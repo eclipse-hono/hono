@@ -127,14 +127,13 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     }
 
     /**
-     * Invoked when the underlying connection to the Hono server
-     * is lost unexpectedly.
+     * Invoked when the underlying connection to the Hono server is lost unexpectedly.
      * <p>
-     * Clears the state of the client factory.
+     * Fails all pending client creation requests and clears the state of the client factory.
      */
     @Override
     protected void onDisconnect() {
-        clientFactory.clearState();
+        clientFactory.onDisconnect();
     }
 
     /**

@@ -106,7 +106,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 
     @Override
     protected void onDisconnect() {
-        mappingAndDelegatingCommandConsumerFactory.clearState();
+        mappingAndDelegatingCommandConsumerFactory.onDisconnect();
         consumerLinkTenants.clear();
     }
 

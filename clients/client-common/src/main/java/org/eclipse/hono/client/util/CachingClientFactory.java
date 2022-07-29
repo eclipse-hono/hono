@@ -37,8 +37,8 @@ import io.vertx.core.Vertx;
 /**
  * A factory for creating clients.
  * <p>
- * The getOrCreateClient method makes sure that the creation attempt
- * fails if the clearState method is being invoked.
+ * The {@link #createClient(Supplier, Handler)} method makes sure that all ongoing creation attempts are failed
+ * when the {@link #onDisconnect()} method gets invoked.
  * <p>
  * Created clients are being cached.
  * <p>
