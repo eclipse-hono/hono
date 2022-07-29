@@ -28,8 +28,8 @@ import io.vertx.core.Handler;
 /**
  * A factory for creating clients.
  * <p>
- * The {@link #createClient(Supplier, Handler)} method makes sure that all ongoing creation attempts are failed when the
- * {@link #clearState()} method gets invoked.
+ * The {@link #createClient(Supplier, Handler)} method makes sure that all ongoing creation attempts are failed
+ * when the {@link #onDisconnect()} method gets invoked.
  *
  * @param <T> The type of client to be created.
  */
@@ -44,11 +44,10 @@ public class ClientFactory<T> {
     protected final List<Handler<ServerErrorException>> creationRequests = new ArrayList<>();
 
     /**
-     * Clears all state. Meant to be invoked when the service connection was lost.
-     * <p>
-     * All pending creation requests are failed with a {@link ServerErrorException} with status 503.
+     * Fails all pending creation requests with a {@link ServerErrorException} with status 503
+     * and clears all state of this factory.
      */
-    public final void clearState() {
+    public final void onDisconnect() {
         final var connectionLostException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                 "no connection to service");
         failAllCreationRequests(connectionLostException);

@@ -72,9 +72,9 @@ public final class ProtonBasedAmqpAdapterClient extends ConnectionLifecycleWrapp
     }
 
     private void onDisconnect() {
-        telemetrySenderClientFactory.clearState();
-        eventSenderClientFactory.clearState();
-        commandResponseSenderClientFactory.clearState();
+        telemetrySenderClientFactory.onDisconnect();
+        eventSenderClientFactory.onDisconnect();
+        commandResponseSenderClientFactory.onDisconnect();
     }
 
     /**

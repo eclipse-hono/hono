@@ -286,12 +286,12 @@ public class CachingClientFactoryTest {
     }
 
     /**
-     * Verifies that clearing the state of the factory fails all client creation requests.
+     * Verifies that invoking onDisconnect on the factory fails all client creation requests.
      *
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testClearStateClearsConcurrentGetOrCreateClientRequests(final VertxTestContext ctx) {
+    public void testOnDisconnectClearsConcurrentGetOrCreateClientRequests(final VertxTestContext ctx) {
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
 
         final Promise<Void> allRequestsCompletedWithFailurePromise = Promise.promise();
@@ -321,8 +321,8 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient("keyB", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
         factory.getOrCreateClient("keyC", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
 
-        // THEN invoking clearState() means that all creation requests get failed
-        factory.clearState();
+        // THEN invoking onDisconnect() means that all creation requests get failed
+        factory.onDisconnect();
         allRequestsCompletedWithFailurePromise.future().onSuccess(v -> {
             ctx.completeNow();
         });
@@ -330,12 +330,12 @@ public class CachingClientFactoryTest {
 
     /**
      * Verifies that a request to create a client is failed immediately when
-     * the factory's clearState method is invoked.
+     * the factory's onDisconnect method is invoked.
      *
      * @param ctx The Vertx test context.
      */
     @Test
-    public void testGetOrCreateClientFailsWhenStateIsCleared(final VertxTestContext ctx) {
+    public void testGetOrCreateClientFailsWhenOnDisconnectIsCalled(final VertxTestContext ctx) {
 
         // GIVEN a factory that tries to create a client for key "tenant"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
@@ -343,9 +343,8 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient(
                 "tenant",
                 () -> {
-                    // WHEN the factory's state is being cleared while the client
-                    // is being created
-                    factory.clearState();
+                    // WHEN the factory's onDisconnect method is invoked while the client is being created
+                    factory.onDisconnect();
                     return Promise.promise().future();
                 }, creationAttempt);
 
@@ -362,7 +361,7 @@ public class CachingClientFactoryTest {
     }
 
     /**
-     * Verifies that having the factory's clearState method invoked while
+     * Verifies that having the factory's onDisconnect method invoked while
      * a request to create a client is taking place, immediately causes
      * the request to get failed. It is also verified that a subsequent
      * completion of the clientInstanceSupplier method used for creating
@@ -371,7 +370,7 @@ public class CachingClientFactoryTest {
      * @param ctx The Vertx test context.
      */
     @Test
-    public void testGetOrCreateClientWithClearStateCalledInBetween(final VertxTestContext ctx) {
+    public void testGetOrCreateClientWithOnDisconnectCalledInBetween(final VertxTestContext ctx) {
 
         // GIVEN a factory that tries to create a client for key "tenant"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
@@ -380,9 +379,8 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient(
                 "tenant",
                 () -> {
-                    // WHEN the factory's state is being cleared while the client
-                    // is being created
-                    factory.clearState();
+                    // WHEN the factory's onDisconnect method is invoked while the client is being created
+                    factory.onDisconnect();
                     // AND the client creation fails afterwards
                     creationFailure.fail("creation failure");
                     return creationFailure.future();

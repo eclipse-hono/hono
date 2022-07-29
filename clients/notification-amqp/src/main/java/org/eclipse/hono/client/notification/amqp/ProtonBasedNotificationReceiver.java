@@ -98,7 +98,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
 
     @Override
     protected void onDisconnect() {
-        receiverFactory.clearState();
+        receiverFactory.onDisconnect();
     }
 
     @Override
