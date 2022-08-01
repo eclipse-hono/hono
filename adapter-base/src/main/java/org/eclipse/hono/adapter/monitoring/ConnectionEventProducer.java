@@ -76,7 +76,7 @@ public interface ConnectionEventProducer {
      * @param authenticatedDevice The optional authenticated device associated with the connection. May be {@code null}
      *            if the connection is from an unauthenticated device.
      * @param data Additional, protocol adapter specific data.
-     * @param spanContext The currently active OpenTracing span context or @{code null}.
+     * @param spanContext The currently active OpenTracing span context or {@code null}.
      * @return A future which indicates the result of the event production.
      * @throws NullPointerException If either the remote ID or the protocol adapter argument are {@code null}.
      */
@@ -93,7 +93,7 @@ public interface ConnectionEventProducer {
      * @param authenticatedDevice The optional authenticated device associated with the connection. May be {@code null}
      *            if the connection is from an unauthenticated device.
      * @param data Additional, protocol adapter specific data.
-     * @param spanContext The currently active OpenTracing span context or @{code null}.
+     * @param spanContext The currently active OpenTracing span context or {@code null}.
      * @return A future which indicates the result of the event production.
      * @throws NullPointerException If either the remote ID or the protocol adapter argument are {@code null}.
      */

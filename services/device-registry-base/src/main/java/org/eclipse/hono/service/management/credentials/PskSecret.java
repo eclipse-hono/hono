@@ -76,7 +76,7 @@ public class PskSecret extends CommonSecret {
      * {@inheritDoc}
      * <p>
      * Sets this secret's key property to the value of the other secret's corresponding
-     * property if this secret's key property is @{@code null}.
+     * property if this secret's key property is {@code null}.
      */
     @Override
     protected void mergeProperties(final CommonSecret otherSecret) {

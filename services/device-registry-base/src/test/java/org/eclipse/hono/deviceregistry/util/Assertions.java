@@ -19,7 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 /**
- * A collection of assertions usefult for testing device registry implementations.
+ * A collection of assertions useful for testing device registry implementations.
  *
  */
 public final class Assertions {

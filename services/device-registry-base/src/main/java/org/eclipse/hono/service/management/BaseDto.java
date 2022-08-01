@@ -234,7 +234,7 @@ public abstract class BaseDto<T> {
     /**
      * Sets the point in time at which the object has been initially created.
      *
-     * @param creationTime The objects's creation time.
+     * @param creationTime The object's creation time.
      */
     protected final void setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;

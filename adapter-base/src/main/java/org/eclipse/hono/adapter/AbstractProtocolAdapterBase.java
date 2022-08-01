@@ -833,7 +833,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * @param context The currently active OpenTracing span context or @{code null}.
+     * @param context The currently active OpenTracing span context or {@code null}.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
      * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, io.vertx.core.json.JsonObject, SpanContext)
@@ -871,7 +871,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
-     * @param context The currently active OpenTracing span context or @{code null}.
+     * @param context The currently active OpenTracing span context or {@code null}.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
      * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, io.vertx.core.json.JsonObject, SpanContext)

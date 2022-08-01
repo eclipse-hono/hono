@@ -19,7 +19,8 @@ import org.eclipse.hono.util.Lifecycle;
  * Provides a server for health checks.
  *
  * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
- *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
+ *             Vert.x Health and register them as CDI beans as described in the
+ *             <a href="https://quarkus.io/guides/smallrye-health">Quarkus SmallRye Health Guide</a>.
  */
 @Deprecated
 public interface HealthCheckServer extends Lifecycle {

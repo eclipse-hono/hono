@@ -24,7 +24,7 @@ import com.google.common.io.BaseEncoding;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A utility class to provide common features for different @{@link LoraProvider}s.
+ * A utility class to provide common features for different {@link LoraProvider}s.
  */
 public class LoraUtils {
 

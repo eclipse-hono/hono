@@ -19,7 +19,8 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * Provides methods to register health checks.
  *
  * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
- *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
+ *             Vert.x Health and register them as CDI beans as described in the
+ *             <a href="https://quarkus.io/guides/smallrye-health">Quarkus SmallRye Health Guide</a>.
  */
 @Deprecated
 public interface HealthCheckProvider {
