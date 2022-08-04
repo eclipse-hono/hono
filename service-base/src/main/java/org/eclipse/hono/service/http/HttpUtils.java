@@ -71,6 +71,12 @@ public final class HttpUtils {
      * Refer <a href="https://tools.ietf.org/html/rfc6585#section-4"> RFC 6585, Section 4 </a>.
      */
     public static final int HTTP_TOO_MANY_REQUESTS = 429;
+    /**
+     * Constant for the "io.vertx.web.router.setup.lenient" system property name. Setting such a property
+     * to {@code true} will allow handlers to be added to routes in any order, ignoring the order restrictions
+     * defined based on the handler type.
+     */
+    public static final String SYSTEM_PROPERTY_ROUTER_SETUP_LENIENT = "io.vertx.web.router.setup.lenient";
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpUtils.class);
 

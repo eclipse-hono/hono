@@ -103,6 +103,16 @@ Your use of *Automaton* is subject to the terms and conditions defined in
 
 The source code is available from [GitHub](https://github.com/cs-au-dk/dk.brics.automaton).
 
+### Brotli4j
+
+This product includes software developed by the [Brotli4j project](https://github.com/hyperxpro/Brotli4j).
+
+Your use of *Brotli4j* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/hyperxpro/Brotli4j).
+
 ### Google Common Protos
 
 This product includes software developed by the [Google Common Protos project](https://github.com/googleapis/java-common-protos).
