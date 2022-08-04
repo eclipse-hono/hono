@@ -20,6 +20,8 @@ on:
   schedule:
   # run three times a day (UTC)
   - cron: '23 3,10,14 * * *'
+  # enable running the workflow manually
+  workflow_dispatch:
 
 jobs:
   build-and-run-tests:
