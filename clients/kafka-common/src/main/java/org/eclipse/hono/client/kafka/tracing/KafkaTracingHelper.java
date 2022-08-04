@@ -32,7 +32,6 @@ import io.vertx.kafka.client.producer.RecordMetadata;
  * A helper class providing Kafka-specific utility methods for interacting with the OpenTracing API.
  *
  */
-// TODO align with Kafka tracing support in Vert.x 4.0
 public final class KafkaTracingHelper {
 
     /**

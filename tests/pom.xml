@@ -208,6 +208,10 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-classes</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-epoll</artifactId>
       <classifier>linux-x86_64</classifier>
       <scope>runtime</scope>
@@ -391,6 +395,13 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.7.0</version>
+      </extension>
+    </extensions>
   </build>
 
   <profiles>
@@ -857,7 +868,8 @@
                           <dependencySet>
                             <includes>
                               <!--  use openSSL in Auth server -->
-                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                              <include>io.netty:netty-tcnative-boringssl-static:jar:${os.detected.classifier}</include>
+                              <include>io.netty:netty-tcnative-classes</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
                           </dependencySet>
@@ -1453,7 +1465,8 @@
                           <dependencySet>
                             <includes>
                               <!--  use openSSL in HTTP adapter -->
-                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                              <include>io.netty:netty-tcnative-boringssl-static:jar:${os.detected.classifier}</include>
+                              <include>io.netty:netty-tcnative-classes</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
                           </dependencySet>

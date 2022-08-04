@@ -895,7 +895,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             // this will also trigger topic auto-creation if the topic doesn't exist yet.
             // Doing so before the "subscribe" invocation shall ensure that these partitions are considered for
             // partition assignment.
-            topics.forEach(topic -> HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
+            topics.forEach(topic -> kafkaConsumer.partitionsFor(topic)
                     .onSuccess(partitions -> {
                         if (partitions.isEmpty()) {
                             // either auto-creation of topics is disabled or the (manually) created topic isn't reflected in the result yet

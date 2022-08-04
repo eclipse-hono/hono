@@ -143,6 +143,13 @@ public class HonoBasicAuthHandler extends HTTPAuthorizationHandler<Authenticatio
             return;
         }
 
-        AuthHandlerTools.processException(ctx, exception, authenticateHeader(ctx));
+        AuthHandlerTools.processException(ctx, exception, getAuthenticateHeader());
+    }
+
+    private String getAuthenticateHeader() {
+        if (realm != null && realm.length() > 0) {
+            return type + " realm=\"" + realm + "\"";
+        }
+        return null;
     }
 }

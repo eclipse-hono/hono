@@ -185,6 +185,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 if (router == null) {
                     return Future.failedFuture("no router configured");
                 } else {
+                    // ensure route order check is disabled, allowing routes with auth handler added before body handler
+                    System.setProperty(HttpUtils.SYSTEM_PROPERTY_ROUTER_SETUP_LENIENT, "true");
+
                     addRoutes(router);
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
