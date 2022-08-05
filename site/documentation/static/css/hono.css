@@ -107,6 +107,19 @@
 	border: none;
 }
 
+/* override heading style theme defaults to fit Swagger UI layout */
+#swagger-ui h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 0px;
+  overflow-x: visible;
+}
+
+/* no reduced letter-spacing for small text in Swagger UI heading */
+#swagger-ui h3 small {
+  letter-spacing: 0px;
+}
+
 /* prevents that the anchor is positioned behind the menu bar */
 :target:before {
   content: "";
