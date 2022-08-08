@@ -143,6 +143,25 @@ spec:
                 :hono-adapter-lora,\
                 :hono-adapter-mqtt,\
                 :hono-adapter-sigfox,\
+                :hono-client-amqp-common,\
+                :hono-client-amqp-connection,\
+                :hono-client-application,\
+                :hono-client-application-amqp,\
+                :hono-client-application-kafka,\
+                :hono-client-command,\
+                :hono-client-command-amqp,\
+                :hono-client-command-kafka,\
+                :hono-client-common,\
+                :hono-client-device-amqp,\
+                :hono-client-kafka-common,\
+                :hono-client-notification,\
+                :hono-client-notification-amqp,\
+                :hono-client-notification-kafka,\
+                :hono-client-registry,\
+                :hono-client-registry-amqp,\
+                :hono-client-telemetry,\
+                :hono-client-telemetry-amqp,\
+                :hono-client-telemetry-kafka,\
                 :hono-example,\
                 :hono-service-auth,\
                 :hono-service-command-router,\
