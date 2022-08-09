@@ -53,10 +53,8 @@ import org.eclipse.hono.util.TenantObject;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.References;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -607,7 +605,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .withTag(TracingHelper.TAG_QOS, qos.name())
                 .start();
 
-        final Promise<Void> responseReady = Promise.promise();
         final Future<RegistrationAssertion> tokenTracker = getRegistrationAssertion(
                 tenant,
                 deviceId,
@@ -631,28 +628,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
                             .onSuccess(effectiveTtd -> Optional.ofNullable(effectiveTtd)
                                     .ifPresent(v -> TracingHelper.TAG_DEVICE_TTD.set(currentSpan, v)));
-                });
-        final Future<CommandConsumer> commandConsumerTracker = ttdTracker
-                .compose(ttd -> createCommandConsumer(
-                        ttd,
-                        tenantTracker.result(),
-                        deviceId,
-                        gatewayId,
-                        ctx.getRoutingContext(),
-                        responseReady,
-                        currentSpan));
+                })
+                .map(ttd -> ttd == null || ttd <= 0 ? null : ttd); // non positive ttd are made null - no ttd
 
-        commandConsumerTracker
-        .compose(ok -> {
+        ttdTracker
+        .compose(ttd ->
+            ttd == null ?
+              ResponseReadyTracker.nop() :
+              createCommandConsumer(
+                ttd,
+                tenantTracker.result(),
+                deviceId,
+                gatewayId,
+                ctx.getRoutingContext(),
+                currentSpan))
+        .compose(responseReadyTracker -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
-            Optional.ofNullable(commandConsumerTracker.result())
-                    .map(c -> ttdTracker.result())
-                    .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
+            final Integer ttd = ttdTracker.result();
+            if (ttd != null) {
+                props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd);
+            }
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
 
             customizeDownstreamMessageProperties(props, ctx);
-            setTtdRequestConnectionCloseHandler(ctx.getRoutingContext(), commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
             if (EndpointType.EVENT.equals(endpoint)) {
                 ctx.getTimeToLive()
@@ -664,8 +663,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 contentType,
                                 payload,
                                 props,
-                                currentSpan.context()),
-                        responseReady.future())
+                                currentSpan.context()).onFailure(thr -> responseReadyTracker.cancel("send event failed", null)),
+                        responseReadyTracker.future())
                         .map(s -> (Void) null);
             } else {
                 // unsettled
@@ -677,26 +676,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 contentType,
                                 payload,
                                 props,
-                                currentSpan.context()),
-                        responseReady.future())
+                                currentSpan.context()).onFailure(thr -> responseReadyTracker.cancel("send event failed", null)),
+                        responseReadyTracker.future())
                         .map(s -> (Void) null);
             }
         })
-        .compose(proceed -> {
-            // overwrites the execution of closeHandler in setTtdRequestConnectionCloseHandler
-            // to prevent ctx.response().end() from being called twice
-            ctx.response().closeHandler(v -> logResponseGettingClosedPrematurely(ctx.getRoutingContext()));
-
-            // downstream message sent and (if ttd was set) command was received or ttd has timed out
-            // we wait for the CommandConsumer having been closed before delivering the response to the
-            // device in order to prevent a race condition when the device immediately sends a new
-            // request and the CommandConsumer from the current request has not been closed yet
-            return Optional.ofNullable(commandConsumerTracker.result())
-                    .map(consumer -> consumer.close(currentSpan.context())
-                            .otherwise(thr -> null))
-                    .orElseGet(Future::succeededFuture);
-        })
         .map(proceed -> {
+
+            metrics.reportTelemetry(
+                endpoint,
+                tenant,
+                tenantTracker.result(),
+                ProcessingOutcome.FORWARDED,
+                qos,
+                payloadSize,
+                ctx.getTtdStatus(),
+                getMicrometerSample(ctx.getRoutingContext()));
 
             if (ctx.response().closed()) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
@@ -721,15 +716,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandContext.getCommand().getPayloadSize(),
                                 getMicrometerSample(commandContext));
                     }
-                    metrics.reportTelemetry(
-                            endpoint,
-                            tenant,
-                            tenantTracker.result(),
-                            ProcessingOutcome.FORWARDED,
-                            qos,
-                            payloadSize,
-                            ctx.getTtdStatus(),
-                            getMicrometerSample(ctx.getRoutingContext()));
                     currentSpan.finish();
                 });
                 ctx.response().exceptionHandler(t -> {
@@ -762,10 +748,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
             final boolean responseClosedPrematurely = ctx.response().closed();
-            final Future<Void> commandConsumerClosedTracker = Optional.ofNullable(commandConsumerTracker.result())
-                    .map(consumer -> consumer.close(currentSpan.context())
-                            .otherwise(thr -> null))
-                    .orElseGet(Future::succeededFuture);
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
                 TracingHelper.logError(commandContext.getTracingSpan(),
@@ -798,7 +780,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     ctx.getTtdStatus(),
                     getMicrometerSample(ctx.getRoutingContext()));
             TracingHelper.logError(currentSpan, t);
-            commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+            currentSpan.finish();
             return Future.failedFuture(t);
         });
     }
@@ -850,38 +832,33 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Sets a handler for tidying up when a device closes the HTTP connection of a TTD request before
+     * Sets a handler for cleaning up when a device closes the HTTP connection of a TTD request before
      * a response could be sent.
      * <p>
-     * The handler will close the message consumer and increment the metric for expired TTDs.
+     * The handler will cancel {@link ResponseReadyTracker} which will finish wait sapn and increment
+     * the metric for expired TTDs.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.
-     * @param messageConsumer The message consumer to receive a command. If {@code null}, no handler is added.
+     * @param responseReadyTracker The response ready tracker.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @param currentSpan The <em>OpenTracing</em> Span used for tracking the processing of the request.
      */
     private void setTtdRequestConnectionCloseHandler(
             final RoutingContext ctx,
-            final CommandConsumer messageConsumer,
+            final ResponseReadyTracker responseReadyTracker,
             final String tenantId,
-            final String deviceId,
-            final Span currentSpan) {
+            final String deviceId) {
 
-        if (messageConsumer != null && !ctx.response().closed() && !ctx.response().ended()) {
-            ctx.response().closeHandler(v -> {
-                log.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
-                        tenantId, deviceId);
-                currentSpan.log("device closed connection, stop waiting for command");
-                cancelCommandReceptionTimer(ctx);
-                // close command consumer
-                messageConsumer.close(currentSpan.context())
-                        .onComplete(r -> {
-                            currentSpan.finish();
-                            logResponseGettingClosedPrematurely(ctx);
-                            ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
-                        });
-            });
+        if (!ctx.response().closed() && !ctx.response().ended()) {
+            ctx.response().closeHandler(v ->
+                responseReadyTracker.cancel("device closed connection, stop waiting for command", canceled -> {
+                    if (canceled) {
+                        log.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
+                            tenantId, deviceId);
+                        cancelCommandReceptionTimer(ctx);
+                    }
+                })
+            );
         }
     }
 
@@ -945,45 +922,43 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param gatewayId The identifier of the gateway that is acting on behalf of the device
      *                  or {@code null} otherwise.
      * @param ctx The device's currently executing HTTP request.
-     * @param responseReady A future to complete once one of the following conditions are met:
-     *              <ul>
-     *              <li>the request did not include a <em>hono-ttd</em> parameter or</li>
-     *              <li>a command has been received and the response ready future has not yet been
-     *              completed or</li>
-     *              <li>the ttd has expired</li>
-     *              </ul>
      * @param uploadMessageSpan The OpenTracing Span used for tracking the processing
      *                       of the request.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be completed with the created message consumer or {@code null}, if
-     *         the response can be sent back to the device without waiting for a command.
+     *         In case of success the future will be completed with a {@link  ResponseReadyTracker} that:
+     *           <ul>
+     *             <li>if device has specified positive ttd will waits for a command:</li>
+     *             <li>otherwise will not wait for a command</li>
+     *           </ul>
+     *         In both cases allocated resources shall be released by the {@link ResponseReadyTracker} itself without any caller interactions.
      *         <p>
      *         The future will be failed with a {@code ServiceInvocationException} if the
      *         message consumer could not be created.
-     * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
+     * @throws NullPointerException if any of the parameters other than gatewayId is {@code null}.
      */
-    protected final Future<CommandConsumer> createCommandConsumer(
+    protected final Future<ResponseReadyTracker> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
             final String gatewayId,
             final RoutingContext ctx,
-            final Handler<AsyncResult<Void>> responseReady,
             final Span uploadMessageSpan) {
 
+        Objects.requireNonNull(ttdSecs);
         Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(responseReady);
         Objects.requireNonNull(uploadMessageSpan);
 
-        if (ttdSecs == null || ttdSecs <= 0) {
-            // no need to wait for a command
-            responseReady.handle(Future.succeededFuture());
-            return Future.succeededFuture();
-        }
         final AtomicBoolean requestProcessed = new AtomicBoolean(false);
+
+        // A promise used when command consumer is created successfully
+        // In that case it would always be completed on one (first) of the following conditions
+        // - a command has been received
+        // - the ttd has expired
+        // - device has closed connection while waiting for command
+        final Promise<Void> responseReady = Promise.promise();
         TracingHelper.TAG_DEVICE_TTD.set(uploadMessageSpan, ttdSecs);
 
         final Span waitForCommandSpan = TracingHelper
@@ -1012,6 +987,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final Promise<Void> commandHandlerDonePromise = Promise.promise();
                 if (requestProcessed.compareAndSet(false, true)) {
                     waitForCommandSpan.finish();
+                    commandHandlerDonePromise.future().onComplete(responseReady);
                     checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
                     .onComplete(result -> {
                         if (result.succeeded()) {
@@ -1033,7 +1009,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         }
                         cancelCommandReceptionTimer(ctx);
                         setTtdStatus(ctx, TtdStatus.COMMAND);
-                        responseReady.handle(Future.succeededFuture());
                         processCommandSpan.finish();
                     });
                 } else {
@@ -1094,25 +1069,66 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     waitForCommandSpan.finish();
                 })
                 .map(consumer -> {
-                    if (!requestProcessed.get()) {
-                        // if the request was not responded already, add a timer for triggering an empty response
-                        addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
-                    }
-                    // wrap the consumer to be able to create a separate span on closing the consumer (errors should just be logged on that span, not the parent)
-                    return new CommandConsumer() {
+                    final ResponseReadyTracker responseReadyTracker = new ResponseReadyTracker() {
+
+                        // responseReady is completed when command was received, ttd has timed out or connection was closed
+                        // we wait for the CommandConsumer having been closed before delivering the response to the
+                        // device in order to prevent a race condition when the device immediately sends a new
+                        // request and the CommandConsumer from the current request has not been closed yet
+                        private final Future<Void> waitForCommandFuture = responseReady.future()
+                            .compose(ar -> closeCommandConsumer())
+                            .recover(thr -> closeCommandConsumer().compose(v -> Future.failedFuture(thr)));
+
                         @Override
-                        public Future<Void> close(final SpanContext spanContext) {
+                        public Future<Void> future() {
+                            return waitForCommandFuture;
+                        }
+
+                        @Override
+                        public void cancel(final String reason, final Handler<Boolean> handler) {
+                            if (requestProcessed.compareAndSet(false, true)) {
+                                if (reason != null) {
+                                    waitForCommandSpan.log(String.format("canceled: %s", reason));
+                                }
+
+                                if (handler != null) {
+                                    handler.handle(true);
+                                }
+
+                                waitForCommandSpan.finish();
+                                responseReady.complete();
+                            } else {
+                                if (handler != null) {
+                                    handler.handle(false);
+                                }
+                            }
+                        }
+
+                        private Future<Void> closeCommandConsumer() {
                             final Span closeConsumerSpan = TracingHelper
-                                    .buildChildSpan(tracer, spanContext, "close command consumer",
+                                    .buildChildSpan(tracer, uploadMessageSpan.context(), "close command consumer",
                                             getTypeName())
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                                     .start();
                             TracingHelper.setDeviceTags(closeConsumerSpan, tenantObject.getTenantId(), deviceId);
                             return consumer.close(closeConsumerSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(closeConsumerSpan, thr))
-                                    .onComplete(ar -> closeConsumerSpan.finish());
+                                    .onComplete(ar -> {
+                                        if (ar.failed()) {
+                                            TracingHelper.logError(closeConsumerSpan, ar.cause());
+                                        }
+                                        closeConsumerSpan.finish();
+                                    })
+                                    .recover(thr -> Future.succeededFuture()); // fail of command close sshal not result in error
                         }
                     };
+
+                    if (!requestProcessed.get()) {
+                        // if the request was not responded already, add a timer for triggering an empty response
+                        addCommandReceptionTimer(ctx, responseReadyTracker, ttdSecs);
+                        setTtdRequestConnectionCloseHandler(ctx, responseReadyTracker, tenantObject.getTenantId(), deviceId);
+                    } // otherwise the responseReady has already been completed
+
+                    return responseReadyTracker;
                 });
     }
 
@@ -1138,32 +1154,27 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * The created timer's ID is put to the routing context using key {@link #KEY_TIMER_ID}.
      *
      * @param ctx The device's currently executing HTTP request.
-     * @param responseReady The future to complete when the time has expired.
+     * @param responseReadyTracker The response ready tracker.
      * @param delaySecs The number of seconds to wait for a command.
-     * @param waitForCommandSpan The span tracking the command reception.
      */
     private void addCommandReceptionTimer(
             final RoutingContext ctx,
-            final AtomicBoolean requestProcessed,
-            final Handler<AsyncResult<Void>> responseReady,
-            final long delaySecs,
-            final Span waitForCommandSpan) {
+            final ResponseReadyTracker responseReadyTracker,
+            final long delaySecs) {
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
             log.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
 
-            if (requestProcessed.compareAndSet(false, true)) {
-                // no command to be sent,
-                // send empty response
-                setTtdStatus(ctx, TtdStatus.EXPIRED);
-                waitForCommandSpan.log(String.format("time to wait for command expired (%ds)", delaySecs));
-                waitForCommandSpan.finish();
-                responseReady.handle(Future.succeededFuture());
-            } else {
-                // a command has been sent to the device already
-                log.trace("response already sent, nothing to do ...");
-            }
+            responseReadyTracker.cancel(String.format("time to wait for command expired (%ds)", delaySecs), canceled -> {
+                if (canceled) {
+                    // no command to be sent, send empty response
+                    setTtdStatus(ctx, TtdStatus.EXPIRED);
+                } else {
+                    // a command has been sent to the device already
+                    log.trace("response already sent, nothing to do ...");
+                }
+            });
         });
 
         log.trace("adding command reception timer [id: {}]", timerId);
@@ -1308,5 +1319,54 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
         bodyHandler.setBodyLimit(getConfig().getMaxPayloadSize());
         return bodyHandler;
+    }
+
+    /**
+     * Tracks command to include in response.
+     */
+    private interface ResponseReadyTracker {
+
+        /**
+         * This method returns a {@link Future} that tracks response readiness to be
+         * sent back. If there is TTD set it wull wait for a command otherwise will
+         * complete directly.
+         *
+         * @return response readiness feature.
+         */
+        Future<Void> future();
+
+        /**
+         * Abort/Cancel waiting for command because of certain condition (e.g. TTD expired
+         * or device has closed connection).
+         *
+         * @param reason cancel reason.
+         * @param handler receives notification if the cancel succeeds or {@link  ResponseReadyTracker}
+         *                has already been completed
+         */
+        void cancel(String reason, Handler<Boolean> handler);
+
+        /**
+         * Return a {@link ResponseReadyTracker} that doesn't wait for any command. It is used
+         * in case that ttd miss, ttd is or is less or equal 0.
+         *
+         * @return No operation {@link ResponseReadyTracker}.
+         */
+        static Future<ResponseReadyTracker> nop() {
+            return Future.succeededFuture(
+                new ResponseReadyTracker() {
+
+                    @Override
+                    public Future<Void> future() {
+                        return Future.succeededFuture();
+                    }
+
+                    @Override
+                    public void cancel(final String reason, final Handler<Boolean> handler) {
+                        if (handler != null) {
+                            handler.handle(false);
+                        }
+                    }
+                });
+        }
     }
 }

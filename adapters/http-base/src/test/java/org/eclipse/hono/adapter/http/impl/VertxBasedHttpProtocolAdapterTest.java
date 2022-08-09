@@ -546,6 +546,44 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
+     * Verifies that the adapter returns (imediately) error when sending telemetry can't be sent.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testPostTelemetryWithTtdFailWhenCantSend(final VertxTestContext ctx) {
+
+        // GIVEN an device for which a telemetry can't be delivered
+        final Promise<Void> sendTelemetryOutcome = Promise.promise();
+        sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+        givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
+            thenReturn(Future.succeededFuture(commandConsumer));
+
+        // WHEN the device posts a telemetry message including a TTD
+        httpClient.post("/telemetry")
+            .addQueryParam("hono-ttd", "30")
+            .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
+            .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
+            .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+            // THEN the response failes with 503 - error thrown by sending telemetry
+            .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
+            .expect(this::assertCorsHeaders)
+            .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                ctx.verify(() -> {
+                    verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                        any(), any(), any());
+                    // and the command consumer has been closed again
+                    verify(commandConsumer).close(any());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that a request to upload a command response using PUT succeeds
      * if the request contains a Basic <em>Authorization</em> header with valid
      * credentials.
