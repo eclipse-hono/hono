@@ -38,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -64,7 +65,8 @@ public class MongoDbBasedCredentialsDaoTest {
     @BeforeEach
     void setUp() {
         mongoClient = mock(MongoClient.class);
-        dao = new MongoDbBasedCredentialsDao(mongoClient, "credentials", null, null);
+        final Vertx vertx = mock(Vertx.class);
+        dao = new MongoDbBasedCredentialsDao(vertx, mongoClient, "credentials", null, null);
     }
 
     /**

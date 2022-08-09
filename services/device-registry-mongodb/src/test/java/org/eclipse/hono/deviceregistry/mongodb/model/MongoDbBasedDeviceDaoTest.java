@@ -37,6 +37,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -63,7 +64,8 @@ public class MongoDbBasedDeviceDaoTest {
     @BeforeEach
     void setUp() {
         mongoClient = mock(MongoClient.class);
-        dao = new MongoDbBasedDeviceDao(mongoClient, "devices", null);
+        final Vertx vertx = mock(Vertx.class);
+        dao = new MongoDbBasedDeviceDao(vertx, mongoClient, "devices", null);
     }
 
     /**

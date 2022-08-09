@@ -46,6 +46,7 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -69,16 +70,18 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
     /**
      * Creates a new DAO.
      *
+     * @param vertx The vert.x instance to use.
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the tenant data.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     public MongoDbBasedTenantDao(
+            final Vertx vertx,
             final MongoClient mongoClient,
             final String collectionName,
             final Tracer tracer) {
-        super(mongoClient, collectionName, tracer, null);
+        super(vertx, mongoClient, collectionName, tracer, null);
     }
 
     /**
@@ -204,7 +207,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                                 tenantConfig.getTenantId(),
                                 HttpURLConnection.HTTP_CONFLICT, "tenant already exists"));
                     } else {
-                        TracingHelper.logError(span, "error creating tenant", error);
+                        logError(span, "error creating tenant", error, tenantConfig.getTenantId(), null);
                         return mapError(error);
                     }
                 })
@@ -272,7 +275,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                             tenantJsonResult.getString(TenantDto.FIELD_VERSION));
                 }
             })
-            .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
+            .onFailure(t -> logError(span, "error retrieving tenant", t, tenantId, null))
             .recover(this::mapError);
     }
 
@@ -316,7 +319,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                             "found multiple tenants with matching trust anchor");
                 }
             })
-            .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
+            .onFailure(t -> logError(span, "error retrieving tenant by subject DN", t, null, null))
             .recover(this::mapError)
             .onComplete(r -> span.finish());
     }
@@ -372,7 +375,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                         TracingHelper.logError(span, exception);
                         return Future.failedFuture(exception);
                     } else {
-                        TracingHelper.logError(span, "error updating tenant", error);
+                        logError(span, "error updating tenant", error, newTenantConfig.getTenantId(), null);
                         return mapError(error);
                     }
                 })
@@ -395,11 +398,8 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         }
 
         return mongoClient.count(collectionName, filter == null ? new JsonObject() : filter)
-                .map(count -> count.intValue())
-                .onFailure(e -> {
-                    LOG.error("error while querying Tenants count from MongoDB", e);
-                    TracingHelper.logError(span, "error getting tenants count", e);
-                })
+                .map(Long::intValue)
+                .onFailure(t -> logError(span, "error getting tenants count", t, null, null))
                 .onComplete(r -> span.finish());
     }
 
@@ -437,7 +437,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                         return Future.succeededFuture((Void) null);
                     }
                 })
-                .onFailure(t -> TracingHelper.logError(span, "error deleting tenant", t))
+                .onFailure(t -> logError(span, "error deleting tenant", t, tenantId, null))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }

@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ import com.bol.config.CryptVaultAutoConfiguration;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -40,6 +42,8 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.IndexOptions;
@@ -78,9 +82,12 @@ public abstract class MongoDbBasedDao {
      */
     protected final FieldLevelEncryption fieldLevelEncryption;
 
+    private final Vertx vertx;
+
     /**
      * Creates a new DAO.
      *
+     * @param vertx The vert.x instance to use.
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the data.
      * @param tracer The tracer to use for tracking the processing of requests.
@@ -89,11 +96,13 @@ public abstract class MongoDbBasedDao {
      * @throws NullPointerException if any of the parameters other than tracer or field level encryption are {@code null}.
      */
     protected MongoDbBasedDao(
+            final Vertx vertx,
             final MongoClient mongoClient,
             final String collectionName,
             final Tracer tracer,
             final FieldLevelEncryption fieldLevelEncryption) {
 
+        this.vertx = Objects.requireNonNull(vertx);
         this.mongoClient = Objects.requireNonNull(mongoClient);
         this.collectionName = Objects.requireNonNull(collectionName);
         this.tracer = Optional.ofNullable(tracer).orElse(NoopTracerFactory.create());
@@ -366,6 +375,8 @@ public abstract class MongoDbBasedDao {
      * the returned future will be failed with the original error.
      * Otherwise the future will be failed with a {@link ServerErrorException}
      * having a status code of 500 and containing the original error as the cause.
+     * An {@link IllegalStateException} due to the client already being closed is
+     * mapped to status code 503.
      *
      * @param <T> The type of future to return.
      * @param error The error to map.
@@ -374,9 +385,54 @@ public abstract class MongoDbBasedDao {
     protected final <T> Future<T> mapError(final Throwable error) {
         if (error instanceof ServiceInvocationException) {
             return Future.failedFuture(error);
+        } else if (isIllegalStateExceptionWithVertxClosed(error)) {
+            // handling "IllegalStateException: state should be: server session pool is open" error with vertx already closed
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, error));
         } else {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
         }
+    }
+
+    private boolean isIllegalStateExceptionWithVertxClosed(final Throwable error) {
+        return error instanceof IllegalStateException
+                && vertx instanceof VertxInternal vertxInternal
+                && vertxInternal.closeFuture().isClosed();
+    }
+
+    /**
+     * Logs the given DB operation error to the logger and the given span.
+     *
+     * @param span The span to log to.
+     * @param message The message to log on the span.
+     * @param error The error to log on the span.
+     * @param tenantId The tenant identifier associated with the operation or {@code null}.
+     * @param deviceId The device identifier associated with the operation or {@code null}.
+     * @throws NullPointerException if span, message or error is {@code null}.
+     */
+    protected void logError(
+            final Span span,
+            final String message,
+            final Throwable error,
+            final String tenantId,
+            final String deviceId) {
+
+        Objects.requireNonNull(span);
+        Objects.requireNonNull(message);
+        Objects.requireNonNull(error);
+
+        final boolean isIllegalStateExceptionWithVertxClosed = isIllegalStateExceptionWithVertxClosed(error);
+        if (LOG.isDebugEnabled()) {
+            final String tenantAndDeviceInfo = Optional.ofNullable(deviceId)
+                    .map(d -> " [tenantId: %s, deviceId: %s]".formatted(tenantId, deviceId))
+                    .or(() -> Optional.ofNullable(tenantId).map(t -> " [tenantId: %s]".formatted(tenantId)))
+                    .orElse("");
+            if (error instanceof ClientErrorException || isIllegalStateExceptionWithVertxClosed) {
+                LOG.debug(message + tenantAndDeviceInfo + ": " + error);
+            } else {
+                LOG.debug(message + tenantAndDeviceInfo, error);
+            }
+        }
+        TracingHelper.logError(span, message, error, isIllegalStateExceptionWithVertxClosed);
     }
 
     /**

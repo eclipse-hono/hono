@@ -36,6 +36,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -76,6 +77,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
     /**
      * Creates a new DAO.
      *
+     * @param vertx The vert.x instance to use.
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the data.
      * @param tracer The tracer to use for tracking the processing of requests.
@@ -83,11 +85,12 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
      * @throws NullPointerException if any of the parameters other than tracer or field level encryption are {@code null}.
      */
     public MongoDbBasedCredentialsDao(
+            final Vertx vertx,
             final MongoClient mongoClient,
             final String collectionName,
             final Tracer tracer,
             final FieldLevelEncryption fieldLevelEncryption) {
-        super(mongoClient, collectionName, tracer, fieldLevelEncryption);
+        super(vertx, mongoClient, collectionName, tracer, fieldLevelEncryption);
         Optional.ofNullable(fieldLevelEncryption)
             .ifPresent(helper -> LOG.info("using [{}] for encrypting credentials", helper.getClass().getName()));
     }
@@ -195,11 +198,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                             credentials.getTenantId(), credentials.getDeviceId(), credentials.getVersion());
                     return credentials.getVersion();
                 })
-                .onFailure(t -> {
-                    LOG.debug("error adding credentials for device [tenant: {}, device-id: {}]",
-                            credentials.getTenantId(), credentials.getDeviceId(), t);
-                    TracingHelper.logError(span, "error adding credentials", t);
-                })
+                .onFailure(t -> logError(span, "error adding credentials for device", t, credentials.getTenantId(),
+                        credentials.getDeviceId()))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -223,10 +223,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .start();
 
         return getByDeviceId(tenantId, deviceId)
-                .onFailure(t -> {
-                    LOG.debug("error retrieving credentials by device ID", t);
-                    TracingHelper.logError(span, "error retrieving credentials by device ID", t);
-                })
+                .onFailure(t -> logError(span, "error retrieving credentials by device ID", t, tenantId, deviceId))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -309,10 +306,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return dto;
                     }
                 })
-                .onFailure(t -> {
-                    LOG.debug("error retrieving credentials by auth-id and type", t);
-                    TracingHelper.logError(span, "error retrieving credentials by auth-id and type", t);
-                })
+                .onFailure(t -> logError(span, "error retrieving credentials by auth-id and type", t, tenantId, null))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -384,10 +378,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return Future.failedFuture(error);
                     }
                 })
-                .onFailure(error -> {
-                    LOG.debug("error updating credentials", error);
-                    TracingHelper.logError(span, "error updating credentials", error);
-                })
+                .onFailure(t -> logError(span, "error updating credentials", t, credentials.getTenantId(),
+                        credentials.getDeviceId()))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -433,10 +425,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return Future.succeededFuture((Void) null);
                     }
                 })
-                .onFailure(error -> {
-                    LOG.debug("error deleting credentials", error);
-                    TracingHelper.logError(span, "error deleting credentials", error);
-                })
+                .onFailure(t -> logError(span, "error deleting credentials", t, tenantId, deviceId))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -461,11 +450,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                     LOG.debug("successfully deleted credentials for devices of tenant [tenant-id: {}]", tenantId);
                     return Future.succeededFuture((Void) null);
                 })
-                .recover(error -> {
-                    LOG.debug("error deleting credentials", error);
-                    TracingHelper.logError(span, "error deleting credentials", error);
-                    return mapError(error);
-                })
+                .onFailure(t -> logError(span, "error deleting credentials", t, tenantId, null))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 }
