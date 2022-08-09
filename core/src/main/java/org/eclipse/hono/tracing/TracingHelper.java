@@ -178,55 +178,6 @@ public final class TracingHelper {
     }
 
     /**
-     * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
-     * <p>
-     * This method does <em>not</em> finish the span.
-     * <p>
-     * If the given error represents an unexpected error (e.g. a {@code NullPointerException}), a <em>WARN</em>
-     * log entry will be created on the {@link Logger} of this class. To suppress this, the
-     * {@link #logError(Span, Throwable, boolean)} method may be used instead, invoking it with {@code true} as value
-     * for the {@code skipUnexpectedErrorCheck} parameter.
-     *
-     * @param span The span to mark.
-     * @param error The exception that has occurred.
-     * @throws NullPointerException if error is {@code null}.
-     */
-    public static void logError(final Span span, final Throwable error) {
-        logError(span, error, false);
-    }
-
-    /**
-     * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
-     * <p>
-     * This method does <em>not</em> finish the span.
-     *
-     * @param span The span to mark.
-     * @param error The exception that has occurred.
-     * @param skipUnexpectedErrorCheck Whether to skip the check for an unexpected error, meaning no <em>WARN</em> log
-     *            entry will be created for such an error.
-     * @throws NullPointerException if error is {@code null}.
-     */
-    public static void logError(final Span span, final Throwable error, final boolean skipUnexpectedErrorCheck) {
-        if (!skipUnexpectedErrorCheck) {
-            logUnexpectedError(error, span);
-        }
-        if (span != null) {
-            logError(span, getErrorLogItems(null, error));
-        }
-    }
-
-    private static void logUnexpectedError(final Throwable error, final Span span) {
-        if (error instanceof NullPointerException
-            || error instanceof IllegalArgumentException
-            || error instanceof IllegalStateException) {
-            Optional.ofNullable(span).ifPresentOrElse(
-                    s -> LOG.warn("An unexpected error occurred! [logged on trace {}, span {}]",
-                            s.context().toTraceId(), s.context().toSpanId(), error),
-                    () -> LOG.warn("An unexpected error occurred!", error));
-        }
-    }
-
-    /**
      * Creates a set of items to log for a message and an error.
      *
      * @param message The message.
@@ -266,8 +217,8 @@ public final class TracingHelper {
      * @throws NullPointerException if message is {@code null}.
      */
     public static void logError(final Span span, final String message) {
+        Objects.requireNonNull(message);
         if (span != null) {
-            Objects.requireNonNull(message);
             final Map<String, String> items = new HashMap<>(2);
             items.put(Fields.MESSAGE, message);
             items.put(Fields.EVENT, Tags.ERROR.getKey());
@@ -276,25 +227,75 @@ public final class TracingHelper {
     }
 
     /**
+     * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
+     * <p>
+     * This method does <em>not</em> finish the span.
+     * <p>
+     * If the given error represents an unexpected error (e.g. a {@code NullPointerException}), a <em>WARN</em>
+     * log entry will be created on the {@link Logger} of this class. To suppress this, the
+     * {@link #logError(Span, String, Throwable, boolean)} method may be used instead, invoking it with {@code true}
+     * as value for the {@code skipUnexpectedErrorCheck} parameter.
+     *
+     * @param span The span to mark.
+     * @param error The exception that has occurred.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static void logError(final Span span, final Throwable error) {
+        Objects.requireNonNull(error);
+        logError(span, null, error, false);
+    }
+
+    /**
      * Marks an <em>OpenTracing</em> span as erroneous, logs a message and an error.
      * <p>
      * This method does <em>not</em> finish the span.
      * <p>
      * If the given error represents an unexpected error (e.g. a {@code NullPointerException}), a <em>WARN</em>
-     * log entry will be created on the {@link Logger} of this class.
+     * log entry will be created on the {@link Logger} of this class. To suppress this, the
+     * {@link #logError(Span, String, Throwable, boolean)} method may be used instead, invoking it with {@code true}
+     * as value for the {@code skipUnexpectedErrorCheck} parameter.
      *
      * @param span The span to mark.
      * @param message The message to log on the span.
      * @param error The error to log on the span.
-     * @throws NullPointerException if message and error are {@code null}.
+     * @throws NullPointerException if both message and error are {@code null}.
      */
     public static void logError(final Span span, final String message, final Throwable error) {
-        logUnexpectedError(error, span);
+        logError(span, message, error, false);
+    }
+
+    /**
+     * Marks an <em>OpenTracing</em> span as erroneous, logs a message and an error.
+     * <p>
+     * This method does <em>not</em> finish the span.
+     *
+     * @param span The span to mark.
+     * @param message The message to log on the span.
+     * @param error The error to log on the span.
+     * @param skipUnexpectedErrorCheck Whether to skip the check for an unexpected error, meaning no <em>WARN</em> log
+     *            entry will be created for such an error.
+     * @throws NullPointerException if both message and error are {@code null}.
+     */
+    public static void logError(final Span span, final String message, final Throwable error, final boolean skipUnexpectedErrorCheck) {
+        if (message == null && error == null) {
+            throw new NullPointerException("Either message or error must not be null");
+        }
+        if (!skipUnexpectedErrorCheck) {
+            logUnexpectedError(error, span);
+        }
         if (span != null) {
-            if (message == null && error == null) {
-                throw new NullPointerException("Either message or error must not be null");
-            }
             logError(span, getErrorLogItems(message, error));
+        }
+    }
+
+    private static void logUnexpectedError(final Throwable error, final Span span) {
+        if (error instanceof NullPointerException
+                || error instanceof IllegalArgumentException
+                || error instanceof IllegalStateException) {
+            Optional.ofNullable(span).ifPresentOrElse(
+                    s -> LOG.warn("An unexpected error occurred! [logged on trace {}, span {}]",
+                            s.context().toTraceId(), s.context().toSpanId(), error),
+                    () -> LOG.warn("An unexpected error occurred!", error));
         }
     }
 
