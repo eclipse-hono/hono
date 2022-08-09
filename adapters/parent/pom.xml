@@ -132,8 +132,12 @@
                         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
                         <JAVA_OPTIONS>
                           -Dvertx.json.base64=legacy
-                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
+                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+                        </JAVA_OPTIONS>
                       </env>
+                      <runCmds>
+                        <run>chmod 755 /opt/hono/run-java.sh</run>
+                      </runCmds>
                       <entryPoint>
                         <arg>/opt/hono/run-java.sh</arg>
                       </entryPoint>
@@ -148,7 +152,6 @@
                               <includes>
                                 <include>run-java.sh</include>
                               </includes>
-                              <fileMode>755</fileMode>
                             </fileSet>
                             <fileSet>
                               <directory>${project.build.directory}/quarkus-app</directory>
