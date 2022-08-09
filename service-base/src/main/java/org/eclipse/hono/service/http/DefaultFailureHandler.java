@@ -124,7 +124,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
      */
     private void logErrorInTraceSpan(final Span span, final Throwable error, final int errorCode) {
         final boolean skipUnexpectedErrorCheck = errorCode >= 400 && errorCode < 500; // client error
-        TracingHelper.logError(span, error, skipUnexpectedErrorCheck);
+        TracingHelper.logError(span, null, error, skipUnexpectedErrorCheck);
     }
 
     private void sendError(final HttpServerResponse response, final int errorCode, final String errorMessage) {
