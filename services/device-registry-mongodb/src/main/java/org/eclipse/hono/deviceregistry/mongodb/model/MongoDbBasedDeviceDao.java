@@ -43,6 +43,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -73,16 +74,18 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
     /**
      * Creates a new DAO.
      *
+     * @param vertx The vert.x instance to use.
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the tenant data.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     public MongoDbBasedDeviceDao(
+            final Vertx vertx,
             final MongoClient mongoClient,
             final String collectionName,
             final Tracer tracer) {
-        super(mongoClient, collectionName, tracer, null);
+        super(vertx, mongoClient, collectionName, tracer, null);
     }
 
     /**
@@ -172,7 +175,8 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 HttpURLConnection.HTTP_CONFLICT,
                                 "device already exists");
                     } else {
-                        TracingHelper.logError(span, "error creating device", error);
+                        logError(span, "error creating device", error, deviceConfig.getTenantId(),
+                                deviceConfig.getDeviceId());
                         return mapError(error);
                     }
                 })
@@ -215,7 +219,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return result.mapTo(DeviceDto.class);
                     }
                 })
-                .onFailure(t -> TracingHelper.logError(span, "error retrieving device", t))
+                .onFailure(t -> logError(span, "error retrieving device", t, tenantId, deviceId))
                 .recover(this::mapError);
     }
 
@@ -256,8 +260,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 findOptions)
                 .map(documents -> {
                     if (documents == null) {
-                        final Set<String> result = Set.of();
-                        return result;
+                        return Set.<String>of();
                     } else {
                         span.log("successfully resolved " + documents.size() + " group members");
                         return documents.stream()
@@ -265,6 +268,8 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 .collect(Collectors.toSet());
                     }
                 })
+                .onFailure(t -> logError(span, "error retrieving group members", t, tenantId, null))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -376,7 +381,8 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return Future.succeededFuture(result.getString(DeviceDto.FIELD_VERSION));
                     }
                 })
-                .onFailure(t -> TracingHelper.logError(span, "error updating device", t))
+                .onFailure(t -> logError(span, "error updating device", t, deviceConfig.getTenantId(),
+                        deviceConfig.getDeviceId()))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -423,7 +429,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return Future.succeededFuture((Void) null);
                     }
                 })
-                .onFailure(t -> TracingHelper.logError(span, "error deleting device", t))
+                .onFailure(t -> logError(span, "error deleting device", t, tenantId, deviceId))
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
@@ -450,11 +456,8 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                     LOG.debug("successfully deleted devices of tenant [tenant-id: {}]", tenantId);
                     return Future.succeededFuture((Void) null);
                 })
-                .recover(error -> {
-                    LOG.debug("error deleting devices", error);
-                    TracingHelper.logError(span, "error deleting devices", error);
-                    return mapError(error);
-                })
+                .onFailure(t -> logError(span, "error deleting devices", t, tenantId, null))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -474,7 +477,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         return mongoClient.count(
                 collectionName,
                 MongoDbDocumentBuilder.builder().withTenantId(tenantId).document())
-            .onFailure(t -> TracingHelper.logError(span, "error counting devices", t))
+            .onFailure(t -> logError(span, "error counting devices", t, tenantId, null))
             .recover(this::mapError)
             .onComplete(r -> span.finish());
     }

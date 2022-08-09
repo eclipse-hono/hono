@@ -98,6 +98,7 @@ public final class MongoDbTestUtils {
                 System.lineSeparator(), mongoDbConfig.encodePrettily());
 
         return new MongoDbBasedTenantDao(
+                vertx,
                 getMongoClient(vertx, mongoDbConfig),
                 "tenants",
                 null);
@@ -120,6 +121,7 @@ public final class MongoDbTestUtils {
                 System.lineSeparator(), mongoDbConfig.encodePrettily());
 
         return new MongoDbBasedDeviceDao(
+                vertx,
                 getMongoClient(vertx, mongoDbConfig),
                 "devices",
                 null);
@@ -142,6 +144,7 @@ public final class MongoDbTestUtils {
                 System.lineSeparator(), mongoDbConfig.encodePrettily());
 
         return new MongoDbBasedCredentialsDao(
+                vertx,
                 getMongoClient(vertx, mongoDbConfig),
                 "credentials",
                 null,

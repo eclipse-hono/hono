@@ -89,6 +89,7 @@ public class DaoProducer {
             final MongoClient mongoClient,
             final MongoDbBasedTenantsConfigOptions config) {
         final var dao =  new MongoDbBasedTenantDao(
+                vertx,
                 mongoClient,
                 config.collectionName(),
                 tracer);
@@ -109,6 +110,7 @@ public class DaoProducer {
             final MongoClient mongoClient,
             final MongoDbBasedRegistrationConfigOptions options) {
         final var dao =  new MongoDbBasedDeviceDao(
+                vertx,
                 mongoClient,
                 options.collectionName(),
                 tracer);
@@ -134,6 +136,7 @@ public class DaoProducer {
                 .orElse(FieldLevelEncryption.NOOP_ENCRYPTION);
 
         final var dao =  new MongoDbBasedCredentialsDao(
+                vertx,
                 mongoClient,
                 options.collectionName(),
                 tracer,

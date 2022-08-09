@@ -68,7 +68,8 @@ public class MongoDbBasedTenantDaoTest {
     @BeforeEach
     void setUp() {
         mongoClient = mock(MongoClient.class);
-        dao = new MongoDbBasedTenantDao(mongoClient, "tenants", null);
+        final Vertx vertx = mock(Vertx.class);
+        dao = new MongoDbBasedTenantDao(vertx, mongoClient, "tenants", null);
     }
 
     /**
