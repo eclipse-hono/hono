@@ -117,7 +117,11 @@ class AbstractHonoResourceTest extends ResourceTestBase {
     @ParameterizedTest
     @CsvSource(value = {
             "true,/telemetry/OTHER_TENANT/device_1,403",
+            "true,/telemetry/OTHER_TENANT/,404",
             "false,/telemetry//device_1,404",
+            "false,/telemetry//,404",
+            "true,/telemetry//,404",
+            "true,/telemetry/DEFAULT_TENANT/,404",
             "true,/event/OTHER_TENANT/device_1,403",
             "false,/event//device_1,404",
             "true,/command_response/OTHER_TENANT/device_1/request_id,403",

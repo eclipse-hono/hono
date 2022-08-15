@@ -138,11 +138,14 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
         Optional.ofNullable(TracingSupportingHonoResource.getAuthenticatedDevice(exchange))
             .ifPresentOrElse(
                     authenticatedDevice -> {
-                        final String tenantFromUri = Optional.ofNullable(requestedResource.getTenantId())
+                        final String tenantId = Optional.ofNullable(requestedResource.getTenantId())
                                 .orElse(authenticatedDevice.getTenantId());
-                        if (authenticatedDevice.getTenantId().equals(tenantFromUri)) {
+                        if (Strings.isNullOrEmpty(requestedResource.getResourceId())) {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                    "request URI must contain device ID"));
+                        } else if (authenticatedDevice.getTenantId().equals(tenantId)) {
                             result.complete(new RequestDeviceAndAuth(
-                                    new Device(tenantFromUri, requestedResource.getResourceId()),
+                                    new Device(tenantId, requestedResource.getResourceId()),
                                     TracingSupportingHonoResource.getAuthId(exchange),
                                     authenticatedDevice));
                         } else {
