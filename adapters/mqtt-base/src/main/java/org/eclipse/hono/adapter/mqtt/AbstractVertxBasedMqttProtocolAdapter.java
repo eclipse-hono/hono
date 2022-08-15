@@ -1824,7 +1824,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             Objects.requireNonNull(reason);
 
             final Span span = newSpan("close device connection");
-            endpoint.closeHandler(v -> {});
+            if (endpoint.isConnected()) {
+                endpoint.closeHandler(v -> {});
+            }
             onCloseInternal(span, reason, sendDisconnectedEvent)
                     .onComplete(ar -> span.finish());
         }
