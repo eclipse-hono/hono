@@ -546,14 +546,15 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * Verifies that the adapter returns (imediately) error when sending telemetry can't be sent.
+     * Verifies that the adapter (immediately) returns an error for a TTD request
+     * when the telemetry message can't be sent.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetryWithTtdFailWhenCantSend(final VertxTestContext ctx) {
+    public void testPostTelemetryWithTtdFailsWhenMessageCantBeSent(final VertxTestContext ctx) {
 
-        // GIVEN an device for which a telemetry can't be delivered
+        // GIVEN a device for which a telemetry message can't be delivered
         final Promise<Void> sendTelemetryOutcome = Promise.promise();
         sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
@@ -569,7 +570,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
             .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
             .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-            // THEN the response failes with 503 - error thrown by sending telemetry
+            // THEN the response fails with 503 - error thrown by sending telemetry
             .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
             .expect(this::assertCorsHeaders)
             .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {

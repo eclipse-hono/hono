@@ -645,10 +645,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         .compose(responseReadyTracker -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
-            final Integer ttd = ttdTracker.result();
-            if (ttd != null) {
-                props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd);
-            }
+            Optional.ofNullable(ttdTracker.result())
+                    .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
 
             customizeDownstreamMessageProperties(props, ctx);
@@ -676,7 +674,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 contentType,
                                 payload,
                                 props,
-                                currentSpan.context()).onFailure(thr -> responseReadyTracker.cancel("send event failed", null)),
+                                currentSpan.context()).onFailure(thr -> responseReadyTracker.cancel("send telemetry failed", null)),
                         responseReadyTracker.future())
                         .map(s -> (Void) null);
             }
@@ -698,7 +696,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         endpoint, tenant, deviceId);
                 TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
                 currentSpan.finish();
-                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
+                ctx.response().end(); // close the response here, ensuring that bodyEndHandlers get called
             } else {
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
@@ -835,8 +833,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Sets a handler for cleaning up when a device closes the HTTP connection of a TTD request before
      * a response could be sent.
      * <p>
-     * The handler will cancel {@link ResponseReadyTracker} which will finish wait sapn and increment
-     * the metric for expired TTDs.
+     * The handler will cancel the {@link ResponseReadyTracker}.
      *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param responseReadyTracker The response ready tracker.
@@ -926,12 +923,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *                       of the request.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         In case of success the future will be completed with a {@link  ResponseReadyTracker} that:
-     *           <ul>
-     *             <li>if device has specified positive ttd will waits for a command:</li>
-     *             <li>otherwise will not wait for a command</li>
-     *           </ul>
-     *         In both cases allocated resources shall be released by the {@link ResponseReadyTracker} itself without any caller interactions.
+     *         In case of success the future will be completed with a {@link ResponseReadyTracker} whose
+     *         future will be completed when a command is received, the ttd period has elapsed or the
+     *         client connection was closed.
+     *         <p>
+     *         The allocated resources shall be released by the {@link ResponseReadyTracker} itself
+     *         without any caller interactions.
      *         <p>
      *         The future will be failed with a {@code ServiceInvocationException} if the
      *         message consumer could not be created.
@@ -1076,8 +1073,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // device in order to prevent a race condition when the device immediately sends a new
                         // request and the CommandConsumer from the current request has not been closed yet
                         private final Future<Void> waitForCommandFuture = responseReady.future()
-                            .compose(ar -> closeCommandConsumer())
-                            .recover(thr -> closeCommandConsumer().compose(v -> Future.failedFuture(thr)));
+                                // always invoke closeCommandConsumer but ignore a failure there,
+                                // completing waitForCommandFuture with the responseReady.future() result/failure
+                                .eventually(v -> closeCommandConsumer());
 
                         @Override
                         public Future<Void> future() {
@@ -1117,8 +1115,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                             TracingHelper.logError(closeConsumerSpan, ar.cause());
                                         }
                                         closeConsumerSpan.finish();
-                                    })
-                                    .recover(thr -> Future.succeededFuture()); // fail of command close sshal not result in error
+                                    });
                         }
                     };
 
@@ -1185,7 +1182,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private void cancelCommandReceptionTimer(final RoutingContext ctx) {
 
         final Long timerId = ctx.get(KEY_TIMER_ID);
-        if (timerId != null && timerId >= 0) {
+        if (timerId != null) {
             if (ctx.vertx().cancelTimer(timerId)) {
                 log.trace("Cancelled timer id {}", timerId);
             } else {
@@ -1322,32 +1319,35 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Tracks command to include in response.
+     * Tracks readiness to send back a response to the device,
+     * waiting for a command to include in the response if needed.
      */
     private interface ResponseReadyTracker {
 
         /**
-         * This method returns a {@link Future} that tracks response readiness to be
-         * sent back. If there is TTD set it wull wait for a command otherwise will
-         * complete directly.
+         * This method returns a {@link Future} that tracks readiness to send back a response to the device.
+         * If there is a TTD set, it will wait for a command otherwise the future will be completed directly.
          *
-         * @return response readiness feature.
+         * @return The response readiness future.
          */
         Future<Void> future();
 
         /**
          * Abort/Cancel waiting for command because of certain condition (e.g. TTD expired
          * or device has closed connection).
+         * <p>
+         * This will complete the future returned by {@link #future()}.
          *
-         * @param reason cancel reason.
-         * @param handler receives notification if the cancel succeeds or {@link  ResponseReadyTracker}
-         *                has already been completed
+         * @param reason The cancellation reason.
+         * @param handler The handler to receive notification if the cancel operation succeeded or {@link ResponseReadyTracker}
+         *                has already been completed. This handler will be invoked before the future returned by
+         *                {@link #future()} is completed.
          */
         void cancel(String reason, Handler<Boolean> handler);
 
         /**
          * Return a {@link ResponseReadyTracker} that doesn't wait for any command. It is used
-         * in case that ttd miss, ttd is or is less or equal 0.
+         * in case no TTD was set or TTD is less or equal 0.
          *
          * @return No operation {@link ResponseReadyTracker}.
          */
