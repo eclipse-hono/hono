@@ -29,6 +29,9 @@ pluralizeListTitles = "false"
   showVisitedLinks = false
   # Disable search function. It will hide search bar
   disableSearch = false
+  # Besides the pseudo languages mapped to Hono versions, "en" needs to be defined so that the index for the
+  # documentation search function can be initialized with a supported language (see initLunr() in Relearn theme search.js).
+  additionalContentLanguage = [ "en" ]
   # Javascript and CSS cache are automatically busted when new version of site is generated.
   # Set this to true to disable this behavior (some proxies don't handle well this optimization)
   disableAssetsBusting = false
