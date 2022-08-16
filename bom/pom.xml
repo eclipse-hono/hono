@@ -37,7 +37,7 @@
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
-    <jaeger.image.name>jaegertracing/all-in-one:1.33</jaeger.image.name>
+    <jaeger.image.name>jaegertracing/all-in-one:1.37</jaeger.image.name>
     <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
     <!--
       We want to allow users to run containers in a rootless Docker environment.
@@ -59,7 +59,6 @@
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <netty.version>4.1.74.Final</netty.version>
-    <opentelemetry-collector.image.name>otel/opentelemetry-collector:0.55.0</opentelemetry-collector.image.name>
     <postgresql-image.name>postgres:14-alpine</postgresql-image.name>
     <proton.version>0.33.10</proton.version>
     <qpid-jms.version>1.6.0</qpid-jms.version>

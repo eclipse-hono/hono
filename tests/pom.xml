@@ -194,7 +194,6 @@
     <jaeger.host>hono-jaeger</jaeger.host>
     <jaeger.query.port>18080</jaeger.query.port>
 
-    <otel-collector.host>hono-otel-collector</otel-collector.host>
     <otel-collector.endpoint></otel-collector.endpoint>
   </properties>
 
@@ -418,7 +417,7 @@
       <id>jaeger</id>
       <properties>
         <jaeger.disabled>false</jaeger.disabled>
-        <otel-collector.endpoint>http://${otel-collector.host}:4317</otel-collector.endpoint>
+        <otel-collector.endpoint>http://${jaeger.host}:4317</otel-collector.endpoint>
       </properties>
     </profile>
 
@@ -826,6 +825,7 @@
                     <env>
                       <LOG_LEVEL>info</LOG_LEVEL>
                       <MEMORY_MAX_TRACES>2000</MEMORY_MAX_TRACES>
+                      <COLLECTOR_OTLP_ENABLED>true</COLLECTOR_OTLP_ENABLED>
                       <SAMPLING_STRATEGIES_FILE>/etc/hono/default-sampling-strategies.json</SAMPLING_STRATEGIES_FILE>
                     </env>
                     <log>
@@ -837,73 +837,6 @@
                       <http>
                         <method>GET</method>
                         <url>http://${jaeger.ip}:${jaeger.health.port}/health</url>
-                        <status>200..299</status>
-                      </http>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### OpenTelemetry collector component, serving as agent, forwarding traces to the jaeger collector ##### -->
-                <image>
-                  <name>${docker.repository}/hono-opentelemetry-collector-test:${project.version}</name>
-                  <build>
-                    <skip>${jaeger.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${opentelemetry-collector.image.name}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSet>
-                          <directory>${project.build.directory}/resources/otel-collector</directory>
-                          <outputDirectory>etc/hono</outputDirectory>
-                          <includes>
-                            <include>*</include>
-                          </includes>
-                        </fileSet>
-                      </inline>
-                    </assembly>
-                  </build>
-                  <run>
-                    <skip>${jaeger.disabled}</skip>
-                    <ports>
-                      <port>+otel-collector.ip:otel-collector.health.port:13133</port><!-- health_check extension -->
-                      <port>+otel-collector.ip:otel-collector.otlp.port:4317</port><!-- OTLP gRPC receiver -->
-                    </ports>
-                    <portPropertyFile>${project.build.directory}/docker/otel-collector.port.properties</portPropertyFile>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>${otel-collector.host}</alias>
-                    </network>
-                    <!--
-                      Setting the swap property to the same value as the memory property effectively
-                      prevents the container from swapping at all.
-                      This way we can force the same behavior for running the integration
-                      tests on both a local machine (which usually has swap space available) as
-                      well as on Travis where there is no swap space available on the build job VMs.
-                      We can thus detect OOM problems when running locally as opposed to only
-                      later on Travis.
-                     -->
-                    <memorySwap>83886080</memorySwap>
-                    <memory>83886080</memory>
-                    <cmd>
-                      <exec>
-                        <arg>/otelcol</arg>
-                        <arg>--config=/etc/hono/otel-collector-config.yaml</arg>
-                      </exec>
-                    </cmd>
-                    <env>
-                    </env>
-                    <log>
-                      <prefix>OTEL</prefix>
-                      <color>${log.color.extra-services}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <http>
-                        <method>GET</method>
-                        <url>http://${otel-collector.ip}:${otel-collector.health.port}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -2010,7 +1943,6 @@
                   <quiet>true</quiet>
                   <files>
                     <file>${project.build.directory}/docker/jaeger.port.properties</file>
-                    <file>${project.build.directory}/docker/otel-collector.port.properties</file>
                     <file>${project.build.directory}/docker/jdbc-db.port.properties</file>
                     <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
