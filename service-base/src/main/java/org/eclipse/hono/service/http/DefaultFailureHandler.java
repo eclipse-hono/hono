@@ -16,6 +16,7 @@ package org.eclipse.hono.service.http;
 import java.net.HttpURLConnection;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -65,27 +66,25 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
             if (ctx.response().ended()) {
                 LOG.debug("skipping processing of failed route, response already ended");
             } else {
-                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}]; failure: {}",
-                        ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
-                        ctx.failure());
                 final Span span = HttpServerSpanHelper.serverSpan(ctx);
                 if (ctx.failure() != null) {
                     final int statusCode;
-                    if (ctx.failure() instanceof ServiceInvocationException) {
-                        statusCode = ((ServiceInvocationException) ctx.failure()).getErrorCode();
-                    } else if (ctx.failure() instanceof HttpException) {
-                        statusCode = ((HttpException) ctx.failure()).getStatusCode();
+                    if (ctx.failure() instanceof ServiceInvocationException ex) {
+                        statusCode = ex.getErrorCode();
+                    } else if (ctx.failure() instanceof HttpException ex) {
+                        statusCode = ex.getStatusCode();
                     } else if (ctx.statusCode() >= 400 && ctx.statusCode() < 600) {
                         statusCode = ctx.statusCode();
                     } else {
-                        LOG.debug("unexpected internal failure", ctx.failure());
                         statusCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
                     }
+                    logError(ctx, statusCode);
                     Optional.ofNullable(span)
                             .ifPresent(s -> logErrorInTraceSpan(span, ctx.failure(), statusCode));
                     sendError(ctx.response(), statusCode, ctx.failure().getMessage());
 
                 } else if (ctx.statusCode() != -1) {
+                    logError(ctx, null);
                     if (span != null) {
                         final String message = HttpResponseStatus.valueOf(ctx.statusCode()).reasonPhrase();
                         TracingHelper.logError(span, message);
@@ -93,6 +92,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                     sendError(ctx.response(), ctx.statusCode(), null);
 
                 } else {
+                    logError(ctx, null);
                     Optional.ofNullable(span)
                             .ifPresent(s -> TracingHelper.logError(span, "unspecified error occurred"));
                     sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
@@ -104,12 +104,26 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
         }
     }
 
+    private static void logError(final RoutingContext ctx, final Integer mappedStatusCode) {
+        if (LOG.isDebugEnabled()) {
+            final int status = Optional.ofNullable(mappedStatusCode).orElseGet(ctx::statusCode);
+            if (ctx.failure() instanceof ClientErrorException) {
+                // skip printing error stacktrace here
+                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}]; error: {}",
+                        ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), status, ctx.failure().toString());
+            } else {
+                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}]",
+                        ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), status, ctx.failure());
+            }
+        }
+    }
+
     /**
      * Creates payload for an error message.
      * <p>
      * This default implementation creates a JSON object with a single <em>error</em> property.
      *
-     * @param errorMessage The error message. If {@code null}, the payload with contain <em>N/A</em> as the error
+     * @param errorMessage The error message. If {@code null}, the payload will contain <em>N/A</em> as the error
      *                     property's value.
      * @return The payload.
      */
