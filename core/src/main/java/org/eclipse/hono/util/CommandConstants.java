@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,10 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -111,9 +113,10 @@ public class CommandConstants {
      * Pattern of the adapter instance identifier, used when routing a command message to a protocol
      * adapter running in a Kubernetes cluster.
      * <p>
-     * The first matcher group contains the first 12 characters of the docker container id of the adapter instance.
+     * The first matcher group contains the pod name, the second matcher group contains the first 12 characters of the
+     * docker container id of the adapter instance.
      */
-    public static final Pattern KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN = Pattern.compile("^.*_([0-9a-f]{12})_\\d+$");
+    private static final Pattern KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN = Pattern.compile("^(.*)_([0-9a-f]{12})_\\d+$");
 
     private CommandConstants() {
         // prevent instantiation
@@ -144,7 +147,7 @@ public class CommandConstants {
      * <p>
      * If this method is invoked from within a docker container in a Kubernetes cluster, the format is
      * <em>[prefix]_[docker_container_id]_[counter]</em>, with prefix being the name of the Kubernetes pod.
-     * See also {@link #KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN}.
+     * See also {@link #getK8sPodNameAndContainerIdFromAdapterInstanceId(String)}.
      * <p>
      * If not running in a Kubernetes cluster, a random id with the given adapter name as prefix is used.
      *
@@ -189,8 +192,10 @@ public class CommandConstants {
      * @param containerId The container identifier to use.
      * @param counter The counter value to use.
      * @return The new adapter instance identifier.
+     * @throws NullPointerException If containerId is {@code null}.
      */
     public static String getNewAdapterInstanceIdForK8sEnv(final String podName, final String containerId, final int counter) {
+        Objects.requireNonNull(containerId);
         // replace special characters so that the id can be used in a Kafka topic name
         final String podNameToUse = Optional.ofNullable(podName)
                 .map(p -> p.replaceAll("[^a-zA-Z0-9._-]", "")).orElse("");
@@ -198,5 +203,23 @@ public class CommandConstants {
                 podNameToUse,
                 containerId.substring(0, 12),
                 counter);
+    }
+
+    /**
+     * Gets the pod name and container identifier from a given adapter instance identifier that was created via
+     * {@link #getNewAdapterInstanceIdForK8sEnv(String, String, int)}.
+     *
+     * @param adapterInstanceId The adapter instance identifier.
+     * @return The pod name and container identifier pair or {@code null} if the adapter instance identifier didn't
+     *         match.
+     * @throws NullPointerException If adapterInstanceId is {@code null}.
+     */
+    public static Pair<String, String> getK8sPodNameAndContainerIdFromAdapterInstanceId(final String adapterInstanceId) {
+        Objects.requireNonNull(adapterInstanceId);
+        final Matcher matcher = KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN.matcher(adapterInstanceId);
+        if (!matcher.matches()) {
+            return null;
+        }
+        return Pair.of(matcher.group(1), matcher.group(2));
     }
 }
