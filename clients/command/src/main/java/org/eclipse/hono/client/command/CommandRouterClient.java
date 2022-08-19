@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client.command;
 import java.time.Duration;
 import java.util.List;
 
+import org.eclipse.hono.util.CommandRouterDeviceInfo;
 import org.eclipse.hono.util.Lifecycle;
 
 import io.opentracing.SpanContext;
@@ -57,6 +58,7 @@ public interface CommandRouterClient extends Lifecycle {
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
+     * @param sendEvent {@code true} if <em>connected notification</em> event should be sent.
      * @param adapterInstanceId The protocol adapter instance id.
      * @param lifespan The lifespan of the registration entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan. Only the number of seconds in the given duration
@@ -70,8 +72,8 @@ public interface CommandRouterClient extends Lifecycle {
      *         Otherwise the future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if tenantId, deviceId or adapterInstanceId is {@code null}.
      */
-    Future<Void> registerCommandConsumer(String tenantId, String deviceId, String adapterInstanceId, Duration lifespan,
-            SpanContext context);
+    Future<Void> registerCommandConsumer(String tenantId, String deviceId, boolean sendEvent, String adapterInstanceId,
+            Duration lifespan, SpanContext context);
 
     /**
      * Unregisters a command consumer for a device.
@@ -80,6 +82,7 @@ public interface CommandRouterClient extends Lifecycle {
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
+     * @param sendEvent {@code true} if <em>disconnected notification</em> event should be sent.
      * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            An implementation should use this as the parent for any span it creates for tracing
@@ -90,7 +93,27 @@ public interface CommandRouterClient extends Lifecycle {
      *         Otherwise the future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
-    Future<Void> unregisterCommandConsumer(String tenantId, String deviceId, String adapterInstanceId, SpanContext context);
+    Future<Void> unregisterCommandConsumer(String tenantId, String deviceId, boolean sendEvent,
+            String adapterInstanceId, SpanContext context);
+
+    /**
+     * Unregisters a command consumers for batch of devices.
+     * <p>
+     * A batch registration entry is only deleted if the device is currently mapped to the given adapter instance.
+     *
+     * @param commandRouterDeviceInfos The batch of device infos.
+     * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
+     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+     *            An implementation should use this as the parent for any span it creates for tracing
+     *            the execution of this operation.
+      * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the consumers were successfully unregistered.
+     *         Otherwise the future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     */
+    Future<Void> unregisterCommandConsumers(List<CommandRouterDeviceInfo> commandRouterDeviceInfos,
+            String adapterInstanceId, SpanContext context);
 
     /**
      * Adds tenants for which command routing should be enabled.

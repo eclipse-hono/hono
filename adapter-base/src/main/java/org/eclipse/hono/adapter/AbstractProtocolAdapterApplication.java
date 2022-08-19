@@ -527,9 +527,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [commandRouterClient: {}]",
                 CommandRouterCommandConsumerFactory.class.getName());
-        return new CommandRouterCommandConsumerFactory(commandRouterClient, getComponentName());
+        return new CommandRouterCommandConsumerFactory(commandRouterClient, getComponentName(), tracer,
+                commandRouterConfig.getBatchSize(), commandRouterConfig.getBatchMaxTimeout());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {

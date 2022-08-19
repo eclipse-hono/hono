@@ -61,4 +61,21 @@ public interface RequestResponseClientOptions {
      */
     @WithDefault("600")
     long responseCacheDefaultTimeout();
+
+    /**
+     * Gets the number of pending operations that trigger their processing as part of a batch operation.
+     *
+     * @return The number of pending operations that trigger their processing as part of a batch operation.
+     */
+    @WithDefault("100")
+    int batchSize();
+
+    /**
+     * Gets the maximum period of time in milliseconds after which an operation is processed as part of a batch
+     * operation.
+     *
+     * @return The maximum period of time after which an operation is processed as part of a batch operation.
+     */
+    @WithDefault("500")
+    long batchMaxTimeout();
 }

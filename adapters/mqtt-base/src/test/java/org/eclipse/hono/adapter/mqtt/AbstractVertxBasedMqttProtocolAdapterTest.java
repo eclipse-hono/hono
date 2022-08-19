@@ -267,7 +267,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
-        when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("my-tenant", "4711")));
 
@@ -401,7 +401,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(authHandler.authenticateDevice(any(MqttConnectContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser(Constants.DEFAULT_TENANT, "9999")));
         // but for which no registration information is available
-        when(registrationClient.assertRegistration(anyString(), eq("9999"), (String) any(), (SpanContext) any()))
+        when(registrationClient.assertRegistration(anyString(), eq("9999"), any(), any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
                         HttpURLConnection.HTTP_NOT_FOUND, "device unknown or disabled")));
 
@@ -610,7 +610,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
         myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
-        when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
 
         // WHEN a device of "my-tenant" publishes a telemetry message
         final MqttEndpoint endpoint = mockEndpoint();
@@ -902,7 +902,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // WHEN a device subscribes to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any()))
+        when(commandConsumer.release(eq(true), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), eq(true), any(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), qos));
@@ -915,15 +916,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), eq(true), any(), any(), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).closeHandler(closeHookCaptor.capture());
         // which closes the command consumer when the device disconnects
         closeHookCaptor.getValue().handle(null);
-        verify(commandConsumer).close(any());
-        // and sends an empty notification downstream with TTD 0
-        assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", 0);
+        verify(commandConsumer).release(eq(true), any());
     }
 
     /**
@@ -1005,10 +1004,23 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttEndpoint endpoint = mockEndpoint();
         when(endpoint.isConnected()).thenReturn(true);
 
+        // WHEN a device subscribes to commands
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        when(commandConsumer.release(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), eq(true), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+        final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
+                newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), MqttQoS.AT_MOST_ONCE));
+        final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
+        when(msg.messageId()).thenReturn(15);
+        when(msg.topicSubscriptions()).thenReturn(subscriptions);
+
         final Promise<Void> startPromise = Promise.promise();
         adapter.doStart(startPromise);
         assertThat(startPromise.future().succeeded()).isTrue();
-        adapter.createMqttDeviceEndpoint(endpoint, device, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, device, OptionalInt.empty());
+        mqttDeviceEndpoint.onSubscribe(msg);
 
         final Promise<Void> endpointClosedPromise = Promise.promise();
         doAnswer(invocation -> {
@@ -1023,58 +1035,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         endpointClosedPromise.future()
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        // and the adapter didn't send an empty notification downstream
-                        assertEmptyNotificationHasNotBeenSentDownstream(device.getTenantId(), device.getDeviceId(), 0);
+                        // and the adapter didn't send an empty notification downstream as release is called with false
+                        verify(commandConsumer).release(eq(false), any());
                     });
                     ctx.completeNow();
                 }));
-    }
-
-    /**
-     * Verifies that the adapter doesn't send a 'disconnectedTtdEvent' on connection loss
-     * when removal of the command consumer mapping entry fails (which would be the case
-     * when another command consumer mapping had been registered in the mean time, meaning
-     * the device has already reconnected).
-     */
-    @Test
-    public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails() {
-
-        // GIVEN a device connected to an adapter
-        givenAnAdapter(properties);
-        givenAnEventSenderForAnyTenant();
-        final MqttEndpoint endpoint = mockEndpoint();
-        when(endpoint.isConnected()).thenReturn(true);
-        when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
-
-        // WHEN a device subscribes to commands
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any()))
-                .thenReturn(Future.succeededFuture(commandConsumer));
-        final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
-                newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), MqttQoS.AT_MOST_ONCE));
-        final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
-        when(msg.messageId()).thenReturn(15);
-        when(msg.topicSubscriptions()).thenReturn(subscriptions);
-
-        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
-        endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
-        mqttDeviceEndpoint.onSubscribe(msg);
-
-        // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any());
-        // and the adapter registers a hook on the connection to the device
-        final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
-        verify(endpoint).closeHandler(closeHookCaptor.capture());
-        // which closes the command consumer when the device disconnects
-        closeHookCaptor.getValue().handle(null);
-        when(endpoint.isConnected()).thenReturn(false);
-        verify(commandConsumer).close(any());
-        // and since closing the command consumer fails with a precon-failed exception
-        // there is only one notification sent during consumer creation,
-        assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", -1);
-        // no 'disconnectedTtdEvent' event with TTD = 0
-        assertEmptyNotificationHasNotBeenSentDownstream("tenant", "deviceId", 0);
     }
 
     /**
@@ -1098,8 +1063,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // and for subscribing to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(), any(), any()))
-                        .thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumer.release(eq(true), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), eq(true), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         // command and error subscription for same device, checking:
         // - a command subscription is OK and shall pass
@@ -1140,8 +1106,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         assertThat(codeCaptor.getValue().get(4)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(5)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(6)).isEqualTo(MqttQoS.AT_MOST_ONCE);
-        // and sends an empty notification downstream with TTD -1
-        assertEmptyNotificationHasBeenSentDownstream("tenant-1", "device-A", -1);
     }
 
     private static MqttTopicSubscription newMockTopicSubscription(final String filter, final MqttQoS qos) {
@@ -1439,7 +1403,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                                 any(TenantObject.class),
                                 any(RegistrationAssertion.class),
                                 any(CommandResponse.class),
-                                (SpanContext) any());
+                                any());
                         // AND has reported the message as unprocessable
                         verify(metrics).reportCommand(
                                 eq(MetricsTags.Direction.RESPONSE),

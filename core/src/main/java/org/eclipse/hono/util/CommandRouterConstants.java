@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,10 @@ public final class CommandRouterConstants extends RequestResponseApiConstants {
          * The <em>unregister command consumer</em> operation.
          */
         UNREGISTER_COMMAND_CONSUMER("unregister-command-consumer"),
+        /**
+         * The <em>unregister command consumers</em> operation.
+         */
+        UNREGISTER_COMMAND_CONSUMERS("unregister-command-consumers"),
         /**
          * The <em>enable command routing</em> operation.
          */

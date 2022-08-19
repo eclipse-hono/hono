@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -40,6 +41,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
+import org.eclipse.hono.util.CommandRouterDeviceInfo;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Pair;
@@ -371,6 +373,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     public Future<Void> registerCommandConsumer(
             final String tenantId,
             final String deviceId,
+            final boolean sendEvent,
             final String adapterInstanceId,
             final Duration lifespan,
             final SpanContext context) {
@@ -388,6 +391,8 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
         TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+
+        properties.put(MessageHelper.APP_PROPERTY_SEND_EVENT, sendEvent);
 
         final Future<RequestResponseResult<JsonObject>> resultTracker = getOrCreateClient(tenantId)
                 .compose(client -> client.createAndSendRequest(
@@ -411,6 +416,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     public Future<Void> unregisterCommandConsumer(
             final String tenantId,
             final String deviceId,
+            final boolean sendEvent,
             final String adapterInstanceId,
             final SpanContext context) {
 
@@ -424,6 +430,8 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
         final Span currentSpan = newChildSpan(context, "unregister command consumer");
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
         TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
+
+        properties.put(MessageHelper.APP_PROPERTY_SEND_EVENT, sendEvent);
 
         return getOrCreateClient(tenantId)
                 .compose(client -> client.createAndSendRequest(
@@ -455,6 +463,49 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
                 })
                 .onComplete(v -> currentSpan.finish())
                 .mapEmpty();
+    }
+
+    @Override
+    public Future<Void> unregisterCommandConsumers(
+            final List<CommandRouterDeviceInfo> commandRouterDeviceInfos,
+            final String adapterInstanceId,
+            final SpanContext context) {
+
+        Objects.requireNonNull(commandRouterDeviceInfos);
+        Objects.requireNonNull(adapterInstanceId);
+
+        if (commandRouterDeviceInfos.isEmpty()) {
+            return Future.succeededFuture();
+        }
+
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+
+        final Span currentSpan = newChildSpan(context, "unregister command consumers");
+        currentSpan.log(Map.of("no_of_deviceInfos", commandRouterDeviceInfos.size()));
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
+
+        final JsonArray payload = new JsonArray(commandRouterDeviceInfos.stream()
+                .map(di -> new JsonArray().add(di.tenantId()).add(di.deviceId()).add(di.sendEvent()))
+                .collect(Collectors.toList()));
+
+        final Future<RequestResponseResult<JsonObject>> resultTracker = getOrCreateClient(
+                commandRouterDeviceInfos.get(0).tenantId())
+                .compose(client -> client.createAndSendRequest(
+                        CommandRouterConstants.CommandRouterAction.UNREGISTER_COMMAND_CONSUMERS.getSubject(),
+                        properties,
+                        payload.toBuffer(),
+                        MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+                        this::getRequestResponseResult,
+                        currentSpan));
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    return null;
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan).mapEmpty();
     }
 
     @Override

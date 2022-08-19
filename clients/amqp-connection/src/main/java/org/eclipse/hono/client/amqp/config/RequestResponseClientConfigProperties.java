@@ -35,10 +35,20 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The maximum period of time in seconds after which cached responses are considered invalid.
      */
     public static final long MAX_RESPONSE_CACHE_TIMEOUT = 24 * 60 * 60L; // 24h
+    /**
+     * The number of pending operations that trigger their processing as part of a batch operation.
+     */
+    private static final int DEFAULT_BATCH_SIZE = 100;
+    /**
+     * The maximum period of time in milliseconds after which an operation is processed as part of a batch operation.
+     */
+    private static final long DEFAULT_BATCH_MAX_TIMEOUT = 500L;
 
     private int responseCacheMinSize = DEFAULT_RESPONSE_CACHE_MIN_SIZE;
     private long responseCacheMaxSize = DEFAULT_RESPONSE_CACHE_MAX_SIZE;
     private long responseCacheDefaultTimeout = DEFAULT_RESPONSE_CACHE_TIMEOUT;
+    private int batchSize = DEFAULT_BATCH_SIZE;
+    private long batchMaxTimeout = DEFAULT_BATCH_MAX_TIMEOUT;
 
     /**
      * Creates new properties using default values.
@@ -57,6 +67,8 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
         setResponseCacheDefaultTimeout(options.responseCacheDefaultTimeout());
         setResponseCacheMaxSize(options.responseCacheMaxSize());
         setResponseCacheMinSize(options.responseCacheMinSize());
+        setBatchSize(options.batchSize());
+        setBatchMaxTimeout(options.batchMaxTimeout());
     }
 
     /**
@@ -150,6 +162,61 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
             throw new IllegalArgumentException("default cache timeout must be greater than zero");
         }
         this.responseCacheDefaultTimeout = Math.min(timeout, MAX_RESPONSE_CACHE_TIMEOUT);
+    }
+
+    /**
+     * Gets the number of pending operations that trigger their processing as part of a batch operation.
+     * <p>
+     * The default value is {@link #DEFAULT_BATCH_SIZE}.
+     *
+     * @return The number of pending operations that trigger their processing as part of a batch operation.
+     */
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    /**
+     * Sets the number of pending operations that trigger their processing as part of a batch operation.
+     * <p>
+     * The default value is {@link #DEFAULT_BATCH_SIZE}.
+     *
+     * @param batchSize The number of pending operations that trigger their processing as part of a batch operation.
+     * @throws IllegalArgumentException if batchSize is &lt; 0.
+     */
+    public void setBatchSize(final int batchSize) {
+        if (batchSize < 0) {
+            throw new IllegalArgumentException("batch size could not be negative");
+        }
+        this.batchSize = batchSize;
+    }
+
+    /**
+     * Gets the maximum period of time in milliseconds after which an operation is processed as part of a batch
+     * operation.
+     * <p>
+     * The default value is {@link #DEFAULT_BATCH_MAX_TIMEOUT}.
+     *
+     * @return The maximum period of time after which an operation is processed as part of a batch operation.
+     */
+    public long getBatchMaxTimeout() {
+        return batchMaxTimeout;
+    }
+
+    /**
+     * Sets the maximum period of time in milliseconds after which an operation is processed as part of a batch
+     * operation.
+     * <p>
+     * The default value is {@link #DEFAULT_BATCH_MAX_TIMEOUT}.
+     *
+     * @param batchMaxTimeout The maximum period of time in milliseconds after which an operation is processed as part
+     *            of a batch operation.
+     * @throws IllegalArgumentException if batchTimeout is &lt; 0.
+     */
+    public void setBatchMaxTimeout(final long batchMaxTimeout) {
+        if (batchMaxTimeout < 0) {
+            throw new IllegalArgumentException("batch max timeout could not be negative");
+        }
+        this.batchMaxTimeout = batchMaxTimeout;
     }
 
     /**
