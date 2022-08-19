@@ -94,7 +94,7 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
             NotificationEventBusSupport.registerConsumer(connection.getVertx(), DeviceChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
-                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isDeviceEnabled())) {
                             removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
                         }
                     });

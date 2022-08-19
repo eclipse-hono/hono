@@ -381,7 +381,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         NotificationEventBusSupport.registerConsumer(vertx, DeviceChangeNotification.TYPE,
                 notification -> {
                     if (LifecycleChange.DELETE.equals(notification.getChange())
-                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isDeviceEnabled())) {
                         final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "device deleted"
                                 : "device disabled";
                         closeDeviceConnectionsOnDeviceOrTenantChange(
@@ -397,7 +397,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
                 notification -> {
                     if (LifecycleChange.DELETE.equals(notification.getChange())
-                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isTenantEnabled())) {
                         final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "tenant deleted"
                                 : "tenant disabled";
                         closeDeviceConnectionsOnDeviceOrTenantChange(

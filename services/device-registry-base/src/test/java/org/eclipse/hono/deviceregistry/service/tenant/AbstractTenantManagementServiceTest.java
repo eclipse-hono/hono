@@ -89,7 +89,7 @@ public class AbstractTenantManagementServiceTest {
                         assertThat(notification.getChange()).isEqualTo(LifecycleChange.CREATE);
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isTenantEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));
@@ -121,7 +121,7 @@ public class AbstractTenantManagementServiceTest {
                         assertThat(notification.getChange()).isEqualTo(LifecycleChange.UPDATE);
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isTenantEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));
@@ -152,7 +152,7 @@ public class AbstractTenantManagementServiceTest {
                         assertThat(notification.getChange()).isEqualTo(LifecycleChange.DELETE);
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isTenantEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));

@@ -45,7 +45,7 @@ public final class DeviceChangeNotification extends AbstractNotification {
     private final LifecycleChange change;
     private final String tenantId;
     private final String deviceId;
-    private final boolean enabled;
+    private final boolean deviceEnabled;
 
     @JsonCreator
     DeviceChangeNotification(
@@ -61,14 +61,14 @@ public final class DeviceChangeNotification extends AbstractNotification {
             @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
             final String deviceId,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
-            final boolean enabled) {
+            final boolean deviceEnabled) {
 
         super(source, creationTime);
 
         this.change = Objects.requireNonNull(change);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
-        this.enabled = enabled;
+        this.deviceEnabled = deviceEnabled;
     }
 
     /**
@@ -78,7 +78,7 @@ public final class DeviceChangeNotification extends AbstractNotification {
      * @param tenantId The tenant ID of the device.
      * @param deviceId The ID of the device.
      * @param creationTime The creation time of the event.
-     * @param enabled {@code true} if the device is enabled.
+     * @param deviceEnabled {@code true} if the device is enabled.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
     public DeviceChangeNotification(
@@ -86,8 +86,8 @@ public final class DeviceChangeNotification extends AbstractNotification {
             final String tenantId,
             final String deviceId,
             final Instant creationTime,
-            final boolean enabled) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, creationTime, change, tenantId, deviceId, enabled);
+            final boolean deviceEnabled) {
+        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, creationTime, change, tenantId, deviceId, deviceEnabled);
     }
 
     /**
@@ -126,8 +126,8 @@ public final class DeviceChangeNotification extends AbstractNotification {
      * @return {@code true} if this device is enabled.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED)
-    public boolean isEnabled() {
-        return enabled;
+    public boolean isDeviceEnabled() {
+        return deviceEnabled;
     }
 
     @Override
@@ -148,7 +148,7 @@ public final class DeviceChangeNotification extends AbstractNotification {
                 .append("change=").append(change)
                 .append(", tenantId='").append(tenantId).append('\'')
                 .append(", deviceId='").append(deviceId).append('\'')
-                .append(", enabled=").append(enabled)
+                .append(", deviceEnabled=").append(deviceEnabled)
                 .append(", creationTime='").append(getCreationTime()).append('\'')
                 .append(", source='").append(getSource()).append("'}")
                 .toString();

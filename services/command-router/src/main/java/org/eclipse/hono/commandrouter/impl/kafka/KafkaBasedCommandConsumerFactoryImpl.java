@@ -251,7 +251,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
                 notification -> {
                     if (lifecycleStatus.isStarted() && LifecycleChange.CREATE == notification.getChange()
-                            && notification.isEnabled()) {
+                            && notification.isTenantEnabled()) {
                         // Optional optimization:
                         // Prepare Kafka consumer to receive commands for devices of a newly created tenant.
                         // If not done here, this preparation is done in the "createCommandConsumer" method below.

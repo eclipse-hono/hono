@@ -118,7 +118,7 @@ public class DeviceChangeNotificationTest {
         assertThat(newNotification.getChange()).isEqualTo(LifecycleChange.DELETE);
         assertThat(newNotification.getTenantId()).isEqualTo(TENANT_ID);
         assertThat(newNotification.getDeviceId()).isEqualTo(DEVICE_ID);
-        assertThat(newNotification.isEnabled()).isTrue();
+        assertThat(newNotification.isDeviceEnabled()).isTrue();
     }
 
 }

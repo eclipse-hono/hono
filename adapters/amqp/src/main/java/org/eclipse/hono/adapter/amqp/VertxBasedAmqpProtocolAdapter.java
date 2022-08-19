@@ -217,7 +217,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         NotificationEventBusSupport.registerConsumer(vertx, DeviceChangeNotification.TYPE,
                 notification -> {
                     if (LifecycleChange.DELETE.equals(notification.getChange())
-                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isDeviceEnabled())) {
                         final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "device deleted"
                                 : "device disabled";
                         closeDeviceConnections(connectedDevice -> connectedDevice.getTenantId().equals(notification.getTenantId())
@@ -232,7 +232,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
                 notification -> {
                     if (LifecycleChange.DELETE.equals(notification.getChange())
-                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isTenantEnabled())) {
                         final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "tenant deleted"
                                 : "tenant disabled";
                         closeDeviceConnections(connectedDevice -> connectedDevice.getTenantId()

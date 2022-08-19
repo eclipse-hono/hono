@@ -95,7 +95,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
                                 || (LifecycleChange.UPDATE.equals(n.getChange())
-                                        && (!n.isEnabled() || n.isInvalidateCacheOnUpdate()))) {
+                                        && (!n.isTenantEnabled() || n.isInvalidateCacheOnUpdate()))) {
                             removeResultFromCache(n.getTenantId());
                         }
                     });
