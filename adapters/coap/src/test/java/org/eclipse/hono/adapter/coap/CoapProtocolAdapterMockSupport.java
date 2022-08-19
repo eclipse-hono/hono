@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.coap;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +29,7 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.test.ProtocolAdapterMockSupport;
-import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -45,7 +46,7 @@ import io.vertx.core.buffer.Buffer;
  */
 abstract class CoapProtocolAdapterMockSupport<T extends CoapProtocolAdapter, P extends CoapAdapterProperties> extends ProtocolAdapterMockSupport {
 
-    CommandConsumer commandConsumer;
+    ProtocolAdapterCommandConsumer commandConsumer;
     CoapAdapterMetrics metrics;
     Span span;
     T adapter;
@@ -66,8 +67,8 @@ abstract class CoapProtocolAdapterMockSupport<T extends CoapProtocolAdapter, P e
         createClients();
         prepareClients();
 
-        commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(), any(), any()))

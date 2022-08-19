@@ -42,7 +42,7 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
-import org.eclipse.hono.client.command.CommandRouterCommandConsumerFactory;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumerFactoryImpl;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
@@ -366,7 +366,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (commandRouterConfig.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
-            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
+            final ProtocolAdapterCommandConsumerFactoryImpl commandConsumerFactory = commandConsumerFactory(commandRouterClient);
             if (!appConfig.isAmqpMessagingDisabled() && commandConsumerConfig.isHostConfigured()) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
@@ -525,11 +525,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @param commandRouterClient The client for accessing the Command Router service.
      * @return The factory.
      */
-    protected CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {
+    protected ProtocolAdapterCommandConsumerFactoryImpl commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
-                CommandRouterCommandConsumerFactory.class.getName());
-        return new CommandRouterCommandConsumerFactory(commandRouterClient, getComponentName());
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [commandRouterClient: {}]",
+                ProtocolAdapterCommandConsumerFactoryImpl.class.getName());
+        return new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, getComponentName());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {

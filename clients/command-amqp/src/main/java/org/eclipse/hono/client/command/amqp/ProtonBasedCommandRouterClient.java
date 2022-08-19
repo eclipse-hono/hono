@@ -371,6 +371,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     public Future<Void> registerCommandConsumer(
             final String tenantId,
             final String deviceId,
+            final boolean sendEvent,
             final String adapterInstanceId,
             final Duration lifespan,
             final SpanContext context) {
@@ -388,6 +389,8 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
         TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+
+        properties.put(MessageHelper.APP_PROPERTY_SEND_EVENT, sendEvent);
 
         final Future<RequestResponseResult<JsonObject>> resultTracker = getOrCreateClient(tenantId)
                 .compose(client -> client.createAndSendRequest(
@@ -411,6 +414,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     public Future<Void> unregisterCommandConsumer(
             final String tenantId,
             final String deviceId,
+            final boolean sendEvent,
             final String adapterInstanceId,
             final SpanContext context) {
 
@@ -424,6 +428,8 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
         final Span currentSpan = newChildSpan(context, "unregister command consumer");
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
         TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
+
+        properties.put(MessageHelper.APP_PROPERTY_SEND_EVENT, sendEvent);
 
         return getOrCreateClient(tenantId)
                 .compose(client -> client.createAndSendRequest(

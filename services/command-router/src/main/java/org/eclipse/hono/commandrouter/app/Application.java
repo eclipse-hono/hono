@@ -39,6 +39,9 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
+import org.eclipse.hono.client.telemetry.EventSender;
+import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
+import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
@@ -114,10 +117,12 @@ public class Application extends NotificationSupportingServiceApplication {
     private ServiceConfigProperties amqpServerProperties;
     private ClientConfigProperties commandConsumerConnectionConfig;
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
+    private ClientConfigProperties downstreamSenderConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
     private MessagingKafkaProducerConfigProperties commandInternalKafkaProducerConfig;
     private MessagingKafkaProducerConfigProperties commandResponseKafkaProducerConfig;
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
+    private MessagingKafkaProducerConfigProperties kafkaEventConfig;
     private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
     private NotificationKafkaConsumerConfigProperties kafkaNotificationConfig;
 
@@ -140,6 +145,17 @@ public class Application extends NotificationSupportingServiceApplication {
         props.setServerRoleIfUnknown("Command & Control");
         props.setNameIfNotSet(getComponentName());
         this.commandConsumerConnectionConfig = props;
+    }
+
+    @Inject
+    void setDownstreamSenderOptions(
+            @ConfigMapping(prefix = "hono.messaging")
+            final ClientOptions options) {
+
+        final var props = new ClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Downstream");
+        props.setNameIfNotSet(getComponentName());
+        this.downstreamSenderConfig = props;
     }
 
     @Inject
@@ -194,6 +210,16 @@ public class Application extends NotificationSupportingServiceApplication {
             final KafkaConsumerOptions consumerOptions) {
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
+    }
+
+    @Inject
+    void setEventKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.event")
+            final KafkaProducerOptions eventOptions) {
+
+        this.kafkaEventConfig = new MessagingKafkaProducerConfigProperties(commonOptions, eventOptions);
     }
 
     @Inject
@@ -321,6 +347,7 @@ public class Application extends NotificationSupportingServiceApplication {
                 tenantClient,
                 deviceConnectionInfo,
                 commandConsumerFactoryProvider(tenantClient, commandTargetMapper),
+                eventSenderProvider(),
                 adapterInstanceStatusService,
                 tracer);
     }
@@ -369,6 +396,31 @@ public class Application extends NotificationSupportingServiceApplication {
                     SendMessageSampler.Factory.noop()));
         }
         return commandConsumerFactoryProvider;
+    }
+
+    private MessagingClientProvider<EventSender> eventSenderProvider() {
+        final var eventSenderProvider = new MessagingClientProvider<EventSender>();
+
+        if (!appConfig.isKafkaMessagingDisabled() && kafkaEventConfig.isConfigured()) {
+
+            final var kafkaProducerFactory = CachingKafkaProducerFactory.<String, Buffer> sharedFactory(vertx);
+            kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
+            eventSenderProvider.setClient(new KafkaBasedEventSender(
+                    vertx,
+                    kafkaProducerFactory,
+                    kafkaEventConfig,
+                    true,
+                    tracer));
+        }
+
+        if (!appConfig.isAmqpMessagingDisabled() && downstreamSenderConfig.isHostConfigured()) {
+            eventSenderProvider.setClient(new ProtonBasedDownstreamSender(
+                    HonoConnection.newConnection(vertx, downstreamSenderConfig, tracer),
+                    SendMessageSampler.Factory.noop(),
+                    true,
+                    false));
+        }
+        return eventSenderProvider;
     }
 
     private Cache<Object, RegistrationResult> registrationResponseCache() {

@@ -43,8 +43,8 @@ import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadExcep
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -152,8 +152,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         setGatewayDeviceCommandEndpoint(new CommandEndpoint());
 
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);
@@ -194,8 +194,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         setGatewayDeviceCommandEndpoint(new CommandEndpoint());
 
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);
@@ -230,8 +230,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         setGatewayDeviceCommandEndpoint(commandEndpoint);
 
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);

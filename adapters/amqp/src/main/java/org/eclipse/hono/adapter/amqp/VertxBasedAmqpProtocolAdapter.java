@@ -58,10 +58,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -900,7 +900,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return span;
     }
 
-    private Future<CommandConsumer> openCommandSenderLink(
+    private Future<ProtocolAdapterCommandConsumer> openCommandSenderLink(
             final ProtonConnection connection,
             final ProtonSender sender,
             final ResourceIdentifier address,
@@ -950,7 +950,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<Void> closeCommandConsumer(
-            final CommandConsumer consumer,
+            final ProtocolAdapterCommandConsumer consumer,
             final ResourceIdentifier address,
             final Device authenticatedDevice,
             final boolean sendDisconnectedEvent, 
@@ -958,7 +958,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final String tenantId = address.getTenantId();
         final String deviceId = address.getResourceId();
-        return consumer.close(span.context())
+        return consumer.close(false, span.context())
                 .recover(thr -> {
                     TracingHelper.logError(span, thr);
                     // ignore all but precon-failed errors
@@ -979,7 +979,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .mapEmpty();
     }
 
-    private Future<CommandConsumer> createCommandConsumer(
+    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final ProtonSender sender,
             final ResourceIdentifier sourceAddress,
             final Device authenticatedDevice,
@@ -1578,10 +1578,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * Represents the command subscription for a specific device. 
      */
     private static class CommandSubscription {
-        private final CommandConsumer consumer;
+        private final ProtocolAdapterCommandConsumer consumer;
         private final ResourceIdentifier subscriptionAddress;
 
-        CommandSubscription(final CommandConsumer consumer, final ResourceIdentifier subscriptionAddress) {
+        CommandSubscription(final ProtocolAdapterCommandConsumer consumer, final ResourceIdentifier subscriptionAddress) {
             this.consumer = consumer;
             this.subscriptionAddress = subscriptionAddress;
         }
@@ -1591,7 +1591,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
          *
          * @return The consumer.
          */
-        public final CommandConsumer getConsumer() {
+        public final ProtocolAdapterCommandConsumer getConsumer() {
             return consumer;
         }
 

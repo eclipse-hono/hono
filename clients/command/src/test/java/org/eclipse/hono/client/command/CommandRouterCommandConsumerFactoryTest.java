@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client.command;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -28,25 +28,30 @@ import static com.google.common.truth.Truth.assertThat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
-
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
 
 /**
- * Tests verifying behavior of {@link CommandRouterCommandConsumerFactory}.
+ * Tests verifying behavior of {@link ProtocolAdapterCommandConsumerFactoryImpl}.
  *
  */
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class CommandRouterCommandConsumerFactoryTest {
 
     private CommandRouterClient commandRouterClient;
-    private CommandRouterCommandConsumerFactory factory;
+    private ProtocolAdapterCommandConsumerFactoryImpl factory;
 
     /**
      * Sets up the fixture.
@@ -54,9 +59,9 @@ public class CommandRouterCommandConsumerFactoryTest {
     @BeforeEach
     void setUp() {
         commandRouterClient = mock(CommandRouterClient.class, withSettings().extraInterfaces(ConnectionLifecycle.class));
-        when(commandRouterClient.registerCommandConsumer(anyString(), anyString(), anyString(), any(Duration.class), any()))
+        when(commandRouterClient.registerCommandConsumer(anyString(), anyString(), anyBoolean(), anyString(), any(Duration.class), any()))
             .thenReturn(Future.succeededFuture());
-        factory = new CommandRouterCommandConsumerFactory(commandRouterClient, "test-adapter");
+        factory = new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, "test-adapter");
     }
 
     @SuppressWarnings("unchecked")

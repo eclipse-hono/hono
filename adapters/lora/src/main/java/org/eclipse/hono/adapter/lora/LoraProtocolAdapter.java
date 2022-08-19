@@ -38,8 +38,8 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
@@ -96,7 +96,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private final Map<SubscriptionKey, Pair<CommandConsumer, LoraProvider>> commandSubscriptions = new ConcurrentHashMap<>();
+    private final Map<SubscriptionKey, Pair<ProtocolAdapterCommandConsumer, LoraProvider>> commandSubscriptions = new ConcurrentHashMap<>();
 
     /**
      * Creates an adapter for a web client.
@@ -168,8 +168,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                         for (final var iter = commandSubscriptions.entrySet().iterator(); iter.hasNext();) {
                             final var entry = iter.next();
                             if (entry.getKey().getTenant().equals(tenantId)) {
-                                final CommandConsumer commandConsumer = entry.getValue().one();
-                                consumerCloseFutures.add(commandConsumer.close(span.context()));
+                                final ProtocolAdapterCommandConsumer commandConsumer = entry.getValue().one();
+                                consumerCloseFutures.add(commandConsumer.close(false, span.context()));
                                 iter.remove();
                             }
                         }

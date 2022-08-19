@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.coap;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -40,7 +41,7 @@ import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.californium.elements.config.Configuration;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
-import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
@@ -66,7 +67,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
     private static final Vertx vertx = Vertx.vertx();
 
-    private CommandConsumer commandConsumer;
+    private ProtocolAdapterCommandConsumer commandConsumer;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
     private CoapServer server;
@@ -85,8 +86,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         createClients();
         prepareClients();
 
-        commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
+        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
     }
@@ -175,7 +176,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         when(endpointFactory.getCoapServerConfiguration()).thenReturn(Future.succeededFuture(new Configuration()));
         when(endpointFactory.getInsecureEndpoint()).thenReturn(Future.failedFuture("not implemented"));
         when(endpointFactory.getSecureEndpoint()).thenReturn(Future.succeededFuture(mock(Endpoint.class)));
-        adapter = new AbstractVertxBasedCoapAdapter<CoapAdapterProperties>() {
+        adapter = new AbstractVertxBasedCoapAdapter<>() {
 
             @Override
             public String getTypeName() {

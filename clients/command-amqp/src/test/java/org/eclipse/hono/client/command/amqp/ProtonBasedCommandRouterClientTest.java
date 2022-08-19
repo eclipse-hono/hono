@@ -147,7 +147,7 @@ public class ProtonBasedCommandRouterClientTest {
     public void testRegisterCommandConsumer(final VertxTestContext ctx) {
 
         // WHEN registering the command consumer
-        client.registerCommandConsumer("tenant", "deviceId", "adapterInstanceId", null, span.context())
+        client.registerCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", null, span.context())
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -168,10 +168,10 @@ public class ProtonBasedCommandRouterClientTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUnregisterCommandConsumer(final VertxTestContext ctx) {
+    public void testUnregisterCommandConsumers(final VertxTestContext ctx) {
 
         // WHEN unregistering the command consumer
-        client.unregisterCommandConsumer("tenant", "deviceId", "adapterInstanceId", span.context())
+        client.unregisterCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", span.context())
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -186,8 +186,8 @@ public class ProtonBasedCommandRouterClientTest {
     }
 
     /**
-     * Verifies that multiple client invocations of the <em>set-last-known-gateway</em> operation result
-     * in batch requests to the command router service.
+     * Verifies that multiple client invocations of the <em>set-last-known-gateway</em> operation result in batch
+     * requests to the command router service.
      */
     @Test
     public void testSetLastKnownGatewayForDeviceDoesBatchRequests() {
@@ -425,7 +425,7 @@ public class ProtonBasedCommandRouterClientTest {
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN registering the command consumer
-        client.registerCommandConsumer("tenant", "deviceId", "adapterInstanceId", null, span.context())
+        client.registerCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", null, span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -450,7 +450,7 @@ public class ProtonBasedCommandRouterClientTest {
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN unregistering the command consumer
-        client.unregisterCommandConsumer("tenant", "deviceId", "adapterInstanceId", span.context())
+        client.unregisterCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -472,7 +472,7 @@ public class ProtonBasedCommandRouterClientTest {
     public void testUnregisterCommandConsumerForNotFoundEntry(final VertxTestContext ctx) {
 
         // WHEN unregistering the command consumer
-        client.unregisterCommandConsumer("tenant", "deviceId", "gatewayId", span.context())
+        client.unregisterCommandConsumer("tenant", "deviceId", false, "gatewayId", span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -491,8 +491,8 @@ public class ProtonBasedCommandRouterClientTest {
     }
 
     /**
-     * Verifies that a client invocation of the <em>set-last-known-gateway</em> operation fails
-     * if the command router service cannot be reached.
+     * Verifies that a client invocation of the <em>set-last-known-gateway</em> operation fails if the command router
+     * service cannot be reached.
      *
      * @param ctx The vert.x test context.
      */
@@ -543,7 +543,7 @@ public class ProtonBasedCommandRouterClientTest {
         });
 
         // WHEN registering the command consumer
-        client.registerCommandConsumer("tenant", "deviceId", "adapterInstanceId", null, span.context())
+        client.registerCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", null, span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -576,7 +576,7 @@ public class ProtonBasedCommandRouterClientTest {
         });
 
         // WHEN unregistering the command consumer
-        client.unregisterCommandConsumer("tenant", "deviceId", "adapterInstanceId", span.context())
+        client.unregisterCommandConsumer("tenant", "deviceId", false, "adapterInstanceId", span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -649,7 +649,7 @@ public class ProtonBasedCommandRouterClientTest {
         final String deviceId = "deviceId";
 
         // WHEN registering the command consumer
-        client.registerCommandConsumer("tenant", deviceId, "adapterInstanceId", null, span.context());
+        client.registerCommandConsumer("tenant", deviceId, false, "adapterInstanceId", null, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
@@ -680,7 +680,7 @@ public class ProtonBasedCommandRouterClientTest {
         final int lifespanSeconds = 20;
 
         // WHEN registering the command consumer
-        client.registerCommandConsumer("tenant", deviceId, "adapterInstanceId",
+        client.registerCommandConsumer("tenant", deviceId, false, "adapterInstanceId",
                 Duration.ofSeconds(lifespanSeconds), span.context());
 
         // THEN the message being sent contains the device ID in its properties
@@ -712,7 +712,7 @@ public class ProtonBasedCommandRouterClientTest {
         final String adapterInstanceId = "adapterInstanceId";
 
         // WHEN unregistering the command consumer
-        client.unregisterCommandConsumer("tenant", deviceId, adapterInstanceId, span.context());
+        client.unregisterCommandConsumer("tenant", deviceId, false, adapterInstanceId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);

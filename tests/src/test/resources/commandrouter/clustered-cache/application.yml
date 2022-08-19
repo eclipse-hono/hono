@@ -23,6 +23,17 @@ hono:
         saslMechanism: "SCRAM-SHA-512"
         socketTimeout: 5000
         connectTimeout: 5000
+  messaging:
+    name: 'Hono Command Router'
+    host: "${hono.amqp-network.host}"
+    port: 5673
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/command-router-key.pem"
+    certPath: "/opt/hono/config/certs/command-router-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   registration:
     name: 'Hono Command Router'
     host: "${hono.registration.host}"
