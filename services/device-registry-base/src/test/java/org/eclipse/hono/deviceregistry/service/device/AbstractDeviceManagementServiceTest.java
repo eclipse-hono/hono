@@ -92,7 +92,7 @@ public class AbstractDeviceManagementServiceTest {
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isDeviceEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));
@@ -125,7 +125,7 @@ public class AbstractDeviceManagementServiceTest {
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isDeviceEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));
@@ -158,7 +158,7 @@ public class AbstractDeviceManagementServiceTest {
                         assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
                         assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
                         assertThat(notification.getCreationTime()).isNotNull();
-                        assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notification.isDeviceEnabled()).isFalse();
                     });
                     context.completeNow();
                 }));

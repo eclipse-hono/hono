@@ -112,7 +112,7 @@ public class TenantChangeNotificationTest {
 
         assertThat(newNotification.getChange()).isEqualTo(CHANGE);
         assertThat(newNotification.getTenantId()).isEqualTo(TENANT_ID);
-        assertThat(newNotification.isEnabled()).isEqualTo(ENABLED);
+        assertThat(newNotification.isTenantEnabled()).isEqualTo(ENABLED);
         assertThat(newNotification.isInvalidateCacheOnUpdate()).isEqualTo(INVALIDATE_CACHE_ON_UPDATE);
     }
 
