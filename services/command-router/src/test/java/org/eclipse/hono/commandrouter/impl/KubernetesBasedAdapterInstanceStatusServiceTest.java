@@ -71,7 +71,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     public void testServiceDetectsAddedPod() throws InterruptedException {
         final CountDownLatch eventLatch = new CountDownLatch(2);
 
-        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");
         final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod0ContainerId).isNotNull();
@@ -80,7 +80,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
                 .andReturn(200, new PodListBuilder().addToItems(pod0).build())
                 .once();
 
-        final Pod pod1 = createAdapterPodWithRunningContainer("testPod1");
+        final Pod pod1 = createAdapterPodWithRunningContainer("adapterTestPod1");
         final String pod1ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1ContainerId).isNotNull();
@@ -88,15 +88,17 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
         server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
-                .waitFor(10).andEmit(new WatchEvent(pod1, "ADDED"))
+                .waitFor(10).andEmit(new WatchEvent(pod1, "MODIFIED")) // preceding ADDED event (with pod without containers) omitted here
                 .done()
                 .once();
 
         statusService = new KubernetesBasedAdapterInstanceStatusService(client) {
             @Override
-            protected void onAdapterContainerAdded(final String containerId) {
-                LOG.debug("onAdapterContainerAdded; containerId: '{}'", containerId);
-                eventLatch.countDown();
+            protected void onAdapterContainerAdded(final String podName, final String containerId) {
+                LOG.debug("onAdapterContainerAdded; podName: '{}', containerId: '{}'", podName, containerId);
+                if (containerId != null) {
+                    eventLatch.countDown();
+                }
             }
         };
         assertThat(statusService).isNotNull();
@@ -114,6 +116,57 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     }
 
     /**
+     * Verifies that a starting adapter pod with either no container or only a container without an id yet is detected
+     * by the status service and given an UNKNOWN status.
+     *
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    public void testServiceHandlesStartingContainerWithNoIDYet() throws InterruptedException {
+        final CountDownLatch eventLatch = new CountDownLatch(2);
+
+        final Pod pod0 = createAdapterPodWithStartingContainer("adapterTestPod0");
+        final Pod pod1 = createAdapterPodWithoutContainer("adapterTestPod1");
+
+        server.expect().withPath("/api/v1/namespaces/test/pods")
+                .andReturn(200, new PodListBuilder().addToItems(pod0).build())
+                .once();
+
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
+                .andUpgradeToWebSocket()
+                .open()
+                .waitFor(10).andEmit(new WatchEvent(pod1, "ADDED"))
+                .done()
+                .once();
+
+        statusService = new KubernetesBasedAdapterInstanceStatusService(client) {
+            @Override
+            protected void onAdapterContainerAdded(final String podName, final String containerId) {
+                LOG.debug("onAdapterContainerAdded; podName: '{}', containerId: '{}'", podName, containerId);
+                if (containerId == null) {
+                    eventLatch.countDown();
+                }
+            }
+        };
+        assertThat(statusService).isNotNull();
+
+        if (eventLatch.await(10, TimeUnit.SECONDS)) {
+            assertThat(statusService.getActiveAdapterInstanceContainerIds().isPresent()).isTrue();
+            assertThat(statusService.getActiveAdapterInstanceContainerIds().get()).isEmpty();
+
+            final String someContainerId0 = "012345678901";
+            final String adapterInstanceId0 = pod0.getMetadata().getName() + "_" + someContainerId0 + "_1";
+            assertThat(statusService.getStatus(adapterInstanceId0)).isEqualTo(AdapterInstanceStatus.UNKNOWN);
+
+            final String someContainerId1 = "123456789012";
+            final String adapterInstanceId1 = pod1.getMetadata().getName() + "_" + someContainerId1 + "_1";
+            assertThat(statusService.getStatus(adapterInstanceId1)).isEqualTo(AdapterInstanceStatus.UNKNOWN);
+        } else {
+            fail("added pod not detected");
+        }
+    }
+
+    /**
      * Verifies that the status service identifies a given adapter instance as dead, if no container with that id
      * exists and the minimum time period in the suspected state has elapsed.
      */
@@ -121,10 +174,10 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     public void testServiceReportsStateOfUnknownAdapterInstanceAsDeadAfterDelay() {
 
         final String nonExistingInstanceId = "old-adapter-pod_000000000000_0";
-        assertThat(CommandConstants.KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN.matcher(nonExistingInstanceId).matches())
-                .isTrue();
+        assertThat(CommandConstants.getK8sPodNameAndContainerIdFromAdapterInstanceId(nonExistingInstanceId))
+                .isNotNull();
 
-        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");
         final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod0ContainerId).isNotNull();
@@ -170,11 +223,11 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     public void testServiceDetectsDeletedPod() throws InterruptedException {
         final CountDownLatch eventLatch = new CountDownLatch(3);
 
-        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");
         final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod0ContainerId).isNotNull();
-        final Pod pod1 = createAdapterPodWithRunningContainer("testPod1");
+        final Pod pod1 = createAdapterPodWithRunningContainer("adapterTestPod1");
         final String pod1ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1ContainerId).isNotNull();
@@ -192,13 +245,15 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
 
         statusService = new KubernetesBasedAdapterInstanceStatusService(client) {
             @Override
-            protected void onAdapterContainerAdded(final String containerId) {
-                LOG.debug("onAdapterContainerAdded; containerId: '{}'", containerId);
-                eventLatch.countDown();
+            protected void onAdapterContainerAdded(final String podName, final String containerId) {
+                LOG.debug("onAdapterContainerAdded; podName: '{}', containerId: '{}'", podName, containerId);
+                if (containerId != null) {
+                    eventLatch.countDown();
+                }
             }
 
             @Override
-            protected void onAdapterContainerRemoved(final String containerId) {
+            protected void onAdapterContainerRemoved(final String podName, final String containerId) {
                 LOG.debug("onAdapterContainerRemoved; containerId: '{}'", containerId);
                 eventLatch.countDown();
             }
@@ -226,18 +281,18 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     public void testServiceDetectsTerminatedContainer() throws InterruptedException {
         final CountDownLatch eventLatch = new CountDownLatch(4);
 
-        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");
         final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod0ContainerId).isNotNull();
-        final Pod pod1WithFirstContainer = createAdapterPodWithRunningContainer("testPod1");
+        final Pod pod1WithFirstContainer = createAdapterPodWithRunningContainer("adapterTestPod1");
         final String pod1FirstContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1WithFirstContainer.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1FirstContainerId).isNotNull();
 
         final Pod pod1WithFirstContainerTerminated = createCopyWithTerminatedContainer(pod1WithFirstContainer);
 
-        final Pod pod1WithSecondContainer = createAdapterPodWithRunningContainer("testPod1");
+        final Pod pod1WithSecondContainer = createAdapterPodWithRunningContainer("adapterTestPod1");
         final String pod1SecondContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1WithSecondContainer.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1SecondContainerId).isNotNull();
@@ -256,13 +311,15 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
 
         statusService = new KubernetesBasedAdapterInstanceStatusService(client) {
             @Override
-            protected void onAdapterContainerAdded(final String containerId) {
-                LOG.debug("onAdapterContainerAdded; containerId: '{}'", containerId);
-                eventLatch.countDown();
+            protected void onAdapterContainerAdded(final String podName, final String containerId) {
+                LOG.debug("onAdapterContainerAdded; podName: '{}', containerId: '{}'", podName, containerId);
+                if (containerId != null) {
+                    eventLatch.countDown();
+                }
             }
 
             @Override
-            protected void onAdapterContainerRemoved(final String containerId) {
+            protected void onAdapterContainerRemoved(final String podName, final String containerId) {
                 LOG.debug("onAdapterContainerRemoved; containerId: '{}'", containerId);
                 eventLatch.countDown();
             }
@@ -292,7 +349,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
         // 3 events: 2x on initAdaptersListAndWatch() + 1x on WatchEvent
         final CountDownLatch eventLatch = new CountDownLatch(3);
 
-        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");
         final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod0ContainerId).isNotNull();
@@ -301,7 +358,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
                 .andReturn(200, new PodListBuilder().addToItems(pod0).build())
                 .times(2);
 
-        final Pod pod1 = createAdapterPodWithRunningContainer("testPod1");
+        final Pod pod1 = createAdapterPodWithRunningContainer("adapterTestPod1");
         final String pod1ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1ContainerId).isNotNull();
@@ -322,9 +379,11 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
 
         statusService = new KubernetesBasedAdapterInstanceStatusService(client) {
             @Override
-            protected void onAdapterContainerAdded(final String containerId) {
-                LOG.debug("onAdapterContainerAdded; containerId: '{}'", containerId);
-                eventLatch.countDown();
+            protected void onAdapterContainerAdded(final String podName, final String containerId) {
+                LOG.debug("onAdapterContainerAdded; podName: '{}', containerId: '{}'", podName, containerId);
+                if (containerId != null) {
+                    eventLatch.countDown();
+                }
             }
         };
         assertThat(statusService).isNotNull();
@@ -344,21 +403,46 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     private Pod createCopyWithTerminatedContainer(final Pod pod) {
         final String containerID = pod.getStatus().getContainerStatuses().get(0).getContainerID();
         final String podName = pod.getMetadata().getName();
-        return createAdapterPod(podName, containerID, new ContainerStateBuilder().withNewTerminated()
-                .withContainerID(containerID).endTerminated().build());
+        final ContainerState containerState = new ContainerStateBuilder()
+                .withNewTerminated().withContainerID(containerID).endTerminated()
+                .build();
+        final ContainerState containerLastState = null; // value not set (not needed for the tests)
+        return createAdapterPod(podName, containerID, containerState, containerLastState);
     }
 
     private Pod createAdapterPodWithRunningContainer(final String podName) {
         final String containerId = getRandomContainerId();
-        return createAdapterPod(podName, containerId, new ContainerStateBuilder().withNewRunning().endRunning().build());
+        final ContainerState containerState = new ContainerStateBuilder().withNewRunning().endRunning().build();
+        final ContainerState containerLastState = null; // value not set (not needed for the tests)
+        return createAdapterPod(podName, containerId, containerState, containerLastState);
     }
 
-    private Pod createAdapterPod(final String podName, final String containerId, final ContainerState podState) {
+    private Pod createAdapterPodWithStartingContainer(final String podName) {
+        final String containerId = null;
+        final ContainerState containerState = new ContainerStateBuilder()
+                .withNewWaiting(null, "ContainerCreating")
+                .build();
+        final ContainerState containerLastState = new ContainerStateBuilder().build();
+        return createAdapterPod(podName, containerId, containerState, containerLastState);
+    }
+
+    private Pod createAdapterPodWithoutContainer(final String podName) {
+        return new PodBuilder()
+                .withNewMetadata()
+                .withName(podName)
+                .endMetadata()
+                .withStatus(new PodStatusBuilder().build())
+                .build();
+    }
+
+    private Pod createAdapterPod(final String podName, final String containerId, final ContainerState podContainerState,
+            final ContainerState podContainerLastState) {
         final PodStatus podStatus = new PodStatusBuilder()
                 .addNewContainerStatus()
                 .withContainerID(containerId)
                 .withName("test_adapter")
-                .withState(podState)
+                .withState(podContainerState)
+                .withLastState(podContainerLastState)
                 .endContainerStatus()
                 .build();
         return new PodBuilder()

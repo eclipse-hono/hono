@@ -10,7 +10,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The default value for the HTTP protocol adapter `hono.http.idleTimeout` configuration property has been increased
   from 60 to 75 seconds. This means HTTP requests with a `hono-ttd` value of 60 seconds (which is the tenant
-  configuration `max-ttd` default) will not cause the idle timeout to be reached. 
+  configuration `max-ttd` default) will not cause the idle timeout to be reached.
+* The mechanism used by the Command Router component to determine the state of protocol adapter instances has been
+  improved.
 
 ## 2.0.1
 

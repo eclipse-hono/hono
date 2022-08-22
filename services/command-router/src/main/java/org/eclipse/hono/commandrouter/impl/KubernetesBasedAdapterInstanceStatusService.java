@@ -29,12 +29,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +70,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
     private static final String ADAPTER_NAME_MATCH = "adapter";
     private static final long WATCH_RECREATION_DELAY_MILLIS = 100;
     private static final int MAX_LRU_MAP_ENTRIES = 200;
+    private static final String STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER = "";
 
     private final KubernetesClient client;
     private final String namespace;
@@ -153,8 +154,8 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
             @Override
             public void eventReceived(final Action watchAction, final Pod pod) {
                 LOG.trace("event received: {}, pod: {}", watchAction, pod != null ? pod.getMetadata().getName() : null);
-                if (pod != null) {
-                    applyPodStatus(watchAction, pod);
+                if (pod != null && isPodNameMatch(pod)) {
+                    applyPodStatus(pod, watchAction);
                 }
             }
 
@@ -168,13 +169,19 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                 containerIdToPodNameMap.size() <= 20 ? containerIdToPodNameMap : containerIdToPodNameMap.size() + " containers");
     }
 
-    private void refreshContainerLists(final List<Pod> podList) {
+    private static boolean isPodNameMatch(final Pod pod) {
+        return pod.getMetadata().getName().contains(ADAPTER_NAME_MATCH);
+    }
+
+    private synchronized void refreshContainerLists(final List<Pod> podList) {
         containerIdToPodNameMap.clear();
         podNameToContainerIdMap.clear();
         LOG.info("refresh container status list");
         podList.forEach(pod -> {
-            LOG.trace("handle pod list result entry: {}", pod.getMetadata().getName());
-            applyPodStatus(Watcher.Action.ADDED, pod);
+            if (isPodNameMatch(pod)) {
+                LOG.trace("handle pod list result entry: {}", pod.getMetadata().getName());
+                applyPodStatus(pod, null);
+            }
         });
         // now that we have the full pod list, use the created container list to evaluate the suspected containers
         final Map<String, Instant> oldSuspectedIds = new HashMap<>(suspectedContainerIds);
@@ -193,31 +200,46 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         });
     }
 
-    private void applyPodStatus(final Watcher.Action watchAction, final Pod pod) {
+    private synchronized void applyPodStatus(final Pod pod, final Watcher.Action watchAction) {
         if (watchAction == Watcher.Action.DELETED) {
             final String podName = pod.getMetadata().getName();
             final String shortContainerId = podNameToContainerIdMap.remove(podName);
-            if (shortContainerId != null && containerIdToPodNameMap.remove(shortContainerId) != null) {
+            if (STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER.equals(shortContainerId)) {
+                onAdapterContainerRemoved(podName, null);
+            } else if (shortContainerId != null && containerIdToPodNameMap.remove(shortContainerId) != null) {
                 LOG.info("removed entry for deleted pod [{}], container [{}]; active adapter containers now: {}",
                         podName, shortContainerId, containerIdToPodNameMap.size());
                 terminatedContainerIds.add(shortContainerId);
-                onAdapterContainerRemoved(shortContainerId);
+                onAdapterContainerRemoved(podName, shortContainerId);
             }
         } else if (watchAction == Watcher.Action.ERROR) {
             LOG.error("got ERROR watch action event");
         } else {
             pod.getStatus().getContainerStatuses().forEach(containerStatus -> {
-                applyContainerStatus(watchAction, pod, containerStatus);
+                if (containerStatus.getName().contains(ADAPTER_NAME_MATCH)) {
+                    applyContainerStatus(pod, containerStatus, watchAction);
+                }
             });
+            if (pod.getStatus().getContainerStatuses().isEmpty() && watchAction == Watcher.Action.ADDED) {
+                registerAddedPodWithoutStartedContainer(pod.getMetadata().getName(), "pod ADDED");
+            }
         }
     }
 
-    private void applyContainerStatus(final Watcher.Action watchAction, final Pod pod, final ContainerStatus containerStatus) {
-        if (!containerStatus.getName().contains(ADAPTER_NAME_MATCH) || containerStatus.getContainerID() == null) {
+    private void applyContainerStatus(final Pod pod, final ContainerStatus containerStatus, final Watcher.Action watchAction) {
+        final String podName = pod.getMetadata().getName();
+        if (containerStatus.getContainerID() == null) {
             // container ID may be null if state is ContainerStateWaiting when creating or terminating pod
+            if (containerStatus.getState().getWaiting() != null
+                    && containerStatus.getLastState().getRunning() == null
+                    && containerStatus.getLastState().getTerminated() == null) {
+                registerAddedPodWithoutStartedContainer(podName, containerStatus.getState().getWaiting().getReason());
+            } else {
+                podNameToContainerIdMap.remove(podName, STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER);
+            }
             return;
         }
-        final String podName = pod.getMetadata().getName();
+        podNameToContainerIdMap.remove(podName, STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER);
         final String shortContainerId = getShortContainerId(containerStatus.getContainerID());
         if (shortContainerId == null) {
             LOG.warn("unexpected format of container id [{}] in pod [{}]", containerStatus.getContainerID(), podName);
@@ -227,7 +249,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                 LOG.info("removed entry for pod [{}] and terminated container [{}] (reason: '{}'); active adapter containers now: {}",
                         podName, shortContainerId, containerStatus.getState().getTerminated().getReason(), containerIdToPodNameMap.size());
                 terminatedContainerIds.add(shortContainerId);
-                onAdapterContainerRemoved(shortContainerId);
+                onAdapterContainerRemoved(podName, shortContainerId);
             }
         } else {
             if (watchAction == Watcher.Action.MODIFIED) {
@@ -239,7 +261,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                         LOG.info("removed obsolete entry for pod [{}], container [{}]; active adapter containers now: {}",
                                 podName, oldContainerId, containerIdToPodNameMap.size());
                         terminatedContainerIds.add(oldContainerId);
-                        onAdapterContainerRemoved(oldContainerId);
+                        onAdapterContainerRemoved(podName, oldContainerId);
                     }
                 }
             }
@@ -248,19 +270,33 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                 LOG.info("added entry for pod [{}], container [{}]; active adapter containers now: {}", podName,
                         shortContainerId, containerIdToPodNameMap.size());
                 suspectedContainerIds.remove(shortContainerId);
-                onAdapterContainerAdded(shortContainerId);
+                onAdapterContainerAdded(podName, shortContainerId);
             }
+        }
+    }
+
+    private void registerAddedPodWithoutStartedContainer(final String podName, final String statusInfo) {
+        if (!podNameToContainerIdMap.containsKey(podName)) {
+            // keep track of the pod name here
+            // for handling scenarios where the subsequent MODIFIED event with a container (with non-null id) gets delayed
+            LOG.debug("new pod [{}] found [state: {}]", podName, statusInfo);
+            podNameToContainerIdMap.put(podName, STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER);
+            onAdapterContainerAdded(podName, null);
         }
     }
 
     /**
      * Invoked when an adapter container was added.
      * <p>
+     * During container startup, this method may first be invoked with the containerId being {@code null} if
+     * the container has no id yet.
+     * <p>
      * This method does nothing by default and may be overridden by subclasses.
      *
-     * @param containerId The container identifier.
+     * @param podName The pod name of the added container.
+     * @param containerId The container identifier or {@code null} if no identifier is set yet.
      */
-    protected void onAdapterContainerAdded(final String containerId) {
+    protected void onAdapterContainerAdded(final String podName, final String containerId) {
        // nothing done by default
     }
 
@@ -269,9 +305,10 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
      * <p>
      * This method does nothing by default and may be overridden by subclasses.
      *
-     * @param containerId The container identifier.
+     * @param podName The pod name of the removed container.
+     * @param containerId The container identifier, may be {@code null} if container had no id yet.
      */
-    protected void onAdapterContainerRemoved(final String containerId) {
+    protected void onAdapterContainerRemoved(final String podName, final String containerId) {
         // nothing done by default
     }
 
@@ -320,18 +357,28 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
             LOG.debug("no status info available for adapter instance id [{}]; service not active", adapterInstanceId);
             return AdapterInstanceStatus.UNKNOWN;
         }
-        final Matcher matcher = CommandConstants.KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN.matcher(adapterInstanceId);
-        if (!matcher.matches()) {
+        final Pair<String, String> matchedPodNameAndContainerIdPair = CommandConstants
+                .getK8sPodNameAndContainerIdFromAdapterInstanceId(adapterInstanceId);
+        if (matchedPodNameAndContainerIdPair == null) {
             return AdapterInstanceStatus.UNKNOWN;
         }
-        final String shortContainerId = matcher.group(1);
-        final String podName = containerIdToPodNameMap.get(shortContainerId);
-        if (podName != null) {
-            LOG.trace("found alive container in pod [{}] for adapter instance id [{}]", podName, adapterInstanceId);
+        final String shortContainerId = matchedPodNameAndContainerIdPair.two();
+        final String registeredPodName = containerIdToPodNameMap.get(shortContainerId);
+        if (registeredPodName != null) {
+            LOG.trace("found alive container in pod [{}] for adapter instance id [{}]", registeredPodName, adapterInstanceId);
             return AdapterInstanceStatus.ALIVE;
         } else {
-            // container is not known to be alive
-            if (terminatedContainerIds.contains(shortContainerId)) {
+            // container derived from adapterInstanceId is not known to be alive
+            if (STARTING_POD_UNKNOWN_CONTAINER_ID_PLACEHOLDER
+                    .equals(podNameToContainerIdMap.get(matchedPodNameAndContainerIdPair.one()))) {
+                // pod derived from adapterInstanceId is new pod with container reported to be starting up (no id yet)
+                // => it may be that the adapterInstanceId container is alive but info wasn't delivered to us yet via K8s API
+                LOG.debug("""
+                        returning status UNKNOWN for adapter instance id [{}] - \
+                        container id not known but found corresponding pod (with no known started container there yet)\
+                        """, adapterInstanceId);
+                return AdapterInstanceStatus.UNKNOWN;
+            } else if (terminatedContainerIds.contains(shortContainerId)) {
                 LOG.debug("container already terminated for adapter instance id [{}]", adapterInstanceId);
                 return AdapterInstanceStatus.DEAD;
             } else {
