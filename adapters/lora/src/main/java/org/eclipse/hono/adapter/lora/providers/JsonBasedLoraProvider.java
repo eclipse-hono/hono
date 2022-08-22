@@ -44,7 +44,7 @@ public abstract class JsonBasedLoraProvider implements LoraProvider {
     public LoraMessage getMessage(final RoutingContext ctx) {
         Objects.requireNonNull(ctx);
         try {
-            final Buffer requestBody = ctx.getBody();
+            final Buffer requestBody = ctx.body().buffer();
             final JsonObject message = requestBody.toJsonObject();
             final LoraMessageType type = getMessageType(message);
             switch (type) {
