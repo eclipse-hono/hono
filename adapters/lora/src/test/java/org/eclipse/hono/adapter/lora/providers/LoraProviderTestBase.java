@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -68,7 +69,9 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
         final HttpServerRequest request = mock(HttpServerRequest.class);
         final RoutingContext routingContext = mock(RoutingContext.class);
         when(routingContext.request()).thenReturn(request);
-        when(routingContext.getBody()).thenReturn(message);
+        final RequestBody body = mock(RequestBody.class);
+        when(body.buffer()).thenReturn(message);
+        when(routingContext.body()).thenReturn(body);
         return routingContext;
     }
 

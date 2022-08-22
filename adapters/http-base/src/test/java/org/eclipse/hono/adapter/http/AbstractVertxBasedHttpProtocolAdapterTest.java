@@ -74,6 +74,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.ParsedHeaderValues;
+import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.junit5.Timeout;
@@ -926,8 +927,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(response.closed()).thenReturn(false);
 
 
+        final RequestBody body = mock(RequestBody.class);
+        when(body.buffer()).thenReturn(payload);
         final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.getBody()).thenReturn(payload);
+        when(ctx.body()).thenReturn(body);
         when(ctx.response()).thenReturn(response);
         when(ctx.request()).thenReturn(request);
         when(ctx.get(HttpServerSpanHelper.ROUTING_CONTEXT_SPAN_KEY)).thenReturn(mock(Span.class));

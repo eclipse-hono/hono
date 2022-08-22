@@ -36,6 +36,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
 import io.vertx.ext.web.MIMEHeader;
+import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CorsHandler;
 
@@ -115,9 +116,9 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * {@link #KEY_REQUEST_BODY}.
      *
      * @param ctx The routing context to retrieve the JSON request body from.
-     * @param payloadExtractor The extractor of the payload from the context.
+     * @param payloadExtractor The extractor of the payload from the request body.
      */
-    protected final void extractRequiredJson(final RoutingContext ctx, final Function<RoutingContext, Object> payloadExtractor) {
+    protected final void extractRequiredJson(final RoutingContext ctx, final Function<RequestBody, Object> payloadExtractor) {
 
         Objects.requireNonNull(payloadExtractor);
 
@@ -130,8 +131,8 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
                     String.format("Unsupported Content-Type [%s]", contentType.value())));
         } else {
             try {
-                if (ctx.getBody() != null) {
-                    final var payload = payloadExtractor.apply(ctx);
+                if (ctx.body().buffer() != null) {
+                    final var payload = payloadExtractor.apply(ctx.body());
                     if (payload != null) {
                         ctx.put(KEY_REQUEST_BODY, payload);
                         ctx.next();
@@ -158,7 +159,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @param ctx The routing context to retrieve the JSON request body from.
      */
     protected final void extractRequiredJsonPayload(final RoutingContext ctx) {
-        extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
+        extractRequiredJson(ctx, RequestBody::asJsonObject);
     }
 
     /**
@@ -175,10 +176,10 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      */
     protected final void extractOptionalJsonPayload(final RoutingContext ctx) {
 
-        if (ctx.getBody() == null || ctx.getBody().length() == 0) {
+        if (ctx.body().length() <= 0) {
             ctx.next();
         } else {
-            extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
+            extractRequiredJson(ctx, RequestBody::asJsonObject);
         }
     }
 
@@ -192,9 +193,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @param ctx The routing context to retrieve the JSON request body from.
      */
     protected final void extractRequiredJsonArrayPayload(final RoutingContext ctx) {
-        extractRequiredJson(ctx, body -> {
-            return body.getBodyAsJsonArray();
-        });
+        extractRequiredJson(ctx, RequestBody::asJsonArray);
     }
 
     /**

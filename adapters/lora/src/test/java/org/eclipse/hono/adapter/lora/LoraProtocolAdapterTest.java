@@ -68,6 +68,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RequestBody;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
@@ -428,8 +429,10 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.path()).thenReturn("/lora");
 
+        final RequestBody body = mock(RequestBody.class);
+        when(body.buffer()).thenReturn(Buffer.buffer());
         final RoutingContext context = mock(RoutingContext.class);
-        when(context.getBody()).thenReturn(Buffer.buffer());
+        when(context.body()).thenReturn(body);
         when(context.user()).thenReturn(new DeviceUser(TEST_TENANT_ID, TEST_GATEWAY_ID));
         when(context.request()).thenReturn(request);
         when(context.response()).thenReturn(mock(HttpServerResponse.class));

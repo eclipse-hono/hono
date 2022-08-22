@@ -572,7 +572,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 ctx,
                 tenant,
                 deviceId,
-                ctx.getRoutingContext().getBody(),
+                ctx.getRoutingContext().body().buffer(),
                 ctx.getContentType(),
                 MetricsTags.EndpointType.fromString(ctx.getRequestedResource().getEndpoint()));
     }
@@ -1216,7 +1216,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
 
-        final Buffer payload = ctx.getRoutingContext().getBody();
+        final Buffer payload = ctx.getRoutingContext().body().buffer();
         final String contentType = ctx.getContentType();
 
         log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
