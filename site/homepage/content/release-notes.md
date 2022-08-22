@@ -34,6 +34,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   sent downstream. This has been fixed.
 * The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
   Command Router startup. This has been fixed.
+* The mechanism used by the Command Router component to determine the state of protocol adapter instances has been
+  improved.
 
 ## 2.0.1
 
