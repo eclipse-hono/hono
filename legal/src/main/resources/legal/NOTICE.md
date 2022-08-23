@@ -447,6 +447,15 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/opentracing/opentracing-java).
 
+### org.crac
+
+This product includes software developed by the [org.crac project](https://github.com/CRaC/org.crac).
+
+Your use of *org.crac* is subject to the terms and conditions defined in the file
+[LICENSE.org-crac.txt](LICENSE.org-crac.txt).
+
+The source code is available from [GitHub](https://github.com/CRaC/org.crac).
+
 ### PerfMark
 
 This product includes software developed by the [PerfMark project](https://github.com/perfmark/perfmark).
