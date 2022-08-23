@@ -30,6 +30,10 @@ import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.CommandConstants;
 
 import io.opentracing.SpanContext;
@@ -96,11 +100,35 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 
     @Override
     public Future<Void> start() {
+        registerCloseConsumerLinkHandler();        
         return super.start()
                 .onSuccess(v -> {
                     connection.addReconnectListener(c -> recreateConsumers());
                     // trigger creation of adapter specific consumer link (with retry if failed)
                     recreateConsumers();
+                });
+    }
+
+    private void registerCloseConsumerLinkHandler() {
+        NotificationEventBusSupport.registerConsumer(connection.getVertx(), AllDevicesOfTenantDeletedNotification.TYPE,
+                notification -> {
+                    final CommandConsumer commandConsumer = mappingAndDelegatingCommandConsumerFactory
+                            .getClient(notification.getTenantId());
+                    if (commandConsumer != null) {
+                        commandConsumer.close(null);
+                    }
+                });
+        NotificationEventBusSupport.registerConsumer(connection.getVertx(), TenantChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())
+                            || (LifecycleChange.UPDATE.equals(notification.getChange())
+                                    && !notification.isTenantEnabled())) {
+                        final CommandConsumer commandConsumer = mappingAndDelegatingCommandConsumerFactory
+                                .getClient(notification.getTenantId());
+                        if (commandConsumer != null) {
+                            commandConsumer.close(null);
+                        }
+                    }
                 });
     }
 
