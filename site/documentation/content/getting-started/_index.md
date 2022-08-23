@@ -45,7 +45,7 @@ The command line client is available in two variants:
 1. A Java Archive that requires a Java Runtime Environment to be installed locally and
 1. a x86_64 Linux executable that can be run from a shell directly.
 
-The former variant works on all platforms where Java is available and will be used during the reminder of this guide.
+The former variant works on all platforms where Java is available and will be used during the remainder of this guide.
 The latter variant should work on modern Linux distributions and can be used by replacing `java -jar hono-cli-*-exec.jar`
 with just the name of the executable file.
 {{% /notice %}}
