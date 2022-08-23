@@ -55,7 +55,6 @@
     <native.builder-image.name>mandrel</native.builder-image.name>
     <netty.version>4.1.78.Final</netty.version>
     <postgresql-image.name>postgres:14-alpine</postgresql-image.name>
-    <proton.version>0.33.10</proton.version>
     <qpid-jms.version>1.6.0</qpid-jms.version>
     <quarkus.platform.version>2.11.2.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
@@ -373,11 +372,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
         <groupId>io.vertx</groupId>
         <artifactId>vertx-proton</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.qpid</groupId>
-        <artifactId>proton-j</artifactId>
-        <version>${proton.version}</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
