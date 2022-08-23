@@ -45,6 +45,7 @@ import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Assertions;
@@ -127,53 +128,223 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that a message containing a payload which has the <em>empty notification</em>
-     * content type is rejected by the adapter.
+     * Verifies that the adapter forwards an empty message with a custom content type other
+     * than {@value EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} to downstream consumers.
      *
-     * @param context The Vert.x context for running asynchronous tests.
-     * @throws InterruptedException if test is interrupted while running.
+     * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    public void testAdapterRejectsBadInboundMessage(final VertxTestContext context) throws InterruptedException {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithCustomContentTypeSucceeds(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
 
-        final VertxTestContext setup = new VertxTestContext();
+        final String customContentType = "application/custom";
 
-        setupProtocolAdapter(tenantId, new Tenant(), deviceId, ProtonQoS.AT_LEAST_ONCE)
-            .map(s -> {
-                setup.verify(() -> {
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(customContentType);
+                        assertThat(msg.getPayload()).isNull();
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    msg.setContentType(customContentType);
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        log.trace("waiting for credit ...");
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            });
+    }
+
+    /**
+     * Verifies that the adapter rejects empty messages that have no content type set.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithoutContentTypeFails(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+                });
+            })
+            .onSuccess(consumer -> {
+
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    replenishedSender.send(msg, delivery -> {
+                        if (delivery.getRemoteState() instanceof Rejected rejected) {
+                            ctx.verify(() -> {
+                                assertThat(rejected.getError().getCondition()).isEqualTo(AmqpUtils.AMQP_BAD_REQUEST);
+                            });
+                            ctx.completeNow();
+                        } else {
+                            ctx.failNow("message should have been rejected by AMQP adapter");
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        log.trace("waiting for credit ...");
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            });
+
+    }
+
+    /**
+     * Verifies that the adapter forwards a non-empty message without any content type set in the request
+     * to downstream consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageWithoutContentTypeSucceeds(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message(getEndpointName(), "some payload");
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        log.trace("waiting for credit ...");
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            });
+
+    }
+
+    /**
+     * Verifies that the adapter rejects non-empty messages that are marked as empty notifications.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageMarkedAsEmptyNotificationFails(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                ctx.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
                     assertWithMessage("max-message-size included in adapter's attach frame")
                             .that(maxMessageSize).isNotNull();
                     assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
                 });
-                sender = s;
-                return s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+                });
             })
-            .onComplete(setup.succeedingThenComplete());
+            .onSuccess(consumer -> {
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            context.failNow(setup.causeOfFailure());
-            return;
-        }
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message(getEndpointName(), "some payload");
+                    msg.setContentType(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+                    replenishedSender.send(msg, delivery -> {
+                        if (delivery.getRemoteState() instanceof Rejected rejected) {
+                            ctx.verify(() -> {
+                                assertThat(rejected.getError().getCondition()).isEqualTo(AmqpUtils.AMQP_BAD_REQUEST);
+                            });
+                            ctx.completeNow();
+                        } else {
+                            ctx.failNow("message should have been rejected by AMQP adapter");
+                        }
+                    });
+                };
 
-        final Message msg = ProtonHelper.message("some payload");
-        msg.setContentType(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
-        msg.setAddress(getEndpointName());
-        sender.send(msg, delivery -> {
-
-            context.verify(() -> {
-                assertThat(delivery.getRemoteState()).isInstanceOf(Rejected.class);
-                final Rejected rejected = (Rejected) delivery.getRemoteState();
-                final ErrorCondition error = rejected.getError();
-                assertThat((Object) error.getCondition()).isEqualTo(AmqpUtils.AMQP_BAD_REQUEST);
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        log.trace("waiting for credit ...");
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
             });
-            context.completeNow();
-        });
 
     }
 

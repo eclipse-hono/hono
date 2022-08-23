@@ -126,11 +126,18 @@ the error topic, otherwise the connection to the client will be closed. The hand
 by means of an *on-error* property bag parameter set on the telemetry message topic. Refer to
 [Error Handling]({{< relref "#error-handling" >}}) for details.
 
-The devices can optionally indicate the content type of the payload by setting the *content-type* property explicitly
-in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message.
-A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of
-URL encoded property names and values that are separated by `&`. For example, a property bag containing two properties
-*seqNo* and *importance* looks like this: `/topic/name/?seqNo=10034&importance=high`.
+### Adding Meta Data
+
+Devices can add arbitrary meta data to a message by means of a *property bag*. The property bag is an optional collection
+of key/value pairs intended for the receiver of the message. The property bag is appended to the end of the topic name.
+It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by the
+`&` character.
+
+The MQTT adapter currently only supports the *content-type* property for publishing telemetry data which can be used by
+devices to indicate the type of data contained in a message. For example, the following topic name can be used to indicate
+that the message contains a JSON string:
+`/topic/name/?content-type=application%2Fjson`.
+
 
 ## Publish Telemetry Data (authenticated Device)
 
@@ -138,8 +145,13 @@ URL encoded property names and values that are separated by `&`. For example, a 
   * `t`
   * `telemetry`
 * Authentication: required
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is
 configured to require devices to authenticate (which is the default). When using this topic, the MQTT adapter determines
@@ -171,8 +183,13 @@ The example above assumes that the MQTT adapter is
   * `t/${tenant-id}/${device-id}`
   * `telemetry/${tenant-id}/${device-id}`
 * Authentication: none
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
 `HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -193,8 +210,13 @@ mosquitto_pub -t t/DEFAULT_TENANT/4711 -m '{"temp": 5}'
   * `t/${tenant-id}/${device-id}`
   * `telemetry/${tenant-id}/${device-id}`
 * Authentication: required
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a
 protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology
@@ -242,14 +264,18 @@ error topic, otherwise the connection to the client will be closed. The handling
 by means of an *on-error* property bag parameter set on the event message topic. Refer to
 [Error Handling]({{< relref "#error-handling" >}}) for details.
 
-The devices can optionally indicate a *time-to-live* duration for event messages and the content type of the payload
-by setting the *hono-ttl* and *content-type* properties explicitly in the `property-bag`. The `property-bag` is an optional
-collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a
-topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are
-separated by `&`. For example, a property bag containing two properties *seqNo* and *importance* looks like this:
-`/topic/name/?seqNo=10034&importance=high`.
+### Adding Meta Data
 
-The MQTT adapter currently does not use any properties except *hono-ttl*.
+Devices can add arbitrary meta data to a message by means of a *property bag*. The property bag is an optional collection
+of key/value pairs intended for the receiver of the message. The property bag is appended to the end of the topic name.
+It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by the
+`&` character.
+
+The MQTT adapter currently supports the *content-type* and *hono-ttl* properties for publishing event messages. The former
+one can be used to indicate the type of data contained in the message. The latter one can be used to indicate the event's
+*time-to-live* duration. For example, the following topic name can be used to indicate that the message contains a JSON string
+and should expire after 30 seconds:
+`/topic/name/?content-type=application%2Fjson&hono-ttl=30`.
 
 ## Publish an Event (authenticated Device)
 
@@ -257,8 +283,14 @@ The MQTT adapter currently does not use any properties except *hono-ttl*.
   * `e`
   * `event`
 * Authentication: required
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter has been configured
 to require devices to authenticate (which is the default).
@@ -283,8 +315,14 @@ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e/?hono-ttl=10 -q 1 
   * `e/${tenant-id}/${device-id}`
   * `event/${tenant-id}/${device-id}`
 * Authentication: none
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
 `HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -311,8 +349,14 @@ mosquitto_pub -t e/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
   * `e/${tenant-id}/${device-id}`
   * `event/${tenant-id}/${device-id}`
 * Authentication: required
+* Meta Data:
+  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
+    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
+    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
+    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
-  * (required) Arbitrary payload
+  * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a
 protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology
@@ -886,7 +930,7 @@ The adapter also considers *defaults* registered for the device at either the
 [device level]({{< relref "/api/device-registration#assert-device-registration" >}}).
 The values of the default properties are determined as follows:
 
-1. If the message already contains a non-empty property of the same name, the value if unchanged.
+1. If the message already contains a non-empty property of the same name, its value remains unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information,
    that value is used.
 3. Otherwise, if a default property of the same name is defined for the tenant that the device belongs to,

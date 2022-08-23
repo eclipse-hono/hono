@@ -48,6 +48,8 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -263,6 +265,137 @@ public abstract class HttpTestBase {
      */
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         // empty
+    }
+
+    /**
+     * Verifies that the adapter forwards an empty message with a custom content type other
+     * than {@value EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} to downstream consumers.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithCustomContentTypeSucceeds(final VertxTestContext ctx) {
+
+        final String customContentType = "application/custom";
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, customContentType)
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry
+            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                logger.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    assertThat(msg.getContentType()).isEqualTo(customContentType);
+                    assertThat(msg.getPayload()).isNull();
+                    assertAdditionalMessageProperties(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> httpClient.create(
+                    getEndpointUri(),
+                    null,
+                    requestHeaders,
+                    ResponsePredicate.SC_ACCEPTED))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter rejects empty messages that have no content type set with a 400 status code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithoutContentTypeFails(final VertxTestContext ctx) {
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry
+            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                logger.trace("received {}", msg);
+                ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(consumer -> httpClient.create(
+                    getEndpointUri(),
+                    null,
+                    requestHeaders,
+                    ResponsePredicate.SC_BAD_REQUEST))
+            .onComplete(ctx.succeedingThenComplete());
+
+    }
+
+    /**
+     * Verifies that the adapter forwards a non-empty message without any content type set in the request
+     * to downstream consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageWithoutContentTypeSucceeds(final VertxTestContext ctx) {
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry
+            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                logger.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                    assertThat(msg.getPayload().length()).isGreaterThan(0);
+                    assertAdditionalMessageProperties(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("some payload"),
+                    requestHeaders,
+                    ResponsePredicate.SC_ACCEPTED))
+            .onFailure(ctx::failNow);
+
+    }
+
+    /**
+     * Verifies that the adapter rejects non-empty messages that are marked as empty
+     * notifications with a 400 status code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageMarkedAsEmptyNotificationFails(final VertxTestContext ctx) {
+
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry
+            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                logger.trace("received {}", msg);
+                ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(consumer -> httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("some payload"),
+                    requestHeaders,
+                    ResponsePredicate.SC_BAD_REQUEST))
+            .onComplete(ctx.succeedingThenComplete());
+
     }
 
     /**

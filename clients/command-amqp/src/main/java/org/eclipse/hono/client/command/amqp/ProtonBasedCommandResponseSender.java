@@ -14,29 +14,26 @@
 
 package org.eclipse.hono.client.command.amqp;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.DownstreamAmqpMessageFactory;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
-import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
-import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.proton.ProtonHelper;
 
 
 /**
@@ -79,33 +76,31 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
     private Message createDownstreamMessage(
             final CommandResponse response,
             final TenantObject tenant,
-            final RegistrationAssertion device,
-            final Map<String, Object> properties) {
+            final RegistrationAssertion device) {
 
-        final var props = new DownstreamMessageProperties(
-                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
-                tenant.getDefaults().getMap(),
-                device.getDefaults(),
-                properties,
-                tenant.getResourceLimits())
-            .asMap();
-
-        final Message msg = ProtonHelper.message();
-        DownstreamAmqpMessageFactory.addDefaults(msg, props);
-        AmqpUtils.setCreationTime(msg);
-        msg.setCorrelationId(response.getCorrelationId());
-        AmqpUtils.setPayload(msg, response.getContentType(), response.getPayload());
-        AmqpUtils.addStatus(msg, response.getStatus());
-        msg.setAddress(AddressHelper.getTargetAddress(
+        final ResourceIdentifier target = ResourceIdentifier.from(
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
                 response.getTenantId(),
-                response.getReplyToId(),
-                null));
+                response.getReplyToId());
+
+        final var msg = DownstreamAmqpMessageFactory.newMessage(
+                target,
+                response.getContentType(),
+                response.getPayload(),
+                tenant,
+                tenant.getDefaults().getMap(),
+                device.getDefaults(),
+                response.getAdditionalProperties(),
+                jmsVendorPropsEnabled);
+
+        // we need to manually overwrite the message's address
+        // because DownstreamAmqpMessageFactory.newMessage sets it to the
+        // target's basePath by default, i.e. $endpoint/$tenant.
+        msg.setAddress(target.toString());
+        msg.setCorrelationId(response.getCorrelationId());
+        AmqpUtils.addStatus(msg, response.getStatus());
         AmqpUtils.addTenantId(msg, response.getTenantId());
         AmqpUtils.addDeviceId(msg, response.getDeviceId());
-        if (jmsVendorPropsEnabled) {
-            DownstreamAmqpMessageFactory.addJmsVendorProperties(msg);
-        }
         return msg;
     }
 
@@ -125,7 +120,7 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         return sender
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(s -> {
-                    final Message msg = createDownstreamMessage(response, tenant, device, response.getAdditionalProperties());
+                    final Message msg = createDownstreamMessage(response, tenant, device);
                     final Span span = newChildSpan(context, "forward Command response");
                     if (response.getMessagingType() != getMessagingType()) {
                         span.log(String.format("using messaging type %s instead of type %s used for the original command",

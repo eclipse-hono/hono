@@ -31,6 +31,7 @@ import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Tracer;
@@ -130,6 +131,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
                 .orElseGet(HashMap::new);
         messageProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId());
         messageProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
+        Optional.ofNullable(contentType).ifPresent(ct -> messageProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));
 
         final var propsWithDefaults = new DownstreamMessageProperties(
                 endpointName,
@@ -139,12 +141,11 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
                 tenant.getResourceLimits())
             .asMap();
 
-        if (contentType != null) {
-            propsWithDefaults.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType);
-        } else if (payload != null) {
-            propsWithDefaults.putIfAbsent(
-                    MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                    MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+        // set default content type if none has been set yet (also after applying properties and defaults)
+        if (Strings.isNullOrEmpty(propsWithDefaults.get(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))) {
+            if (payload != null) {
+                propsWithDefaults.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+            }
         }
 
         return propsWithDefaults;

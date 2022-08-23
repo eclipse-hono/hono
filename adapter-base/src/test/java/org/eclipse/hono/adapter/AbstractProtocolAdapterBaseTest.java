@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -66,6 +65,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
@@ -333,85 +334,29 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that the helper approves empty notification without payload.
+     * Verifies that payload/content-type consistency is checked correctly.
      *
+     * @param payload The payload from the request body.
+     * @param contentType The content-type from the request.
+     * @param expectedOutcome The expected outcome of the check.
      */
-    @Test
-    public void testEmptyNotificationWithoutPayload() {
-        // GIVEN an adapter
+    @ParameterizedTest
+    @CsvSource({
+        ",,false",
+        ",application/vnd.eclipse-hono-empty-notification,true",
+        ",application/custom,true",
+        "non-empty,application/vnd.eclipse-hono-empty-notification,false",
+        "non-empty,application/custom,true"
+    })
+    public void testIsPayloadOfIndicatedType(
+            final String payload,
+            final String contentType,
+            final boolean expectedOutcome) {
+
         adapter = newProtocolAdapter(properties, null);
 
-        // WHEN an empty event with an empty payload is approved, no error message must be returned
-        final Buffer payload = null;
-        final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
-
-        assertTrue(adapter.isPayloadOfIndicatedType(payload, contentType));
-    }
-
-    /**
-     * Verifies that any empty notification with a payload is an error.
-     *
-     */
-    @Test
-    public void testEmptyNotificationWithPayload() {
-        // GIVEN an adapter
-        adapter = newProtocolAdapter(properties, null);
-
-        // WHEN an empty event with a non empty payload is approved, an error message must be returned
-        final Buffer payload = Buffer.buffer("test");
-        final String contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
-
-        assertFalse(adapter.isPayloadOfIndicatedType(payload, contentType));
-    }
-
-    /**
-     * Verifies that any general message with a payload is approved.
-     *
-     */
-    @Test
-    public void testNonEmptyGeneralMessage() {
-        // GIVEN an adapter
-        adapter = newProtocolAdapter(properties, null);
-
-        // WHEN an non empty event with a non empty payload is approved, no error message must be returned
-        final Buffer payload = Buffer.buffer("test");
-        final String arbitraryContentType = "bum/lux";
-
-        // arbitrary content-type needs non empty payload
-        assertTrue(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
-    }
-
-    /**
-     * Verifies that any non empty message without a content type is approved.
-     *
-     */
-    @Test
-    public void testNonEmptyMessageWithoutContentType() {
-        // GIVEN an adapter
-        adapter = newProtocolAdapter(properties, null);
-
-        // WHEN an event without content type and a non empty payload is approved, no error message must be returned
-        final Buffer payload = Buffer.buffer("test");
-
-        // arbitrary content-type needs non empty payload
-        assertTrue(adapter.isPayloadOfIndicatedType(payload, null));
-    }
-
-    /**
-     * Verifies that any empty general message is an error.
-     *
-     */
-    @Test
-    public void testEmptyGeneralMessage() {
-        // GIVEN an adapter
-        adapter = newProtocolAdapter(properties, null);
-
-        // WHEN an event with content type and an empty payload is approved, an error message must be returned
-        final Buffer payload = null;
-        final String arbitraryContentType = "bum/lux";
-
-        // arbitrary content-type needs non empty payload
-        assertFalse(adapter.isPayloadOfIndicatedType(payload, arbitraryContentType));
+        final Buffer body = Optional.ofNullable(payload).map(Buffer::buffer).orElse(null);
+        assertThat(adapter.isPayloadOfIndicatedType(body, contentType)).isEqualTo(expectedOutcome);
     }
 
     /**

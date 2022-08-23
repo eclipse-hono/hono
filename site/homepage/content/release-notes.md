@@ -16,6 +16,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   JSON Web Key set as defined by [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517). The Device Registry and
   Command Router components will use this endpoint to periodically download the keys if no key material has been configured
   explicitly.
+* The handling of messages that have no payload and/or no content type has been harmonized across the protocol adapters.
+  Adapters now uniformly accept messages from devices that have no payload if the device explicitly sets a non-empty content
+  type on the message. Messages with a non-empty payload can be uploaded without specifying a content type. In the messages
+  being forwarded to downstream consumers, the adapters will either use the devices's default content type, if defined, or
+  otherwise fall back to `application/octet-stream` in such cases.
 
 ### Fixes & Enhancements
 

@@ -94,7 +94,7 @@ class AbstractHonoResourceTest extends ResourceTestBase {
             "false,/command_response/DEFAULT_TENANT/device_1/request_id",
             "true,/command_response//device_1/request_id"
             })
-    void getPutRequestDeviceAndAuthSucceeds(
+    void testGetPutRequestDeviceAndAuthSucceeds(
             final boolean isDeviceAuthenticated,
             final String uri,
             final VertxTestContext ctx) {
@@ -127,7 +127,7 @@ class AbstractHonoResourceTest extends ResourceTestBase {
             "true,/command_response/OTHER_TENANT/device_1/request_id,403",
             "false,/event//device_1/request_id,404"
             })
-    void getPutRequestDeviceAndAuthFailsForInvalidUri(
+    void testGetPutRequestDeviceAndAuthFailsForInvalidUri(
             final boolean isDeviceAuthenticated,
             final String uri,
             final int expectedErrorCode,
