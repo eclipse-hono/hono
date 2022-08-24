@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,73 +19,81 @@
 pipeline {
   agent {
     kubernetes {
-      label 'my-agent-pod'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: maven
-    image: "maven:3.8.4-eclipse-temurin-17"
-    tty: true
-    command:
-    - cat
-    volumeMounts:
-    - mountPath: /home/jenkins
-      name: "jenkins-home"
-    - mountPath: /home/jenkins/.ssh
-      name: "volume-known-hosts"
-    - name: "settings-xml"
-      mountPath: /home/jenkins/.m2/settings.xml
-      subPath: settings.xml
-      readOnly: true
-    - name: "settings-security-xml"
-      mountPath: /home/jenkins/.m2/settings-security.xml
-      subPath: settings-security.xml
-      readOnly: true
-    - name: "m2-repo"
-      mountPath: /home/jenkins/.m2/repository
-    - name: "toolchains-xml"
-      mountPath: /home/jenkins/.m2/toolchains.xml
-      subPath: toolchains.xml
-      readOnly: true
-    env:
-    - name: "HOME"
-      value: "/home/jenkins"
-    resources:
-      limits:
-        memory: "6Gi"
-        cpu: "2"
-      requests:
-        memory: "6Gi"
-        cpu: "2"
-  volumes:
-  - name: "jenkins-home"
-    emptyDir: {}
-  - name: "m2-repo"
-    emptyDir: {}
-  - configMap:
-      name: known-hosts
-    name: "volume-known-hosts"
-  - name: "settings-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings.xml
-        path: settings.xml
-  - name: "settings-security-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings-security.xml
-        path: settings-security.xml
-  - name: "toolchains-xml"
-    configMap:
-      name: m2-dir
-      items:
-      - key: toolchains.xml
-        path: toolchains.xml
-"""
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: "jnlp"
+            volumeMounts:
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+          - name: "hono-builder"
+            image: "eclipse/hono-builder:2.1.0"
+            imagePullPolicy: "Always"
+            tty: true
+            command:
+            - cat
+            volumeMounts:
+            - mountPath: "/home/jenkins"
+              name: "jenkins-home"
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            - mountPath: "/home/jenkins/.m2/settings.xml"
+              name: "settings-xml"
+              subPath: "settings.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/settings-security.xml"
+              name: "settings-security-xml"
+              subPath: "settings-security.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/repository"
+              name: "m2-repo"
+            - mountPath: "/home/jenkins/.m2/toolchains.xml"
+              name: "toolchains-xml"
+              subPath: "toolchains.xml"
+              readOnly: true
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+            resources:
+              limits:
+                memory: "8Gi"
+                cpu: "2"
+              requests:
+                memory: "8Gi"
+                cpu: "2"
+          volumes:
+          - name: "jenkins-home"
+            emptyDir: {}
+          - name: "m2-repo"
+            emptyDir: {}
+          - name: "volume-known-hosts"
+            configMap:
+              name: "known-hosts"
+          - name: "settings-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings.xml
+                path: settings.xml
+          - name: "settings-security-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings-security.xml
+                path: settings-security.xml
+          - name: "toolchains-xml"
+            configMap:
+              name: "m2-dir"
+              items:
+              - key: toolchains.xml
+                path: toolchains.xml
+        '''
+      defaultContainer 'hono-builder'
     }
   }
 
@@ -101,27 +109,25 @@ spec:
 
   stages {
 
-    stage('Build and deploy to Eclipse Repo') {
+    stage("Build and deploy to Eclipse Repo") {
       steps {
-        container('maven') {
-          echo "checking out branch [master] ..."
-          checkout([$class           : 'GitSCM',
-                    branches         : [[name: "refs/heads/master"]],
-                    userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
+        echo "checking out branch [master] ..."
+        checkout([$class           : 'GitSCM',
+                  branches         : [[name: "refs/heads/master"]],
+                  userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
-          echo "building and deploying nightly artifacts ..."
-          sh 'mvn deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'
+        echo "building and deploying nightly artifacts ..."
+        sh 'mvn deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'
 
-          echo "recording JUnit test results ..."
-          junit '**/surefire-reports/*.xml'
+        echo "recording JUnit test results ..."
+        junit '**/surefire-reports/*.xml'
 
-          echo "publishing JavaDoc ..."
-          sh 'mvn package javadoc:aggregate -DskipTests -DnoDocker'
-          step([$class: 'JavadocArchiver', javadocDir: 'target/site/apidocs'])
+        echo "publishing JavaDoc ..."
+        sh 'mvn package javadoc:aggregate -DskipTests -DnoDocker'
+        step([$class: 'JavadocArchiver', javadocDir: 'target/site/apidocs'])
 
-          echo "archiving Command Line Client ..."
-          step([$class: 'ArtifactArchiver', artifacts: "cli/target/hono-cli-*-exec.jar"])
-        }
+        echo "archiving Command Line Client ..."
+        step([$class: 'ArtifactArchiver', artifacts: "cli/target/hono-cli-*-exec.jar"])
       }
 
     }

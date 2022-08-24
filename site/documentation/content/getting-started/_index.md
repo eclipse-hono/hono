@@ -39,6 +39,17 @@ able to simulate an MQTT based device but otherwise will be able to get the same
 The Hono command line client is used in this guide for simulating an application that consumes telemetry data and events
 published by devices. The client is available from [Hono's download page]({{% homelink "downloads" %}}).
 
+{{% notice tip %}}
+The command line client is available in two variants:
+
+1. A Java Archive that requires a Java Runtime Environment to be installed locally and
+1. a x86_64 Linux executable that can be run from a shell directly.
+
+The former variant works on all platforms where Java is available and will be used during the remainder of this guide.
+The latter variant should work on modern Linux distributions and can be used by replacing `java -jar hono-cli-*-exec.jar`
+with just the name of the executable file.
+{{% /notice %}}
+
 #### Hono Instance
 
 The most important prerequisite is, of course, a Hono instance that you can work with.
