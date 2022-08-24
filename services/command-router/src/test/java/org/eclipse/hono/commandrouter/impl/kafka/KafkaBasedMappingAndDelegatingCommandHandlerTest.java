@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -273,7 +273,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final String deviceId3 = "device3";
         final String deviceId4 = "device4";
 
-        // GIVEN valid command records
+        // GIVEN valid command records, all mapped to the SAME partition
+        // (different device IDs used only for letting getTargetGatewayAndAdapterInstance() be finished at different times for these commands)
         final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId1, "subject1", 0, 1);
         final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId2, "subject2", 0, 2);
         final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId3, "subject3", 0, 3);
@@ -337,7 +338,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final String deviceId3 = "device3";
         final String deviceId4 = "device4";
 
-        // GIVEN valid command records
+        // GIVEN valid command records, all mapped to the SAME partition
+        // (different device IDs used only for letting getTargetGatewayAndAdapterInstance() be finished at different times for these commands)
         final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId1, "subject1", 0, 1);
         final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId2, "subject2", 0, 2);
         final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId3, "subject3", 0, 3);

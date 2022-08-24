@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,8 +72,7 @@ public class KafkaCommandProcessingQueue {
      */
     public void add(final KafkaBasedCommandContext commandContext) {
         Objects.requireNonNull(commandContext);
-        final KafkaConsumerRecord<String, Buffer> record = commandContext.getCommand().getRecord();
-        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        final TopicPartition topicPartition = getTopicPartition(commandContext);
         final TopicPartitionCommandQueue commandQueue = commandQueues
                 .computeIfAbsent(topicPartition, k -> new TopicPartitionCommandQueue());
         commandQueue.add(commandContext);
@@ -91,8 +90,7 @@ public class KafkaCommandProcessingQueue {
      */
     public boolean remove(final KafkaBasedCommandContext commandContext) {
         Objects.requireNonNull(commandContext);
-        final KafkaConsumerRecord<String, Buffer> record = commandContext.getCommand().getRecord();
-        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        final TopicPartition topicPartition = getTopicPartition(commandContext);
         return Optional.ofNullable(commandQueues.get(topicPartition))
                 .map(commandQueue -> commandQueue.remove(commandContext))
                 .orElse(false);
@@ -111,8 +109,7 @@ public class KafkaCommandProcessingQueue {
      */
     public Future<Void> applySendCommandAction(final KafkaBasedCommandContext commandContext,
             final Supplier<Future<Void>> sendActionSupplier) {
-        final TopicPartition topicPartition = new TopicPartition(
-                commandContext.getCommand().getRecord().topic(), commandContext.getCommand().getRecord().partition());
+        final TopicPartition topicPartition = getTopicPartition(commandContext);
         final TopicPartitionCommandQueue commandQueue = commandQueues.get(topicPartition);
         if (commandQueue == null) {
             LOG.info("command won't be sent - commands received from partition [{}] aren't handled by this consumer anymore [{}]",
@@ -125,6 +122,11 @@ public class KafkaCommandProcessingQueue {
             return Future.failedFuture(error);
         }
         return commandQueue.applySendCommandAction(commandContext, sendActionSupplier);
+    }
+
+    private static TopicPartition getTopicPartition(final KafkaBasedCommandContext commandContext) {
+        final KafkaConsumerRecord<String, Buffer> record = commandContext.getCommand().getRecord();
+        return new TopicPartition(record.topic(), record.partition());
     }
 
     /**
@@ -280,11 +282,12 @@ public class KafkaCommandProcessingQueue {
                 // given command is not next-in-line;
                 // that means determining its target adapter instance has finished sooner (maybe because of fewer data-grid requests)
                 // compared to a command that was received earlier
-                LOG.debug("sending of command with offset {} gets delayed; waiting for processing of offset {} [queue size: {}; delayed {}]",
-                        getRecordOffset(commandContext), getRecordOffset(queue.peek()), queue.size(), commandContext.getCommand());
+                final KafkaBasedCommandContext next = queue.peek();
+                LOG.debug("sending of command with offset {} gets delayed; waiting for processing of offset {} [queue size: {}; delayed {}; waiting for {}]",
+                        getRecordOffset(commandContext), getRecordOffset(next), queue.size(), commandContext.getCommand(), next.getCommand());
                 commandContext.getTracingSpan()
                         .log(String.format("waiting for an earlier command with offset %d to be processed first [queue size: %d]",
-                                getRecordOffset(queue.peek()), queue.size()));
+                                getRecordOffset(next), queue.size()));
                 commandContext.getTracingSpan().setTag("processing_delayed", true);
                 commandContext.put(KEY_COMMAND_SEND_ACTION_SUPPLIER_AND_RESULT_PROMISE, Pair
                         .of(sendActionSupplier, resultPromise));
