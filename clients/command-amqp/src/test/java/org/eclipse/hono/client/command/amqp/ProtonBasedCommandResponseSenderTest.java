@@ -40,6 +40,7 @@ import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -138,11 +139,20 @@ public class ProtonBasedCommandResponseSenderTest {
     }
 
     /**
-     * Verifies that command response messages being sent downstream contain a creation-time
-     * and a time-to-live as defined at the tenant level.
+     * Verifies that command response messages being sent downstream contains all required properties.
+     *
+     * <ul>
+     * <li>a creation-time</li>
+     * <li>a time-to-live as defined at the tenant level</li>
+     * <li>a status code</li>
+     * <li>an address that contains the reply-to-id</li>
+     * <li>the tenant ID</li>
+     * <li>the device ID</li>
+     * <li>the correlation ID</li>
+     * </ul>
      */
     @Test
-    public void testCommandResponseMessageHasCreationTimeAndTtl() {
+    public void testCommandResponseMessageHasRequiredProperties() {
 
         final var now = Instant.now();
         final TenantObject tenant = TenantObject.from(TENANT_ID);
@@ -176,5 +186,14 @@ public class ProtonBasedCommandResponseSenderTest {
         assertThat(downstreamMessage.getValue().getTtl()).isEqualTo(10_000L);
         // and a 200 status code
         assertThat(AmqpUtils.getStatus(downstreamMessage.getValue())).isEqualTo(HttpURLConnection.HTTP_OK);
+        // and an address containing the reply-to-id
+        final var address = ResourceIdentifier.fromString(downstreamMessage.getValue().getAddress());
+        assertThat(address.getResourceId()).isEqualTo(REPLY_TO_ID);
+        // and a tenant ID
+        assertThat(AmqpUtils.getTenantId(downstreamMessage.getValue())).isEqualTo(TENANT_ID);
+        // and a device ID
+        assertThat(AmqpUtils.getDeviceId(downstreamMessage.getValue())).isEqualTo(DEVICE_ID);
+        // and the correlation ID
+        assertThat(downstreamMessage.getValue().getCorrelationId()).isEqualTo(CORRELATION_ID);
     }
 }

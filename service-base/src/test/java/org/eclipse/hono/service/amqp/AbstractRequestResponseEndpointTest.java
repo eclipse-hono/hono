@@ -391,9 +391,9 @@ public class AbstractRequestResponseEndpointTest {
         final CacheDirective directive = CacheDirective.noCacheDirective();
         final Message request = ProtonHelper.message();
         request.setCorrelationId("message-id");
-        final RequestResponseResult<JsonObject> response = new RequestResponseResult<>(
+        final var response = new RequestResponseResult<JsonObject>(
                 HttpURLConnection.HTTP_OK,
-                null,
+                new JsonObject(),
                 directive,
                 null);
 
