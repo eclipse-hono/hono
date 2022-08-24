@@ -14,8 +14,11 @@
 package org.eclipse.hono.client.device.amqp.impl;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
@@ -172,7 +175,12 @@ public final class ProtonBasedAmqpAdapterClient extends ConnectionLifecycleWrapp
         final Message msg = ProtonHelper.message();
         msg.setAddress(targetAddress);
         AmqpUtils.setCreationTime(msg);
-        AmqpUtils.setPayload(msg, contentType, payload);
+        Optional.ofNullable(contentType).ifPresent(msg::setContentType);
+        Optional.ofNullable(payload)
+            .map(Buffer::getBytes)
+            .map(Binary::new)
+            .map(Data::new)
+            .ifPresent(msg::setBody);
         return msg;
     }
 
@@ -192,7 +200,6 @@ public final class ProtonBasedAmqpAdapterClient extends ConnectionLifecycleWrapp
             final SpanContext context) {
 
         Objects.requireNonNull(qos);
-        Objects.requireNonNull(payload);
 
         checkDeviceSpec(tenantId, deviceId);
         return getOrCreateGenericTelemetrySender()
@@ -221,8 +228,6 @@ public final class ProtonBasedAmqpAdapterClient extends ConnectionLifecycleWrapp
             final String tenantId,
             final String deviceId,
             final SpanContext context) {
-
-        Objects.requireNonNull(payload);
 
         checkDeviceSpec(tenantId, deviceId);
         return getOrCreateGenericEventSender()

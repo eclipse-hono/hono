@@ -21,7 +21,8 @@ import static org.mockito.Mockito.verify;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.apache.qpid.proton.message.Message;
+import java.util.Optional;
+
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientTestBase;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
@@ -57,27 +58,11 @@ public class TelemetrySenderTest extends AmqpAdapterClientTestBase {
     }
 
     /**
-     * Executes the assertions that check that the message created by the client conforms to the expectations of the
-     * AMQP adapter.
-     *
-     * @param endpoint The expected target address endpoint.
-     * @param tenantId The expected target address tenant.
-     * @param deviceId The expected target address device.
-     * @return The captured message.
-     */
-    private Message assertMessageConformsAmqpAdapterSpec(
-            final String endpoint,
-            final String tenantId,
-            final String deviceId) {
-
-        final var expectedAddress = ResourceIdentifier.fromPath(endpoint, tenantId, deviceId).toString();
-        return assertMessageConformsAmqpAdapterSpec(expectedAddress);
-    }
-
-    /**
      * Verifies that a telemetry message sent by the client conforms to the expectations of the AMQP adapter.
      *
      * @param qos The delivery semantics.
+     * @param payload The payload to put in the message body.
+     * @param contentType The value to set as the message's content-type.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param useSpanContext {@code true} if the sending should be tracked.
@@ -85,22 +70,28 @@ public class TelemetrySenderTest extends AmqpAdapterClientTestBase {
      */
     @ParameterizedTest
     @CsvSource(value = {
-                            "AT_MOST_ONCE,,my-device,true", "AT_MOST_ONCE,my-tenant,my-device,false",
-                            "AT_LEAST_ONCE,,my-device,false", "AT_LEAST_ONCE,my-tenant,my-device,true",
+        "AT_MOST_ONCE,the-payload,,,my-device,true",
+        "AT_MOST_ONCE,,custom/content,my-tenant,my-device,false",
+        "AT_LEAST_ONCE,the-payload,custom/content,,my-device,false",
+        "AT_LEAST_ONCE,,,my-tenant,my-device,true",
     })
     public void testSendTelemetryCreatesValidMessage(
             final QoS qos,
+            final String payload,
+            final String contentType,
             final String tenantId,
             final String deviceId,
             final boolean useSpanContext,
             final VertxTestContext ctx) {
 
         final var spanContext = mock(SpanContext.class);
+        final var expectedBody = Optional.ofNullable(payload).map(Buffer::buffer).orElse(null);
+
         // WHEN sending a message using the API
         final var result = client.sendTelemetry(
                 qos,
-                PAYLOAD,
-                CONTENT_TYPE,
+                expectedBody,
+                contentType,
                 tenantId,
                 deviceId,
                 useSpanContext ? spanContext : null);
@@ -115,10 +106,10 @@ public class TelemetrySenderTest extends AmqpAdapterClientTestBase {
         result.onComplete(ctx.succeeding(ok -> {
                 // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
                 ctx.verify(() -> {
-                    assertMessageConformsAmqpAdapterSpec(
-                            TelemetryConstants.TELEMETRY_ENDPOINT,
-                            tenantId,
-                            deviceId);
+                    assertMessageConformsToAmqpAdapterSpec(
+                            ResourceIdentifier.fromPath(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId).toString(),
+                            contentType,
+                            expectedBody);
                     if (useSpanContext) {
                         // and the given SpanContext is used
                         verify(spanBuilder).addReference(any(), eq(spanContext));
@@ -139,24 +130,33 @@ public class TelemetrySenderTest extends AmqpAdapterClientTestBase {
     /**
      * Verifies that an event message sent by the client conforms to the expectations of the AMQP adapter.
      *
+     * @param payload The payload to put in the message body.
+     * @param contentType The value to set as the message's content-type.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param useSpanContext {@code true} if the sending should be tracked.
      * @param ctx The test context to use for running asynchronous tests.
      */
     @ParameterizedTest
-    @CsvSource(value = { ",,true", ",other-device,false", "my-tenant,my-device,true" })
+    @CsvSource(value = {
+        "the-payload,custom/content,,,true",
+        ",,,other-device,false",
+        "the-payload,,my-tenant,my-device,true"
+    })
     public void testSendEventCreatesValidMessage(
+            final String payload,
+            final String contentType,
             final String tenantId,
             final String deviceId,
             final boolean useSpanContext,
             final VertxTestContext ctx) {
 
         final var spanContext = mock(SpanContext.class);
+        final var expectedBody = Optional.ofNullable(payload).map(Buffer::buffer).orElse(null);
         // WHEN sending a message using the API
         final var result = client.sendEvent(
-                PAYLOAD,
-                CONTENT_TYPE,
+                expectedBody,
+                contentType,
                 tenantId,
                 deviceId,
                 useSpanContext ? spanContext : null);
@@ -169,10 +169,10 @@ public class TelemetrySenderTest extends AmqpAdapterClientTestBase {
         result.onComplete(ctx.succeeding(ok -> {
                 // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
                 ctx.verify(() -> {
-                    assertMessageConformsAmqpAdapterSpec(
-                            EventConstants.EVENT_ENDPOINT,
-                            tenantId,
-                            deviceId);
+                    assertMessageConformsToAmqpAdapterSpec(
+                            ResourceIdentifier.fromPath(EventConstants.EVENT_ENDPOINT, tenantId, deviceId).toString(),
+                            contentType,
+                            expectedBody);
                     if (useSpanContext) {
                         // and the given SpanContext is used
                         verify(spanBuilder).addReference(any(), eq(spanContext));
