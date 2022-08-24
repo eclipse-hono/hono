@@ -95,6 +95,13 @@
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <systemProperties>
+            <vertx.json.base64>legacy</vertx.json.base64>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+          </systemProperties>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>

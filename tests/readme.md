@@ -190,3 +190,36 @@ For example, the following command will not start the MQTT adapter and will run 
 ```sh
 mvn verify -Prun-tests -Dhono.mqtt-adapter.disabled=true
 ```
+
+### Running the Tests with local services
+
+Hono services and adapters could be run locally - not as containers. 
+This could be done using the following steps:
+
+1. Start dependencies
+
+``` sh
+mvn verify -Dstart -Pno-adapters,no-services
+```
+
+The command line above would start default dependencies (i.e. MongoDB and Kafka as data storage and messaging infrastructure). 
+The flavours, e.g. AMQP instead Kafka) could be specified via the same system properties as described above.
+
+Dependencies would be started as containers using fixed ports. This allows easy monitoring via external tools (e.g. database viewers).
+
+2. Start services and adapters using Quarkus IDE integration or via maven (`mvn quarkus:dev`)
+
+Started this way, services and adapters would be configured in similar way as if they were started via containers.
+
+Now integration tests could be run against them using:
+
+```sh
+mvn verify -Plocal,fix-ports,useRunningContainers,run-tests
+```
+
+Finaly all Hono related containers (e.g. dependencies) could be stopped as described above:
+
+```sh
+mvn verify -PstopContainers
+```
+

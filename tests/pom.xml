@@ -90,6 +90,8 @@
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
 
+    <hono.service-auth.disabled>false</hono.service-auth.disabled>
+
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
     <hono.infinispan.host>hono-data-grid</hono.infinispan.host>
     <hono.infinispan.port>11222</hono.infinispan.port>
@@ -104,6 +106,8 @@
     <hono.kafka-messaging.disabled>false</hono.kafka-messaging.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
     <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
+
+    <hono.command-router.disabled>false</hono.command-router.disabled>
 
     <!--
       Device Registry related properties - The MongoDB based device registry is used as the default one.
@@ -136,6 +140,8 @@
     <hono.deviceregistry.http.authConfig.passwordHash>
       5905BFCF36F5852A0E75B9D0727F3E26FD9701FD3C6A182F360EBD1FBFD321A8E1D7E392AEA7D8AF84B445186C86532E22D99892DE5EE95C86C0783198AA9840
     </hono.deviceregistry.http.authConfig.passwordHash>
+
+    <hono.mongodb.disabled>false</hono.mongodb.disabled>
 
     <hono.mongodb.host>hono-mongodb</hono.mongodb.host>
     <hono.mongodb.port>27017</hono.mongodb.port>
@@ -195,6 +201,9 @@
     <jaeger.query.port>18080</jaeger.query.port>
 
     <otel-collector.endpoint></otel-collector.endpoint>
+
+    <!-- prevents circular dependency -->
+    <quarkus.application-dev.properties>n/a</quarkus.application-dev.properties>
   </properties>
 
   <dependencies>
@@ -553,6 +562,7 @@
         </property>
       </activation>
       <properties>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
         <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
         <hono.postgres.disabled>false</hono.postgres.disabled>
         <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
@@ -619,6 +629,48 @@
       </properties>
     </profile>
     <profile>
+      <id>no-services</id>
+      <activation>
+        <property>
+          <name>no-services</name>
+        </property>
+      </activation>
+      <properties>
+        <hono.service-auth.disabled>true</hono.service-auth.disabled>
+        <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
+        <hono.deviceregistry.jdbc.disabled>true</hono.deviceregistry.jdbc.disabled>
+        <hono.command-router.disabled>true</hono.command-router.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>auth-only</id>
+      <activation>
+        <property>
+          <name>auth-only</name>
+        </property>
+      </activation>
+      <properties>
+        <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
+        <hono.deviceregistry.jdbc.disabled>true</hono.deviceregistry.jdbc.disabled>
+        <hono.command-router.disabled>true</hono.command-router.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>no-adapters</id>
+      <activation>
+        <property>
+          <name>no-adapters</name>
+        </property>
+      </activation>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
       <id>amqp-only</id>
       <properties>
         <hono.amqp-adapter.disabled>false</hono.amqp-adapter.disabled>
@@ -668,18 +720,84 @@
         <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
+    
     <profile>
-      <id>no-adapters</id>
+      <id>local</id>
+      <activation>
+        <property>
+          <name>local</name>
+        </property>
+      </activation>
       <properties>
-        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
-        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
-        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
-        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
-        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+        <docker.host.address>localhost</docker.host.address>
+        <auth.ip>localhost</auth.ip>
+        <deviceregistry.ip>localhost</deviceregistry.ip>
+        <commandrouter.ip>localhost</commandrouter.ip>
+        <amqp.ip>localhost</amqp.ip>
+        <coap.ip>localhost</coap.ip>
+        <http.ip>localhost</http.ip>
+        <lora.ip>localhost</lora.ip>
+        <mqtt.ip>localhost</mqtt.ip>
       </properties>
     </profile>
+    
+    <profile>
+      <id>fix-ports</id>
+      <activation>
+        <property>
+          <name>start</name>
+        </property>
+      </activation>
+      <properties>
+        <infinispan.port>11222</infinispan.port>
+        <mongodb.port>27017</mongodb.port>
+        <kafka.port>9094</kafka.port>
+        <qpid.amqps.port>15671</qpid.amqps.port>
+        <qpid.amqp.port>15672</qpid.amqp.port>
+        
+        <auth.amqps.port>${fixed.auth.amqps.port}</auth.amqps.port>
+        <deviceregistry.amqp.port>${fixed.deviceregistry.amqp.port}</deviceregistry.amqp.port>
+        <deviceregistry.http.port>${fixed.deviceregistry.http.port}</deviceregistry.http.port>
+        <commandrouter.amqp.port>${fixed.commandrouter.amqp.port}</commandrouter.amqp.port>
+                
+        <amqp.port>${fixed.amqp.adapter.port}</amqp.port>
+        <amqps.port>${fixed.amqps.adapter.port}</amqps.port>
+        <coap.port>${fixed.coap.adapter.port}</coap.port>
+        <coaps.port>${fixed.coaps.adapter.port}</coaps.port>
+        <http.port>${fixed.http.adapter.port}</http.port>
+        <https.port>${fixed.https.adapter.port}</https.port>
+        <lora.port>${fixed.lora.adapter.port}</lora.port>
+        <lora.secure-port>${fixed.loras.adapter.port}</lora.secure-port>
+        <mqtt.port>${fixed.mqtt.adapter.port}</mqtt.port>
+        <mqtts.port>${fixed.mqtts.adapter.port}</mqtts.port>
+      </properties>
+      <build>
+        <plugins>
+          <!-- Skips random kafka port -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>reserve-network-port</id>
+                <goals>
+                  <goal>reserve-network-port</goal>
+                </goals>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
     <profile>
       <id>run-tests</id>
+      <activation>
+        <property>
+          <name>start</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -857,6 +975,7 @@
                 <image>
                   <name>${docker.repository}/hono-service-auth-test:${project.version}</name>
                   <build>
+                    <skip>${hono.service-auth.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.auth-server.image}:${project.version}</from>
                     <assembly>
@@ -868,7 +987,7 @@
                           <dependencySet>
                             <includes>
                               <!--  use openSSL in Auth server -->
-                              <include>io.netty:netty-tcnative-boringssl-static:jar:${os.detected.classifier}</include>
+                              <include>io.netty:netty-tcnative-boringssl-static:jar:linux-${os.detected.arch}</include>
                               <include>io.netty:netty-tcnative-classes</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
@@ -894,6 +1013,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.service-auth.disabled}</skip>
                     <ports>
                       <port>+auth.ip:auth.amqps.port:5671</port>
                       <port>+auth.ip:auth.health.port:${health.check.port}</port>
@@ -1153,7 +1273,7 @@
                 <image>
                   <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
                   <build>
-                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
+                    <skip>${hono.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${mongodb-image.name}</from>
                     <assembly>
@@ -1176,7 +1296,7 @@
                     </assembly>
                   </build>
                   <run>
-                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
+                    <skip>${hono.mongodb.disabled}</skip>
                     <cmd>
                       <arg>--config</arg>
                       <arg>/etc/mongo/mongod.conf</arg>
@@ -1288,6 +1408,9 @@
                   <run>
                     <skip>${hono.postgres.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <ports>
+                      <port>5432:5432</port>
+                    </ports>
                     <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
@@ -1385,6 +1508,7 @@
                 <image>
                   <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
                   <build>
+                    <skip>${hono.command-router.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.command-router.image}:${project.version}</from>
                     <assembly>
@@ -1420,6 +1544,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.command-router.disabled}</skip>
                     <ports>
                       <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
                       <port>+commandrouter.ip:commandrouter.health.port:${health.check.port}</port>
@@ -1477,7 +1602,7 @@
                           <dependencySet>
                             <includes>
                               <!--  use openSSL in HTTP adapter -->
-                              <include>io.netty:netty-tcnative-boringssl-static:jar:${os.detected.classifier}</include>
+                              <include>io.netty:netty-tcnative-boringssl-static:jar:linux-${os.detected.arch}</include>
                               <include>io.netty:netty-tcnative-classes</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
@@ -1659,10 +1784,10 @@
                   <run>
                     <skip>${hono.amqp-adapter.disabled}</skip>
                     <ports>
-                      <port>5005</port>
-                      <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
-                      <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
-                      <port>+adapter.amqp.ip:adapter.amqp.health.port:${health.check.port}</port>
+                      <!-- <port>5005</port> -->
+                      <port>+amqp.ip:amqp.port:5672</port>
+                      <port>+amqps.ip:amqps.port:5671</port>
+                      <port>+amqp.ip:adapter.amqp.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/adapter.amqp.port.properties</portPropertyFile>
                     <network>
@@ -1695,7 +1820,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${adapter.amqp.ip}:${adapter.amqp.health.port}${health.check.root-path}${health.check.readiness-path}</url>
+                        <url>http://${amqp.ip}:${adapter.amqp.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1905,43 +2030,44 @@
                 <auth.host>${auth.ip}</auth.host>
                 <auth.amqps.port>${auth.amqps.port}</auth.amqps.port>
                 <auth.http.port>${auth.health.port}</auth.http.port>
-                <hono.username>hono-client</hono.username>
-                <hono.password>secret</hono.password>
-                <tenant.admin.username>http-adapter@HONO</tenant.admin.username>
-                <tenant.admin.password>http-secret</tenant.admin.password>
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                 <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
-                <downstream.username>consumer@HONO</downstream.username>
-                <downstream.password>verysecret</downstream.password>
                 <commandrouter.host>${commandrouter.ip}</commandrouter.host>
                 <commandrouter.amqp.port>${commandrouter.amqp.port}</commandrouter.amqp.port>
                 <deviceregistry.type>${hono.deviceregistry.type}</deviceregistry.type>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
-                <deviceregistry.http.authConfig.username>${hono.deviceregistry.http.authConfig.username}</deviceregistry.http.authConfig.username>
-                <deviceregistry.http.authConfig.password>${hono.deviceregistry.http.authConfig.password}</deviceregistry.http.authConfig.password>
-                <adapter.coap.disabled>${hono.coap-adapter.disabled}</adapter.coap.disabled>
-                <adapter.coap.host>${coap.ip}</adapter.coap.host>
-                <adapter.coap.port>${coap.port}</adapter.coap.port>
-                <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
                 <adapter.http.disabled>${hono.http-adapter.disabled}</adapter.http.disabled>
                 <adapter.http.host>${http.ip}</adapter.http.host>
                 <adapter.http.port>${http.port}</adapter.http.port>
                 <adapter.https.port>${https.port}</adapter.https.port>
-                <adapter.lora.disabled>${hono.lora-adapter.disabled}</adapter.lora.disabled>
-                <adapter.lora.host>${lora.ip}</adapter.lora.host>
-                <adapter.lora.port>${lora.port}</adapter.lora.port>
-                <adapter.lora.secure-port>${lora.secure-port}</adapter.lora.secure-port>
                 <adapter.mqtt.disabled>${hono.mqtt-adapter.disabled}</adapter.mqtt.disabled>
                 <adapter.mqtt.host>${mqtt.ip}</adapter.mqtt.host>
                 <adapter.mqtt.port>${mqtt.port}</adapter.mqtt.port>
                 <adapter.mqtts.port>${mqtts.port}</adapter.mqtts.port>
                 <adapter.amqp.disabled>${hono.amqp-adapter.disabled}</adapter.amqp.disabled>
-                <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
-                <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
-                <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
+                <adapter.amqp.host>${amqp.ip}</adapter.amqp.host>
+                <adapter.amqp.port>${amqp.port}</adapter.amqp.port>
+                <adapter.amqps.port>${amqps.port}</adapter.amqps.port>
+                <adapter.coap.disabled>${hono.coap-adapter.disabled}</adapter.coap.disabled>
+                <adapter.coap.host>${coap.ip}</adapter.coap.host>
+                <adapter.coap.port>${coap.port}</adapter.coap.port>
+                <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
+                <adapter.lora.disabled>${hono.lora-adapter.disabled}</adapter.lora.disabled>
+                <adapter.lora.host>${lora.ip}</adapter.lora.host>
+                <adapter.lora.port>${lora.port}</adapter.lora.port>
+                <adapter.lora.secure-port>${lora.secure-port}</adapter.lora.secure-port>
+                
+                <hono.username>hono-client</hono.username>
+                <hono.password>secret</hono.password>
+                <tenant.admin.username>http-adapter@HONO</tenant.admin.username>
+                <tenant.admin.password>http-secret</tenant.admin.password>
+                <downstream.username>consumer@HONO</downstream.username>
+                <downstream.password>verysecret</downstream.password>
+                <deviceregistry.http.authConfig.username>${hono.deviceregistry.http.authConfig.username}</deviceregistry.http.authConfig.username>
+                <deviceregistry.http.authConfig.password>${hono.deviceregistry.http.authConfig.password}</deviceregistry.http.authConfig.password>
                 <adapter.sendMessageToDeviceTimeout>${adapter.sendMessageToDeviceTimeout}</adapter.sendMessageToDeviceTimeout>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
                 <test.env>${test.env}</test.env>
@@ -1966,8 +2092,14 @@
         </plugins>
       </build>
     </profile>
+    
     <profile>
       <id>useRunningContainers</id>
+      <activation>
+        <property>
+          <name>use-running</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -2002,6 +2134,20 @@
               </execution>
             </executions>
           </plugin>
+          <!-- disable kafka.port aut generation -->
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>reserve-network-port</id>
+                <goals>
+                  <goal>reserve-network-port</goal>
+                </goals>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>io.fabric8</groupId>
             <artifactId>docker-maven-plugin</artifactId>
@@ -2024,8 +2170,48 @@
         </plugins>
       </build>
     </profile>
+    
+    <profile>
+      <id>start</id>
+      <activation>
+        <property>
+          <name>start</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <skipITs>true</skipITs>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <verbose>true</verbose>
+            </configuration>
+            <executions>
+              <!-- disable 'stop-and-remove' executions -->
+              <execution>
+                <id>stop-and-remove-docker</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
     <profile>
       <id>stopContainers</id>
+      <activation>
+        <property>
+          <name>stop</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -2062,6 +2248,5 @@
         </plugins>
       </build>
     </profile>
-
   </profiles>
 </project>

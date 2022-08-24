@@ -99,6 +99,105 @@ quarkus.vertx.prefer-native-transport=true
 quarkus.vertx.resolver.cache-max-time-to-live=0
     </quarkus.application.properties>
 
+    <!-- Local dev and test mode  support -->
+    <!-- Fixed ports used when starting hono services/adapters locally or with fixed ports -->
+    <fixed.auth.amqps.port>5673</fixed.auth.amqps.port>
+    <fixed.auth.amqp.port>5674</fixed.auth.amqp.port> <!-- Reserved - not used -->
+    <fixed.deviceregistry.amqps.port>5675</fixed.deviceregistry.amqps.port> <!-- Reserved - not used -->
+    <fixed.deviceregistry.amqp.port>5676</fixed.deviceregistry.amqp.port>
+    <fixed.deviceregistry.http.port>1080</fixed.deviceregistry.http.port>
+    <fixed.deviceregistry.https.port>1443</fixed.deviceregistry.https.port> <!-- Reserved - not used -->
+    <fixed.commandrouter.amqps.port>5677</fixed.commandrouter.amqps.port> <!-- Reserved - not used -->
+    <fixed.commandrouter.amqp.port>5678</fixed.commandrouter.amqp.port>
+
+    <fixed.http.adapter.port>8080</fixed.http.adapter.port>
+    <fixed.https.adapter.port>8443</fixed.https.adapter.port>
+    <fixed.mqtt.adapter.port>1883</fixed.mqtt.adapter.port>
+    <fixed.mqtts.adapter.port>8883</fixed.mqtts.adapter.port>
+    <fixed.amqp.adapter.port>5672</fixed.amqp.adapter.port>
+    <fixed.amqps.adapter.port>5671</fixed.amqps.adapter.port>
+    <fixed.coap.adapter.port>5683</fixed.coap.adapter.port>
+    <fixed.coaps.adapter.port>5684</fixed.coaps.adapter.port>
+    <fixed.lora.adapter.port>2080</fixed.lora.adapter.port>
+    <fixed.loras.adapter.port>2443</fixed.loras.adapter.port>
+
+    <quarkus.application-dev.properties>
+hono.auth=${hono.auth}
+hono.auth.host=localhost
+hono.auth.port=${fixed.auth.amqps.port}
+hono.auth.name=${app.id}
+hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem
+hono.auth.validation.certPath=../../demo-certs/certs/auth-server-cert.pem
+hono.auth.jwksPollingInterval=PT20S
+
+hono.app.amqpMessagingDisabled=${hono.amqp-messaging.disabled:true}
+hono.app.kafkaMessagingDisabled=${hono.kafka-messaging.disabled:false}
+
+hono.kafka.commonClientConfig."bootstrap.servers"=${docker.host.address:localhost}:${kafka.port:9094}
+hono.kafka.commonClientConfig."max.block.ms"=1000
+
+# AMQP connection to central AMQP message broker if configured
+#hono.command.hostnameVerificationRequired=false
+hono.command.host=${docker.host.address:localhost}
+hono.command.port=${qpid.amqps.port:15671}
+hono.command.amqpHostname=hono-internal
+hono.command.keyPath=../../demo-certs/certs/${app.id}-key.pem
+hono.command.certPath=../../demo-certs/certs/${app.id}-cert.pem
+hono.command.trustStorePath=../../demo-certs/certs/trusted-certs.pem
+#hono.command.trustStorePassword=../../demo-certs/certs/trust-store-password
+hono.command.linkEstablishmentTimeout=${link.establishment.timeout:5000}
+hono.command.flowLatency=${flow.latency:1000}
+hono.command.requestTimeout=${request.timeout:500}
+
+hono.registration.host=localhost
+hono.registration.port=${fixed.deviceregistry.amqp.port}
+hono.registration.username=${app.id}@HONO
+hono.registration.password=${short.name}-secret
+hono.registration.linkEstablishmentTimeout=${link.establishment.timeout:5000}
+hono.registration.flowLatency=${flow.latency:1000}
+hono.registration.requestTimeout=${request.timeout:500}
+
+hono.tenant.host=localhost
+hono.tenant.port=${fixed.deviceregistry.amqp.port}
+hono.tenant.username=${app.id}@HONO
+hono.tenant.password=${short.name}-secret
+hono.tenant.linkEstablishmentTimeout=${link.establishment.timeout:5000}
+hono.tenant.flowLatency=${flow.latency:1000}
+hono.tenant.requestTimeout=${request.timeout:500}
+
+hono.credentials.host=localhost
+hono.credentials.port=${fixed.deviceregistry.amqp.port}
+hono.credentials.username=${app.id}@HONO
+hono.credentials.password=${short.name}-secret
+hono.credentials.linkEstablishmentTimeout=${link.establishment.timeout:5000}
+hono.credentials.flowLatency=${flow.latency:1000}
+hono.credentials.requestTimeout=${request.timeout:500}
+
+hono.commandRouter.host=localhost
+hono.commandRouter.port=${fixed.commandrouter.amqps.port}
+hono.commandRouter.username=${app.id}@HONO
+hono.commandRouter.password=${short.name}-secret
+hono.commandRouter.linkEstablishmentTimeout=${link.establishment.timeout:5000}
+hono.commandRouter.flowLatency=${flow.latency:1000}
+hono.commandRouter.requestTimeout=${request.timeout:500}
+    
+# Disable dev services - start them manually
+quarkus.devservices.enabled=false
+# app id
+quarkus.application.name=${app.id}
+# Service replicas
+hono.app.maxInstances=1
+# Telemetry endpoint
+quarkus.opentelemetry.tracer.exporter.otlp.endpoint=${otel-collector.endpoint:}
+# Log setup
+quarkus.log.console.color=true
+quarkus.log.level=INFO
+quarkus.log.min-level=TRACE
+quarkus.log.category."io.quarkus.vertx.core.runtime".level=DEBUG
+quarkus.log.category."org.eclipse.hono".level=${hono.debug.level:DEBUG}
+# Max exec time
+quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
+    </quarkus.application-dev.properties>
   </properties>
 
   <dependencyManagement>

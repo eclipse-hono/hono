@@ -26,6 +26,15 @@
   <name>Hono Protocol Adapters Parent</name>
   <description>Defines common dependencies and build profiles for Quarkus-based protocol adapter implementations</description>
 
+  <properties>
+    <!-- 
+      hono.auth poperty is needed while quarkus resolve dev properties (it 
+      contains hono.auth=${hono.auth}). That's why we specify here. 
+      For services it is delegating, whle here we just desable hono auth  
+    -->
+    <hono.auth>n/a</hono.auth>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -98,6 +107,13 @@
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <systemProperties>
+            <vertx.json.base64>legacy</vertx.json.base64>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+          </systemProperties>
+        </configuration>
       </plugin>
     </plugins>
   </build>
