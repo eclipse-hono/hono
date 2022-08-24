@@ -43,7 +43,6 @@ import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
 import org.fusesource.jansi.AnsiConsole;
 import org.jline.console.SystemRegistry;
@@ -384,15 +383,21 @@ public class AmqpAdapter implements Callable<Integer> {
         return CommandLine.ExitCode.OK;
     }
 
-    private void handleUnauthorizedError(final Throwable t, final String deviceId) {
-        if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_FORBIDDEN) {
-            System.err.println("""
-                    The currently connected device is not authorized to act on behalf of device [id: %1$s].
-                    In order to authorize the connected device, its device identifier needs to be added to
-                    the list of (gateway) devices that may act on behalf of device [id: %1$s].
-                    Please refer to https://www.eclipse.org/hono/docs/concepts/connecting-devices/#connecting-via-a-device-gateway
-                    for details regarding connecting devices via gateways.
-                    """.formatted(deviceId));
+    private void handleError(final Throwable t, final String deviceId) {
+        if (t instanceof ServiceInvocationException e) {
+            switch (e.getErrorCode()) {
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                System.err.println("""
+                        The currently connected device is not authorized to act on behalf of device [id: %1$s].
+                        In order to authorize the connected device, its device identifier needs to be added to
+                        the list of (gateway) devices that may act on behalf of device [id: %1$s].
+                        Please refer to https://www.eclipse.org/hono/docs/concepts/connecting-devices/#connecting-via-a-device-gateway
+                        for details regarding connecting devices via gateways.
+                        """.formatted(deviceId));
+                break;
+            default:
+                System.err.println("The AMQP protocol adapter was not able to process the request.");
+            }
         }
     }
 
@@ -490,7 +495,7 @@ public class AmqpAdapter implements Callable<Integer> {
             .onSuccess(consumer -> activeConsumers.put(getConsumerKey(tenantId, deviceId), consumer))
             .onFailure(t -> {
                 System.err.println("Cannot subscribe to commands for device");
-                handleUnauthorizedError(t, deviceId);
+                handleError(t, deviceId);
             })
             .toCompletionStage()
             .toCompletableFuture()
@@ -565,15 +570,13 @@ public class AmqpAdapter implements Callable<Integer> {
             .compose(client -> client.sendTelemetry(
                     QoS.AT_MOST_ONCE,
                     Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    Optional.ofNullable(options.contentType).orElseGet(() -> Optional.ofNullable(options.payload)
-                            .map(p -> (String) null)
-                            .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)),
+                    options.contentType,
                     options.tenantId,
                     options.deviceId,
                     null))
             .onFailure(t -> {
                 System.err.println("Cannot send telemetry message.");
-                handleUnauthorizedError(t, options.deviceId);
+                handleError(t, options.deviceId);
             })
             .toCompletionStage()
             .toCompletableFuture()
@@ -594,15 +597,13 @@ public class AmqpAdapter implements Callable<Integer> {
         getClient()
             .compose(f -> f.sendEvent(
                     Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    Optional.ofNullable(options.contentType).orElseGet(() -> Optional.ofNullable(options.payload)
-                            .map(p -> (String) null)
-                            .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)),
+                    options.contentType,
                     options.tenantId,
                     options.deviceId,
                     null))
             .onFailure(t -> {
                 System.err.println("Cannot send event message.");
-                handleUnauthorizedError(t, options.deviceId);
+                handleError(t, options.deviceId);
             })
             .toCompletionStage()
             .toCompletableFuture()

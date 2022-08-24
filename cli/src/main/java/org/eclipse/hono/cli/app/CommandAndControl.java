@@ -247,21 +247,16 @@ public class CommandAndControl implements Callable<Integer> {
         connected.set(false);
     }
 
-    private void handleCommandSendingError(final Throwable e) {
-        if (e instanceof ServiceInvocationException) {
-            final var sie = (ServiceInvocationException) e;
-            System.err.println("Error: %d %s".formatted(sie.getErrorCode(),
-                    ServiceInvocationException.getErrorMessageForExternalClient(sie)));
+    private void handleCommandSendingError(final Throwable t) {
+        System.err.println("Cannot send command to device.");
+        if (t instanceof ServiceInvocationException sie) {
             if (sie.getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
-                System.err.println("Cannot send command to device");
                 System.err.println("""
                         Check if device is connected to a protocol adapter and has subscribed \
                         for commands as described in the protocol adapter user guides.
                         https://www.eclipse.org/hono/docs/user-guide/
                         """);
             }
-        } else {
-            System.err.println("Error: failed to send command to device");
         }
     }
 
@@ -281,23 +276,19 @@ public class CommandAndControl implements Callable<Integer> {
                         .map(p -> MessageHelper.CONTENT_TYPE_APPLICATION_JSON)
                         .orElse("text/plain"));
 
-        try {
-            appCommand.getApplicationClient()
-                .compose(c -> c.sendOneWayCommand(
-                    options.tenantId,
-                    options.deviceId,
-                    options.commandName,
-                    Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    ct,
-                    null))
-                .toCompletionStage()
-                .toCompletableFuture()
-                .join();
-            return ExitCode.OK;
-        } catch (final CompletionException e) {
-            handleCommandSendingError(e.getCause());
-            return ExitCode.SOFTWARE;
-        }
+        appCommand.getApplicationClient()
+            .compose(c -> c.sendOneWayCommand(
+                options.tenantId,
+                options.deviceId,
+                options.commandName,
+                Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
+                ct,
+                null))
+            .onFailure(this::handleCommandSendingError)
+            .toCompletionStage()
+            .toCompletableFuture()
+            .join();
+        return ExitCode.OK;
     }
 
     @CommandLine.Command(
@@ -322,25 +313,21 @@ public class CommandAndControl implements Callable<Integer> {
                         .map(p -> MessageHelper.CONTENT_TYPE_APPLICATION_JSON)
                         .orElse("text/plain"));
 
-        try {
-            appCommand.getApplicationClient()
-                .compose(c -> c.sendCommand(
-                    options.tenantId,
-                    options.deviceId,
-                    options.commandName,
-                    Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    ct,
-                    UUID.randomUUID().toString(),
-                    Duration.ofSeconds(responseTimeout),
-                    null))
-                .onSuccess(this::printResponse)
-                .toCompletionStage()
-                .toCompletableFuture()
-                .join();
-            return ExitCode.OK;
-        } catch (final CompletionException e) {
-            handleCommandSendingError(e.getCause());
-            return ExitCode.SOFTWARE;
-        }
+        appCommand.getApplicationClient()
+            .compose(c -> c.sendCommand(
+                options.tenantId,
+                options.deviceId,
+                options.commandName,
+                Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
+                ct,
+                UUID.randomUUID().toString(),
+                Duration.ofSeconds(responseTimeout),
+                null))
+            .onSuccess(this::printResponse)
+            .onFailure(this::handleCommandSendingError)
+            .toCompletionStage()
+            .toCompletableFuture()
+            .join();
+        return ExitCode.OK;
     }
 }

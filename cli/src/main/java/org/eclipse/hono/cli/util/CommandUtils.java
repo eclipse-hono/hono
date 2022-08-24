@@ -46,8 +46,9 @@ public final class CommandUtils {
      */
     public static void printError(final Throwable t) {
         if (t instanceof ServiceInvocationException cause) {
-            System.err.printf("Error: %d %s%n", cause.getErrorCode(),
-                    ServiceInvocationException.getErrorMessageForExternalClient(cause));
+            System.err.println("Error: %d - %s".formatted(
+                    cause.getErrorCode(),
+                    ServiceInvocationException.getErrorMessageForExternalClient(cause)));
         } else {
             System.err.println("Error: %s".formatted(t.getMessage()));
         }
