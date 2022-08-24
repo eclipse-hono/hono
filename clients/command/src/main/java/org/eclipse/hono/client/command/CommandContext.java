@@ -41,6 +41,13 @@ public interface CommandContext extends ExecutionContext {
     String KEY_TENANT_CONFIG = "tenant-config";
 
     /**
+     * Checks if the context has already been completed.
+     *
+     * @return {@code true} if the context has already been completed.
+     */
+    boolean isCompleted();
+
+    /**
      * Logs information about the command.
      *
      * @param span The span to log to.

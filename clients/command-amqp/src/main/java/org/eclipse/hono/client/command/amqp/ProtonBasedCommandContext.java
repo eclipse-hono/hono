@@ -47,6 +47,8 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     private final ProtonBasedCommand command;
     private final ProtonDelivery delivery;
 
+    private String completedOutcome;
+
     /**
      * Creates a new command context.
      *
@@ -61,6 +63,16 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
         this.delivery = Objects.requireNonNull(delivery);
     }
 
+    /**
+     * Checks if the context has already been completed.
+     *
+     * @return {@code true} if the context has already been completed.
+     */
+    @Override
+    public final boolean isCompleted() {
+        return completedOutcome != null;
+    }
+
     @Override
     public void logCommandToSpan(final Span span) {
         command.logToSpan(span);
@@ -73,12 +85,18 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void accept() {
+        if (!setCompleted("accepted")) {
+            return;
+        }
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_ACCEPTED);
         updateDelivery(Accepted.getInstance());
     }
 
     @Override
     public void release() {
+        if (!setCompleted("released")) {
+            return;
+        }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed");
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_UNAVAILABLE);
         updateDelivery(Released.getInstance());
@@ -87,6 +105,9 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     @Override
     public void release(final Throwable error) {
         Objects.requireNonNull(error);
+        if (!setCompleted("released")) {
+            return;
+        }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed", error);
         final int status = ServiceInvocationException.extractStatusCode(error);
         Tags.HTTP_STATUS.set(getTracingSpan(), status);
@@ -95,6 +116,9 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
+        if (!setCompleted("modified")) {
+            return;
+        }
         final Span span = getTracingSpan();
         TracingHelper.logError(span, "command for device handled with outcome 'modified'"
                 + (deliveryFailed ? "; delivery failed" : "")
@@ -110,6 +134,9 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final String error) {
+        if (!setCompleted("rejected")) {
+            return;
+        }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command: " + error);
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_BAD_REQUEST);
         final ErrorCondition errorCondition = ProtonHelper.condition(AmqpUtils.AMQP_BAD_REQUEST, error);
@@ -120,6 +147,9 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final Throwable error) {
+        if (!setCompleted("rejected")) {
+            return;
+        }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command", error);
         final int status = error instanceof ClientErrorException
                 ? ((ClientErrorException) error).getErrorCode()
@@ -171,5 +201,15 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
             }
         }
         span.finish();
+    }
+
+    private boolean setCompleted(final String outcome) {
+        if (completedOutcome != null) {
+            LOG.warn("can't apply '{}' outcome, context already completed with '{}' outcome [{}]",
+                    outcome, completedOutcome, getCommand());
+            return false;
+        }
+        completedOutcome = outcome;
+        return true;
     }
 }
