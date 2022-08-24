@@ -50,8 +50,6 @@ public abstract class AmqpAdapterClientTestBase {
 
     protected static final String TENANT_ID = "test-tenant";
     protected static final String DEVICE_ID = "test-device";
-    protected static final String CONTENT_TYPE = "text/plain";
-    protected static final Buffer PAYLOAD = Buffer.buffer("test-value");
     protected static final String TEST_PROPERTY_KEY = "test-key";
     protected static final String TEST_PROPERTY_VALUE = "test-value";
 
@@ -109,10 +107,15 @@ public abstract class AmqpAdapterClientTestBase {
      * Executes the assertions that check that the message created by the client conforms to the expectations of the
      * AMQP adapter.
      *
-     * @param expectedAddress The expected target address.
+     * @param expectedAddress The target address expected to be found in the message that has been sent.
+     * @param expectedContentType The content type expected to be found in the message that has been sent.
+     * @param expectedPayload The payload expected to be found in the message that has been sent.
      * @return The captured message.
      */
-    protected Message assertMessageConformsAmqpAdapterSpec(final String expectedAddress) {
+    protected Message assertMessageConformsToAmqpAdapterSpec(
+            final String expectedAddress,
+            final String expectedContentType,
+            final Buffer expectedPayload) {
 
         final ArgumentCaptor<Message> messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
 
@@ -120,8 +123,20 @@ public abstract class AmqpAdapterClientTestBase {
         final Message message = messageArgumentCaptor.getValue();
 
         assertAll(() -> assertThat(message.getAddress()).isEqualTo(expectedAddress),
-                () -> assertThat(AmqpUtils.getPayload(message)).isEqualTo(PAYLOAD),
-                () -> assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE));
+                () -> {
+                    if (expectedContentType != null) {
+                        assertThat(message.getContentType()).isEqualTo(expectedContentType);
+                    } else {
+                        assertThat(message.getContentType()).isNull();
+                    }
+                },
+                () -> {
+                    if (expectedPayload != null) {
+                        assertThat(AmqpUtils.getPayload(message)).isEqualTo(expectedPayload);
+                    } else {
+                        assertThat(AmqpUtils.getPayload(message)).isNull();
+                    }
+                });
 
         return message;
     }

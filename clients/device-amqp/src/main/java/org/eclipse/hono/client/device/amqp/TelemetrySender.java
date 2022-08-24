@@ -33,7 +33,7 @@ public interface TelemetrySender {
      * @param qos The delivery semantics to use.
      * @param payload The data to send.
      *            <p>
-     *            The payload will be added to the message as an AMQP 1.0 <em>Data</em> section.
+     *            The payload, if not {@code null}, will be added to the message as an AMQP 1.0 <em>Data</em> section.
      * @param contentType The content type of the payload or {@code null} if unknown.
      *            <p>
      *            This parameter will be used as the value for the message's <em>content-type</em> property.
@@ -58,7 +58,7 @@ public interface TelemetrySender {
      *         will be failed with either a {@code org.eclipse.hono.client.ServerErrorException} or a
      *         {@link org.eclipse.hono.client.ClientErrorException} depending on the reason for the
      *         failure to process the message.
-     * @throws NullPointerException if quality-of-service or payload are {@code null}.
+     * @throws NullPointerException if quality-of-service is {@code null}.
      * @throws IllegalArgumentException if tenant ID is not {@code null} but device ID is {@code null}.
      */
     Future<ProtonDelivery> sendTelemetry(

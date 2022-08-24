@@ -21,16 +21,17 @@ import static org.mockito.Mockito.verify;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.apache.qpid.proton.message.Message;
+import java.util.Optional;
+
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientTestBase;
-import org.eclipse.hono.client.device.amqp.impl.ProtonBasedAmqpAdapterClient;
 import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -58,32 +59,36 @@ public class CommandResponderTest extends AmqpAdapterClientTestBase {
         client = new ProtonBasedAmqpAdapterClient(connection);
     }
 
-    private void assertMessageConformsAmqpAdapterSpec() {
-        final Message message = assertMessageConformsAmqpAdapterSpec(ADDRESS.toString());
-        assertThat(message.getCorrelationId()).isEqualTo(CORRELATION_ID);
-        assertThat(message.getApplicationProperties().getValue().get("status")).isEqualTo(STATUS);
-    }
-
     /**
      * Verifies that a command response message sent by the client conforms to the expectations of the AMQP adapter.
      *
+     * @param payload The payload to put in the message body.
+     * @param contentType The value to set as the message's content-type.
      * @param useSpanContext {@code true} if the sending should be tracked.
      * @param ctx The test context to use for running asynchronous tests.
      */
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @CsvSource(value = {
+        "the-payload,custom/content,true",
+        "the-payload,,false",
+        ",custom/content,true",
+        ",,false",
+    })
     public void testSendCommandResponseCreatesValidMessage(
+            final String payload,
+            final String contentType,
             final boolean useSpanContext,
             final VertxTestContext ctx) {
 
         final var spanContext = mock(SpanContext.class);
+        final var expectedBody = Optional.ofNullable(payload).map(Buffer::buffer).orElse(null);
         // WHEN sending a command response using the API
         final var result = client.sendCommandResponse(
                 ADDRESS,
                 CORRELATION_ID,
                 STATUS,
-                PAYLOAD,
-                CONTENT_TYPE,
+                expectedBody,
+                contentType,
                 useSpanContext ? spanContext : null);
 
         // THEN the future waits for the disposition to be updated by the peer
@@ -94,7 +99,9 @@ public class CommandResponderTest extends AmqpAdapterClientTestBase {
         result.onComplete(ctx.succeeding(ok -> {
                 // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
                 ctx.verify(() -> {
-                    assertMessageConformsAmqpAdapterSpec();
+                    final var message = assertMessageConformsToAmqpAdapterSpec(ADDRESS.toString(), contentType, expectedBody);
+                    assertThat(message.getCorrelationId()).isEqualTo(CORRELATION_ID);
+                    assertThat(message.getApplicationProperties().getValue().get("status")).isEqualTo(STATUS);
                     if (useSpanContext) {
                         // and the given SpanContext is used
                         verify(spanBuilder).addReference(any(), eq(spanContext));
