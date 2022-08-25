@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -109,7 +108,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
 
         vertx = mock(Vertx.class);
         final Context context = VertxMockSupport.mockContext(vertx);
-        final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+        final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(vertx);
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         when(metrics.startTimer()).thenReturn(Timer.start());
         final Tracer tracer = TracingMockSupport.mockTracer(TracingMockSupport.mockSpan());
@@ -268,35 +268,28 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
      */
     @Test
     public void testIncomingCommandOrderIsPreservedWhenDelegating(final VertxTestContext ctx) {
-        final String deviceId1 = "device1";
-        final String deviceId2 = "device2";
-        final String deviceId3 = "device3";
-        final String deviceId4 = "device4";
 
         // GIVEN valid command records, all mapped to the SAME partition
-        // (different device IDs used only for letting getTargetGatewayAndAdapterInstance() be finished at different times for these commands)
-        final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId1, "subject1", 0, 1);
-        final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId2, "subject2", 0, 2);
-        final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId3, "subject3", 0, 3);
-        final KafkaConsumerRecord<String, Buffer> commandRecord4 = getCommandRecord(tenantId, deviceId4, "subject4", 0, 4);
+        final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId, "subject1", 0, 1);
+        final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId, "subject2", 0, 2);
+        final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId, "subject3", 0, 3);
+        final KafkaConsumerRecord<String, Buffer> commandRecord4 = getCommandRecord(tenantId, deviceId, "subject4", 0, 4);
 
         // WHEN getting the target adapter instances for the commands results in different delays for each command
         // so that the invocations are completed with the order: commandRecord3, commandRecord2, commandRecord1, commandRecord4
         final Promise<JsonObject> resultForCommand1 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId1), any()))
-                .thenReturn(resultForCommand1.future());
         final Promise<JsonObject> resultForCommand2 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId2), any()))
-                .thenReturn(resultForCommand2.future());
         final Promise<JsonObject> resultForCommand3 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId3), any()))
-                .thenReturn(resultForCommand3.future());
-        doAnswer(invocation -> {
-            resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId3, adapterInstanceId));
-            resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId2, adapterInstanceId));
-            resultForCommand1.complete(createTargetAdapterInstanceJson(deviceId1, adapterInstanceId));
-            return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId4, adapterInstanceId));
-        }).when(commandTargetMapper).getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId4), any());
+        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId), any()))
+                .thenReturn(resultForCommand1.future())
+                .thenReturn(resultForCommand2.future())
+                .thenReturn(resultForCommand3.future())
+                .thenAnswer(invocation -> {
+                    resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand1.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                });
 
         // WHEN mapping and delegating the commands
         final Future<Void> cmd1Future = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord1);
@@ -313,10 +306,10 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
                                 commandContextCaptor.capture(),
                                 anyString());
                         final List<CommandContext> capturedCommandContexts = commandContextCaptor.getAllValues();
-                        assertThat(capturedCommandContexts.get(0).getCommand().getDeviceId()).isEqualTo(deviceId1);
-                        assertThat(capturedCommandContexts.get(1).getCommand().getDeviceId()).isEqualTo(deviceId2);
-                        assertThat(capturedCommandContexts.get(2).getCommand().getDeviceId()).isEqualTo(deviceId3);
-                        assertThat(capturedCommandContexts.get(3).getCommand().getDeviceId()).isEqualTo(deviceId4);
+                        assertThat(capturedCommandContexts.get(0).getCommand().getName()).isEqualTo("subject1");
+                        assertThat(capturedCommandContexts.get(1).getCommand().getName()).isEqualTo("subject2");
+                        assertThat(capturedCommandContexts.get(2).getCommand().getName()).isEqualTo("subject3");
+                        assertThat(capturedCommandContexts.get(3).getCommand().getName()).isEqualTo("subject4");
                     });
                     ctx.completeNow();
                 }));
@@ -333,36 +326,29 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
      */
     @Test
     public void testCommandDelegationOrderWithMappingFailedForFirstEntry(final VertxTestContext ctx) {
-        final String deviceId1 = "device1";
-        final String deviceId2 = "device2";
-        final String deviceId3 = "device3";
-        final String deviceId4 = "device4";
 
         // GIVEN valid command records, all mapped to the SAME partition
-        // (different device IDs used only for letting getTargetGatewayAndAdapterInstance() be finished at different times for these commands)
-        final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId1, "subject1", 0, 1);
-        final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId2, "subject2", 0, 2);
-        final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId3, "subject3", 0, 3);
-        final KafkaConsumerRecord<String, Buffer> commandRecord4 = getCommandRecord(tenantId, deviceId4, "subject4", 0, 4);
+        final KafkaConsumerRecord<String, Buffer> commandRecord1 = getCommandRecord(tenantId, deviceId, "subject1", 0, 1);
+        final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(tenantId, deviceId, "subject2", 0, 2);
+        final KafkaConsumerRecord<String, Buffer> commandRecord3 = getCommandRecord(tenantId, deviceId, "subject3", 0, 3);
+        final KafkaConsumerRecord<String, Buffer> commandRecord4 = getCommandRecord(tenantId, deviceId, "subject4", 0, 4);
 
         // WHEN getting the target adapter instances for the commands results in different delays for each command
         // so that the invocations are completed with the order: commandRecord3, commandRecord2, commandRecord1 (failed), commandRecord4
         // with command 1 getting failed
         final Promise<JsonObject> resultForCommand1 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId1), any()))
-                .thenReturn(resultForCommand1.future());
         final Promise<JsonObject> resultForCommand2 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId2), any()))
-                .thenReturn(resultForCommand2.future());
         final Promise<JsonObject> resultForCommand3 = Promise.promise();
-        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId3), any()))
-                .thenReturn(resultForCommand3.future());
-        doAnswer(invocation -> {
-            resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId3, adapterInstanceId));
-            resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId2, adapterInstanceId));
-            resultForCommand1.fail("mapping of command 1 failed for some reason");
-            return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId4, adapterInstanceId));
-        }).when(commandTargetMapper).getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId4), any());
+        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId), any()))
+                .thenReturn(resultForCommand1.future())
+                .thenReturn(resultForCommand2.future())
+                .thenReturn(resultForCommand3.future())
+                .thenAnswer(invocation -> {
+                    resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand1.fail("mapping of command 1 failed for some reason");
+                    return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                });
 
         // WHEN mapping and delegating the commands
         final Future<Void> cmd1Future = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord1);
@@ -380,9 +366,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
                                 commandContextCaptor.capture(),
                                 anyString());
                         final List<CommandContext> capturedCommandContexts = commandContextCaptor.getAllValues();
-                        assertThat(capturedCommandContexts.get(0).getCommand().getDeviceId()).isEqualTo(deviceId2);
-                        assertThat(capturedCommandContexts.get(1).getCommand().getDeviceId()).isEqualTo(deviceId3);
-                        assertThat(capturedCommandContexts.get(2).getCommand().getDeviceId()).isEqualTo(deviceId4);
+                        assertThat(capturedCommandContexts.get(0).getCommand().getName()).isEqualTo("subject2");
+                        assertThat(capturedCommandContexts.get(1).getCommand().getName()).isEqualTo("subject3");
+                        assertThat(capturedCommandContexts.get(2).getCommand().getName()).isEqualTo("subject4");
                     });
                     ctx.completeNow();
                 }));

@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -25,6 +26,7 @@ import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
@@ -40,6 +42,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonQoS;
 
 /**
@@ -65,6 +68,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
 
+    private final ProtonBasedCommandProcessingQueue commandQueue;
     private final ProtonBasedMappingAndDelegatingCommandHandler mappingAndDelegatingCommandHandler;
     /**
      * List of tenant ids corresponding to the tenants for which consumers have been registered.
@@ -74,7 +78,8 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     /**
      * Creates a new factory for an existing connection.
      *
-     * @param connection The connection to the AMQP network.
+     * @param connection The connection to the AMQP network, used for receiving command messages and forwarding them
+     *                   on the 'command_internal' address.
      * @param tenantClient The Tenant service client.
      * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
      *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
@@ -93,15 +98,21 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         Objects.requireNonNull(tenantClient);
         Objects.requireNonNull(commandTargetMapper);
 
-        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient, connection,
-                commandTargetMapper, metrics);
-        mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
+        final Vertx vertx = connection.getVertx();
+        final var internalCommandSender = new ProtonBasedInternalCommandSender(connection);
+        // connection establishment already done in the start() method of this class, therefore skip it in internalCommandSender
+        internalCommandSender.setSkipConnectDisconnectOnStartStop(true);
+        commandQueue = new ProtonBasedCommandProcessingQueue(vertx);
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(vertx, tenantClient,
+                commandQueue, internalCommandSender, commandTargetMapper, metrics, connection.getTracer());
+        mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(vertx, c -> true);
     }
 
     @Override
     public Future<Void> start() {
-        registerCloseConsumerLinkHandler();        
-        return super.start()
+        registerCloseConsumerLinkHandler();
+        return CompositeFuture.all(super.start(), mappingAndDelegatingCommandHandler.start())
+                .map((Void) null)
                 .onSuccess(v -> {
                     connection.addReconnectListener(c -> recreateConsumers());
                     // trigger creation of adapter specific consumer link (with retry if failed)
@@ -109,25 +120,27 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                 });
     }
 
+    @Override
+    public Future<Void> stop() {
+        return CompositeFuture.join(super.stop(), mappingAndDelegatingCommandHandler.stop())
+                .map((Void) null);
+    }
+
     private void registerCloseConsumerLinkHandler() {
         NotificationEventBusSupport.registerConsumer(connection.getVertx(), AllDevicesOfTenantDeletedNotification.TYPE,
                 notification -> {
-                    final CommandConsumer commandConsumer = mappingAndDelegatingCommandConsumerFactory
-                            .getClient(notification.getTenantId());
-                    if (commandConsumer != null) {
-                        commandConsumer.close(null);
-                    }
+                    Optional.ofNullable(mappingAndDelegatingCommandConsumerFactory
+                            .getClient(notification.getTenantId()))
+                            .ifPresent(commandConsumer -> commandConsumer.close(null));
                 });
         NotificationEventBusSupport.registerConsumer(connection.getVertx(), TenantChangeNotification.TYPE,
                 notification -> {
                     if (LifecycleChange.DELETE.equals(notification.getChange())
                             || (LifecycleChange.UPDATE.equals(notification.getChange())
                                     && !notification.isTenantEnabled())) {
-                        final CommandConsumer commandConsumer = mappingAndDelegatingCommandConsumerFactory
-                                .getClient(notification.getTenantId());
-                        if (commandConsumer != null) {
-                            commandConsumer.close(null);
-                        }
+                        Optional.ofNullable(mappingAndDelegatingCommandConsumerFactory
+                                .getClient(notification.getTenantId()))
+                                .ifPresent(commandConsumer -> commandConsumer.close(null));
                     }
                 });
     }
@@ -183,11 +196,12 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                     return (CommandConsumer) new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext spanContext) {
-                            log.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed locally", tenantId);
+                            log.debug("MappingAndDelegatingCommandConsumer consumer [tenant-id: {}] closed locally", tenantId);
                             mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
                             consumerLinkTenants.remove(tenantId);
                             final Promise<Void> result = Promise.promise();
                             connection.closeAndFree(receiver, receiverClosed -> result.complete());
+                            commandQueue.removeEntriesForTenant(tenantId);
                             return result.future();
                         }
                     };

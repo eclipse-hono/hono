@@ -51,7 +51,6 @@ import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -193,11 +192,10 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         } else if (!lifecycleStatus.setStarting()) {
             return Future.failedFuture(new IllegalStateException("factory is already started/stopping"));
         }
-        final Context context = Vertx.currentContext();
-        if (context == null) {
+        if (Vertx.currentContext() == null) {
             return Future.failedFuture(new IllegalStateException("factory must be started in a Vert.x context"));
         }
-        final var commandQueue = new KafkaCommandProcessingQueue(context);
+        final var commandQueue = new KafkaCommandProcessingQueue(vertx);
         final Promise<Void> internalCommandSenderTracker = Promise.promise();
         internalCommandSender.addOnKafkaProducerReadyHandler(internalCommandSenderTracker);
         final Promise<Void> commandResponseSenderTracker = Promise.promise();
