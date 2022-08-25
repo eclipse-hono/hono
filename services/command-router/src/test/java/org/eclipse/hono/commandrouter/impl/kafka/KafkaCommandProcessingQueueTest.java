@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,7 +69,7 @@ public class KafkaCommandProcessingQueueTest {
     void testSendActionIsInvokedInOrder(final Vertx vertx, final VertxTestContext ctx) {
         final Context vertxContext = vertx.getOrCreateContext();
         vertxContext.runOnContext(v -> {
-            final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(vertxContext);
+            final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(vertx);
             // GIVEN a number of test commands
             final LinkedList<KafkaBasedCommandContext> commandContexts = IntStream.range(0, 5)
                     .mapToObj(this::getTestCommandContext)
@@ -106,7 +107,10 @@ public class KafkaCommandProcessingQueueTest {
      */
     @Test
     void testQueueEntriesDiscardedOnPartitionRevoked() {
-        final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(mock(Context.class));
+        final Vertx vertx = mock(Vertx.class);
+        final Context context = VertxMockSupport.mockContext(vertx);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+        final KafkaCommandProcessingQueue kafkaCommandProcessingQueue = new KafkaCommandProcessingQueue(vertx);
         // GIVEN a number of test commands, received via partition 0
         final LinkedList<KafkaBasedCommandContext> commandContexts = IntStream.range(0, 3)
                 .mapToObj(this::getTestCommandContext)

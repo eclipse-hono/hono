@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -102,7 +102,6 @@ public final class KafkaBasedCommand implements Command {
      *                                  headers do not contain a target device identifier matching the record's key.
      */
     public static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record) {
-
         Objects.requireNonNull(record);
 
         if (Strings.isNullOrEmpty(record.topic())) {
@@ -334,15 +333,15 @@ public final class KafkaBasedCommand implements Command {
     public String toString() {
         if (isValid()) {
             if (isTargetedAtGateway()) {
-                return String.format("Command [name: %s, tenant-id: %s, gateway-id: %s, device-id: %s, request-id: %s]",
-                        getName(), tenantId, gatewayId, deviceId, requestId);
+                return "Command [name: %s, tenant-id: %s, gateway-id: %s, device-id: %s, request-id: %s, partition offset: %s]"
+                        .formatted(getName(), tenantId, gatewayId, deviceId, requestId, record.offset());
             } else {
-                return String.format("Command [name: %s, tenant-id: %s, device-id: %s, request-id: %s]",
-                        getName(), tenantId, deviceId, requestId);
+                return "Command [name: %s, tenant-id: %s, device-id: %s, request-id: %s, partition offset: %s]"
+                        .formatted(getName(), tenantId, deviceId, requestId, record.offset());
             }
         } else {
-            return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId,
-                    deviceId, validationError.get());
+            return "Invalid Command [tenant-id: %s, device-id: %s, partition offset: %s, error: %s]"
+                    .formatted(tenantId, deviceId, record.offset(), validationError.get());
         }
     }
 

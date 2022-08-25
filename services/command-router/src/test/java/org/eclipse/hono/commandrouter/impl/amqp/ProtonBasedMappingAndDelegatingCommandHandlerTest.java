@@ -18,15 +18,16 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,6 +41,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -50,10 +52,13 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 import io.micrometer.core.instrument.Timer;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -61,6 +66,8 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
@@ -69,6 +76,7 @@ import io.vertx.proton.ProtonSender;
 /**
  * Verifies behavior of {@link ProtonBasedMappingAndDelegatingCommandHandler}.
  */
+@ExtendWith(VertxExtension.class)
 public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
     private String tenantId;
@@ -78,27 +86,26 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
     // sender used in the DelegatedCommandSender
     private ProtonSender sender;
 
+    private String adapterInstanceId;
+
     /**
      * Sets up fixture.
      */
     @BeforeEach
     public void setUp() {
+        adapterInstanceId = UUID.randomUUID().toString();
 
         final Vertx vertx = mock(Vertx.class);
         final Context context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
 
-        doAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(1);
-            handler.handle(null);
-            return null;
-        }).when(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
         final EventBus eventBus = mock(EventBus.class);
         when(vertx.eventBus()).thenReturn(eventBus);
 
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setSendMessageTimeout(0);
         final HonoConnection connection = mockHonoConnection(vertx, props);
+        when(connection.connect()).thenReturn(Future.succeededFuture(connection));
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         sender = mockProtonSender();
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(sender));
@@ -110,8 +117,12 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         when(metrics.startTimer()).thenReturn(Timer.start());
-        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient,
-                connection, commandTargetMapper, metrics);
+        final ProtonBasedInternalCommandSender internalCommandSender = new ProtonBasedInternalCommandSender(connection);
+        final Tracer tracer = connection.getTracer();
+        final ProtonBasedCommandProcessingQueue commandQueue = new ProtonBasedCommandProcessingQueue(vertx);
+        mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(vertx, tenantClient,
+                commandQueue, internalCommandSender, commandTargetMapper, metrics, tracer);
+        mappingAndDelegatingCommandHandler.start();
     }
 
     /**
@@ -339,6 +350,150 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         assertThat(viaProperty).isEqualTo(gatewayId);
     }
 
+    /**
+     * Verifies the behaviour of the
+     * {@link ProtonBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(String, ProtonDelivery, Message)}
+     * method in a scenario where the mapping operation for one command completes earlier than for a previously received
+     * command. The order in which commands are then delegated to the target adapter instance has to be the same
+     * as the order in which commands were received.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testIncomingCommandOrderIsPreservedWhenDelegating(final VertxTestContext ctx) {
+        final String deviceId = "myDevice";
+
+        // GIVEN valid command messages
+        final Message message1 = getValidCommandMessage(deviceId, "subject1");
+        final Message message2 = getValidCommandMessage(deviceId, "subject2");
+        final Message message3 = getValidCommandMessage(deviceId, "subject3");
+        final Message message4 = getValidCommandMessage(deviceId, "subject4");
+
+        // AND an ACCEPTED result when sending the command message to an adapter instance
+        final ProtonDelivery sendMsgDeliveryUpdate = mock(ProtonDelivery.class);
+        when(sendMsgDeliveryUpdate.getRemoteState()).thenReturn(new Accepted());
+        when(sendMsgDeliveryUpdate.remotelySettled()).thenReturn(true);
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
+            dispositionHandler.handle(sendMsgDeliveryUpdate);
+            return mock(ProtonDelivery.class);
+        });
+
+        // WHEN getting the target adapter instances for the commands results in different delays for each command
+        // so that the invocations are completed with the order: commandRecord3, commandRecord2, commandRecord1, commandRecord4
+        final Promise<JsonObject> resultForCommand1 = Promise.promise();
+        final Promise<JsonObject> resultForCommand2 = Promise.promise();
+        final Promise<JsonObject> resultForCommand3 = Promise.promise();
+        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId), any()))
+                .thenReturn(resultForCommand1.future())
+                .thenReturn(resultForCommand2.future())
+                .thenReturn(resultForCommand3.future())
+                .thenAnswer(invocation -> {
+                    resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand1.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                });
+
+        // WHEN mapping and delegating the commands
+        final Future<Void> cmd1Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message1);
+        final Future<Void> cmd2Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message2);
+        final Future<Void> cmd3Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message3);
+        final Future<Void> cmd4Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message4);
+
+        // THEN the messages are delegated in the original order
+        CompositeFuture.all(cmd1Future, cmd2Future, cmd3Future, cmd4Future)
+                .onComplete(ctx.succeeding(r -> {
+                    ctx.verify(() -> {
+                        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+                        verify(sender, times(4)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+                        final List<Message> capturedMessages = messageCaptor.getAllValues();
+                        assertThat(capturedMessages.get(0).getSubject()).isEqualTo("subject1");
+                        assertThat(capturedMessages.get(1).getSubject()).isEqualTo("subject2");
+                        assertThat(capturedMessages.get(2).getSubject()).isEqualTo("subject3");
+                        assertThat(capturedMessages.get(3).getSubject()).isEqualTo("subject4");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies the behaviour of the
+     * {@link ProtonBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(String, ProtonDelivery, Message)}
+     * method in a scenario where the rather long-running processing of a command delays subsequent, already mapped
+     * commands from getting delegated to the target adapter instance. After the processing of the first command finally
+     * resulted in an error, the subsequent commands shall get delegated in the correct order.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testCommandDelegationOrderWithMappingFailedForFirstEntry(final VertxTestContext ctx) {
+        final String deviceId = "myDevice";
+
+        // GIVEN valid command messages
+        final Message message1 = getValidCommandMessage(deviceId, "subject1");
+        final Message message2 = getValidCommandMessage(deviceId, "subject2");
+        final Message message3 = getValidCommandMessage(deviceId, "subject3");
+        final Message message4 = getValidCommandMessage(deviceId, "subject4");
+
+        // AND an ACCEPTED result when sending the command message to an adapter instance
+        final ProtonDelivery sendMsgDeliveryUpdate = mock(ProtonDelivery.class);
+        when(sendMsgDeliveryUpdate.getRemoteState()).thenReturn(new Accepted());
+        when(sendMsgDeliveryUpdate.remotelySettled()).thenReturn(true);
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
+            dispositionHandler.handle(sendMsgDeliveryUpdate);
+            return mock(ProtonDelivery.class);
+        });
+
+        // WHEN getting the target adapter instances for the commands results in different delays for each command
+        // so that the invocations are completed with the order: commandRecord3, commandRecord2, commandRecord1 (failed), commandRecord4
+        // with command 1 getting failed
+        final Promise<JsonObject> resultForCommand1 = Promise.promise();
+        final Promise<JsonObject> resultForCommand2 = Promise.promise();
+        final Promise<JsonObject> resultForCommand3 = Promise.promise();
+        when(commandTargetMapper.getTargetGatewayAndAdapterInstance(eq(tenantId), eq(deviceId), any()))
+                .thenReturn(resultForCommand1.future())
+                .thenReturn(resultForCommand2.future())
+                .thenReturn(resultForCommand3.future())
+                .thenAnswer(invocation -> {
+                    resultForCommand3.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand2.complete(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                    resultForCommand1.fail("mapping of command 1 failed for some reason");
+                    return Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId));
+                });
+
+        // WHEN mapping and delegating the commands
+        final Future<Void> cmd1Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message1);
+        final Future<Void> cmd2Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message2);
+        final Future<Void> cmd3Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message3);
+        final Future<Void> cmd4Future = mappingAndDelegatingCommandHandler
+                .mapAndDelegateIncomingCommandMessage(tenantId, mock(ProtonDelivery.class), message4);
+
+        // THEN the messages are delegated in the original order, with command 1 left out because it timed out
+        CompositeFuture.all(cmd2Future, cmd3Future, cmd4Future)
+                .onComplete(ctx.succeeding(r -> {
+                    ctx.verify(() -> {
+                        assertThat(cmd1Future.failed()).isTrue();
+                        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+                        verify(sender, times(3)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+                        final List<Message> capturedMessages = messageCaptor.getAllValues();
+                        assertThat(capturedMessages.get(0).getSubject()).isEqualTo("subject2");
+                        assertThat(capturedMessages.get(1).getSubject()).isEqualTo("subject3");
+                        assertThat(capturedMessages.get(2).getSubject()).isEqualTo("subject4");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+
     private JsonObject createTargetAdapterInstanceJson(final String deviceId, final String otherAdapterInstance) {
         final JsonObject targetAdapterInstanceJson = new JsonObject();
         targetAdapterInstanceJson.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
@@ -347,10 +502,14 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
     }
 
     private Message getValidCommandMessage(final String deviceId) {
+        return getValidCommandMessage(deviceId, "doThis");
+    }
+
+    private Message getValidCommandMessage(final String deviceId, final String subject) {
         final Message message = ProtonHelper.message("input data");
         message.setAddress(String.format("%s/%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
-        message.setSubject("doThis");
+        message.setSubject(subject);
         message.setCorrelationId("the-correlation-id");
         return message;
     }

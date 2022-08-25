@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,6 +58,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * The factory for creating <em>send message</em> samplers.
      */
     protected final SendMessageSampler.Factory samplerFactory;
+    private boolean skipConnectDisconnectOnStartStop = false;
 
     /**
      * Creates a new client.
@@ -265,12 +266,30 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     }
 
     /**
+     * Sets whether connection establishment on {@link #start()} and shutdown on {@link #stop()} shall be skipped.
+     * <p>
+     * This setting is {@code false} by default and should be enabled if the connection is shared and connection
+     * establishment/shutdown is done elsewhere.
+     *
+     * @param skipConnectDisconnectOnStartStop {@code true} if connection establishment/shutdown shall be done on
+     *            start/stop.
+     */
+    public void setSkipConnectDisconnectOnStartStop(final boolean skipConnectDisconnectOnStartStop) {
+        this.skipConnectDisconnectOnStartStop = skipConnectDisconnectOnStartStop;
+    }
+
+    /**
      * {@inheritDoc}
      *
-     * @return The outcome of the connection's {@link HonoConnection#connect()} method.
+     * @return The outcome of the connection's {@link HonoConnection#connect()} method (if
+     *         {@code skipConnectDisconnectOnStartStop} wasn't set).
      */
     @Override
     public Future<Void> start() {
+        if (skipConnectDisconnectOnStartStop) {
+            log.trace("connection establishment to {} endpoint on start() skipped here", connection.getConfig().getServerRole());
+            return Future.succeededFuture();
+        }
         return connection.connect()
                 .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
                 .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
@@ -280,10 +299,15 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     /**
      * {@inheritDoc}
      * <p>
-     * Invokes the connection's {@link HonoConnection#shutdown(Handler)} method.
+     * Invokes the connection's {@link HonoConnection#shutdown(Handler)} method (if
+     * {@code skipConnectDisconnectOnStartStop} wasn't set).
      */
     @Override
     public Future<Void> stop() {
+        if (skipConnectDisconnectOnStartStop) {
+            log.trace("shutdown of connection to {} endpoint on stop() skipped here", connection.getConfig().getServerRole());
+            return Future.succeededFuture();
+        }
         final Promise<Void> result = Promise.promise();
         connection.shutdown(result);
         return result.future()

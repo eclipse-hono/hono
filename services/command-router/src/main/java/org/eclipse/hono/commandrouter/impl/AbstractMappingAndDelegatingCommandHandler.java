@@ -13,6 +13,7 @@
 package org.eclipse.hono.commandrouter.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -32,6 +33,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
@@ -45,18 +47,33 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A handler for mapping received commands to the corresponding target protocol adapter instance
  * and forwarding them using an {@link org.eclipse.hono.client.command.InternalCommandSender}.
+ *
+ * @param <T> The type of command context of the commands handled here.
  */
-public abstract class AbstractMappingAndDelegatingCommandHandler implements Lifecycle {
+public abstract class AbstractMappingAndDelegatingCommandHandler<T extends CommandContext> implements Lifecycle {
+
+    /**
+     * Duration after which record processing is cancelled.
+     * <p>
+     * Usually, the timeout values configured for the service clients involved in command processing should define the
+     * overall time limit. The timeout mechanism associated with this value here serves as a safeguard against
+     * exceptional cases where the other timeouts didn't get applied. It thereby prevents command processing from
+     * getting stuck, so that the command consumer doesn't get blocked.
+     */
+    private static final Duration PROCESSING_TIMEOUT = Duration.ofSeconds(8);
 
     /**
      * A logger to be shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+
     /**
      * A client for accessing Hono's <em>Tenant</em> service.
      */
@@ -66,14 +83,19 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      */
     protected final Tracer tracer;
 
+    private final Vertx vertx;
     private final CommandTargetMapper commandTargetMapper;
     private final InternalCommandSender internalCommandSender;
     private final CommandRouterMetrics metrics;
 
+    private final CommandProcessingQueue<T> commandQueue;
+
     /**
      * Creates a new MappingAndDelegatingCommandHandler instance.
      *
+     * @param vertx The Vert.x instance to use.
      * @param tenantClient The Tenant service client.
+     * @param commandQueue The command processing queue instance to use.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @param metrics The component to use for reporting metrics.
@@ -81,13 +103,17 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public AbstractMappingAndDelegatingCommandHandler(
+            final Vertx vertx,
             final TenantClient tenantClient,
+            final CommandProcessingQueue<T> commandQueue,
             final CommandTargetMapper commandTargetMapper,
             final InternalCommandSender internalCommandSender,
             final CommandRouterMetrics metrics,
             final Tracer tracer) {
 
+        this.vertx = Objects.requireNonNull(vertx);
         this.tenantClient = Objects.requireNonNull(tenantClient);
+        this.commandQueue = Objects.requireNonNull(commandQueue);
         this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         this.internalCommandSender = Objects.requireNonNull(internalCommandSender);
         this.metrics = Objects.requireNonNull(metrics);
@@ -111,6 +137,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      */
     @Override
     public Future<Void> stop() {
+        commandQueue.clear();
         return internalCommandSender.stop();
     }
 
@@ -142,13 +169,36 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final Future<Void> mapAndDelegateIncomingCommand(
-            final CommandContext commandContext,
-            final Timer.Sample timer) {
-
+    protected Future<Void> mapAndDelegateIncomingCommand(final T commandContext, final Timer.Sample timer) {
         Objects.requireNonNull(commandContext);
         Objects.requireNonNull(timer);
 
+        commandQueue.add(commandContext);
+
+        final Promise<Void> resultPromise = Promise.promise();
+        final long timerId = vertx.setTimer(PROCESSING_TIMEOUT.toMillis(), tid -> {
+            if (commandQueue.remove(commandContext) || !commandContext.isCompleted()) {
+                log.info("command processing timed out after {}s [{}]", PROCESSING_TIMEOUT.toSeconds(), commandContext.getCommand());
+                TracingHelper.logError(commandContext.getTracingSpan(),
+                        String.format("command processing timed out after %ds", PROCESSING_TIMEOUT.toSeconds()));
+                final ServerErrorException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "command processing timed out");
+                commandContext.release(error);
+                resultPromise.tryFail(error);
+            }
+        });
+        mapAndDelegateIncomingCommandInternal(commandContext, timer)
+                .onComplete(ar -> {
+                    vertx.cancelTimer(timerId);
+                    if (ar.failed()) {
+                        commandQueue.remove(commandContext);
+                    }
+                    Futures.tryHandleResult(resultPromise, ar);
+                });
+        return resultPromise.future();
+    }
+
+    private Future<Void> mapAndDelegateIncomingCommandInternal(final T commandContext, final Timer.Sample timer) {
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
@@ -224,18 +274,15 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                                 targetGatewayId, targetAdapterInstanceId, command);
                         commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
                     }
-                    return sendCommand(commandContext, targetAdapterInstanceId, tenantObjectFuture.result(), timer);
+                    return commandQueue.applySendCommandAction(commandContext,
+                            () -> sendCommandInternal(commandContext, targetAdapterInstanceId,
+                                    tenantObjectFuture.result(), timer));
                 });
     }
 
     /**
      * Sends the given command to the internal Command and Control API endpoint provided by protocol adapters,
      * adhering to the specification of {@link InternalCommandSender#sendCommand(CommandContext, String)}.
-     * <p>
-     * This default implementation just invokes the {@link InternalCommandSender#sendCommand(CommandContext, String)}
-     * method.
-     * <p>
-     * Subclasses may override this method to do further checks before actually sending the command.
      *
      * @param commandContext Context of the command to send.
      * @param targetAdapterInstanceId The target protocol adapter instance id.
@@ -244,17 +291,11 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @return A future indicating the output of the operation.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected Future<Void> sendCommand(
-            final CommandContext commandContext,
+    private Future<Void> sendCommandInternal(
+            final T commandContext,
             final String targetAdapterInstanceId,
             final TenantObject tenantObject,
             final Timer.Sample timer) {
-
-        Objects.requireNonNull(commandContext);
-        Objects.requireNonNull(targetAdapterInstanceId);
-        Objects.requireNonNull(tenantObject);
-        Objects.requireNonNull(timer);
-
         return internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId)
                 .onFailure(thr -> reportCommandProcessingError(commandContext.getCommand(), tenantObject, thr, timer));
     }
