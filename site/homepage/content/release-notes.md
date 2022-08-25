@@ -38,6 +38,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   improved.
 * The CoAP adapter returned a 500 error code for PUT requests without a device identifier in the URI path. This has
   been fixed, now returning a response with a 404 error code instead.
+* The command line client no longer throws an NPE when trying to upload an empty message without a content type to the
+  AMQP adapter.
 
 ## 2.0.1
 
