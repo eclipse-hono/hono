@@ -135,8 +135,9 @@ public class NorthBoundApis {
                     commonProps.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, path);
                     connectionOptions.trustStorePassword
                         .ifPresent(pwd -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, pwd));
-                    final var trustStoreType = FileFormat.detect(path);
-                    commonProps.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, trustStoreType.name());
+
+                    Optional.ofNullable(FileFormat.detect(path))
+                        .ifPresent(s -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, s.name()));
                     if (connectionOptions.disableHostnameVerification) {
                         commonProps.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
                     }
