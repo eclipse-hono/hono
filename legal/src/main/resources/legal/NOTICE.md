@@ -9,7 +9,7 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 
 # Source Code
 
-* https://github.com/eclipse/hono
+* https://github.com/eclipse-hono/hono
 
 # Copyright Holders
 

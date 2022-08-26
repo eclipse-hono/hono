@@ -6,28 +6,28 @@ weight = 390
 Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of 
 (prototype) devices, (protocol) gateways or (end-to-end) tests. The client is based on Eclipse Vert.x.
 
-The client is represented by the [AmqpAdapterClient](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
+The client is represented by the [AmqpAdapterClient](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
 class in the *hono-client-device-amqp* module.
 Instances can be created using the `create(HonoConnection)` factory method.
 
 The client provides methods for each of the following operations:
 
  * Getting a receiver for receiving command & control messages
-   <br>(via the [AmqpAdapterClient](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
+   <br>(via the [AmqpAdapterClient](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
    `createCommandConsumer` / `createDeviceSpecificCommandConsumer` methods)
  * Sending a telemetry message
-   <br>(via the inherited [TelemetrySender](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/TelemetrySender.java)
+   <br>(via the inherited [TelemetrySender](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/TelemetrySender.java)
    `sendTelemetry` method)
  * Sending an event message
-   <br>(via the inherited [EventSender](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/EventSender.java)
+   <br>(via the inherited [EventSender](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/EventSender.java)
   `sendEvent` method)
  * Sending a response to a previously received command
-   <br>(via the inherited [CommandResponder](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/CommandResponder.java)
+   <br>(via the inherited [CommandResponder](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/CommandResponder.java)
    `sendCommandResponse` method)
 
 Please refer to the javadoc of the classes for details.
 
-For examples of how to use the client, see the example implementation in the [AmqpExampleDevice](https://github.com/eclipse/hono/blob/master/examples/hono-client-examples/src/main/java/org/eclipse/hono/devices/AmqpExampleDevice.java) class.
+For examples of how to use the client, see the example implementation in the [AmqpExampleDevice](https://github.com/eclipse-hono/hono/blob/master/examples/hono-client-examples/src/main/java/org/eclipse/hono/devices/AmqpExampleDevice.java) class.
 
 ## Usage in a Gateway
 

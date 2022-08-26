@@ -75,7 +75,7 @@ pipeline {
       steps {
         echo "Cloning Hono repository..."
         sh '''
-          git clone https://github.com/eclipse/hono.git ${WORKSPACE}/hono
+          git clone https://github.com/eclipse-hono/hono.git ${WORKSPACE}/hono
         '''
         echo "Copying Documentation directory from master branch..."
         sh ''' 

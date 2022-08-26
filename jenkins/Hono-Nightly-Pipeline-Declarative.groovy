@@ -114,7 +114,7 @@ pipeline {
         echo "checking out branch [master] ..."
         checkout([$class           : 'GitSCM',
                   branches         : [[name: "refs/heads/master"]],
-                  userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
+                  userRemoteConfigs: [[url: 'https://github.com/eclipse-hono/hono.git']]])
 
         echo "building and deploying nightly artifacts ..."
         sh 'mvn deploy -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true'

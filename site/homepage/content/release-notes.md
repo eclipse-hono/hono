@@ -608,7 +608,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
   on how to configure a tenant's trusted CA authority for that.
 * The Hono CLI supports now Kafka as a messaging system. Please refer to the module's
-  [README](https://github.com/eclipse/hono/tree/master/cli) file for examples of using the CLI to receive events and
+  [README](https://github.com/eclipse-hono/hono/tree/master/cli) file for examples of using the CLI to receive events and
   telemetry data and send commands.
 * The example business application supports now Kafka as a messaging system. Please refer to the
   [Developer Guide]({{% doclink "/dev-guide/java_client_consumer/" %}}) for details.

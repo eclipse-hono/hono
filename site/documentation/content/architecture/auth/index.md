@@ -103,7 +103,7 @@ are defined in a configuration file read in during start-up of the *Auth Server*
 authenticating and authorizing system components. They are also used for authenticating *Business Applications* when
 using AMQP 1.0 based Messaging Infrastructure.
 
-An example configuration file can be found in the [Auth Server code base](https://github.com/eclipse/hono/blob/master/services/auth-base/src/test/resources/authentication-service-test-permissions.json).
+An example configuration file can be found in the [Auth Server code base](https://github.com/eclipse-hono/hono/blob/master/services/auth-base/src/test/resources/authentication-service-test-permissions.json).
 
 ## Future Approach
 

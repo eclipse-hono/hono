@@ -43,19 +43,19 @@
   </licenses>
 
   <scm>
-    <developerConnection>scm:git:https://github.com/eclipse/hono.git</developerConnection>
-    <url>https://github.com/eclipse/hono</url>
+    <developerConnection>scm:git:https://github.com/eclipse-hono/hono.git</developerConnection>
+    <url>https://github.com/eclipse-hono/hono</url>
     <tag>HEAD</tag>
   </scm>
 
   <issueManagement>
     <system>GitHub Issues</system>
-    <url>https://github.com/eclipse/hono/issues</url>
+    <url>https://github.com/eclipse-hono/hono/issues</url>
   </issueManagement>
 
   <ciManagement>
     <system>Jenkins</system>
-    <url>https://github.com/eclipse/hono/actions</url>
+    <url>https://github.com/eclipse-hono/hono/actions</url>
   </ciManagement>
 
   <distributionManagement>

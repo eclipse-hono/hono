@@ -138,7 +138,7 @@ pipeline {
           checkout([$class                           : 'GitSCM',
                     branches                         : [[name: "refs/tags/${params.RELEASE_VERSION}"]],
                     doGenerateSubmoduleConfigurations: false,
-                    userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse/hono.git']]])
+                    userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse-hono/hono.git']]])
         }
       }
     }
