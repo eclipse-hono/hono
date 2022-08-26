@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.command;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -257,19 +259,25 @@ public final class CommandResponse {
     /**
      * Gets additional properties set for this command response.
      *
-     * @return The properties.
+     * @return An unmodifiable view on the properties.
      */
     public Map<String, Object> getAdditionalProperties() {
-        return Optional.ofNullable(additionalProperties).orElseGet(Map::of);
+        return Optional.ofNullable(additionalProperties)
+                .map(Collections::unmodifiableMap)
+                .orElseGet(Map::of);
     }
 
     /**
      * Sets additional properties for this command response.
+     * <p>
+     * A copy of the given property map will be created, leaving the passed in map unaltered.
      *
      * @param additionalProperties The properties to set.
      */
     public void setAdditionalProperties(final Map<String, Object> additionalProperties) {
-        this.additionalProperties = additionalProperties;
+        this.additionalProperties = Optional.ofNullable(additionalProperties)
+            .map(HashMap::new)
+            .orElse(null);
     }
 
     @Override
