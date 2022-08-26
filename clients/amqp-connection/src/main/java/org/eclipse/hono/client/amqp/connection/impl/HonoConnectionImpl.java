@@ -48,6 +48,7 @@ import org.eclipse.hono.util.Futures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.AsyncResult;
@@ -284,7 +285,7 @@ public final class HonoConnectionImpl implements HonoConnection {
      *
      * @return {@code true} if the connection is established.
      */
-    protected boolean isConnectedInternal() {
+    private boolean isConnectedInternal() {
         return connection != null && !connection.isDisconnected() && session != null;
     }
 
@@ -311,17 +312,6 @@ public final class HonoConnectionImpl implements HonoConnection {
                         .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
                         .orElse(Collections.emptyList());
             }
-        }
-    }
-
-    /**
-     * Gets the underlying connection object that this client uses to interact with the server.
-     *
-     * @return The connection.
-     */
-    protected ProtonConnection getConnection() {
-        synchronized (connectionLock) {
-            return this.connection;
         }
     }
 
@@ -1092,6 +1082,12 @@ public final class HonoConnectionImpl implements HonoConnection {
                 });
         }
 
+        @SuppressFBWarnings(
+                value = "PREDICTABLE_RANDOM",
+                justification = """
+                        The values returned by the ThreadLocalRandom are only used for calculating a
+                        random amount of time to wait before trying to reconnect.
+                        """)
         private void reconnect(final Throwable connectionFailureCause) {
             if (cancelled.get()) {
                 return;

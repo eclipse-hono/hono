@@ -109,6 +109,7 @@ time.sleep(2)
 
 # Send HTTP Message
 print("Send Telemetry Message via HTTP")
+# nosemgrep: no-auth-over-http
 response = requests.post(f'http://{httpAdapterIp}:8080/telemetry', headers={"content-type": "application/json"},
                          data=json.dumps({"temp": 5, "transport": "http"}),
                          auth=HTTPBasicAuth(f'{deviceId}@{tenantId}', f'{devicePassword}'))

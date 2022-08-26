@@ -26,4 +26,4 @@ helm repo update
 
 echo ""
 echo "Deploying Hono..."
-helm install eclipse-hono eclipse-iot/hono -f $SCRIPTPATH/hono-values.yml -n hono --wait --timeout 5m0s
+helm install eclipse-hono eclipse-iot/hono -f "${SCRIPTPATH}/hono-values.yml" -n hono --wait --timeout 5m0s

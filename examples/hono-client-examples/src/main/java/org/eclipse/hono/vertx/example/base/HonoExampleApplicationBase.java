@@ -14,6 +14,7 @@
 package org.eclipse.hono.vertx.example.base;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -58,6 +60,15 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * The code consumes data until it receives any input on its console (which finishes it and closes vertx).
  */
+@SuppressFBWarnings(
+        value = { "HARD_CODE_PASSWORD", "PREDICTABLE_RANDOM" },
+        justification = """
+                We use the default passwords of the Hono Sandbox installation throughout this class
+                for ease of use. The passwords are publicly documented and do not affect any
+                private installations of Hono.
+                The values returned by the Random are only used as arbitrary values in example message
+                payload.
+                """)
 public class HonoExampleApplicationBase {
 
     public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
@@ -346,9 +357,6 @@ public class HonoExampleApplicationBase {
      */
     private void sendCommand(final TimeUntilDisconnectNotification notification) {
 
-        final long commandTimeout = calculateCommandTimeout(notification);
-        // TODO set request timeout
-
         if (SEND_ONE_WAY_COMMANDS) {
             sendOneWayCommandToAdapter(notification.getTenantId(), notification.getDeviceId(), notification);
         } else {
@@ -363,14 +371,14 @@ public class HonoExampleApplicationBase {
      * @param notification The notification that was received for the device.
      * @return The timeout (milliseconds) to be set for the command.
      */
-    private long calculateCommandTimeout(final TimeUntilDisconnectNotification notification) {
+    private Duration calculateCommandTimeout(final TimeUntilDisconnectNotification notification) {
 
         if (notification.getTtd() == -1) {
             // let the command expire directly before the next periodic timer is started
-            return HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY * 1000L;
+            return Duration.ofMillis(HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY * 1000L);
         } else {
             // let the command expire when the notification expires
-            return notification.getMillisecondsUntilExpiry();
+            return Duration.ofMillis(notification.getMillisecondsUntilExpiry());
         }
     }
 
@@ -393,7 +401,7 @@ public class HonoExampleApplicationBase {
     }
 
     private boolean isPeriodicCommandSenderActiveForDevice(final TimeUntilDisconnectNotification notification) {
-        return (periodicCommandSenderTimerCancelerMap.containsKey(notification.getTenantAndDeviceId()));
+        return periodicCommandSenderTimerCancelerMap.containsKey(notification.getTenantAndDeviceId());
     }
 
     /**
@@ -404,15 +412,19 @@ public class HonoExampleApplicationBase {
      * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
      * @param ttdNotification The ttd notification that was received for the device.
      */
-    private void sendCommandToAdapter(final String tenantId, final String deviceId,
+    private void sendCommandToAdapter(
+            final String tenantId,
+            final String deviceId,
             final TimeUntilDisconnectNotification ttdNotification) {
+
+        final Duration commandTimeout = calculateCommandTimeout(ttdNotification);
         final Buffer commandBuffer = buildCommandPayload();
         final String command = "setBrightness";
         if (LOG.isDebugEnabled()) {
             LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        client.sendCommand(tenantId, deviceId, command, commandBuffer, "application/json")
+        client.sendCommand(tenantId, deviceId, command, commandBuffer, "application/json", null, commandTimeout, null)
             .onSuccess(result -> {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());

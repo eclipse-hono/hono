@@ -57,6 +57,11 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-demo-certs</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-annotations</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>

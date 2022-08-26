@@ -21,6 +21,7 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
 import org.eclipse.hono.util.QoS;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -45,6 +46,13 @@ import io.vertx.core.json.JsonObject;
  * @see <a href="https://www.eclipse.org/hono/docs/dev-guide/amqp_adapter_client/">The AMQP Adapter Client
  *      documentation</a>
  */
+@SuppressFBWarnings(
+        value = "HARD_CODE_PASSWORD",
+        justification = """
+                We use the default passwords of the Hono Sandbox installation throughout this class
+                for ease of use. The passwords are publicly documented and do not affect any
+                private installations of Hono.
+                """)
 public class AmqpExampleDevice {
 
     private static final String HOST = "hono.eclipseprojects.io";

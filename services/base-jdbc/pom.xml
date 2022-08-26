@@ -80,6 +80,12 @@
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
 
     <!-- testing -->
     <dependency>

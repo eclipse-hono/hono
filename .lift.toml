@@ -1,0 +1,2 @@
+# These two Infer rules seem to only produce false positives in Hono
+# ignoreRules = [ "INTERFACE_NOT_THREAD_SAFE", "RESOURCE_LEAK" ]

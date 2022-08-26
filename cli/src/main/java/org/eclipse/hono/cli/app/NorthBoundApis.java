@@ -43,6 +43,7 @@ import org.eclipse.hono.config.FileFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.quarkus.runtime.ShutdownEvent;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -63,6 +64,13 @@ import picocli.CommandLine.ParameterException;
         versionProvider = PropertiesVersionProvider.class,
         sortOptions = false,
         subcommands = { TelemetryAndEvent.class, CommandAndControl.class })
+@SuppressFBWarnings(
+        value = "HARD_CODE_PASSWORD",
+        justification = """
+                We use the default passwords of the Hono Sandbox installation throughout this class
+                for ease of use. The passwords are publicly documented and do not affect any
+                private installations of Hono.
+                """)
 public class NorthBoundApis {
 
     private static final Logger LOG = LoggerFactory.getLogger(NorthBoundApis.class);

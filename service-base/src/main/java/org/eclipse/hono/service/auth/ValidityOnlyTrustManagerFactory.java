@@ -28,6 +28,7 @@ import javax.security.auth.x500.X500Principal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
 
@@ -36,6 +37,14 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
  * valid according to its <em>not before</em> and <em>not after</em> properties.
  *
  */
+@SuppressFBWarnings(
+        value = "WEAK_TRUST_MANAGER",
+        justification = """
+                We cannot validate the certificate chain when the TLS connection gets established because we need to
+                dynamically look up the trust anchors configured for the tenant that the client (device) belongs to.
+                Therefore, the validation of the chain of trust is done at the application level, i.e. during connection
+                establishment and/or request processing instead.
+                """)
 public final class ValidityOnlyTrustManagerFactory extends SimpleTrustManagerFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(ValidityOnlyTrustManagerFactory.class);

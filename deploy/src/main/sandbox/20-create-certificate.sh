@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,17 +26,15 @@ EMAIL=$1
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
 
 retry() {
-  "$@"
-  while [ $? -ne 0 ]; do
+  while ! "$@"; do
     sleep 2s
     echo "retrying" "$@"
-    "$@"
   done
 }
 
 echo ""
 echo "Creating configuration..."
-LE_CONFIG=$(helm template $SCRIPTPATH/letsencrypt-chart -f $SCRIPTPATH/letsencrypt-chart/values-$LE_API.yaml --set spec.acme.email=$EMAIL)
+LE_CONFIG=$(helm template "${SCRIPTPATH}/letsencrypt-chart" -f "${SCRIPTPATH}/letsencrypt-chart/values-${LE_API}.yaml" --set "spec.acme.email=${EMAIL}")
 
 # checking when cert-manager is ready is tricky: https://cert-manager.io/docs/installation/kubernetes/#verifying-the-installation
 # we just retry the following command
