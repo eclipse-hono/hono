@@ -353,10 +353,8 @@ public class AbstractProtocolAdapterBaseTest {
             final String contentType,
             final boolean expectedOutcome) {
 
-        adapter = newProtocolAdapter(properties, null);
-
         final Buffer body = Optional.ofNullable(payload).map(Buffer::buffer).orElse(null);
-        assertThat(adapter.isPayloadOfIndicatedType(body, contentType)).isEqualTo(expectedOutcome);
+        assertThat(AbstractProtocolAdapterBase.isPayloadOfIndicatedType(body, contentType)).isEqualTo(expectedOutcome);
     }
 
     /**

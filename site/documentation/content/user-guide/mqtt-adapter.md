@@ -146,10 +146,10 @@ that the message contains a JSON string:
   * `telemetry`
 * Authentication: required
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
@@ -184,10 +184,10 @@ The example above assumes that the MQTT adapter is
   * `telemetry/${tenant-id}/${device-id}`
 * Authentication: none
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
@@ -211,10 +211,10 @@ mosquitto_pub -t t/DEFAULT_TENANT/4711 -m '{"temp": 5}'
   * `telemetry/${tenant-id}/${device-id}`
 * Authentication: required
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
@@ -284,10 +284,10 @@ and should expire after 30 seconds:
   * `event`
 * Authentication: required
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
@@ -316,10 +316,10 @@ mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e/?hono-ttl=10 -q 1 
   * `event/${tenant-id}/${device-id}`
 * Authentication: none
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
@@ -350,10 +350,10 @@ mosquitto_pub -t e/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
   * `event/${tenant-id}/${device-id}`
 * Authentication: required
 * Meta Data:
-  * (optional) *content-type*: The type of payload contained in the message payload. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message payload. Required, if the payload is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds.
 * Payload:
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.

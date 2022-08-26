@@ -176,10 +176,10 @@ or rejected (unsettled).
   * (required) *to*:
     * `t`
     * `telemetry`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -245,10 +245,10 @@ client and can then be (re-)used for sending multiple messages.
   * (required) *to*:
     * `t/${tenant-id}/${device-id}`
     * `telemetry/${tenant-id}/${device-id}`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -300,10 +300,10 @@ message address is used to identify the device that the gateway publishes data f
     * `t/${tenant-id}/${device-id}`
     * `telemetry//${device-id}`
     * `telemetry/${tenant-id}/${device-id}`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -350,10 +350,10 @@ All other combinations are not supported by the adapter and result in the messag
   * (required) *to*:
     * `e`
     * `event`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -390,10 +390,10 @@ java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --
   * (required) *to*:
     * `e/${tenant-id}/${device-id}`
     * `event/${tenant-id}/${device-id}`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -438,10 +438,10 @@ the AMQP adapter could determine the tenant and device ID from.
     * `event//${device-id}`
     * `e/${tenant-id}/${device-id}`
     * `event/${tenant-id}/${device-id}`
-  * (optional) *content-type*: The type of payload contained in the message body. The given content type, if not empty,
-    will be used in the message being forwarded downstream. Otherwise, the content type of the downstream message will
-    be set to `application/octet-stream`, if the payload is not empty and no default content type has been defined for the
-    origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *content-type*: The type of payload contained in the message body. Required, if the message body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content type
+    of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default content type
+    has been defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
