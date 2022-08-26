@@ -173,7 +173,7 @@ public final class Statement {
      * @param sql The SQL statement to process. This is a formatted string according to
      *        {@link String#format(String, Object...)}.
      * @param values The values to replace in the parameter {@code sql}.
-     * @return The statement, or {@code null} if the provided SQL as {@code null}.
+     * @return The statement, or {@code null} if the provided SQL is {@code null}.
      */
     public static Statement statement(final String sql, final Object... values) {
         if (sql == null) {

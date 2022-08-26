@@ -417,6 +417,11 @@ public abstract class AbstractConfig {
 
             final FileFormat format = FileFormat.orDetect(this.keyFormat, this.keyStorePath);
 
+            if (format == null) {
+                LOG.warn("Unable to detect keystore file format for: {}", keyStorePath);
+                return null;
+            }
+
             // construct result
 
             switch (format) {
