@@ -15,10 +15,11 @@ package org.eclipse.hono.client.kafka.consumer;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -371,7 +372,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
     // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
     private synchronized void ensureOffsetCommitsExistForNewlyAssignedPartitions(
             final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
-        final List<TopicPartition> partitionsForNextCommit = new LinkedList<>();
+        final List<TopicPartition> partitionsForNextCommit = new ArrayList<>();
 
         final Set<TopicPartition> partitionsToCheckCommittedOffsetsFor = partitionsSet.stream().map(Helper::to)
                 .filter(partition -> !offsetsMap.containsKey(partition) && lastKnownCommittedOffsets.get(partition) == null)
@@ -599,7 +600,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
 
         private static final long UNDEFINED_OFFSET = -2;
         private final TopicPartition topicPartition;
-        private final Deque<OffsetsQueueEntry> queue = new LinkedList<>();
+        private final Deque<OffsetsQueueEntry> queue = new ArrayDeque<>();
 
         private long lastSequentiallyCompletedOffset = UNDEFINED_OFFSET;
         private long lastCommittedOffset = UNDEFINED_OFFSET;

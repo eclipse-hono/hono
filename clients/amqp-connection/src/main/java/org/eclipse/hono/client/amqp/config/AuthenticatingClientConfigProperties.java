@@ -23,6 +23,8 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Common configuration properties required for accessing and authenticating to a remote server.
  *
@@ -232,6 +234,12 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
         this.credentialsPath = path;
     }
 
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The path that the credentials are read from is determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     private void loadCredentials() {
 
         if (Strings.isNullOrEmpty(username) && Strings.isNullOrEmpty(password) && !Strings.isNullOrEmpty(credentialsPath)) {

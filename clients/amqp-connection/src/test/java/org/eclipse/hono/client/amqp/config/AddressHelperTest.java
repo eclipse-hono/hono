@@ -14,8 +14,6 @@ package org.eclipse.hono.client.amqp.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.eclipse.hono.client.amqp.config.AddressHelper;
-import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -58,7 +56,7 @@ public class AddressHelperTest {
      */
     @Test
     public void testAddressRewriteForNonMatchingPattern() {
-        assertEquals(address, AddressHelper.rewrite(address, createConfig("* *")));
+        assertEquals(address, AddressHelper.rewrite(address, createConfig("something $0")));
     }
 
     /**

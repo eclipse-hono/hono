@@ -43,6 +43,11 @@
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.github.spotbugs</groupId>
+      <artifactId>spotbugs-annotations</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Testing -->
     <dependency>

@@ -42,6 +42,7 @@ import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.impl.pkcs1.PrivateKeyParser;
@@ -180,6 +181,12 @@ public final class KeyLoader {
                 .generatePrivate(keySpec);
     }
 
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The path that the file is read from is determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     private static <R> R processFile(final Vertx vertx, final String pathName, final PemProcessor<R> processor) {
 
         final Path path = Paths.get(pathName);

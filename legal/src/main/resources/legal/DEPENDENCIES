@@ -16,6 +16,7 @@ maven/mavencentral/com.github.luben/zstd-jni/1.5.2-1, BSD-2-Clause, approved, cl
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.api.grpc/proto-google-common-protos/2.9.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.code.gson/gson/2.9.0, Apache-2.0, approved, CQ24148
+maven/mavencentral/com.google.errorprone/error_prone_annotations/2.14.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.guava/failureaccess/1.0.1, Apache-2.0, approved, CQ22654
 maven/mavencentral/com.google.guava/guava/31.1-jre, Apache-2.0 AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ24046
 maven/mavencentral/com.google.protobuf/protobuf-java/3.19.3, BSD-3-Clause, approved, clearlydefined

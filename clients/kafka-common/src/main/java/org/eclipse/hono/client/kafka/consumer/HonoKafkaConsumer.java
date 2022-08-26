@@ -18,7 +18,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -781,7 +780,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             final var partitions = Helper.to(assignedPartitions);
             // handle an exception across all position() invocations - the underlying server fetch that may trigger an exception is done for multiple partitions anyway
             try {
-                final List<org.apache.kafka.common.TopicPartition> outOfRangeOffsetPartitions = new LinkedList<>();
+                final List<org.apache.kafka.common.TopicPartition> outOfRangeOffsetPartitions = new ArrayList<>();
                 final var beginningOffsets = getUnderlyingConsumer().beginningOffsets(partitions);
                 partitions.forEach(partition -> {
                     final long position = getUnderlyingConsumer().position(partition);
@@ -1030,6 +1029,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
      *                               has been set yet on the Kafka consumer.
      * @throws NullPointerException if handler is {@code null}.
      */
+    @SuppressWarnings("FutureReturnValueIgnored")
     protected void runOnKafkaWorkerThread(final Handler<Void> handler) {
         Objects.requireNonNull(handler);
         if (kafkaConsumerWorker == null) {

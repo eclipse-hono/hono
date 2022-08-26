@@ -15,12 +15,15 @@
 # A simple shell script to get IP addresses for hono-service-device-registry-ext, hono-dispatch-router-ext and hono-adapter-amqp and creates a device id and password
 
 # prior: setup hono in kubernetes namespace "hono"
-export REGISTRY_IP=$(kubectl -n hono get service hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
+REGISTRY_IP=$(kubectl -n hono get service hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
 echo "REGISTRY_IP=${REGISTRY_IP}"
-export AMQP_NETWORK_IP=$(kubectl -n hono get service hono-dispatch-router-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
+export REGISTRY_IP
+AMQP_NETWORK_IP=$(kubectl -n hono get service hono-dispatch-router-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
 echo "AMQP_NETWORK_IP=${AMQP_NETWORK_IP}"
-export AMQP_ADAPTER_PORT=$(kubectl -n hono get service hono-adapter-amqp --output='jsonpath={.status.loadBalancer.ingress[0].port}')
+export AMQP_NETWORK_IP
+AMQP_ADAPTER_PORT=$(kubectl -n hono get service hono-adapter-amqp --output='jsonpath={.status.loadBalancer.ingress[0].port}')
 echo "AMQP_ADAPTER_IP=${AMQP_ADAPTER_IP}"
+export AMQP_ADAPTER_PORT
 
 # Get example tenant or
 export MY_TENANT="DEFAULT_TENANT"
@@ -30,14 +33,15 @@ export MY_TENANT="DEFAULT_TENANT"
 echo "MY_TENANT=\"${MY_TENANT}\""
 
 # register new device
-export MY_DEVICE=$(curl -X POST http://$REGISTRY_IP:28080/v1/devices/$MY_TENANT 2>/dev/null | jq -r .id)
+MY_DEVICE=$(curl -X POST "http://${REGISTRY_IP}:28080/v1/devices/${MY_TENANT}" 2>/dev/null | jq -r .id)
 echo "MY_DEVICE=\"${MY_DEVICE}\""
+export MY_DEVICE
 
 # set credential secret for device
 export MY_PWD="dummyDevicePassword"
 echo "MY_PWD=\"${MY_PWD}\""
-curl -i -X PUT -H "content-type: application/json" --data-binary '[{
-  "type": "hashed-password",
-  "auth-id": "'$MY_DEVICE'",
-  "secrets": [{ "pwd-plain": "'$MY_PWD'" }]
-}]' http://$REGISTRY_IP:28080/v1/credentials/$MY_TENANT/$MY_DEVICE
+curl -i -X PUT -H "content-type: application/json" --data-binary "[{
+  \"type\": \"hashed-password\",
+  \"auth-id\": \"${MY_DEVICE}\",
+  \"secrets\": [{ \"pwd-plain\": \"${MY_PWD}\" }]
+}]" "http://${REGISTRY_IP}:28080/v1/credentials/${MY_TENANT}/${MY_DEVICE}"

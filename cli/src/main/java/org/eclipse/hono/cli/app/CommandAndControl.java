@@ -157,6 +157,7 @@ public class CommandAndControl implements Callable<Integer> {
                     .orElse("-")));
     }
 
+    @SuppressWarnings("CatchAndPrintStackTrace")
     private void readAndExecuteCommands() {
         AnsiConsole.systemInstall();
         try {

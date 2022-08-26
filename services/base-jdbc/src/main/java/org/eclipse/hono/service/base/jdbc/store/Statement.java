@@ -29,6 +29,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.MoreObjects;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -175,7 +177,8 @@ public final class Statement {
      * @param values The values to replace in the parameter {@code sql}.
      * @return The statement, or {@code null} if the provided SQL is {@code null}.
      */
-    public static Statement statement(final String sql, final Object... values) {
+    @FormatMethod
+    public static Statement statement(@FormatString final String sql, final Object... values) {
         if (sql == null) {
             return null;
         }

@@ -33,6 +33,7 @@ import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.vertx.core.net.JksOptions;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.PemKeyCertOptions;
@@ -140,6 +141,12 @@ public abstract class AbstractConfig {
      * @return The password.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The path that the password is read from is determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     protected final String getPassword(final String purpose, final String value) {
 
         Objects.requireNonNull(purpose);
@@ -258,6 +265,12 @@ public abstract class AbstractConfig {
     }
 
 
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The path that the trust store is read from is determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     private TrustOptions createTrustOptions() {
 
         if (trustOptions != null) {
@@ -363,6 +376,12 @@ public abstract class AbstractConfig {
         return keyCertOptions;
     }
 
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The paths that the certificate and key are read from are determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     private KeyCertOptions createKeyCertOptions() {
 
         if (!Strings.isNullOrEmpty(this.keyPath) && !Strings.isNullOrEmpty(this.certPath)) {

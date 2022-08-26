@@ -399,6 +399,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         TracingHelper.logError(span, cause);
     }
 
+    @SuppressWarnings("unused")
     private int getErrorCode(final Throwable t) {
         /*
          * TODO set error code depending on type of exception?

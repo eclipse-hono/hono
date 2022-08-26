@@ -15,7 +15,6 @@ package org.eclipse.hono.devices;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -78,7 +77,7 @@ public class HonoHttpDevice {
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
     /**
-     * Different types of requests this application may send.
+     * Different types of request messages this application may send.
      */
     private enum Request {
         EMPTY_EVENT_WITH_TTD(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 60, true),
@@ -88,25 +87,22 @@ public class HonoHttpDevice {
         TELEMETRY_WITHOUT_TTD(new JsonObject().put("weather", "sunny"), CONTENT_TYPE_APPLICATION_JSON, null, false),
         TELEMETRY_WITH_TTD(new JsonObject().put("weather", "cloudy"), CONTENT_TYPE_APPLICATION_JSON, 60, false);
 
-        /**
-         * The payload of the message, defined as JsonObject. May be {@code null}.
-         */
-        private final JsonObject payload;
-        /**
-         * The Content-Type that is set for the message.
-         */
+        private final String payload;
         private final String contentType;
-        /**
-         * The <em>time-to-deliver</em> of the message, which is defined as application property of the AMQP 1.0 message.
-         */
         private final Integer ttd;
-        /**
-         * Property to define if the message shall be sent as event or as telemetry message.
-         */
-        private final Boolean isEvent;
+        private final boolean isEvent;
 
-        Request(final JsonObject payload, final String contentType, final Integer ttd, final Boolean isEvent) {
-            this.payload = payload;
+        /**
+         * Creates a new request message.
+         *
+         * @param payload The JSON payload of the message or {@code null} if the message has no payload.
+         * @param contentType The type of the payload or {@code null} if unknown.
+         * @param ttd The number of seconds after which the client will disconnect, once the request has been sent.
+         *            May be {@code null}.
+         * @param isEvent {@code true} if the message represents an <em>event</em> rather than <em>telemetry</em> data.
+         */
+        Request(final JsonObject payload, final String contentType, final Integer ttd, final boolean isEvent) {
+            this.payload = Optional.ofNullable(payload).map(JsonObject::encode).orElse(null);
             this.contentType = contentType;
             this.ttd = ttd;
             this.isEvent = isEvent;
@@ -129,7 +125,7 @@ public class HonoHttpDevice {
         }
     }
 
-    private final List<Request> requests = Arrays.asList(
+    private final List<Request> requests = List.of(
             Request.EMPTY_EVENT_WITH_TTD,
             Request.EMPTY_EVENT_WITH_TTD,
             Request.EMPTY_EVENT_WITH_TTD,
@@ -157,6 +153,11 @@ public class HonoHttpDevice {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
     }
 
+    /**
+     * Sends some data.
+     *
+     * @param args The command line arguments (not used).
+     */
     public static void main(final String[] args) {
         final HonoHttpDevice httpDevice = new HonoHttpDevice();
         httpDevice.sendData();
@@ -185,8 +186,8 @@ public class HonoHttpDevice {
                 return httpRequest;
             })
             .compose(httpRequest -> httpRequest.send(Optional.ofNullable(request.payload)
-                    .map(JsonObject::toBuffer)
-                    .orElse(Buffer.buffer())))
+                    .map(Buffer::buffer)
+                    .orElseGet(Buffer::buffer)))
                 .onFailure(result::completeExceptionally)
                 .onSuccess(response -> {
                     System.out.println(response.statusCode() + " " + response.statusMessage());
@@ -206,7 +207,7 @@ public class HonoHttpDevice {
                             VERTX.setTimer(1000, l -> result.complete(null));
                         } else {
                             // response contains a command
-                            sendCommandResponse("text/plain", Buffer.buffer("ok"), commandReqId, HttpURLConnection.HTTP_OK)
+                            sendCommandResponse(commandReqId, HttpURLConnection.HTTP_OK, Buffer.buffer("ok"), "text/plain")
                             .map(status -> {
                                 System.out.println(String.format("sent response to command [HTTP response status: %d]", status));
                                 VERTX.setTimer(1000, l -> result.complete(null));
@@ -221,15 +222,21 @@ public class HonoHttpDevice {
         return result;
     }
 
-    private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
+    private Future<Integer> sendCommandResponse(
+            final String commandReqId,
+            final int status,
+            final Buffer payload,
+            final String contentType) {
 
         return httpClient.request(HttpMethod.POST, String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
                 .map(httpRequest -> {
                     httpRequest.putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, Integer.toString(status));
+                    Optional.ofNullable(contentType)
+                        .ifPresent(ct -> httpRequest.putHeader(HttpHeaders.CONTENT_TYPE, ct));
                     httpRequest.headers().addAll(standardRequestHeaders);
                     return httpRequest;
                 })
-                .compose(httpRequest -> httpRequest.send(Optional.ofNullable(payload).orElse(Buffer.buffer())))
+                .compose(httpRequest -> payload == null ? httpRequest.send() : httpRequest.send(payload))
                 .map(HttpClientResponse::statusCode);
     }
 

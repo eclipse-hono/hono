@@ -27,7 +27,11 @@ fi
 HONO_MAVEN_DEPS="legal/src/main/resources/legal/hono-maven.deps"
 DEPENDENCIES="legal/src/main/resources/legal/DEPENDENCIES"
 
-mvn dependency:list -DexcludeGroupIds=org.eclipse,org.junit -Pmetrics-prometheus,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > $HONO_MAVEN_DEPS
+# The spotbugs artifacts are being used with scope "provided", i.e. they are not copied to the
+# container images and are not used/required during runtime and thus constitute something like
+# a "works-with" dependency. It therefore seems ok to simply exclude them from the license check
+# even though they are LGPL 2.1.
+mvn dependency:list -DexcludeGroupIds=org.eclipse,org.junit,com.github.spotbugs -Pmetrics-prometheus,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > $HONO_MAVEN_DEPS
 
 java -Dorg.eclipse.dash.timeout=60 -jar "${DASH_LICENSE_JAR}" -batch 90 -summary ${DEPENDENCIES} ${HONO_MAVEN_DEPS} "$@"
 sort -o ${DEPENDENCIES} ${DEPENDENCIES}

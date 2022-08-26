@@ -15,7 +15,6 @@ package org.eclipse.hono.client.kafka.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -66,7 +65,7 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
     private static final Logger LOG = LoggerFactory.getLogger(MicrometerKafkaClientMetricsSupport.class);
     private static final String PREFIX_KAFKA = "kafka.";
 
-    private final List<MeterRegistry> boundMeterRegistries = new LinkedList<>();
+    private final List<MeterRegistry> boundMeterRegistries = new ArrayList<>();
     private final Map<Producer<?, ?>, KafkaClientMetrics> producerMetricsMap = new HashMap<>();
     private final Map<Consumer<?, ?>, KafkaClientMetrics> consumerMetricsMap = new HashMap<>();
     private final boolean producerMetricsEnabled;

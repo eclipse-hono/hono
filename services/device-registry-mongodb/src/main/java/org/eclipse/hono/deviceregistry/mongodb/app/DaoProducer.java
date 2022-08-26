@@ -40,10 +40,11 @@ import org.eclipse.hono.service.HealthCheckServer;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import com.bol.config.CryptVaultAutoConfiguration;
 import com.bol.config.CryptVaultAutoConfiguration.CryptVaultConfigurationProperties;
-import com.bol.config.CryptVaultAutoConfiguration.Key;
 import com.bol.crypt.CryptVault;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
 import io.vertx.ext.mongo.MongoClient;
@@ -145,12 +146,18 @@ public class DaoProducer {
         return dao;
     }
 
+    @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = """
+                    The path that the CryptVault properties are read from is determined from configuration properties that
+                    are supposed to be passed in during startup of the component only.
+                    """)
     private FieldLevelEncryption fieldLevelEncryption(final String path) {
         try (FileInputStream in = new FileInputStream(path)) {
             final Yaml yaml = new Yaml(new Constructor(CryptVaultConfigurationProperties.class));
             final CryptVaultConfigurationProperties config = yaml.load(in);
             final CryptVault cryptVault = new CryptVault();
-            for (Key key : config.getKeys()) {
+            for (CryptVaultAutoConfiguration.Key key : config.getKeys()) {
                 final byte[] secretKeyBytes = Base64.getDecoder().decode(key.getKey());
                 cryptVault.with256BitAesCbcPkcs5PaddingAnd128BitSaltKey(key.getVersion(), secretKeyBytes);
             }

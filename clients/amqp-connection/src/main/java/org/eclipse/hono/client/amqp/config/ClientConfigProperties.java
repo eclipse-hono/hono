@@ -636,16 +636,15 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * {@link org.eclipse.hono.client.amqp.config.AddressHelper#rewrite(String, ClientConfigProperties)} method.
      *
      * @param addressRewriteRule The rewrite rule to be applied to the address.
+     * @throws PatternSyntaxException if the rewrite rule contains an invalid pattern definition.
      */
     public final void setAddressRewriteRule(final String addressRewriteRule) {
         this.addressRewriteRule = addressRewriteRule;
         if (!Strings.isNullOrEmpty(addressRewriteRule)) {
             final String[] elements = addressRewriteRule.split(" ", 2);
             if (elements.length == 2) {
-                try {
-                    addressRewritePattern = Pattern.compile(elements[0]);
-                    addressRewriteReplacement = elements[1];
-                } catch (PatternSyntaxException pe) { }
+                addressRewritePattern = Pattern.compile(elements[0]);
+                addressRewriteReplacement = elements[1];
             }
         }
     }

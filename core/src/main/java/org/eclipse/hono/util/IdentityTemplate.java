@@ -25,8 +25,7 @@ import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.Strings;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * A utility class for handling template used for generating device and authentication identifiers during
@@ -131,6 +130,9 @@ public final class IdentityTemplate {
      *                                  configured in the template are not present in the subject DN.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
+    @SuppressFBWarnings(
+            value = "LDAP_INJECTION",
+            justification = "we never run an LDAP search but merely use the class for string parsing")
     public String apply(final String subjectDN) {
         Objects.requireNonNull(subjectDN, "subjectDN must not be null");
 
