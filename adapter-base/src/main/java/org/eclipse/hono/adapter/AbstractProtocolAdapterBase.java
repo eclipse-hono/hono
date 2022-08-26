@@ -1006,13 +1006,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param contentType The indicated content type.
      * @param payload The payload from the request body.
-     * @return {@code true} if the payload is empty and the content type is
-     *         {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} or else
+     * @return {@code true} if the payload is empty and the content type is not empty, or else
      *         if the content type is not {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION}.
      */
-    protected boolean isPayloadOfIndicatedType(final Buffer payload, final String contentType) {
+    public static boolean isPayloadOfIndicatedType(final Buffer payload, final String contentType) {
         if (payload == null || payload.length() == 0) {
-            return EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
+            return !Strings.isNullOrEmpty(contentType);
         } else {
             return !EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType);
         }

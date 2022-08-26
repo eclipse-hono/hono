@@ -76,6 +76,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterEach;
@@ -887,6 +888,144 @@ public abstract class CoapTestBase {
             return result.future();
         })
         .onComplete(ctx.succeedingThenComplete());
+    }
+
+    /**
+     * Verifies that the adapter forwards an empty message with a custom content format set in the request
+     * to downstream consumers.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithCustomContentFormatSucceeds(final VertxTestContext ctx) {
+
+        final int customContentType = MediaTypeRegistry.APPLICATION_OCTET_STREAM;
+
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(MediaTypeRegistry.toString(customContentType));
+                        assertThat(msg.getPayload().length()).isEqualTo(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(
+                        Code.POST,
+                        getMessageType(),
+                        IntegrationTestSupport.COAP_HOST,
+                        getPostResource(),
+                        null);
+                request.getOptions().setContentFormat(customContentType);
+                client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                return result.future();
+            })
+            .onFailure(ctx::failNow);
+
+    }
+
+    /**
+     * Verifies that the adapter rejects empty messages that have no content format set and
+     * that are not marked as empty notifications with a 4.00 response code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithoutContentFormatFails(final VertxTestContext ctx) {
+
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(
+                        Code.POST,
+                        getMessageType(),
+                        getPostResource(),
+                        null);
+                request.getOptions().removeContentFormat();
+                client.advanced(getHandler(result, ResponseCode.BAD_REQUEST), request);
+                return result.future();
+            })
+            .onComplete(ctx.succeedingThenComplete());
+
+    }
+
+    /**
+     * Verifies that the adapter forwards a non-empty message without any content format set in the request
+     * to downstream consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageWithoutContentFormatSucceeds(final VertxTestContext ctx) {
+
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                request.getOptions().removeContentFormat();
+                client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                return result.future();
+            })
+            .onFailure(ctx::failNow);
+
+    }
+
+    /**
+     * Verifies that the adapter rejects non-empty messages that are marked as empty
+     * notifications with a 4.00 response code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageMarkedAsEmptyNotificationFails(final VertxTestContext ctx) {
+
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                request.getOptions().removeContentFormat();
+                request.getOptions().addUriQuery("empty");
+                client.advanced(getHandler(result, ResponseCode.BAD_REQUEST), request);
+                return result.future();
+            })
+            .onComplete(ctx.succeedingThenComplete());
+
     }
 
     /**

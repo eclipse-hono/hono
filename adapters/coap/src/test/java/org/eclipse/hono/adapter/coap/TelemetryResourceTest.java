@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.coap;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -47,6 +46,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantObject;
@@ -126,13 +126,12 @@ public class TelemetryResourceTest extends ResourceTestBase {
     }
 
     /**
-     * Verifies that the adapter fails the upload of an event with a 4.00 result
-     * if the request body is not empty but doesn't contain a content-format option.
+     * Verifies that the adapter successfully forwards a non-empty message that has no content-format set.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryFailsForMissingContentFormat(final VertxTestContext ctx) {
+    public void testUploadTelemetrySucceedsForMissingContentFormat(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         givenAnAdapter(properties);
@@ -146,23 +145,23 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context)
-            .onComplete(ctx.failing(t -> {
+            .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
-                    // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOf(ClientErrorException.class);
-                    assertThat(((ClientErrorException) t).getErrorCode())
-                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
 
-                    // and the message has not been forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
+                    // THEN the message has been forwarded downstream
+                    assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_MOST_ONCE,
+                            "my-tenant",
+                            "the-device",
+                            null);
+                    verify(metrics).reportTelemetry(
+                            eq(MetricsTags.EndpointType.TELEMETRY),
+                            eq("my-tenant"),
                             any(),
-                            any(MetricsTags.ProcessingOutcome.class),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any(TtdStatus.class),
+                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                            eq(MetricsTags.QoS.AT_MOST_ONCE),
+                            eq(payload.length()),
+                            eq(TtdStatus.NONE),
                             any());
                 });
                 ctx.completeNow();
@@ -171,43 +170,40 @@ public class TelemetryResourceTest extends ResourceTestBase {
     }
 
     /**
-     * Verifies that the adapter fails the upload of an event with a 4.00 result
-     * if the request body is empty but is not marked as an empty notification.
+     * Verifies that the adapter successfully forwards an empty message that is not marked as an empty notification.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryFailsForEmptyBody(final VertxTestContext ctx) {
+    public void testUploadTelemetrySucceedsForEmptyBody(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         givenAnAdapter(properties);
         givenATelemetrySenderForAnyTenant();
         final var resource = givenAResource(adapter);
 
-        // WHEN a device publishes an empty message that doesn't contain
-        // a URI-query option
-        final CoapExchange coapExchange = newCoapExchange(null, Type.NON, MediaTypeRegistry.UNDEFINED);
+        // WHEN a device publishes an empty message that is not marked as an empty notification
+        final CoapExchange coapExchange = newCoapExchange(null, Type.NON, MediaTypeRegistry.APPLICATION_OCTET_STREAM);
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context)
-            .onComplete(ctx.failing(t -> {
+            .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
-                    // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOf(ClientErrorException.class);
-                    assertThat(((ClientErrorException) t).getErrorCode())
-                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
-
-                    // and the message has not been forwarded downstream
-                    assertNoTelemetryMessageHasBeenSentDownstream();
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
+                    // THEN the message has been forwarded downstream
+                    assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_MOST_ONCE,
+                            "my-tenant",
+                            "the-device",
+                            MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                    verify(metrics).reportTelemetry(
+                            eq(MetricsTags.EndpointType.TELEMETRY),
+                            eq("my-tenant"),
                             any(),
-                            any(MetricsTags.ProcessingOutcome.class),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any(TtdStatus.class),
+                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                            eq(MetricsTags.QoS.AT_MOST_ONCE),
+                            eq(0),
+                            eq(TtdStatus.NONE),
                             any());
                 });
                 ctx.completeNow();

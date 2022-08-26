@@ -426,6 +426,159 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     }
 
     /**
+     * Verifies that the adapter forwards an empty message with a custom content type other
+     * than {@value EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} to downstream consumers.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithCustomContentTypeSucceeds(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String customContentType = "application/custom";
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    assertThat(msg.getContentType()).isEqualTo(customContentType);
+                    assertThat(msg.getPayload().length()).isEqualTo(0);
+                    assertAdditionalMessageProperties(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer(),
+                        false,
+                        true,
+                        Map.of("content-type", customContentType)))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter rejects empty messages that have no content type set.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadEmptyMessageWithoutContentTypeFails(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> {
+                mqttClient.publishHandler(msg -> {
+                    LOGGER.trace("received error message [topic: {}]", msg.topicName());
+                    ctx.verify(() -> {
+                        final var error = msg.payload().toJsonObject();
+                        assertThat(error.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                    });
+                    ctx.completeNow();
+                });
+                return subscribeToErrorTopic(null);
+            })
+            .compose(ok -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer(),
+                        false,
+                        true,
+                        null))
+            .onFailure(ctx::failNow);
+
+    }
+
+    /**
+     * Verifies that the adapter forwards a non-empty message without any content type set in the request
+     * to downstream consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageWithoutContentTypeSucceeds(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                    assertThat(msg.getPayload().length()).isGreaterThan(0);
+                    assertAdditionalMessageProperties(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer("some payload"),
+                        false,
+                        true,
+                        null))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter rejects non-empty messages that are marked as empty notifications.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadNonEmptyMessageMarkedAsEmptyNotificationFails(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.failNow("downstream consumer should not have received message");
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> {
+                mqttClient.publishHandler(msg -> {
+                    LOGGER.trace("received error message [topic: {}]", msg.topicName());
+                    ctx.verify(() -> {
+                        final var error = msg.payload().toJsonObject();
+                        assertThat(error.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                    });
+                    ctx.completeNow();
+                });
+                return subscribeToErrorTopic(null);
+            })
+            .compose(ok -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer("some payload"),
+                        false,
+                        true,
+                        Map.of("content-type", EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)))
+            .onFailure(ctx::failNow);
+
+    }
+
+    /**
      * Verifies that a message from a device with a payload exceeding the maximum size cannot be consumed and causes
      * the connection to be closed.
      *

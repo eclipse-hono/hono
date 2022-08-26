@@ -143,9 +143,10 @@ public final class DownstreamAmqpMessageFactory {
         addDefaults(message, props.asMap());
 
         // set default content type if none has been set yet (also after applying properties and defaults)
-        // and message payload isn't null
-        if (Strings.isNullOrEmpty(message.getContentType()) && message.getBody() != null) {
-            message.setContentType(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+        if (Strings.isNullOrEmpty(message.getContentType())) {
+            if (message.getBody() != null) {
+                message.setContentType(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+            }
         }
         if (addJmsVendorProps) {
             addJmsVendorProperties(message);

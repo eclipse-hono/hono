@@ -68,13 +68,17 @@ is exceeded.
   * (optional) *authorization*: The device's *auth-id* and plain text password encoded according to the
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device
     to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -97,9 +101,10 @@ is exceeded.
     potential consumer. However, if the QoS level header is set to `1` (*at least once* semantics), then the adapter
     waits for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty.
-    * The QoS header value is invalid.
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
+    * The *qos-level* header value is invalid.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
@@ -178,13 +183,17 @@ The example above assumes that the HTTP adapter is
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -204,9 +213,10 @@ The example above assumes that the HTTP adapter is
     potential consumer. However, if the QoS level header is set to `1` (*at least once* semantics), then the adapter
     waits for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty.
-    * The QoS header value is invalid.
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
+    * The *qos-level* header value is invalid.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -272,13 +282,17 @@ content-length: 23
   * (optional) *authorization*: The gateway's *auth-id* and plain text password encoded according to the
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway
     to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -300,9 +314,10 @@ content-length: 23
     potential consumer. However, if the QoS level header is set to `1` (*at least once* semantics), then the adapter
     waits for the message to be delivered and accepted by a downstream consumer before responding with this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty.
-    * The QoS header value is invalid.
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
+    * The *qos-level* header value is invalid.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
@@ -384,13 +399,17 @@ The example above assumes that a gateway device has been registered with `hashed
   * (optional) *authorization*: The device's *auth-id* and plain text password encoded according to the
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the
     device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
     specified using a URI query parameter of the same name.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -409,8 +428,9 @@ The example above assumes that a gateway device has been registered with `hashed
   * 200 (OK): The event has been accepted for processing. The response contains a command for the device to execute.
   * 202 (Accepted): The event has been accepted for processing.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
@@ -443,13 +463,17 @@ content-length: 0
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
     specified using a URI query parameter of the same name.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -466,8 +490,9 @@ content-length: 0
     a command for the device to execute.
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -503,13 +528,17 @@ content-length: 0
   * (optional) *authorization*: The gateway's *auth-id* and plain text password encoded according to the
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the
     gateway to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) *content-type*: The type of payload contained in the request body.
+  * (optional) *content-type*: The type of payload contained in the request body. Required, if the request body is empty.
+    The given content type, if not empty, will be used in the message being forwarded downstream. Otherwise, the content
+    type of the downstream message will be set to `application/octet-stream`, if the payload is not empty and no default
+    content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
     specified using a URI query parameter of the same name.
   * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
     specified using a URI query parameter of the same name.
 * Request Body:
-  * (required) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Headers:
   * (optional) *content-type*: A media type describing the semantics and format of payload contained in the response body.
     This header will only be present if the response contains a command to be executed by the device which requires input
@@ -528,8 +557,9 @@ content-length: 0
     contains a command for the device to execute.
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
-    * The content type header is missing.
-    * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
+    * The request body is empty and the *content-type* header is missing.
+    * The *content-type* header indicates an [empty-notification]({{< relref "/api/event#empty-notification" >}}) but the request
+      body is not empty.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
@@ -825,7 +855,7 @@ The adapter also considers *defaults* registered for the device at either the
 [device level]({{< relref "/api/device-registration#assert-device-registration" >}}).
 The values of the default properties are determined as follows:
 
-1. If the message already contains a non-empty property of the same name, the value if unchanged.
+1. If the message already contains a non-empty property of the same name, its value remains unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information,
    that value is used.
 3. Otherwise, if a default property of the same name is defined for the tenant that the device belongs to,

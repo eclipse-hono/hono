@@ -28,6 +28,7 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
@@ -262,14 +263,10 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
         final String contentType = context.getContentType();
         final Buffer payload = context.getPayload();
 
-        if (contentType == null) {
+        if (!AbstractProtocolAdapterBase.isPayloadOfIndicatedType(payload, contentType)) {
             return Future.failedFuture(new ClientErrorException(
                     HttpURLConnection.HTTP_BAD_REQUEST,
-                    "request message must contain content-format option"));
-        } else if (payload.length() == 0 && !context.isEmptyNotification()) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_BAD_REQUEST,
-                    "request contains no body but is not marked as empty notification"));
+                    "content type [%s] does not match payload".formatted(contentType)));
         } else {
             final String gatewayId = context.getGatewayId();
             final String tenantId = context.getOriginDevice().getTenantId();

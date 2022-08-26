@@ -38,7 +38,6 @@ import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -573,77 +572,33 @@ public final class AmqpUtils {
      * Sets the payload of an AMQP message using a <em>Data</em> section.
      *
      * @param message The message.
-     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
-     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
-     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
-     *                    given.
-     *                    If the given type is {@code null} and the payload is not {@code null}, the
-     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
-     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * @param contentType The type of the payload.
+     * @param payload The payload.
      *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setPayload(final Message message, final String contentType, final Buffer payload) {
         Objects.requireNonNull(message);
-
-        setPayload(
-                message,
-                contentType,
-                Optional.ofNullable(payload).map(Buffer::getBytes).orElse(null));
+        setPayload(message, contentType, Optional.ofNullable(payload).map(Buffer::getBytes).orElse(null));
     }
 
     /**
      * Sets the payload of an AMQP message using a <em>Data</em> section.
      *
      * @param message The message.
-     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
-     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
-     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
-     *                    given.
-     *                    If the given type is {@code null} and the payload is not {@code null}, the
-     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
-     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * @param contentType The type of the payload or {@code null} if unknown.
+     * @param payload The payload or {@code null}.
      *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
         Objects.requireNonNull(message);
 
-        setPayload(message, contentType, payload, true);
-    }
-
-    /**
-     * Sets the payload of an AMQP message using a <em>Data</em> section.
-     *
-     * @param message The message.
-     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
-     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
-     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
-     *                    given.
-     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
-     * @param useDefaultContentTypeAsFallback {@code true} if the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM
-     *                                        default content type} should be set if content type is {@code null} and
-     *                                        the payload is not {@code null}.
-     * @throws NullPointerException If message is {@code null}.
-     */
-    public static void setPayload(
-            final Message message,
-            final String contentType,
-            final byte[] payload,
-            final boolean useDefaultContentTypeAsFallback) {
-
-        Objects.requireNonNull(message);
-
-        if (payload != null) {
-            message.setBody(new Data(new Binary(payload)));
-        }
-        if ((payload != null && contentType != null)
-                || EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType)
-                || EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION.equals(contentType)) {
-            message.setContentType(contentType);
-        } else if (payload != null && useDefaultContentTypeAsFallback) {
-            message.setContentType(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
-        }
+        Optional.ofNullable(contentType).ifPresent(message::setContentType);
+        Optional.ofNullable(payload)
+            .map(Binary::new)
+            .map(Data::new)
+            .ifPresent(message::setBody);
     }
 
     /**

@@ -47,6 +47,9 @@ public final class EventConstants {
      * The registration status of a device.
      */
     public enum RegistrationStatus {
+        /**
+         * Status indicating a newly registered device.
+         */
         NEW
     }
 

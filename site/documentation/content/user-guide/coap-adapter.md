@@ -72,12 +72,17 @@ page lists all (currently) registered codes and the corresponding media types.
   * `CON`: *at least once* delivery semantics
   * `NON`: *at most once* delivery semantics
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -101,7 +106,9 @@ page lists all (currently) registered codes and the corresponding media types.
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -167,12 +174,17 @@ downstream application attached which could send any commands to the device.
   * `CON`: *at least once* delivery semantics
   * `NON`: *at most once* delivery semantics
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -196,7 +208,9 @@ downstream application attached which could send any commands to the device.
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -262,12 +276,17 @@ unauthenticated devices.
   * `CON`: *at least once* delivery semantics
   * `NON`: *at most once* delivery semantics
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -292,7 +311,9 @@ unauthenticated devices.
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
@@ -358,12 +379,17 @@ The example above assumes that a gateway device has been registered with `psk` c
 * Method: `POST`
 * Type:`CON`
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -387,7 +413,9 @@ The example above assumes that a gateway device has been registered with `psk` c
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -441,12 +469,17 @@ downstream application attached which could send any commands to the device.
 * Method: `PUT`
 * Type:`CON`
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -470,7 +503,9 @@ downstream application attached which could send any commands to the device.
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The given tenant is not allowed to use this protocol adapter.
@@ -524,12 +559,17 @@ unauthenticated devices.
 * Method: `PUT`
 * Type:`CON`
 * Request Options:
-  * (optional) *content-format*: The type of payload contained in the request body. Required, if request contains payload.
+  * (optional) *content-format*: The type of payload contained in the request body. Required, if request body is empty
+    but message is not an [empty notification]({{< relref "/api/event#empty-notification" >}}).
+    The content type corresponding to the given content format, if not empty, will be used in the message being forwarded
+    downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
+    is not empty and no default content type has been defined for the origin device or its tenant (see
+    [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type.
+  * (optional) Arbitrary payload matching the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -554,7 +594,9 @@ unauthenticated devices.
     `CON` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a
     downstream consumer before responding with this status code.
   * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
-    * the request body is empty, and the *URI-query* option doesn't contain the *empty* parameter.
+    * The *URI-query* option contains the *empty* parameter but the request body is not empty.
+    * The request body is empty but the request has no *content-format* set nor does its
+      *URI-query* option contain the *empty* parameter.
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
     * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
@@ -813,7 +855,7 @@ The adapter also considers *defaults* registered for the device at either the
 [device level]({{< relref "/api/device-registration#assert-device-registration" >}}).
 The values of the default properties are determined as follows:
 
-1. If the message already contains a non-empty property of the same name, the value if unchanged.
+1. If the message already contains a non-empty property of the same name, its value remains unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information,
    that value is used.
 3. Otherwise, if a default property of the same name is defined for the tenant that the device belongs to,
