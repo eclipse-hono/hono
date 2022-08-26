@@ -1325,7 +1325,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Tracks readiness to send back a response to the device,
      * waiting for a command to include in the response if needed.
      */
-    private interface ResponseReadyTracker {
+    protected interface ResponseReadyTracker {
 
         /**
          * This method returns a {@link Future} that tracks readiness to send back a response to the device.
