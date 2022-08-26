@@ -30,7 +30,7 @@ line options that the client supports.
 
 ## Source Code
 
-The source code can be cloned or downloaded from [Hono's GitHub repository](https://github.com/eclipse/hono).
+The source code can be cloned or downloaded from [Hono's GitHub repository](https://github.com/eclipse-hono/hono).
 The [Building from Source]({{% doclink "/dev-guide/building_hono/" %}}) guide provides instructions on how to build Hono locally.
 
 ## Release Notes

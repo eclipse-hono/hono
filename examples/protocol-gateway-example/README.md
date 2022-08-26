@@ -5,7 +5,7 @@
 This example illustrates how devices using a custom TCP based protocol can be connected to Hono's standard AMQP
 adapter by means of implementing a *protocol gateway*. The gateway listens on a TCP socket for commands to be executed
 on behalf of a device and maps them to interactions with the AMQP adapter using the AMQP device client classes from
-Hono's [Device AMQP Client module](https://github.com/eclipse/hono/tree/master/clients/device-amqp).
+Hono's [Device AMQP Client module](https://github.com/eclipse-hono/hono/tree/master/clients/device-amqp).
 
 ## Prerequisites
 

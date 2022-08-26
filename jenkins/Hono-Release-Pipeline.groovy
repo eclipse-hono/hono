@@ -143,7 +143,7 @@ spec:
                   branches                         : [[name: "${params.BRANCH}"]],
                   doGenerateSubmoduleConfigurations: false,
                   extensions                       : [[$class: 'LocalBranch', localBranch: "**"]],
-                  userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse/hono.git']]])
+                  userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse-hono/hono.git']]])
       }
     }
 
@@ -215,7 +215,7 @@ spec:
           sh '''
              git add pom.xml \\*/pom.xml
              git commit -m "Bump version to ${NEXT_VERSION}"
-             git push --all ssh://git@github.com/eclipse/hono.git && git push --tags ssh://git@github.com/eclipse/hono.git
+             git push --all ssh://git@github.com/eclipse-hono/hono.git && git push --tags ssh://git@github.com/eclipse-hono/hono.git
              '''
         }
       }

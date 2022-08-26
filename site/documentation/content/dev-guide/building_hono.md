@@ -46,11 +46,11 @@ instructions.
 
 Either
 
-* download the latest [release archive](https://github.com/eclipse/hono/releases) and extract the archive to a local
+* download the latest [release archive](https://github.com/eclipse-hono/hono/releases) and extract the archive to a local
   folder or
 * clone the Hono source code repository from GitHub:
   ```sh
-  git clone https://github.com/eclipse/hono.git
+  git clone https://github.com/eclipse-hono/hono.git
   ```
   This will create a `hono` folder in the current working directory and clone the whole repository into that folder.
 
@@ -139,7 +139,7 @@ mvn verify -Prun-tests
 ```
 
 The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the
-respective images as described above before the execution of the tests. See the [hono/tests/readme.md](https://github.com/eclipse/hono/blob/master/tests/readme.md)
+respective images as described above before the execution of the tests. See the [hono/tests/readme.md](https://github.com/eclipse-hono/hono/blob/master/tests/readme.md)
 file for more information regarding the test suite.
 
 ## IDE setup

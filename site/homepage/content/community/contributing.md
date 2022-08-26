@@ -20,7 +20,7 @@ Here is a (non-exclusive, non-prioritized) list of things you might be able to h
 * documentation (Getting Started guide, Examples, Deployment instructions for cloud environments)
 * features (both ideas and code are welcome)
 
-You might also want to take a look at our [GitHub Issues](https://github.com/eclipse/hono/issues) page and see if you can help out with any of the issues listed. We have put a [help wanted](https://github.com/eclipse/hono/labels/help%20wanted) label on those issues that we are particularly keen on receiving contributions for.
+You might also want to take a look at our [GitHub Issues](https://github.com/eclipse-hono/hono/issues) page and see if you can help out with any of the issues listed. We have put a [help wanted](https://github.com/eclipse-hono/hono/labels/help%20wanted) label on those issues that we are particularly keen on receiving contributions for.
 
 ## Eclipse Contributor Agreement
 
@@ -47,7 +47,7 @@ https://www.eclipse.org/projects/handbook/#resources-commit
 
 ## Making your Changes
 
-1. [Fork the repository on GitHub](https://github.com/eclipse/hono/fork).
+1. [Fork the repository on GitHub](https://github.com/eclipse-hono/hono/fork).
 2. Create a new *feature branch* for your changes.
 3. Make your changes.
 4. Make sure your code complies with the formatting rules defined by the settings files in the `eclipse` folder.

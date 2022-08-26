@@ -16,7 +16,7 @@ We would be delighted to answer your questions regarding the usage of Hono on [S
 
 ## Report an Issue
 
-The easiest way to tell us about a problem you experience with Hono is by [opening an issue on our GitHub page](https://github.com/eclipse/hono/issues).
+The easiest way to tell us about a problem you experience with Hono is by [opening an issue on our GitHub page](https://github.com/eclipse-hono/hono/issues).
 
 Please make sure to search the existing issues for similar symptoms before you open a new issue.
 
