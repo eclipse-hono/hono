@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -176,6 +178,7 @@ public class KafkaCommandProcessingQueue {
 
         private static final String KEY_COMMAND_SEND_ACTION_SUPPLIER_AND_RESULT_PROMISE = "commandSendActionSupplierAndResultPromise";
 
+        // using LinkedList because we want to better support removing elements from within the list
         private final Deque<KafkaBasedCommandContext> queue = new LinkedList<>();
 
         /**
@@ -229,7 +232,7 @@ public class KafkaCommandProcessingQueue {
          * Releases any contained commands waiting to be sent and clears the queue.
          */
         public void markAsUnusedAndClear() {
-            final LinkedList<KafkaBasedCommandContext> queueCopy = new LinkedList<>(queue);
+            final List<KafkaBasedCommandContext> queueCopy = new ArrayList<>(queue);
             queue.clear();
             queueCopy.forEach(commandContext -> {
                 final var actionAppliedPair = getSendActionSupplierAndResultPromise(commandContext);

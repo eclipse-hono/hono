@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +40,7 @@ public class GenericCredential extends CommonCredential {
     private static final Predicate<String> typeValidator = CredentialsConstants.PATTERN_TYPE_VALUE.asMatchPredicate();
 
     private final String type;
-    private final List<GenericSecret> secrets = new LinkedList<>();
+    private final List<GenericSecret> secrets = new ArrayList<>();
 
     private Map<String, Object> additionalProperties = new HashMap<>();
 

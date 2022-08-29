@@ -15,11 +15,11 @@ package org.eclipse.hono.commandrouter.impl;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +72,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider;
     private final AdapterInstanceStatusService adapterInstanceStatusService;
     private final Tracer tracer;
-    private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
+    private final Deque<Pair<String, Integer>> tenantsToEnable = new ArrayDeque<>();
     private final Set<String> reenabledTenants = new HashSet<>();
     private final Set<String> tenantsInProcess = new HashSet<>();
     private final AtomicBoolean running = new AtomicBoolean();
@@ -263,8 +263,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         tenantIds.stream()
             .filter(s -> !reenabledTenants.contains(s))
             .filter(s -> !tenantsInProcess.contains(s))
-            .filter(s -> tenantsToEnable.stream()
-                .allMatch(entry -> !entry.one().equals(s)))
+            .filter(s -> !tenantsToEnable.stream()
+                .anyMatch(entry -> entry.one().equals(s)))
             .forEach(s -> tenantsToEnable.addLast(Pair.of(s, 1)));
 
         if (isProcessingRequired) {

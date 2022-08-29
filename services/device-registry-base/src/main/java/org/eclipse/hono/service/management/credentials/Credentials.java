@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.OptionalInt;
@@ -38,7 +39,7 @@ public final class Credentials {
     public static PskCredential createPSKCredential(final String authId, final String psk) {
 
         final PskSecret s = new PskSecret();
-        s.setKey(psk.getBytes());
+        s.setKey(psk.getBytes(StandardCharsets.UTF_8));
         return new PskCredential(authId, List.of(s));
     }
 

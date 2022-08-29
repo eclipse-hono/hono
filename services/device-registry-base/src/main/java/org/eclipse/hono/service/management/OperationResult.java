@@ -37,12 +37,17 @@ public final class OperationResult<T> extends Result<T> {
      * @param cacheDirective The caching directive, may be {@link Optional#empty()}, but not {@code null}.
      * @param resourceVersion The resource version, may be {@link Optional#empty()}, but not {@code null}.
      */
-    protected OperationResult(final int status, final T payload,
+    private OperationResult(final int status, final T payload,
             final Optional<CacheDirective> cacheDirective, final Optional<String> resourceVersion) {
         super(status, payload, cacheDirective);
         this.resourceVersion = resourceVersion;
     }
 
+    /**
+     * Gets the version of the resource conveyed in this result.
+     *
+     * @return The version.
+     */
     public Optional<String> getResourceVersion() {
         return this.resourceVersion;
     }

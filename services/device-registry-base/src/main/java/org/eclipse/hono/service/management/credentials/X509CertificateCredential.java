@@ -16,8 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -48,7 +48,7 @@ public class X509CertificateCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
 
-    private final List<X509CertificateSecret> secrets = new LinkedList<>();
+    private final List<X509CertificateSecret> secrets = new ArrayList<>();
 
     /**
      * Creates a new credentials object for an X.500 Distinguished Name.

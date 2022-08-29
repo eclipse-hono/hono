@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -44,7 +44,7 @@ public class PskCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
 
-    private final List<PskSecret> secrets = new LinkedList<>();
+    private final List<PskSecret> secrets = new ArrayList<>();
 
     /**
      * Creates a new credentials object for an authentication identifier.

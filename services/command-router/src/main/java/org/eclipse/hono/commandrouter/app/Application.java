@@ -70,9 +70,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.health.api.HealthRegistry;
 import io.vertx.core.CompositeFuture;
@@ -88,23 +85,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  */
 @ApplicationScoped
 public class Application extends NotificationSupportingServiceApplication {
-
-    // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding
-    // model classes
-    static {
-        new Watcher<Pod>() {
-
-            @Override
-            public void eventReceived(final Action action, final Pod resource) {
-                // nothing to do
-            }
-
-            @Override
-            public void onClose(final WatcherException cause) {
-                // nothing to do
-            }
-        };
-    }
 
     private static final String COMPONENT_NAME = "Hono Command Router";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);

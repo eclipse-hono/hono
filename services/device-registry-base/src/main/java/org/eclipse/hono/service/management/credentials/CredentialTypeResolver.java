@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.management.credentials;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
@@ -44,8 +44,8 @@ public final class CredentialTypeResolver extends TypeIdResolverBase {
     }
 
     @Override
-    public Id getMechanism() {
-        return Id.NAME;
+    public JsonTypeInfo.Id getMechanism() {
+        return JsonTypeInfo.Id.NAME;
     }
 
     @Override

@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,17 +57,17 @@ public class Device {
     @JsonProperty(RegistryManagementConstants.FIELD_VIA)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<String> via = new LinkedList<>();
+    private List<String> via = new ArrayList<>();
 
     @JsonProperty(RegistryManagementConstants.FIELD_VIA_GROUPS)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<String> viaGroups = new LinkedList<>();
+    private List<String> viaGroups = new ArrayList<>();
 
     @JsonProperty(RegistryManagementConstants.FIELD_MEMBER_OF)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<String> memberOf = new LinkedList<>();
+    private List<String> memberOf = new ArrayList<>();
 
     @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
     @JsonInclude(value = Include.NON_EMPTY)

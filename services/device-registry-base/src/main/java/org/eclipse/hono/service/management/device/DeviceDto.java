@@ -60,9 +60,6 @@ public class DeviceDto extends BaseDto<Device> {
     @JsonProperty(FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     private boolean autoProvisioningNotificationSent = false;
 
-    @JsonIgnore
-    private DeviceStatus deviceStatus = new DeviceStatus();
-
     /**
      * Default constructor for serialisation/deserialization.
      */

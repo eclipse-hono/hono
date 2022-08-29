@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -50,7 +50,7 @@ public class PasswordCredential extends CommonCredential {
      */
     private static Pattern PATTERN_AUTH_ID_VALUE;
 
-    private final List<PasswordSecret> secrets = new LinkedList<>();
+    private final List<PasswordSecret> secrets = new ArrayList<>();
 
     static {
         final String regex = System.getProperty(RegistryManagementConstants.SYSTEM_PROPERTY_USERNAME_REGEX);

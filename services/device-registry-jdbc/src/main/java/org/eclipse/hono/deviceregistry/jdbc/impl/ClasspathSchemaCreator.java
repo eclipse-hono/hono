@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.jdbc.config.SchemaCreator;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
@@ -106,17 +107,19 @@ public class ClasspathSchemaCreator implements SchemaCreator {
         final Promise<Void> clientCloseTracker = Promise.promise();
         SQL.runTransactionally(jdbcClient, tracer, ctx,
                 (connection, context) -> {
-                    final var expanded = Statement.statement(script).expand();
-                    if (expanded == null) {
-                        log.warn("cannot create database schema in [{}]: script can not be expanded to SQL statement",
-                                jdbcProperties.getUrl());
-                        return Future.failedFuture("cannot create database schema using script");
-                    } else {
-                        log.debug("creating database schema in [{}] using script: {}", jdbcProperties.getUrl(), expanded);
-                        return expanded
-                                .query(jdbcClient)
-                                .recover(SQL::translateException);
-                    }
+                    return Optional.ofNullable(Statement.statement(script))
+                            .map(Statement::expand)
+                            .map(stmt -> {
+                                log.debug("creating database schema in [{}] using script: {}", jdbcProperties.getUrl(), stmt);
+                                return stmt
+                                        .query(jdbcClient)
+                                        .recover(SQL::translateException);
+                            })
+                            .orElseGet(() -> {
+                                log.warn("cannot create database schema in [{}]: script can not be expanded to SQL statement",
+                                        jdbcProperties.getUrl());
+                                return Future.failedFuture("cannot create database schema using script");
+                            });
                 })
                 .onComplete(ar -> jdbcClient.close(clientCloseTracker));
         return clientCloseTracker.future();
