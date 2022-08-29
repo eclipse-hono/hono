@@ -33,7 +33,7 @@ jobs:
     - name: Set up Maven
       uses: stCarolas/setup-maven@v4.3
       with:
-        maven-version: 3.8.4
+        maven-version: 3.8.6
     - name: Set up JDK
       uses: actions/setup-java@v2
       with:
@@ -64,3 +64,7 @@ jobs:
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=file \
         -Dhono.messaging-infra.type=amqp -Dhono.commandrouting.cache=embedded \
         -Prun-tests
+    - name: "Create CLI native executable"
+      run: |
+        mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+        -Pbuild-cli-native-executable -am -pl :hono-cli

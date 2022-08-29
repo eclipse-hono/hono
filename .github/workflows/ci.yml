@@ -45,7 +45,7 @@ jobs:
     - name: Set up Maven
       uses: stCarolas/setup-maven@v4.3
       with:
-        maven-version: 3.8.4
+        maven-version: 3.8.6
     - name: Set up JDK
       uses: actions/setup-java@v2
       with:
