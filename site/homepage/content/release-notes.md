@@ -48,6 +48,18 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The command line client no longer throws an NPE when trying to upload an empty message without a content type to the
   AMQP adapter.
 
+## 2.0.2
+
+### Fixes & Enhancements
+
+* The default value for the HTTP protocol adapter `hono.http.idleTimeout` configuration property has been increased
+  from 60 to 75 seconds. This means HTTP requests with a `hono-ttd` value of 60 seconds (which is the tenant
+  configuration `max-ttd` default) will not cause the idle timeout to be reached.
+* The mechanism used by the Command Router component to determine the state of protocol adapter instances has been
+  improved.
+* The CoAP adapter returned a 500 error code for PUT requests without a device identifier in the URI path. This has
+  been fixed, now returning a response with a 404 error code instead.
+
 ## 2.0.1
 
 ### Fixes & Enhancements

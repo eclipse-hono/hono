@@ -19,14 +19,15 @@ using the [Helm package manager](https://helm.sh).
 Please refer to the [deployment guide]({{% doclink "/deployment/helm-based-deployment/" %}})
 for installation instructions.
 
-A Java based command line client for consuming telemetry data and events from Hono is available for download from
+A command line client for interacting with Hono's north bound APIs and its AMQP adapter is available for download from
 
-* [Eclipse Hono 2.0.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.1-exec.jar)
+* [Eclipse Hono 2.1.0 Command Line Client (Java Archive)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0-exec.jar)
+* [Eclipse Hono 2.1.0 Command Line Client (Linux x86_64)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0)
 
-The client requires a Java 17 runtime environment to run.
+The Java client requires a Java 17 runtime environment to run. The Linux binary should run on most (modern) Linux distributions.
 
-Please refer to the [Admin Guide]({{% doclink "/admin-guide/hono-client-configuration/" %}}) for details regarding the command
-line options that the client supports.
+Please refer to the [Getting Started Guide]({{% doclink "/getting-started/" %}}) for details regarding the usage of the command
+line client.
 
 ## Source Code
 
@@ -39,8 +40,6 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 ## Previous versions
 
+* [Eclipse Hono 2.0.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.2-exec.jar)
+* [Eclipse Hono 2.0.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.1-exec.jar)
 * [Eclipse Hono 2.0.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.0-exec.jar)
-* [Eclipse Hono 1.12.3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.3-exec.jar)
-* [Eclipse Hono 1.12.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.2-exec.jar)
-* [Eclipse Hono 1.12.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.1-exec.jar)
-* [Eclipse Hono 1.12.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.0-exec.jar)
