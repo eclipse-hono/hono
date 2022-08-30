@@ -37,7 +37,7 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-service-command-router-native \
         hono-service-device-registry-mongodb-native"
 
-ME=`basename "$0"`
+ME=$(basename "$0")
 echo "called as $ME"
 
 if [[ "push_hono_native_images.sh" == "$ME" ]]
@@ -53,12 +53,12 @@ then
     if [[ "docker.io" != "${CR}" || "eclipse" != "${REPO}" ]]
     then
       IMAGE_NAME="${CR}/${REPO}/${image}"
-      docker tag $ECLIPSE_IMAGE_NAME:$TAG $IMAGE_NAME:$TAG
+      docker tag "${ECLIPSE_IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:${TAG}"
     else
-      IMAGE_NAME=$ECLIPSE_IMAGE_NAME
+      IMAGE_NAME="${ECLIPSE_IMAGE_NAME}"
     fi
-    echo "pushing image $IMAGE_NAME:$TAG ..."
-    docker push $IMAGE_NAME:$TAG
+    echo "pushing image ${IMAGE_NAME}:${TAG} ..."
+    docker push "${IMAGE_NAME}:${TAG}"
   done
 else
   echo "This script can be used to push Hono's images from"

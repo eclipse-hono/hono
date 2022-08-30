@@ -12,21 +12,20 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
-hugo version
-if [ $? != 0 ]
-then
+
+if ! hugo version; then
   echo "Please install \"hugo\" to be able to build the hono documentation. See readme.md for further details."
   exit 0
 fi
 
-if [ $1 ]
+if [ "$1" ]
 then
   TARGET="$1"
 else
   TARGET="public"
 fi
 
-cd homepage/
+cd homepage || exit
 WEBSITE_THEME_CLONING_REQUIRED=1
 if [ -d themes/hugo-universal-theme/.git ]
 then
@@ -50,7 +49,7 @@ echo "Building homepage in directory: $TARGET"
 hugo -v -d $TARGET
 cd .. 
 
-cd documentation/
+cd documentation || exit
 DOC_THEME_CLONING_REQUIRED=1
 if [ -d themes/hugo-theme-relearn/.git ]
 then

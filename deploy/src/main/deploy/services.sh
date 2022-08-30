@@ -15,12 +15,11 @@
 NS=${1:-hono}
 
 function get_service_ip {
-  IP_ADDR=$(kubectl get service $1 --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n $NS 2> /dev/null)
-  if [ $? -eq 0 ]
-  then
-    if [ "$IP_ADDR" != '' ]
+  
+  if IP_ADDR=$(kubectl get service "$1" --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n "$NS" 2> /dev/null); then
+    if [ "${IP_ADDR}" != '' ]
     then
-      echo export $2=$IP_ADDR
+      echo "export $2=${IP_ADDR}"
     else
       echo "echo \"could not determine IP address of service '$1'\""
     fi

@@ -53,9 +53,9 @@ function create_key {
   echo ""
   if [ $KEY_ALG == "EC" ]
   then
-    openssl ecparam -name secp384r1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+    openssl ecparam -name secp384r1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out "$DIR/$1"
   else
-    openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+    openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out "$DIR/$1"
   fi
 
   if [ $? -ne 0 ]; then
@@ -74,14 +74,14 @@ function create_cert {
 
   echo ""
   echo "creating $1 key and certificate"
-  create_key $1-key.pem
-  openssl req -config ca_opts -new -key $DIR/$1-key.pem -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
-    openssl x509 -req -extfile ca_opts -extensions req_ext_$1 -out $DIR/$1.pem -days 365 -CA $DIR/ca-cert.pem -CAkey $DIR/ca-key.pem -CAcreateserial
-  cat $DIR/$1.pem $DIR/ca-cert.pem > $DIR/$1-cert.pem && rm $DIR/$1.pem
-  if [ $2 ]
+  create_key "$1-key.pem"
+  openssl req -config ca_opts -new -key "$DIR/$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=$1" | \
+    openssl x509 -req -extfile ca_opts -extensions "req_ext_$1" -out "$DIR/$1.pem" -days 365 -CA "$DIR/ca-cert.pem" -CAkey "$DIR/ca-key.pem" -CAcreateserial
+  cat "$DIR/$1.pem" "$DIR/ca-cert.pem" > "$DIR/$1-cert.pem" && rm "$DIR/$1.pem"
+  if [ "$2" ]
   then
     echo "adding key/cert for $1 to key store $DIR/$2"
-    openssl pkcs12 -export -inkey $DIR/$1-key.pem -in $DIR/$1-cert.pem -out $DIR/$2 -name $1 -password pass:$3
+    openssl pkcs12 -export -inkey "$DIR/$1-key.pem" -in "$DIR/$1-cert.pem" -out "$DIR/$2" -name "$1" -password "pass:$3"
   fi
 
   if [ $? -ne 0 ]; then
@@ -94,7 +94,7 @@ function create_cert {
 function create_client_cert {
   echo ""
   echo "creating client key and certificate for device $1"
-  create_key device-$1-key.pem
+  create_key "device-$1-key.pem"
   openssl req -new -key "$DIR/device-$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=Device $1" | \
     openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/default_tenant-cert.pem -CAkey $DIR/default_tenant-key.pem -CAcreateserial
   SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
@@ -154,11 +154,13 @@ CA_SUBJECT=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -subject -name
 PK=$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -pubkey | sed /^---/d | sed -z 's/\n//g')
 NOT_BEFORE=$(date --date="$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -startdate -nameopt RFC2253 | sed s/^notBefore=//)" --iso-8601=seconds)
 NOT_AFTER=$(date --date="$(openssl x509 -in $DIR/default_tenant-cert.pem -noout -enddate -nameopt RFC2253 | sed s/^notAfter=//)" --iso-8601=seconds)
-echo "trusted-ca.subject-dn=$CA_SUBJECT" > $DIR/trust-anchor.properties
-echo "trusted-ca.public-key=$PK" >> $DIR/trust-anchor.properties
-echo "trusted-ca.algorithm=$KEY_ALG" >> $DIR/trust-anchor.properties
-echo "trusted-ca.not-before=$NOT_BEFORE" >> $DIR/trust-anchor.properties
-echo "trusted-ca.not-after=$NOT_AFTER" >> $DIR/trust-anchor.properties
+{
+  echo "trusted-ca.subject-dn=$CA_SUBJECT"
+  echo "trusted-ca.public-key=$PK"
+  echo "trusted-ca.algorithm=$KEY_ALG"
+  echo "trusted-ca.not-before=$NOT_BEFORE"
+  echo "trusted-ca.not-after=$NOT_AFTER"
+} > $DIR/trust-anchor.properties
 
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
