@@ -58,11 +58,11 @@ public class MessageAnnotationsInjectAdapter implements TextMap {
     @SuppressWarnings("unchecked")
     private Map<Symbol, String> getPropertiesMap() {
         final MessageAnnotations messageAnnotations;
-        if (message.getMessageAnnotations() == null || message.getMessageAnnotations().getValue() == null) {
+        if (message.getMessageAnnotations() != null && message.getMessageAnnotations().getValue() != null) {
+            messageAnnotations = message.getMessageAnnotations();
+        } else {
             messageAnnotations = new MessageAnnotations(new HashMap<>());
             message.setMessageAnnotations(messageAnnotations);
-        } else {
-            messageAnnotations = message.getMessageAnnotations();
         }
         final Map<Symbol, String> propertiesMap;
         final Object annotationValue = messageAnnotations.getValue().get(Symbol.getSymbol(propertiesMapName));

@@ -287,12 +287,17 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
         } else {
 
+            final var credentialsType = getType();
+            if (credentialsType == null) {
+                throw new IllegalStateException("credentials object must have a type");
+            }
+
             try {
-                switch (getType()) {
+                switch (credentialsType) {
                 case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
                     checkSecrets(secrets, secret -> {
                         checkHashedPassword(secret);
-                        secretValidator.accept(getType(), secret);
+                        secretValidator.accept(credentialsType, secret);
                     });
                     break;
                 default:

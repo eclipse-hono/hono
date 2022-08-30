@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,7 +48,7 @@ public final class DownstreamMessageProperties {
 
     private static final Logger LOG = LoggerFactory.getLogger(DownstreamMessageProperties.class);
 
-    private final Map<String, Object> props;
+    private final Map<String, Object> props = new HashMap<>();
     private final ResourceLimits resourceLimits;
     private final String endpointName;
 
@@ -78,7 +78,6 @@ public final class DownstreamMessageProperties {
 
         this.endpointName = Objects.requireNonNull(endpointName);
         this.resourceLimits = resourceLimits;
-        this.props = new HashMap<>();
 
         Optional.ofNullable(tenantLevelDefaults).ifPresent(props::putAll);
         Optional.ofNullable(deviceLevelDefaults).ifPresent(props::putAll);

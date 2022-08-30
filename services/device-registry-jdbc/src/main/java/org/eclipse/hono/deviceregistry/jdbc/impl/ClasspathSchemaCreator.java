@@ -107,10 +107,16 @@ public class ClasspathSchemaCreator implements SchemaCreator {
         SQL.runTransactionally(jdbcClient, tracer, ctx,
                 (connection, context) -> {
                     final var expanded = Statement.statement(script).expand();
-                    log.debug("Creating database schema in [{}] with script: {}", jdbcProperties.getUrl(), expanded);
-                    return expanded
-                            .query(jdbcClient)
-                            .recover(SQL::translateException);
+                    if (expanded == null) {
+                        log.warn("cannot create database schema in [{}]: script can not be expanded to SQL statement",
+                                jdbcProperties.getUrl());
+                        return Future.failedFuture("cannot create database schema using script");
+                    } else {
+                        log.debug("creating database schema in [{}] using script: {}", jdbcProperties.getUrl(), expanded);
+                        return expanded
+                                .query(jdbcClient)
+                                .recover(SQL::translateException);
+                    }
                 })
                 .onComplete(ar -> jdbcClient.close(clientCloseTracker));
         return clientCloseTracker.future();
