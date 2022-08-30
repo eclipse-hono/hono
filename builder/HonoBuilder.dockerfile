@@ -39,6 +39,7 @@ RUN set -xeu && \
         libfreetype6-dev \
         libz-dev \
         gpg \
+        gpg-agent \
         pinentry-tty \
         openssh-client \
         upx-ucl \
