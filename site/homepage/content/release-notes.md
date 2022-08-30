@@ -4,7 +4,7 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.1.0 (not released yet)
+## 2.1.0
 
 ### New features
 
@@ -21,28 +21,30 @@ description = "Information about changes in recent Hono releases. Includes new f
   type on the message. Messages with a non-empty payload can be uploaded without specifying a content type. In the messages
   being forwarded to downstream consumers, the adapters will either use the devices's default content type, if defined, or
   otherwise fall back to `application/octet-stream` in such cases.
+* A Linux x86_64 executable of the command line client has been added to the downloads page.
 
 ### Fixes & Enhancements
 
 * The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
   native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
   with less than ~150MB of RAM. This has been fixed.
-* The HTTP protocol adapter and Device Registry now support a configuration property for explicitly setting the idle timeout.
-  The timeout is configured with the property `idleTimeout`. This determines if a connection will timeout and be closed
-  if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
+* The HTTP protocol adapter and Device Registry now support a configuration property for explicitly setting a request's
+  idle timeout. The timeout is configured with the property *idleTimeout*. This determines if a request will time out
+  and be closed if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
   A zero value means no timeout is used.
-* The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
+* The MQTT adapter skipped command or error (the first one) subscription if both were requested for the same device.
+  This has been fixed.
 * On startup, Hono components could get into a state that caused certain Kafka client metrics to not get reported.
   This has been fixed.
 * Default messaging type changed to Kafka. Changed related documentation pages.  
 * The native executable based Lora adapter container image failed to forward Lora meta information in messages being
   sent downstream. This has been fixed.
-* The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
+* The Command Router component might not have reached the *ready* state in case the Kafka broker got restarted during
   Command Router startup. This has been fixed.
 * The mechanism used by the Command Router component to determine the state of protocol adapter instances has been
   improved.
-* The CoAP adapter returned a 500 error code for PUT requests without a device identifier in the URI path. This has
-  been fixed, now returning a response with a 404 error code instead.
+* The CoAP adapter returned a `500` error code for PUT requests without a device identifier in the URI path. This has
+  been fixed, now returning a response with a `404` error code instead.
 * The command line client no longer throws an NPE when trying to upload an empty message without a content type to the
   AMQP adapter.
 
