@@ -9,8 +9,10 @@ canonifyurls = false
 googleAnalytics = "GTM-5WLCZXC"
 pluralizeListTitles = "false"
 
-[markup.goldmark.renderer]
-    unsafe = true
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
 
 [params]
   # General information
@@ -55,12 +57,6 @@ pluralizeListTitles = "false"
   # Twitter
   twitter = "EclipseHono"
   twitterImage = "images/twitter_image.png"
-
-[blackfriday]
-  smartypants = true
-  fractions = true
-  smartDashes = true
-  plainIDAnchors = true
 
 [outputs]
   home = [ "HTML", "RSS", "JSON"]

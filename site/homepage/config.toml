@@ -30,8 +30,10 @@ pluralizeListTitles = "false"
     disable = true
     privacyEnhanced = false
 
-[markup.goldmark.renderer]
-    unsafe = true
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
 
 [[menu.main]]
     name = "Getting Started"

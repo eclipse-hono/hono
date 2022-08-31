@@ -40,7 +40,7 @@ pipeline {
                 memory: "512Mi"
                 cpu: "1"
           - name: hugo
-            image: cibuilds/hugo:0.97
+            image: cibuilds/hugo:0.102
             command:
             - cat
             tty: true
