@@ -45,7 +45,7 @@
       specified on the containers. OpenJDK supports this starting with version 15:
       https://bugs.openjdk.java.net/browse/JDK-8230305
      -->
-    <java-base-image.name>docker.io/eclipse-temurin:17-jre-focal</java-base-image.name>
+    <java-base-image.name>docker.io/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
     <kafka-client.version>3.2.1</kafka-client.version>
     <kafka.image.name>confluentinc/cp-kafka:7.2.1</kafka.image.name>
