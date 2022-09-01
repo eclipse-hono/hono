@@ -261,7 +261,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.40.1</version>
+          <version>0.40.2</version>
           <executions>
             <execution>
               <id>build_images</id>
@@ -790,6 +790,39 @@
       <properties>
         <docker.skip.push>false</docker.skip.push>
       </properties>
+    </profile>
+    <profile>
+      <id>docker-multiarch-build</id>
+      <properties>
+        <docker.buildx.dockerStateDir>~/.docker</docker.buildx.dockerStateDir>
+        <docker.buildx.builderName>maven</docker.buildx.builderName>
+      </properties>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <build>
+                      <buildx>
+                        <dockerStateDir>${docker.buildx.dockerStateDir}</dockerStateDir>
+                        <builderName>${docker.buildx.builderName}</builderName>
+                        <platforms>
+                          <platform>linux/amd64</platform>
+                          <platform>linux/arm64</platform>
+                        </platforms>
+                      </buildx>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
     </profile>
   </profiles>
 </project>

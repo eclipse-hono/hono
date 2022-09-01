@@ -125,8 +125,31 @@ mvn clean install -Pbuild-docker-image,metrics-prometheus,docker-push-image
 ```
 
 Note that the container registry might require authentication in order to push images. The build uses the Docker Maven
-Plugin for creating and pushing images. Please refer to the [plugin documentation](http://dmp.fabric8.io/#authentication)
+Plugin for creating and pushing images. Please refer to the [plugin documentation](https://dmp.fabric8.io/#authentication)
 for details regarding how to configure credentials for the registry.
+
+#### Building Images for the arm64 Platform
+
+By default, the build process creates container images for the host system platform. For example when running the build
+on an `amd64` based system, the container images created will be for the `amd64` platform as well.
+
+Images for the `arm64` platform can, of course, be created by running the build on an `arm64` based system. However, it is also
+possible to create images for arbitrary platforms by means of [Docker's buildx command](https://docs.docker.com/build/buildx/).
+
+On Linux based hosts it is possible to use QEMU for building images for other platforms than the host system as described in this
+[blog post](https://medium.com/@nshankar_88597/building-and-testing-multi-arch-images-with-docker-buildx-and-qemu-8f72c2f8728b).
+
+Once QEMU and Docker buildx support have been set up, the `docker-multiarch-build` Maven profile can be used to build container
+images for both the `amd64` as well as the `arm64` platforms:
+
+```sh
+mvn clean install -Pbuild-docker-image,docker-multiarch-build,docker-push-image,metrics-prometheus -Ddocker.registry-name=registry.custom.org -Ddocker.image.org-name=my-repo
+```
+
+Note that the `docker-push-image` profile has been activated as well. This is necessary because buildx currently does not support
+loading multiple platform build results into the local image cache. Therefore, the created images need to be pushed to a
+container registry instead. The `docker.registry-name` and `docker.image.org-name` Maven properties can be used to set
+the (host) name of the container registry and the name of the image repository to use for the container image names.
 
 ## Running the Integration Tests
 
