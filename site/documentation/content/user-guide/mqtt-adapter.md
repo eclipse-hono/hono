@@ -162,14 +162,14 @@ the device's tenant and device identity as part of the authentication process.
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t t -m '{"temp": 5}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t t -m '{"temp": 5}'
 ```
 
 Publish some JSON data for device `4711` using a client certificate for authentication:
 
 ```sh
 # in base directory of Hono repository:
-mosquitto_pub -p 8883 -t t -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
+mosquitto_pub -h hono.eclipseprojects.io -p 8883 --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem -t t -m '{"temp": 5}'
 ```
 
 {{% notice info %}}
@@ -199,7 +199,7 @@ This topic can be used by devices that have not authenticated to the protocol ad
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -t t/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+mosquitto_pub -h hono.eclipseprojects.io -t t/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 ```
 
 ## Publish Telemetry Data (authenticated Gateway)
@@ -233,7 +233,7 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t t/DEFAULT_TENANT/4712 -m '{"temp": 5}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'gw@DEFAULT_TENANT' -P gw-secret -t t/DEFAULT_TENANT/4712 -m '{"temp": 5}'
 ```
 
 {{% notice info %}}
@@ -300,13 +300,13 @@ to require devices to authenticate (which is the default).
 Upload a JSON string for device `4711`:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e -q 1 -m '{"alarm": 1}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e -q 1 -m '{"alarm": 1}'
 ```
 
 Upload a JSON string for device `4711` with `time-to-live` as 10 seconds:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e/?hono-ttl=10 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e/?hono-ttl=10 -q 1 -m '{"alarm": 1}'
 ```
 
 ## Publish an Event (unauthenticated Device)
@@ -332,13 +332,13 @@ This topic can be used by devices that have not authenticated to the protocol ad
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -t e/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -h hono.eclipseprojects.io -t e/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
 ```
 
 Publish some JSON data for device `4711` with `time-to-live` as 15 seconds:
 
 ```sh
-mosquitto_pub -t e/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -h hono.eclipseprojects.io -t e/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
 ```
 
 ## Publish an Event (authenticated Gateway)
@@ -373,7 +373,7 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t e//4712 -q 1 -m '{"temp": 5}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'gw@DEFAULT_TENANT' -P gw-secret -t e//4712 -q 1 -m '{"temp": 5}'
 ```
 
 {{% notice info %}}
@@ -466,7 +466,7 @@ The following command can be used to subscribe to commands resulting in command 
 topic that does not include tenant nor device ID:
 
 ```sh
-mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///q/#
+mosquitto_sub -v -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///q/#
 ```
 
 A request-response command with name `setBrightness` from an application might look like this:
@@ -493,7 +493,7 @@ The following command can be used to subscribe to commands resulting in command 
 topic that includes the tenant ID:
 
 ```sh
-mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command/DEFAULT_TENANT//req/#
+mosquitto_sub -v -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command/DEFAULT_TENANT//req/#
 ```
 
 Note the usage of the fully spelled out names (`command` and `req` instead of `c` and `q`) and the inclusion of the tenant ID
@@ -538,7 +538,7 @@ The protocol adapter will publish **request-response** commands for the device t
 **Example**
 
 ```sh
-mosquitto_sub -v -t c/DEFAULT_TENANT/4711/q/#
+mosquitto_sub -v -h hono.eclipseprojects.io -t c/DEFAULT_TENANT/4711/q/#
 ```
 
 A request-response command with name `setBrightness` from an application might look like this:
@@ -610,7 +610,7 @@ message.
 A subscription to commands for all devices that a gateway acts on behalf of looks like this:
 
 ```sh
-mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t c/DEFAULT_TENANT/+/q/#
+mosquitto_sub -v -h hono.eclipseprojects.io -u 'gw@DEFAULT_TENANT' -P gw-secret -t c/DEFAULT_TENANT/+/q/#
 ```
 
 A request/response command for device `4711` with name `setBrightness` from an application might then look like this:
@@ -630,7 +630,7 @@ included in the topic filter used for subscribing to the commands.
 A subscription to commands for a specific device can be done like this:
 
 ```sh
-mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/q/#
+mosquitto_sub -v -h hono.eclipseprojects.io -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/q/#
 ```
 
 A corresponding *one-way* command might look like this:
@@ -658,7 +658,7 @@ one of the following topics:
 Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ### Sending a Response to a Command (unauthenticated Device)
@@ -673,7 +673,7 @@ one of the following topics:
 Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -t c/DEFAULT_TENANT/4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -h hono.eclipseprojects.io -t c/DEFAULT_TENANT/4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ### Sending a Response to a Command (authenticated Gateway)
@@ -687,7 +687,7 @@ An authenticated gateway MUST send a device's response to a command it has recei
 Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -h hono.eclipseprojects.io -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ## Error Reporting via Error Topic
@@ -755,7 +755,7 @@ no downstream consumer for the device messages.
 
 ```sh
 mqtt shell
-con -V 3 -h [MQTT_ADAPTER_IP] -u [DEVICE]@[TENANT] -pw [PWD]
+con -V 3 -h hono.eclipseprojects.io  -u sensor1@DEFAULT_TENANT -pw hono-secret
 sub -t e///# --qos 0 --outputToConsole
 pub -t t -m '{"temp": 5}' --qos 1
 ```

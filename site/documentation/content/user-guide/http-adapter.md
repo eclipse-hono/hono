@@ -129,7 +129,7 @@ configured to require devices to authenticate (which is the default).
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -139,7 +139,7 @@ content-length: 0
 Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -149,7 +149,7 @@ content-length: 0
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry
 ~~~
 ~~~
 HTTP/1.1 200 OK
@@ -166,7 +166,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
 
 ~~~sh
 # in base directory of Hono repository:
-curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'content-type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
+curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'content-type: application/json' --data-binary '{"temp": 5}' https://hono.eclipseprojects.io:8443/telemetry
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -241,7 +241,7 @@ This resource MUST be used by devices that have not authenticated to the protoco
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry/DEFAULT_TENANT/4711
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -251,7 +251,7 @@ content-length: 0
 Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
-curl -i -X PUT -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry/DEFAULT_TENANT/4711
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -261,7 +261,7 @@ content-length: 0
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -X PUT -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry/DEFAULT_TENANT/4711
 ~~~
 ~~~
 HTTP/1.1 200 OK
@@ -352,7 +352,7 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry//4712
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -362,7 +362,7 @@ content-length: 0
 Publish some JSON data on behalf of device `4712` using *at least once* QoS:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry//4712
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -373,7 +373,7 @@ Publish some JSON data on behalf of device `4712`, indicating that the gateway w
 response:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry//4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry//4712
 ~~~
 ~~~
 HTTP/1.1 200 OK
@@ -451,7 +451,7 @@ require devices to authenticate (which is the default).
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"alarm": true}' http://hono.eclipseprojects.io:8080/event
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -513,7 +513,7 @@ This resource MUST be used by devices that have not authenticated to the protoco
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"alarm": true}' http://hono.eclipseprojects.io:8080/event/DEFAULT_TENANT/4711
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -590,7 +590,7 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event//4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/event//4712
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -623,7 +623,7 @@ parameter.
 The (optional) *hono-ttd* header can be set in requests for publishing telemetry data or events:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -634,7 +634,7 @@ content-length: 0
 The (optional) *hono-ttd* query parameter can be used in requests for publishing telemetry data or events:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://hono.eclipseprojects.io:8080/telemetry?hono-ttd=60
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -719,7 +719,7 @@ configured to require devices to authenticate (which is the default).
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://hono.eclipseprojects.io:8080/command/res/req-id-uuid?hono-cmd-status=200
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -767,7 +767,7 @@ Send a response to a previously received command with the command-request-id `re
 device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://hono.eclipseprojects.io:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -828,7 +828,7 @@ by means of retrieving a *registration assertion* for the device from the config
 Send a response to a previously received command with the command-request-id `req-id-uuid` on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res//4712/req-id-uuid?hono-cmd-status=200
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://hono.eclipseprojects.io:8080/command/res//4712/req-id-uuid?hono-cmd-status=200
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
