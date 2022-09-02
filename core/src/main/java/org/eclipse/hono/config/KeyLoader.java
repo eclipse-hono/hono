@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -225,6 +225,9 @@ public final class KeyLoader {
                 } else {
                     throw new IllegalArgumentException(String.format("%s: Unsupported key algorithm: %s", keyPath, algorithm));
                 }
+
+            case "EC PRIVATE KEY":
+                return generatePrivateKey("EC", PrivateKeyParser.getECKeySpec(pem.getPayload()));
 
             case "RSA PRIVATE KEY":
                 return generatePrivateKey("RSA", PrivateKeyParser.getRSAKeySpec(pem.getPayload()));

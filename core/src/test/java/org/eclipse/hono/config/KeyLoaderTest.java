@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,7 +39,9 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyStore() {
 
-        final KeyLoader loader = KeyLoader.fromKeyStore(vertx, PREFIX_KEY_PATH + "authServerKeyStore.p12",
+        final KeyLoader loader = KeyLoader.fromKeyStore(
+                vertx,
+                PREFIX_KEY_PATH + "authServerKeyStore.p12",
                 "authkeys".toCharArray());
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
@@ -51,7 +53,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingKeyStore() {
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> KeyLoader.fromKeyStore(vertx, "non-existing.p12", "secret".toCharArray()));
     }
 
@@ -62,7 +65,9 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyAndCertFiles() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem",
+        final KeyLoader loader = KeyLoader.fromFiles(
+                vertx,
+                PREFIX_KEY_PATH + "auth-server-key.pem",
                 PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNotNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
@@ -76,7 +81,10 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingKeyFile() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", null);
+        final KeyLoader loader = KeyLoader.fromFiles(
+                vertx,
+                PREFIX_KEY_PATH + "auth-server-key.pem",
+                null);
         assertNotNull(loader.getPrivateKey());
         assertNull(loader.getPublicKey());
     }
@@ -88,7 +96,10 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderSucceedsForExistingCertFile() {
 
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, null, PREFIX_KEY_PATH + "auth-server-cert.pem");
+        final KeyLoader loader = KeyLoader.fromFiles(
+                vertx,
+                null,
+                PREFIX_KEY_PATH + "auth-server-cert.pem");
         assertNull(loader.getPrivateKey());
         assertNotNull(loader.getPublicKey());
         assertTrue(loader.getCertificateChain().length == 2);
@@ -102,8 +113,12 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingKeyFile() {
 
-        assertThrows(IllegalArgumentException.class,
-                () -> KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> KeyLoader.fromFiles(
+                        vertx,
+                        "non-existing-key.pem",
+                        PREFIX_KEY_PATH + "auth-server-cert.pem"));
     }
 
     /**
@@ -113,17 +128,38 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingCertFile() {
 
-        assertThrows(IllegalArgumentException.class,
-                () -> KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> KeyLoader.fromFiles(
+                        vertx,
+                        PREFIX_KEY_PATH + "auth-server-key.pem",
+                        "non-existing-cert.pem"));
     }
 
     /**
-     * Verifies that the loader loads a private key from
+     * Verifies that the loader loads a private RSA key from
      * an existing pkcs1 PEM file.
      */
     @Test
-    public void testLoaderPkcs1PrivateKey() {
-        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH_2 + "pkcs1-private-key.pem", null);
+    public void testLoaderPkcs1PrivateRsaKey() {
+        final KeyLoader loader = KeyLoader.fromFiles(
+                vertx,
+                PREFIX_KEY_PATH_2 + "pkcs1-private-key.pem",
+                null);
+        assertNotNull(loader.getPrivateKey());
+        assertNull(loader.getPublicKey());
+    }
+
+    /**
+     * Verifies that the loader loads a private ECC key from
+     * an existing pkcs1 PEM file.
+     */
+    @Test
+    public void testLoaderPkcs1PrivateEccKey() {
+        final KeyLoader loader = KeyLoader.fromFiles(
+                vertx,
+                PREFIX_KEY_PATH_2 + "pkcs1-ec-private-key.pem",
+                null);
         assertNotNull(loader.getPrivateKey());
         assertNull(loader.getPublicKey());
     }
