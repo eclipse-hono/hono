@@ -1,0 +1,10 @@
+[submodule "homepage-theme"]
+	path = site/homepage/themes/hugo-universal-theme
+	url = https://github.com/devcows/hugo-universal-theme.git
+	branch = 1.3.2
+	shallow = true
+[submodule "doc-theme"]
+	path = site/documentation/themes/hugo-theme-relearn
+	url = https://github.com/McShelby/hugo-theme-relearn.git
+	branch = 4.2.5
+	shallow = true
