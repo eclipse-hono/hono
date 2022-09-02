@@ -41,23 +41,28 @@ jobs:
           java-version: "17"
           cache: "maven"
 
-      - name: Build all Docker images
+      - name: Create Hono container images
         run: |
-          mvn clean package -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus
+          mvn clean install -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus
 
-      - name: Get Trivy Version
-        run: echo "TRIVY_VERSION=$(wget -qO - 'https://api.github.com/repos/aquasecurity/trivy/releases/latest' | grep '\"tag_name\":' | sed -E 's/.*\"v([^\"]+)\".*/\1/')" >> $GITHUB_ENV
+      - name: Determine most recent Trivy version
+        run: |
+          echo "TRIVY_VERSION=$(wget -qO - 'https://api.github.com/repos/aquasecurity/trivy/releases/latest' | \
+            grep '\"tag_name\":' | sed -E 's/.*\"v([^\"]+)\".*/\1/')" >> $GITHUB_ENV
 
-      - name: Install trivy
-        run: wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${{ env.TRIVY_VERSION }}/trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz -O - | tar -zxvf -
-
-      - run: mkdir -p scans/eclipse
+      - name: Install Trivy
+        run: |
+          wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${{ env.TRIVY_VERSION }}/trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz -O - | tar -zxvf -
 
       - name: Scan Docker images
-        run: 'while read -r IMAGE; do ./trivy image $IMAGE --ignore-unfixed --severity HIGH,CRITICAL --output "scans/$IMAGE.sarif" --format sarif; done < <(docker images --format "{{.Repository}}:{{.Tag}}" | grep "eclipse/")'
+        run: |
+          mkdir -p scans/eclipse
+          for IMAGE in $(docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/hono-*"); do
+            ./trivy image "${IMAGE}" --ignore-unfixed --severity HIGH,CRITICAL --output "scans/$IMAGE.sarif" --format sarif
+          done
 
       - name: Upload Docker image scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'scans/eclipse'
-          category: container images
+          category: "Container Images"
