@@ -21,22 +21,13 @@ IF ERRORLEVEL 1 (
   ECHO Hugo installation detected...
 )
 
-cd homepage
-SET WEBSITE_THEME_CLONING_REQUIRED=1
-IF EXIST themes\hugo-universal-theme\.git (
-  SET /p HEAD=<themes\hugo-universal-theme\.git\HEAD
-  SET WEBSITE_THEME_HEAD_REVISION=78887402aeca0ab44deb8f0de800f7a6974f8c8a
-  ECHO website theme repo rev required: !WEBSITE_THEME_HEAD_REVISION!, rev found: !HEAD!
-  IF "!WEBSITE_THEME_HEAD_REVISION!" == "!HEAD!" (
-    SET WEBSITE_THEME_CLONING_REQUIRED=0
-  )
-)
-IF "!WEBSITE_THEME_CLONING_REQUIRED!" == "1" (
-  RMDIR /S /Q themes\hugo-universal-theme
-  ECHO cloning website theme repository...
-  git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
+git submodule status
+IF ERRORLEVEL 1 (
+  ECHO Initializing submodules containing Hugo themes.
+  git submodule update --init
 )
 
+cd homepage
 IF NOT "%~1"==""  (
   ECHO Going to build homepage in directory: %1
   hugo -v -d %1
@@ -47,21 +38,6 @@ IF NOT "%~1"==""  (
 cd ..
 
 cd documentation
-SET DOC_THEME_CLONING_REQUIRED=1
-IF EXIST themes\hugo-theme-relearn\.git (
-  SET /p HEAD=<themes\hugo-theme-relearn\.git\HEAD
-  SET DOC_THEME_HEAD_REVISION=be030d4eab0e5648c83e32a888bc3084e44da02b
-  ECHO doc theme repo rev required: !DOC_THEME_HEAD_REVISION!, rev found: !HEAD!
-  IF "!DOC_THEME_HEAD_REVISION!" == "!HEAD!" (
-    SET DOC_THEME_CLONING_REQUIRED=0
-  )
-)
-IF "!DOC_THEME_CLONING_REQUIRED!" == "1" (
-  RMDIR /S /Q themes\hugo-theme-relearn
-  ECHO cloning doc theme repository...
-  git clone --depth 1 --branch 4.2.5 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
-)
-
 IF NOT "%~1"==""  (
   ECHO Going to build documentation in directory: %1\docs
   hugo -v -d %1\docs
