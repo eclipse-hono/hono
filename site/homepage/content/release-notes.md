@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 2.2.0
+
+### New features
+
+* All Hono components now support reading ECC based keys from PEM files that contain the Base64 encoded DER-encoding of an
+  ECPrivateKey as described in [RFC 5915, Section 4](https://datatracker.ietf.org/doc/html/rfc5915#section-4).
+
 ## 2.1.0
 
 ### New features
