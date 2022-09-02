@@ -170,15 +170,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         this.metrics = metrics;
     }
 
-    /**
-     * Gets the metrics for this service.
-     *
-     * @return The metrics
-     */
-    protected AmqpAdapterMetrics getMetrics() {
-        return metrics;
-    }
-
     @Override
     protected void doStart(final Promise<Void> startPromise) {
 
@@ -192,7 +183,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         .compose(success -> {
             if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
                 authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
-                        getMetrics(),
+                        metrics,
                         () -> tracer.buildSpan("open connection")
                                 .ignoreActiveSpan()
                                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
@@ -263,7 +254,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param executionContext The execution context, including the TenantObject.
      * @return A future indicating the outcome of the operation. A failed future will fail the authentication attempt.
      */
-    protected Future<Void> handleBeforeCredentialsValidation(final DeviceCredentials credentials,
+    private Future<Void> handleBeforeCredentialsValidation(final DeviceCredentials credentials,
             final SaslResponseContext executionContext) {
 
         final String tenantId = credentials.getTenantId();
@@ -403,7 +394,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *
      * @param con The connection to be opened.
      */
-    protected void onConnectRequest(final ProtonConnection con) {
+    void onConnectRequest(final ProtonConnection con) {
 
         con.disconnectHandler(lostConnection -> {
             log.debug("lost connection to device [container: {}]", con.getRemoteContainer());
@@ -600,7 +591,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @throws NullPointerException If the server is {@code null}.
      * @throws IllegalStateException if this adapter is already running.
      */
-    protected void setInsecureAmqpServer(final ProtonServer server) {
+    void setInsecureAmqpServer(final ProtonServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
             throw new IllegalStateException("AMQP Server should not be running");
@@ -619,7 +610,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param authFactory The SASL authenticator factory.
      * @throws NullPointerException if the authFactory is {@code null}.
      */
-    protected void setSaslAuthenticatorFactory(final ProtonSaslAuthenticatorFactory authFactory) {
+    void setSaslAuthenticatorFactory(final ProtonSaslAuthenticatorFactory authFactory) {
         this.authenticatorFactory = Objects.requireNonNull(authFactory, "authFactory must not be null");
     }
 
@@ -681,7 +672,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param conn The connection through which the request is initiated.
      * @param receiver The receiver link for receiving the data.
      */
-    protected void handleRemoteReceiverOpen(final ProtonConnection conn, final ProtonReceiver receiver) {
+    void handleRemoteReceiverOpen(final ProtonConnection conn, final ProtonReceiver receiver) {
 
         final Device authenticatedDevice = getAuthenticatedDevice(conn);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
@@ -769,7 +760,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *         here.
      * @throws NullPointerException if span is {@code null}.
      */
-    protected Future<Void> applyTraceSamplingPriorityForAddressTenant(final ResourceIdentifier address, final Span span) {
+    private Future<Void> applyTraceSamplingPriorityForAddressTenant(final ResourceIdentifier address, final Span span) {
         Objects.requireNonNull(span);
         if (address == null || address.getTenantId() == null) {
             // an invalid address is ignored here
@@ -799,7 +790,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *         The future will succeed if the message has been processed successfully, otherwise it
      *         will fail with a {@link ServiceInvocationException}.
      */
-    protected Future<Void> onMessageReceived(final AmqpContext ctx) {
+    Future<Void> onMessageReceived(final AmqpContext ctx) {
 
         log.trace("processing message [address: {}, qos: {}]", ctx.getAddress(), ctx.getRequestedQos());
         final Span msgSpan = ctx.getTracingSpan();
@@ -834,7 +825,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param connection The AMQP connection to the device.
      * @param sender The link to use for sending commands to the device.
      */
-    protected void handleRemoteSenderOpenForCommands(
+    void handleRemoteSenderOpenForCommands(
             final ProtonConnection connection,
             final ProtonSender sender) {
 
@@ -1501,7 +1492,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param t The throwable to map to an error condition.
      * @return The error condition.
      */
-    protected static ErrorCondition getErrorCondition(final Throwable t) {
+    private static ErrorCondition getErrorCondition(final Throwable t) {
         final String errorMessage = ServiceInvocationException.getErrorMessageForExternalClient(t);
         if (t instanceof AuthorizationException || t instanceof AdapterDisabledException) {
             return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);

@@ -42,8 +42,14 @@ public class SamplingPrioritySampler implements Sampler {
     }
 
     @Override
-    public SamplingResult shouldSample(final Context parentContext, final String traceId, final String name, final SpanKind spanKind,
-            final Attributes attributes, final List<LinkData> parentLinks) {
+    public SamplingResult shouldSample(
+            final Context parentContext,
+            final String traceId,
+            final String name,
+            final SpanKind spanKind,
+            final Attributes attributes,
+            final List<LinkData> parentLinks) {
+
         return Optional.ofNullable(attributes.get(AttributeKey.longKey(SAMPLING_PRIORITY_TAG)))
                 .map(samplingPriority -> {
                     if (samplingPriority == 1L) {

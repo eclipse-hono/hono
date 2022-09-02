@@ -83,16 +83,12 @@ public enum FileFormat {
 
         if (path == null) {
             return null;
-        }
-
-        final String[] toks = path.split("\\.");
-
-        if (toks.length < 2) {
+        } else if (path.endsWith(".")) {
             return null;
         }
 
-        final String extension = toks[toks.length - 1].toLowerCase();
-
+        final int idx = path.lastIndexOf(".");
+        final var extension = path.substring(idx + 1).toLowerCase();
         return EXTENSIONS.get(extension);
     }
 }

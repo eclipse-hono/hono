@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,8 +64,6 @@ public class LoraConstants {
 
     public static final String ADAPTIVE_DATA_RATE_ENABLED = "adr_enabled";
     public static final String CODING_RATE = "coding_rate";
-    public static final String DATA_RATE = "data_rate";
-    public static final String DATA_RATE_ID = "data_rate_id";
     public static final String FREQUENCY = "frequency";
     public static final String FRAME_COUNT = "frame_count";
     public static final String GATEWAY_ID = "gateway_id";

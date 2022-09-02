@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
@@ -36,9 +35,6 @@ import io.vertx.core.buffer.Buffer;
 public final class CommandResponse {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandResponse.class);
-
-    private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
-        code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
 
     private final String tenantId;
     private final String deviceId;
@@ -111,7 +107,7 @@ public final class CommandResponse {
         if (requestId == null) {
             LOG.debug("cannot create CommandResponse: request id is null");
             return null;
-        } else if (INVALID_STATUS_CODE.test(status)) {
+        } else if (isInvalidStatusCode(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         }
@@ -155,7 +151,7 @@ public final class CommandResponse {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
                     correlationId, address, status);
             return null;
-        } else if (INVALID_STATUS_CODE.test(status)) {
+        } else if (isInvalidStatusCode(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         }
@@ -290,5 +286,9 @@ public final class CommandResponse {
                 + ", replyToId='" + replyToId + '\''
                 + ", messagingType='" + messagingType + '\''
                 + '}';
+    }
+
+    private static boolean isInvalidStatusCode(final Integer code) {
+        return code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
     }
 }

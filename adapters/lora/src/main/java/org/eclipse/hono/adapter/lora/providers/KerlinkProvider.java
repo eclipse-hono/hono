@@ -122,7 +122,7 @@ public class KerlinkProvider extends JsonBasedLoraProvider {
 
         LoraUtils.getChildObject(loraMessage, FIELD_KERLINK_DATA_RATE, String.class)
             .ifPresent(datr -> {
-                final String[] dataRateParts = datr.split(KERLINK_BANDWIDTH);
+                final String[] dataRateParts = datr.split(KERLINK_BANDWIDTH, 2);
                 final String spreadingFactor = dataRateParts[0].replace(KERLINK_SPREADING_FACTOR, "");
                 final String bandWith = dataRateParts[1];
                 data.setSpreadingFactor(Integer.parseInt(spreadingFactor));

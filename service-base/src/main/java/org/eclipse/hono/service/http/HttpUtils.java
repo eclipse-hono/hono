@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -416,7 +416,7 @@ public final class HttpUtils {
                 ctx.response().setStatusCode(404);
                 Optional.ofNullable(HttpServerSpanHelper.serverSpan(ctx))
                         .ifPresent(span -> TracingHelper.logError(span, HttpResponseStatus.valueOf(404).reasonPhrase()));
-                if (ctx.request().method() != HttpMethod.HEAD) {
+                if (!ctx.request().method().equals(HttpMethod.HEAD)) {
                     ctx.response()
                             .putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8")
                             .end("<html><body><h1>Resource not found</h1></body></html>");

@@ -14,7 +14,7 @@
 package org.eclipse.hono.application.client.kafka.impl;
 
 import java.time.Duration;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,7 +52,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
 
     private final Vertx vertx;
     private final MessagingKafkaConsumerConfigProperties consumerConfig;
-    private final List<MessageConsumer> consumersToCloseOnStop = new LinkedList<>();
+    private final List<MessageConsumer> consumersToCloseOnStop = new ArrayList<>();
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**

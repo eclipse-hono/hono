@@ -124,7 +124,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
                     final var entries = r.getRows(true);
                     switch (entries.size()) {
                         case 0:
-                            return Future.succeededFuture((Optional.empty()));
+                            return Future.succeededFuture(Optional.empty());
                         case 1:
                             final var entry = entries.get(0);
                             final var device = Json.decodeValue(entry.getString("data"), Device.class);

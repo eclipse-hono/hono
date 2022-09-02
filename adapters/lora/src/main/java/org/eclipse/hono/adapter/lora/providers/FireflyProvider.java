@@ -168,7 +168,9 @@ public class FireflyProvider extends JsonBasedLoraProvider {
         json.put(COMMAND_FIELD_FIREFLY_CONFIRMED, false);
         try {
             json.put(COMMAND_FIELD_FIREFLY_PORT, Integer.parseInt(subject));
-        } catch (final NumberFormatException ignored) { }
+        } catch (final NumberFormatException ignored) {
+            // port is not mandatory
+        }
         return json;
     }
 }

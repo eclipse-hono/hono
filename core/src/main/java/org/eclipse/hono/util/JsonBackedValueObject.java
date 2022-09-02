@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ abstract class JsonBackedValueObject {
      * @return The properties.
      */
     @JsonAnyGetter
+    @SuppressWarnings("unused")
     private Map<String, Object> getPropertiesAsMap() {
         return json.getMap();
     }

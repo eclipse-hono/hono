@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,11 @@ public interface AuthenticationServerMetrics {
 
     /**
      * The outcome of an attempt to authenticate a client.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     enum ClientType {
         AUTH_SERVICE("auth-service"),
         DISPATCH_ROUTER("dispatch-router"),

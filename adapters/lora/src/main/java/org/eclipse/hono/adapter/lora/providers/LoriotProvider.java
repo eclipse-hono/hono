@@ -170,7 +170,9 @@ public class LoriotProvider extends JsonBasedLoraProvider {
         json.put(COMMAND_FIELD_LORIOT_EUI, deviceId);
         try {
             json.put(COMMAND_FIELD_LORIOT_PORT, Integer.parseInt(subject));
-        } catch (final NumberFormatException ignored) { }
+        } catch (final NumberFormatException ignored) {
+            // port is not mandatory
+        }
         return json;
     }
 

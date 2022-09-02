@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -285,7 +285,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
 
         // wrap the handler to ensure distinct objects are added to the consumerCloseHandlers list
         // preventing issues if the same closeHandler instance is used for multiple createConsumer() invocations
-        final Handler<Throwable> wrappedCloseHandler = closeHandler != null ? (thr -> closeHandler.handle(thr)) : null;
+        final Handler<Throwable> wrappedCloseHandler = closeHandler != null ? thr -> closeHandler.handle(thr) : null;
         return connection
                 .isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> GenericReceiverLink.create(

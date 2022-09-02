@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.lora;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -165,7 +164,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                         log.debug("tenant [{}] disabled or removed, removing corresponding command consumers", tenantId);
                         span.log("tenant disabled or removed, corresponding command consumers will be closed");
                         @SuppressWarnings("rawtypes")
-                        final List<Future> consumerCloseFutures = new LinkedList<>();
+                        final List<Future> consumerCloseFutures = new ArrayList<>();
                         for (final var iter = commandSubscriptions.entrySet().iterator(); iter.hasNext();) {
                             final var entry = iter.next();
                             if (entry.getKey().getTenant().equals(tenantId)) {

@@ -38,7 +38,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.Timer.Sample;
 import io.vertx.core.Vertx;
 
 /**
@@ -101,6 +100,9 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
     private static final long DEFAULT_TENANT_IDLE_TIMEOUT = Duration.ZERO.toMillis();
     private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
 
+    /**
+     * A logger to be shared with subclasses.
+     */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
@@ -239,7 +241,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
     }
 
     @Override
-    public Sample startTimer() {
+    public Timer.Sample startTimer() {
         return Timer.start(registry);
     }
 
@@ -251,7 +253,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             final ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
             final int payloadSize,
-            final Sample timer) {
+            final Timer.Sample timer) {
         reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, MetricsTags.TtdStatus.NONE, timer);
     }
 
@@ -264,7 +266,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             final MetricsTags.QoS qos,
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
-            final Sample timer) {
+            final Timer.Sample timer) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
@@ -305,7 +307,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             final TenantObject tenantObject,
             final ProcessingOutcome outcome,
             final int payloadSize,
-            final Sample timer) {
+            final Timer.Sample timer) {
 
         Objects.requireNonNull(direction);
         Objects.requireNonNull(tenantId);
@@ -481,11 +483,11 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
 
         return new SendMessageSampler() {
             @Override
-            public Sample start(final String tenantId) {
+            public SendMessageSampler.Sample start(final String tenantId) {
 
                 final Timer.Sample sample = Timer.start(registry);
 
-                return new Sample() {
+                return new SendMessageSampler.Sample() {
 
                     @Override
                     public void completed(final String outcome) {

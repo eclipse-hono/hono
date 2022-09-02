@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,9 +35,12 @@ import org.yaml.snakeyaml.constructor.Constructor;
  */
 public class StatementConfiguration {
 
+    /**
+     * The default path to read SQL configuration from.
+     */
     public static final Path DEFAULT_PATH = Paths.get("/etc/config/sql");
-    private static final boolean SKIP_DUMPING_CONFIG = Boolean.getBoolean("org.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration");
 
+    private static final boolean SKIP_DUMPING_CONFIG = Boolean.getBoolean("org.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration");
     private static final Logger log = LoggerFactory.getLogger(StatementConfiguration.class);
 
     private final Map<String, Statement> statements;
@@ -118,7 +121,7 @@ public class StatementConfiguration {
             final String key = entry.getKey();
 
             // if key is set, but not a string ...
-            if (entry.getValue() != null && (!(entry.getValue() instanceof String))) {
+            if (entry.getValue() != null && !(entry.getValue() instanceof String)) {
                 // ... fail
                 throw new IllegalArgumentException(String.format("Key '%s' is not of type string: %s", entry.getKey(), entry.getValue().getClass()));
             }

@@ -15,6 +15,7 @@ package org.eclipse.hono.example.protocolgateway.controller;
 
 import java.net.HttpURLConnection;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -154,14 +155,14 @@ public class ProtocolGateway {
             return login(args, socket, dictionary);
         case TelemetryConstants.TELEMETRY_ENDPOINT:
         case TelemetryConstants.TELEMETRY_ENDPOINT_SHORT:
-            return sendTelemetry(args, socket, dictionary);
+            return sendTelemetry(args, dictionary);
         case EventConstants.EVENT_ENDPOINT:
         case EventConstants.EVENT_ENDPOINT_SHORT:
-            return sendEvent(args, socket, dictionary);
+            return sendEvent(args, dictionary);
         case CMD_SUBSCRIBE:
             return subscribe(socket, dictionary);
         case CMD_UNSUBSCRIBE:
-            return unsubscribe(socket, dictionary);
+            return unsubscribe(dictionary);
         default:
             LOG.debug("unsupported command [{}]", commandName);
             return Future.failedFuture("no such command");
@@ -180,7 +181,7 @@ public class ProtocolGateway {
         }
     }
 
-    private Future<Void> sendTelemetry(final String args, final NetSocket socket, final Map<String, Object> dictionary) {
+    private Future<Void> sendTelemetry(final String args, final Map<String, Object> dictionary) {
 
         final Promise<Void> result = Promise.promise();
         LOG.debug("Command: send Telemetry");
@@ -205,7 +206,7 @@ public class ProtocolGateway {
         return result.future();
     }
 
-    private Future<Void> sendEvent(final String args, final NetSocket socket, final Map<String, Object> dictionary) {
+    private Future<Void> sendEvent(final String args, final Map<String, Object> dictionary) {
 
         final Promise<Void> result = Promise.promise();
         LOG.debug("Command: send Event");
@@ -249,7 +250,7 @@ public class ProtocolGateway {
         return result.future();
     }
 
-    private Future<Void> unsubscribe(final NetSocket socket, final Map<String, Object> dictionary) {
+    private Future<Void> unsubscribe(final Map<String, Object> dictionary) {
 
         final Promise<Void> result = Promise.promise();
         LOG.debug("Command: unsubscribe");
@@ -297,7 +298,7 @@ public class ProtocolGateway {
 
         final Buffer payload = Buffer.buffer(String.format(
                 "myCurrentTime: %s",
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())));
+                DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now(ZoneId.systemDefault()))));
 
         return amqpAdapterClient.sendCommandResponse(
                         command.getReplyTo(),

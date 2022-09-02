@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,8 @@ import io.vertx.core.Vertx;
  */
 public final class DeviceConnectionDurationTracker {
 
-    protected final Logger log = LoggerFactory.getLogger(DeviceConnectionDurationTracker.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionDurationTracker.class);
+
     private final AtomicLong noOfDeviceConnections;
     private final Consumer<Long> recorder;
     private final AtomicReference<Instant> startInstant = new AtomicReference<>();
@@ -48,7 +49,7 @@ public final class DeviceConnectionDurationTracker {
         this.startInstant.set(Instant.now());
         this.vertx = vertx;
         this.timerId = this.vertx.setPeriodic(recordingIntervalInMs, id -> report());
-        log.trace("Started a device connection duration tracker for the tenant [{}].", tenantId);
+        LOG.trace("Started a device connection duration tracker for the tenant [{}].", tenantId);
     }
 
     /**
@@ -64,11 +65,11 @@ public final class DeviceConnectionDurationTracker {
         }
         report();
         this.noOfDeviceConnections.set(noOfDeviceConnections);
-        log.trace("Updated number of device connections for the tenant [{}] to [{}]", tenantId,
+        LOG.trace("Updated number of device connections for the tenant [{}] to [{}]", tenantId,
                 noOfDeviceConnections);
         if (noOfDeviceConnections == 0) {
             vertx.cancelTimer(timerId);
-            log.trace("Stopped the device connection duration tracker for the tenant [{}].", tenantId);
+            LOG.trace("Stopped the device connection duration tracker for the tenant [{}].", tenantId);
             return null;
         }
 
@@ -79,7 +80,7 @@ public final class DeviceConnectionDurationTracker {
         final long deviceConnectionDuration = noOfDeviceConnections.get()
                 * Duration.between(startInstant.getAndSet(Instant.now()), Instant.now()).toMillis();
         recorder.accept(deviceConnectionDuration);
-        log.trace(
+        LOG.trace(
                 "Reported device connection duration [tenant : {}, noOfDeviceConnections: {}, connectionDurationInMs: {}].",
                 tenantId, noOfDeviceConnections.get(), deviceConnectionDuration);
     }

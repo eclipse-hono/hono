@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,6 +78,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Pair;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -797,6 +797,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             throw new IllegalArgumentException("context does not contain command response message but " +
                     ctx.endpoint().getCanonicalName());
         }
+        if (ctx.topic() == null) {
+            throw new IllegalArgumentException("context does not contain topic");
+        }
         verifyTenantAndDeviceContextIsSet(ctx);
 
         final String[] addressPath = ctx.topic().getResourcePath();
@@ -927,7 +930,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return CompositeFuture.all(tokenTracker, tenantValidationTracker).compose(ok -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
-            props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
+            Optional.ofNullable(ctx.getRequestedQos())
+                .map(QoS::ordinal)
+                .ifPresent(qos -> props.put(MessageHelper.APP_PROPERTY_QOS, qos));
             addRetainAnnotation(ctx, props, currentSpan);
             customizeDownstreamMessageProperties(props, ctx);
 
@@ -1342,7 +1347,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             // process in reverse order and skip equivalent subscriptions, meaning the last of such subscriptions shall be used
             // (done with respect to MQTT 3.1.1 spec section 3.8.4, processing multiple filters as if they had been submitted
             //  using multiple separate SUBSCRIBE packets)
-            final Deque<MqttTopicSubscription> topicSubscriptions = new LinkedList<>(subscribeMsg.topicSubscriptions());
+            final Deque<MqttTopicSubscription> topicSubscriptions = new ArrayDeque<>(subscribeMsg.topicSubscriptions());
             topicSubscriptions.descendingIterator().forEachRemaining(mqttTopicSub -> {
 
                 final Future<Subscription> result;

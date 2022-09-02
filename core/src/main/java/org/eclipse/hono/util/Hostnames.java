@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * Helper class for working with hostnames.
@@ -32,7 +33,8 @@ public final class Hostnames {
             try {
                 final InetAddress localhost = InetAddress.getLocalHost();
                 hostname = localhost.getHostAddress();
-            } catch (final Exception e) {
+            } catch (final UnknownHostException e) {
+                // fall through
             }
         }
 

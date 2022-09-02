@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -128,7 +128,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
         if (obj == null) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        if (!getClass().isInstance(obj)) {
             return false;
         }
         final PreSharedKeyDeviceIdentity other = (PreSharedKeyDeviceIdentity) obj;

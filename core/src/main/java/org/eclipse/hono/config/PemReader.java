@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,8 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -171,11 +171,11 @@ public final class PemReader {
     public static List<Entry> readAll(final Reader reader) throws IOException {
 
         final LineNumberReader lnr = new LineNumberReader(reader);
-        final List<Entry> result = new LinkedList<>();
+        final List<Entry> result = new ArrayList<>();
 
         String line;
         String type = null;
-        StringBuffer buffer = null;
+        StringBuilder buffer = null;
 
         while ((line = lnr.readLine()) != null) {
 
@@ -192,7 +192,7 @@ public final class PemReader {
                     throw new IOException("PEM: Duplicate BEGIN statement");
                 }
 
-                buffer = new StringBuffer();
+                buffer = new StringBuilder();
                 type = begin.group(1);
                 continue;
             }

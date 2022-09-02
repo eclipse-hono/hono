@@ -178,7 +178,9 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, payload.getBytes());
         try {
             deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_PORT, Integer.parseInt(subject));
-        } catch (final NumberFormatException ignored) { }
+        } catch (final NumberFormatException ignored) {
+            // port is not mandatory
+        }
 
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM, deviceQueueItem);

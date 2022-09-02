@@ -254,7 +254,7 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             if (this == o) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (o == null || !getClass().isInstance(o)) {
                 return false;
             }
             final CacheKey cacheKey = (CacheKey) o;

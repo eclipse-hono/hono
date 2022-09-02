@@ -18,7 +18,7 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.cert.TrustAnchor;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -365,7 +365,7 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(adapter);
 
         if (adapters == null) {
-            adapters = new LinkedList<>();
+            adapters = new ArrayList<>();
         } else if (getAdapter(adapter.getType()) != null) {
             throw new IllegalArgumentException(
                     String.format("Already an adapter of the type [%s] exists", adapter.getType()));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,11 @@ public final class MetricsTags {
 
     /**
      * The outcome of a connection attempt to a protocol adapter.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum ConnectionAttemptOutcome {
         ADAPTER_CONNECTIONS_EXCEEDED("adapter-connections-exceeded"),
         ADAPTER_DISABLED("adapter-disabled"),
@@ -63,7 +67,11 @@ public final class MetricsTags {
 
     /**
      * The type of endpoint that a message is published to.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum EndpointType {
 
         /**
@@ -145,7 +153,11 @@ public final class MetricsTags {
 
     /**
      * The type of component.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum ComponentType {
 
         /**
@@ -177,8 +189,11 @@ public final class MetricsTags {
 
     /**
      * A status indicating the outcome of processing a message received from a device.
-     *
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum ProcessingOutcome {
 
         /**
@@ -228,8 +243,11 @@ public final class MetricsTags {
 
     /**
      * Status indicating the outcome of processing a TTD value contained in a message received from a device.
-     *
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum TtdStatus {
 
         /**
@@ -269,7 +287,11 @@ public final class MetricsTags {
 
     /**
      * Quality of service used for sending a message.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum QoS {
 
         /**
@@ -326,8 +348,11 @@ public final class MetricsTags {
 
     /**
      * The direction of a message.
-     *
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
      */
+    @SuppressWarnings("ImmutableEnumChecker")
     public enum Direction {
 
         /**

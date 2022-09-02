@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,8 @@
 
 package org.eclipse.hono.adapter.lora;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,10 +41,6 @@ public final class LoraMetaData {
     private Integer frameCount;
     @JsonProperty(LoraConstants.FREQUENCY)
     private Double frequency;
-    @JsonProperty(LoraConstants.DATA_RATE)
-    private Integer dataRate;
-    @JsonProperty(LoraConstants.DATA_RATE_ID)
-    private String dataRateIdentifier;
     @JsonProperty(LoraConstants.CODING_RATE)
     private String codingRate;
     @JsonProperty(LoraConstants.ADAPTIVE_DATA_RATE_ENABLED)
@@ -55,7 +51,7 @@ public final class LoraMetaData {
     private Location location;
     @JsonProperty(LoraConstants.GATEWAYS)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<GatewayInfo> gatewayInfo = new LinkedList<>();
+    private List<GatewayInfo> gatewayInfo = new ArrayList<>();
 
     /**
      * Gets the bandwidth used by the device's radio for sending the data.

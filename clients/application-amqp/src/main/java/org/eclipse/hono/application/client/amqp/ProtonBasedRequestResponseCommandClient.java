@@ -58,7 +58,7 @@ public final class ProtonBasedRequestResponseCommandClient extends
     /**
      * The default number of milliseconds to wait for a disposition for a command message.
      */
-    protected static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
+    public static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtonBasedRequestResponseCommandClient.class);
     private int messageCounter;
@@ -70,7 +70,7 @@ public final class ProtonBasedRequestResponseCommandClient extends
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected ProtonBasedRequestResponseCommandClient(
+    ProtonBasedRequestResponseCommandClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory) {
         super(connection, samplerFactory,

@@ -19,8 +19,9 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -168,8 +169,8 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                     final Map<String, String> detail = new HashMap<>(4);
                     detail.put("subject DN", deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
                     detail.put("issuer DN", deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
-                    detail.put("not before", deviceCert.getNotBefore().toString());
-                    detail.put("not after", deviceCert.getNotAfter().toString());
+                    detail.put("not before", DateTimeFormatter.ISO_INSTANT.format(deviceCert.getNotBefore().toInstant()));
+                    detail.put("not after", DateTimeFormatter.ISO_INSTANT.format(deviceCert.getNotAfter().toInstant()));
                     span.log(detail);
 
                     final Future<TenantObject> tenantTracker = getTenant(deviceCert, requestedHostNames, span);
@@ -260,7 +261,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     private Future<List<X509Certificate>> getX509CertificatePath(final Certificate[] clientPath) {
 
-        final List<X509Certificate> path = new LinkedList<>();
+        final List<X509Certificate> path = new ArrayList<>();
         for (Certificate cert : clientPath) {
             if (cert instanceof X509Certificate) {
                 path.add((X509Certificate) cert);
@@ -299,7 +300,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      *         to the {@code AuthProvider} for verification. The future will be
      *         failed if the information cannot be extracted from the certificate chain.
      */
-    protected Future<JsonObject> getCredentials(final List<X509Certificate> clientCertPath, final TenantObject tenant) {
+    private Future<JsonObject> getCredentials(final List<X509Certificate> clientCertPath, final TenantObject tenant) {
 
         final X509Certificate deviceCert = clientCertPath.get(0);
         final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);

@@ -49,9 +49,15 @@ import io.vertx.core.Vertx;
  */
 public abstract class AbstractCredentialsManagementService implements CredentialsManagementService {
 
-    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
-
+    /**
+     * The vert.x instance that this instance is running on.
+     */
     protected final Vertx vertx;
+
+    /**
+     * The service to use for retrieving tenant information.
+     */
+    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;
@@ -63,19 +69,19 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *
      * @param vertx The Vertx instance to use.
      * @param passwordEncoder The password encoder.
-     * @param maxBcryptCostfactor The maximum cost factor allowed for bcrypt password hashes.
+     * @param maxBcryptCostFactor The maximum cost factor allowed for bcrypt password hashes.
      * @param hashAlgorithmsWhitelist An optional collection of allowed password hashes.
      * @throws NullPointerException if any of the required parameters is {@code null};
      */
     public AbstractCredentialsManagementService(
             final Vertx vertx,
             final HonoPasswordEncoder passwordEncoder,
-            final int maxBcryptCostfactor,
+            final int maxBcryptCostFactor,
             final Set<String> hashAlgorithmsWhitelist) {
 
         this.vertx = Objects.requireNonNull(vertx);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
-        this.maxBcryptCostFactor = maxBcryptCostfactor;
+        this.maxBcryptCostFactor = maxBcryptCostFactor;
         this.hashAlgorithmsWhitelist = hashAlgorithmsWhitelist != null ? hashAlgorithmsWhitelist : Collections.emptySet();
         this.notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
     }

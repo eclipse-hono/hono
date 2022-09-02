@@ -324,6 +324,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         // no liveness checks to be added
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private Future<Void> createTopic() {
         final Promise<Void> promise = Promise.promise();
         final String topicName = getTopicName();

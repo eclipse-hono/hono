@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@
 
 package org.eclipse.hono.adapter.auth.device;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,7 +36,7 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
 
     static final String AUTH_PROVIDER_CONTEXT_KEY = ChainAuthHandler.class.getName() + ".provider";
 
-    private final List<AuthHandler<T>> handlerChain = new LinkedList<>();
+    private final List<AuthHandler<T>> handlerChain = new ArrayList<>();
 
     /**
      * Creates a new handler with an empty list of chained handlers.

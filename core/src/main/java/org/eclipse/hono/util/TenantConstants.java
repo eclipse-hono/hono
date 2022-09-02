@@ -250,6 +250,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
                 try {
                     return TenantAction.valueOf(subject);
                 } catch (final IllegalArgumentException e) {
+                    // fall through
                 }
             }
             return custom;

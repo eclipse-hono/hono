@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -170,7 +170,7 @@ public class KafkaCommandProcessingQueue {
 
     /**
      * Keeps track of commands that are currently being processed and ensures that
-     * the "SendCommandAction" provided via {@link #applySendCommandAction(KafkaBasedCommandContext, Supplier)}
+     * the {@linkplain #applySendCommandAction(KafkaBasedCommandContext, Supplier) SendCommandAction}
      * is invoked on command objects in the same order that the commands got added
      * to the queue.
      */
@@ -178,8 +178,7 @@ public class KafkaCommandProcessingQueue {
 
         private static final String KEY_COMMAND_SEND_ACTION_SUPPLIER_AND_RESULT_PROMISE = "commandSendActionSupplierAndResultPromise";
 
-        // using LinkedList because we want to better support removing elements from within the list
-        private final Deque<KafkaBasedCommandContext> queue = new LinkedList<>();
+        private final Deque<KafkaBasedCommandContext> queue = new ArrayDeque<>();
 
         /**
          * Adds the given command to the queue.
@@ -189,7 +188,7 @@ public class KafkaCommandProcessingQueue {
          */
         public void add(final KafkaBasedCommandContext commandContext) {
             Objects.requireNonNull(commandContext);
-            queue.add(commandContext);
+            queue.addLast(commandContext);
         }
 
         /**
@@ -239,7 +238,9 @@ public class KafkaCommandProcessingQueue {
                 if (actionAppliedPair != null) {
                     // command is ready to be sent but waiting for the processing of an earlier entry
                     LOG.info("command won't be sent - its partition isn't being handled anymore [{}]", commandContext.getCommand());
-                    TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - its partition isn't being handled anymore");
+                    TracingHelper.logError(
+                            commandContext.getTracingSpan(),
+                            "command won't be sent - its partition isn't being handled anymore");
                     final ServerErrorException error = new CommandToBeReprocessedException();
                     commandContext.release(error);
                     actionAppliedPair.two().fail(error);

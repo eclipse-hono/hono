@@ -14,10 +14,10 @@
 package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,7 +68,7 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
      * List of request data for client creation requests that are put on hold because
      * a concurrent request is still not completed.
      */
-    private final List<CreationRequestData> waitingCreationRequests = new LinkedList<>();
+    private final List<CreationRequestData> waitingCreationRequests = new ArrayList<>();
     /**
      * Set of client keys for which the client creation request has succeeded but for which
      * all corresponding {@link #waitingCreationRequests} have not been processed yet.

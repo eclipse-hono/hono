@@ -76,7 +76,9 @@ class AmqpHandler(MessagingHandler):
         self.address = address
 
     def on_start(self, event):
-        conn = event.container.connect(self.server, user="consumer@HONO", password="verysecret")
+        # the password used below is the Sandbox server's password for the default consumer
+        # as documented on the Hono website
+        conn = event.container.connect(self.server, user="consumer@HONO", password="verysecret") # nosec hardcoded_password_funcarg
         event.container.create_receiver(conn, self.address)
 
     def on_connection_error(self, event):

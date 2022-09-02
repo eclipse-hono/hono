@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.auth.device;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -106,7 +107,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
             final JsonObject clientContext) {
 
         try {
-            final String decoded = new String(Base64.getDecoder().decode(username));
+            final String decoded = new String(Base64.getDecoder().decode(username), StandardCharsets.UTF_8);
             final int colonIdx = decoded.indexOf(":");
             if (colonIdx > -1) {
                 final String user = decoded.substring(0, colonIdx);

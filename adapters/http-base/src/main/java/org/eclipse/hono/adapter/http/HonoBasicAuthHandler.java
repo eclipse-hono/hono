@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.http;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -92,7 +93,7 @@ public class HonoBasicAuthHandler extends HTTPAuthorizationHandler<Authenticatio
 
             try {
                 // decode the payload
-                final String decoded = new String(Base64.getDecoder().decode(parseAuthorization.result()));
+                final String decoded = new String(Base64.getDecoder().decode(parseAuthorization.result()), StandardCharsets.UTF_8);
 
                 final int colonIdx = decoded.indexOf(":");
                 if (colonIdx != -1) {

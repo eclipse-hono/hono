@@ -162,6 +162,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
                 try {
                     return CredentialsAction.valueOf(subject);
                 } catch (final IllegalArgumentException e) {
+                    // fall through
                 }
             }
             return unknown;

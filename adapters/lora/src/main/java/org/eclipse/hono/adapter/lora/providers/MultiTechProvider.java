@@ -113,7 +113,7 @@ public class MultiTechProvider extends JsonBasedLoraProvider {
 
         LoraUtils.getChildObject(loraMessage, FIELD_MULTITECH_DATA_RATE, String.class)
             .ifPresent(datr -> {
-                final String[] dataRateParts = datr.split(MULTITECH_BANDWIDTH);
+                final String[] dataRateParts = datr.split(MULTITECH_BANDWIDTH, 2);
                 final String spreadingFactor = dataRateParts[0].replace(MULTITECH_SPREADING_FACTOR, "");
                 final String bandWith = dataRateParts[1];
                 data.setSpreadingFactor(Integer.parseInt(spreadingFactor));
