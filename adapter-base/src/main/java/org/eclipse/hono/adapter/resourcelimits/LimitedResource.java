@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 
 package org.eclipse.hono.adapter.resourcelimits;
+
+import java.util.Objects;
 
 /**
  * A holder for a limited resource's current and max value.
@@ -29,23 +31,28 @@ public final class LimitedResource<V> {
      *
      * @param currentLimit The limit calculated for the value.
      * @param currentValue The current value.
+     * @throws NullPointerException if value is {@code null}.
      */
     LimitedResource(
             final V currentLimit,
             final V currentValue) {
-        this.currentValue = currentValue;
+        this.currentValue = Objects.requireNonNull(currentValue);
         this.currentLimit = currentLimit;
     }
 
     /**
-     * @return The currentValue.
+     * Gets the current value.
+     *
+     * @return The value or {@code null} if undefined.
      */
     public V getCurrentValue() {
         return currentValue;
     }
 
     /**
-     * @return The currentLimit or {@code null} if there is no limit defined.
+     * Gets the limit calculated for the value.
+     *
+     * @return The limit or {@code null} if there is no limit defined.
      */
     public V getCurrentLimit() {
         return currentLimit;

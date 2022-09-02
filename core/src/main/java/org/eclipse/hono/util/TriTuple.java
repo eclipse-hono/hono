@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,21 +55,27 @@ public final class TriTuple<A, B, C> {
     }
 
     /**
-     * @return The one.
+     * Gets this tuple's first value.
+     *
+     * @return The value or {@code null} if not set.
      */
     public A one() {
         return one;
     }
 
     /**
-     * @return The two.
+     * Gets this tuple's second value.
+     *
+     * @return The value or {@code null} if not set.
      */
     public B two() {
         return two;
     }
 
     /**
-     * @return The three.
+     * Gets this tuple's third value.
+     *
+     * @return The value or {@code null} if not set.
      */
     public C three() {
         return three;
@@ -83,9 +89,6 @@ public final class TriTuple<A, B, C> {
         return stringRep;
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#hashCode()
-     */
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -96,9 +99,6 @@ public final class TriTuple<A, B, C> {
         return result;
     }
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
     @SuppressWarnings("rawtypes")
     @Override
     public boolean equals(final Object obj) {

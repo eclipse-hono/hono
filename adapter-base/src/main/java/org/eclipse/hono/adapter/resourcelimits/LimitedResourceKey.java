@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,7 +46,9 @@ public final class LimitedResourceKey {
     }
 
     /**
-     * @return The tenantId.
+     * Gets the identifier of the tenant that the limits are defined for.
+     *
+     * @return The identifier.
      */
     public String getTenantId() {
         return tenantId;
@@ -62,9 +64,6 @@ public final class LimitedResourceKey {
         return tenantInfoSupplier.apply(tenantId, tracingContext);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -73,9 +72,6 @@ public final class LimitedResourceKey {
         return result;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
         if (this == obj) {
