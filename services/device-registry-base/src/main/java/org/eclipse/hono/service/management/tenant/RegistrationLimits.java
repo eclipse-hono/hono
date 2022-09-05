@@ -48,14 +48,19 @@ public class RegistrationLimits {
     }
 
     /**
-     * @return The maxNumberOfDevices.
+     * Gets the maximum number of devices that can be registered for a tenant.
+     *
+     * @return The maximum number of devices or {@value #UNLIMITED} if no limit has been set.
      */
     public final int getMaxNumberOfDevices() {
         return maxNumberOfDevices;
     }
 
     /**
-     * @param maxNumberOfDevices The maxNumberOfDevices to set.
+     * Sets the maximum number of devices that can be registered for a tenant.
+     *
+     * @param maxNumberOfDevices The maximum number of devices or {@value #UNLIMITED} if an unlimited number of devices can
+     *                           be registered per tenant.
      * @throws IllegalArgumentException if the value is &lt; {@value #UNLIMITED}.
      * @return A reference to this object for command chaining.
      */
@@ -78,14 +83,19 @@ public class RegistrationLimits {
     }
 
     /**
-     * @return The maxCredentialsPerDevice.
+     * Gets the maximum number of credentials that can be registered per device.
+     *
+     * @return The maximum number of credentials or {@value #UNLIMITED} if no limit has been set.
      */
     public final int getMaxCredentialsPerDevice() {
         return maxCredentialsPerDevice;
     }
 
     /**
-     * @param maxCredentialsPerDevice The maxCredentialsPerDevice to set.
+     * Sets the maximum number of credentials that can be registered per device.
+     *
+     * @param maxCredentialsPerDevice The maximum number of credentials or {@value #UNLIMITED} if an unlimited number of
+     *                                credentials can be registered per device.
      * @throws IllegalArgumentException if the value is &lt; {@value #UNLIMITED}.
      * @return A reference to this object for command chaining.
      */

@@ -23,11 +23,17 @@ import io.smallrye.config.ConfigMapping.NamingStrategy;
 public interface JdbcTenantStoreOptions {
 
     /**
+     * Gets the options for configuring the JDBC connection to the database that contains
+     * the information relevant to the protocol adapters.
+     *
      * @return The options.
      */
     JdbcOptions adapter();
 
     /**
+     * Gets the options for configuring the JDBC connection to the database that contains
+     * the information relevant for tenant management.
+     *
      * @return The options.
      */
     JdbcOptions management();

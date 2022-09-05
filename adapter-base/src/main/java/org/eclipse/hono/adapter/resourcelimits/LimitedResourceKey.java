@@ -55,10 +55,12 @@ public final class LimitedResourceKey {
     }
 
     /**
+     * Gets configuration information for the tenant that the limits are defined for.
+     *
      * @param tracingContext The Open Tracing context to use for tracking the retrieval of the information
      *                       or {@code null} if there is no context available.
-     * @return A future indicating the outcome.
-     * @throws NullPointerException if tenant ID is {@code null}.
+     * @return A succeeded future containing the tenant configuration or a failed future if the tenant
+     *         configuration could not be retrieved.
      */
     public Future<TenantObject> getTenantInformation(final SpanContext tracingContext) {
         return tenantInfoSupplier.apply(tenantId, tracingContext);
