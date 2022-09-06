@@ -25,7 +25,7 @@ pipeline {
         kind: Pod
         spec:
           containers:
-          - name: jnlp
+          - name: "jnlp"
             volumeMounts:
             - mountPath: /home/jenkins/.ssh
               name: volume-known-hosts
@@ -39,8 +39,8 @@ pipeline {
               requests:
                 memory: "512Mi"
                 cpu: "1"
-          - name: hugo
-            image: cibuilds/hugo:0.102
+          - name: "hugo"
+            image: "cibuilds/hugo:0.102"
             command:
             - cat
             tty: true
@@ -69,150 +69,137 @@ pipeline {
       cron('TZ=Europe/Berlin\n# every night between 3 and 4 AM\nH 3 * * *')
   }
 
+  environment {
+    HONO_HOMEPAGE_DIR="${WORKSPACE}/hono/site/homepage"
+    HONO_DOCUMENTATION_DIR="${WORKSPACE}/hono/site/documentation"
+    WEBSITE_TARGET_DIR="${WORKSPACE}/hono-web-site"
+    DOC_ASSEMBLY_DIR="${WORKSPACE}/hono-documentation-assembly"
+  }
+
   stages {
 
-    stage('Prepare workspace') {
+    stage("Prepare workspace") {
       steps {
-        echo "Cloning Hono repository..."
         sh '''
-          git clone https://github.com/eclipse-hono/hono.git ${WORKSPACE}/hono
-        '''
-        echo "Copying Documentation directory from master branch..."
-        sh ''' 
-           cp -r ${WORKSPACE}/hono/site/documentation ${WORKSPACE}/hono-documentation-assembly
-           mkdir -p ${WORKSPACE}/hono-documentation-assembly/content_dirs
+          #!/bin/bash
+          echo "cloning Hono repository..."
+          git clone --recurse-submodules https://github.com/eclipse-hono/hono.git "${WORKSPACE}/hono"
+          echo "copying Documentation directory from master branch..."
+          cp -r "${HONO_DOCUMENTATION_DIR}" "${DOC_ASSEMBLY_DIR}"
+          mkdir -p "${DOC_ASSEMBLY_DIR}/content_dirs"
         '''
       }
     }
 
-    stage('Cloning Hugo themes') {
-      steps {
-        echo "cloning Hugo Relearn theme..."
-        sh '''
-            git clone --depth 1 --branch 4.2.5 https://github.com/McShelby/hugo-theme-relearn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-relearn
-        '''
-        echo "cloning Hugo Universal theme..."
-        sh '''
-            git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
-            echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
-            rm ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme/static/img/*
-        '''
-      }
-    }
-
-    stage('Cloning Hono web site repository') {
+    stage("Clone Hono web site repository") {
       steps {
         sshagent(["git.eclipse.org-bot-ssh"]) {
           sh '''
+            #!/bin/bash
             echo "cloning Hono web site repository..."
-            git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono.git ${WORKSPACE}/hono-web-site
+            git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono.git "${WEBSITE_TARGET_DIR}"
             echo "scrubbing web site target directory..."
-            rm -rf ${WORKSPACE}/hono-web-site/*
+            rm -rf "${WEBSITE_TARGET_DIR}"/*
           '''
         }
       }
     }
 
-    stage('Preparing web site source') {
+    stage("Build home page") {
       steps {
-        echo "building documentation for versions"
-        sh '''#!/bin/bash
+        container("hugo") {
+          sh '''
+            #!/bin/bash
+            cd "${HONO_HOMEPAGE_DIR}"
+            echo "using $(hugo version)"
+            echo "removing obsolete images that come with theme used for home page ..."
+            # we do not need the pictures that come with the theme
+            # removing them, so they don't get deployed.
+            rm themes/hugo-universal-theme/static/img/*
+            echo "building home page..."
+            hugo -v -d "${WEBSITE_TARGET_DIR}"
+          '''
+        }
+      }
+    }
+
+    stage("Build documentation") {
+      steps {
+        sh '''
+          #!/bin/bash
+          echo "determining supported versions of documentation"
           function prepare_stable {
-              VERSION="$1.$2"
-cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
-  [Languages.stable]
-    weight = -20000
-    languageName = "stable ($VERSION)"
-    contentDir = "content_dirs/stable"
-    [Languages.stable.params]
-      honoVersion = "stable"
-EOS
-              git checkout $3
-              cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/stable
+            VERSION="$1.$2"
+            {
+              echo "  [Languages.stable]"
+              echo "    weight = -20000"
+              echo "    languageName = \"stable ($VERSION)\""
+              echo "    contentDir = \"content_dirs/stable\""
+              echo "    [Languages.stable.params]"
+              echo "      honoVersion = \"stable\""
+            } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
+            cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/stable"
           }
 
           function prepare_docu_version {
-              local pad=00
-              local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
-              WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
-              VERSION="$1.$2"
-
-cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
-  [Languages."${VERSION}"]
-    title = "Eclipse Hono&trade; Vers.: ${VERSION}"
-    weight = $WEIGHT
-    languageName = "${VERSION}"
-    contentDir = "content_dirs/${VERSION}"
-    [Languages."${VERSION}".params]
-      honoVersion = "$4"
-EOS
-              git checkout $3
-              cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/${VERSION}
+            local pad=00
+            local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
+            WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
+            VERSION="$1.$2"
+            {
+              echo "  [Languages.\"${VERSION}\"]"
+              echo "    title = \"Eclipse Hono&trade; Vers.: ${VERSION}\""
+              echo "    weight = ${WEIGHT}"
+              echo "    languageName = \"${VERSION}\""
+              echo "    contentDir = \"content_dirs/${VERSION}\""
+              echo "    [Languages.\"${VERSION}\".params]"
+              echo "      honoVersion = \"$3\""
+            } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
+            cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/$3"
           }
 
-          cd $WORKSPACE/hono/site/documentation
+          cd "${HONO_DOCUMENTATION_DIR}"
 
-          TAG_STABLE=$(cat "$WORKSPACE/hono-documentation-assembly/tag_stable.txt")
+          TAG_STABLE=$(cat "${DOC_ASSEMBLY_DIR}/tag_stable.txt")
           while IFS=";" read -r MAJOR MINOR TAG
           do
+            git checkout --recurse-submodules "${TAG}"
             if [[ "${TAG}" == "${TAG_STABLE}" ]]; then
-              prepare_docu_version ${MAJOR} ${MINOR} ${TAG} "stable"
-              prepare_stable ${MAJOR} ${MINOR} ${TAG}
-            else
-              prepare_docu_version ${MAJOR} ${MINOR} ${TAG} "${MAJOR}.${MINOR}"
+              prepare_stable "${MAJOR}" "${MINOR}"
             fi
-          done < <(tail -n+3 $WORKSPACE/hono-documentation-assembly/versions_supported.csv)  # skip header line and comment
+            prepare_docu_version "${MAJOR}" "${MINOR}" "${MAJOR}.${MINOR}"
+          done < <(tail -n+3 "${DOC_ASSEMBLY_DIR}/versions_supported.csv")  # skip header line and comment
         '''
-      }
-    }
-
-    stage('Building documentation using Hugo') {
-      steps {
-        container('hugo') {
+        container("hugo") {
           sh '''
-            cd ${WORKSPACE}/hono-documentation-assembly
-            echo "building documentation using Hugo $(hugo version)"
-            hugo -v -d ${WORKSPACE}/hono-web-site/docs --config config.toml,config_version.toml
+            #!/bin/bash
+            echo "building documentation..."
+            cd "${DOC_ASSEMBLY_DIR}"
+            hugo -v -d "${WEBSITE_TARGET_DIR}/docs" --config config.toml,config_version.toml
           '''
         }
       }
     }
 
-    stage('Building homepage using Hugo') {
+    stage("Commit and push web site") {
       steps {
-        sh '''
-          cd ${WORKSPACE}/hono/site/homepage
-          git checkout master
-        '''
-        container('hugo') {
-          sh '''
-              cd ${WORKSPACE}/hono/site/homepage
-              echo "building homepage using Hugo $(hugo version)"
-              hugo -v -d ${WORKSPACE}/hono-web-site
-              '''
-        }
-      }
-    }
-
-    stage('Commit and push') {
-      steps {
-
         sshagent(["git.eclipse.org-bot-ssh"]) {
-            sh '''
-              cd ${WORKSPACE}/hono-web-site && 
-              git add -A
-              if git diff --cached --exit-code; then
-                echo "No changes have been detected since last build, nothing to publish"
-              else
-                echo "Changes have been detected, publishing to repo 'www.eclipse.org/hono'"
-                git config user.email "hono-bot@eclipse.org"
-                git config user.name "Hono Bot"
-                git commit -s -m "Website build ${JOB_NAME}-${BUILD_NUMBER}"
-                git log --graph --abbrev-commit --date=relative -n 5
-                git push origin HEAD:refs/heads/master
-                echo "Done" 
-              fi
-            '''
+          sh '''
+            #!/bin/bash
+            cd "${WEBSITE_TARGET_DIR}"
+            git add -A
+            if git diff --cached --exit-code; then
+              echo "no changes have been detected since last build, nothing to publish"
+            else
+              echo "changes have been detected, publishing to repo 'www.eclipse.org/hono'"
+              git config user.email "hono-bot@eclipse.org"
+              git config user.name "Hono Bot"
+              git commit -s -m "Website build ${JOB_NAME}-${BUILD_NUMBER}"
+              git log --graph --abbrev-commit --date=relative -n 5
+              git push origin HEAD:refs/heads/master
+              echo "done" 
+            fi
+          '''
         }
       }
     }
