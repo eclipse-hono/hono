@@ -151,6 +151,15 @@ loading multiple platform build results into the local image cache. Therefore, t
 container registry instead. The `docker.registry-name` and `docker.image.org-name` Maven properties can be used to set
 the (host) name of the container registry and the name of the image repository to use for the container image names.
 
+{{% notice style="info" %}}
+While creating arm64 specific container images for Hono's components is necessary in order to run Hono on an arm64 based
+platform, it may not be sufficient to do so. That is because Hono depends on several other (external) services to be available.
+For example, the Mongo DB based registry implementation needs to be configured with a connection to a Mongo DB server and
+the Command Router should be configured with access to an Infinispan data grid in a production environment.
+Container images for these services may or may not be available for the arm64 platform, so these services might need to be
+deployed to an amd64 based platform or hosted externally.
+{{% /notice %}}
+
 ## Running the Integration Tests
 
 The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests`

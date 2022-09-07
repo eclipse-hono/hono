@@ -10,6 +10,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * All Hono components now support reading ECC based keys from PEM files that contain the Base64 encoded DER-encoding of an
   ECPrivateKey as described in [RFC 5915, Section 4](https://datatracker.ietf.org/doc/html/rfc5915#section-4).
+* The build process now supports creating container images for the `arm64` platform. Please refer to the
+  [Developer Guide]({{% doclink "/dev-guide/building_hono/" %}}) for details.
 
 ## 2.1.0
 
