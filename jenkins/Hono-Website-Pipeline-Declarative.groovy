@@ -80,8 +80,7 @@ pipeline {
 
     stage("Prepare workspace") {
       steps {
-        sh '''
-          #!/bin/bash
+        sh '''#!/bin/bash
           echo "cloning Hono repository..."
           git clone --recurse-submodules https://github.com/eclipse-hono/hono.git "${WORKSPACE}/hono"
           echo "copying Documentation directory from master branch..."
@@ -94,8 +93,7 @@ pipeline {
     stage("Clone Hono web site repository") {
       steps {
         sshagent(["git.eclipse.org-bot-ssh"]) {
-          sh '''
-            #!/bin/bash
+          sh '''#!/bin/bash
             echo "cloning Hono web site repository..."
             git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono.git "${WEBSITE_TARGET_DIR}"
             echo "scrubbing web site target directory..."
@@ -108,8 +106,7 @@ pipeline {
     stage("Build home page") {
       steps {
         container("hugo") {
-          sh '''
-            #!/bin/bash
+          sh '''#!/bin/bash
             cd "${HONO_HOMEPAGE_DIR}"
             echo "using $(hugo version)"
             echo "removing obsolete images that come with theme used for home page ..."
@@ -125,18 +122,17 @@ pipeline {
 
     stage("Build documentation") {
       steps {
-        sh '''
-          #!/bin/bash
+        sh '''#!/bin/bash
           echo "determining supported versions of documentation"
           function prepare_stable {
             VERSION="$1.$2"
             {
               echo "  [Languages.stable]"
               echo "    weight = -20000"
-              echo "    languageName = \"stable ($VERSION)\""
-              echo "    contentDir = \"content_dirs/stable\""
+              echo "    languageName = \\"stable ($VERSION)\\""
+              echo "    contentDir = \\"content_dirs/stable\\""
               echo "    [Languages.stable.params]"
-              echo "      honoVersion = \"stable\""
+              echo "      honoVersion = \\"stable\\""
             } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
             cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/stable"
           }
@@ -147,13 +143,13 @@ pipeline {
             WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
             VERSION="$1.$2"
             {
-              echo "  [Languages.\"${VERSION}\"]"
-              echo "    title = \"Eclipse Hono&trade; Vers.: ${VERSION}\""
+              echo "  [Languages.\\"${VERSION}\\"]"
+              echo "    title = \\"Eclipse Hono&trade; Vers.: ${VERSION}\\""
               echo "    weight = ${WEIGHT}"
-              echo "    languageName = \"${VERSION}\""
-              echo "    contentDir = \"content_dirs/${VERSION}\""
-              echo "    [Languages.\"${VERSION}\".params]"
-              echo "      honoVersion = \"$3\""
+              echo "    languageName = \\"${VERSION}\\""
+              echo "    contentDir = \\"content_dirs/${VERSION}\\""
+              echo "    [Languages.\\"${VERSION}\\".params]"
+              echo "      honoVersion = \\"$3\\""
             } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
             cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/$3"
           }
@@ -171,8 +167,7 @@ pipeline {
           done < <(tail -n+3 "${DOC_ASSEMBLY_DIR}/versions_supported.csv")  # skip header line and comment
         '''
         container("hugo") {
-          sh '''
-            #!/bin/bash
+          sh '''#!/bin/bash
             echo "building documentation..."
             cd "${DOC_ASSEMBLY_DIR}"
             hugo -v -d "${WEBSITE_TARGET_DIR}/docs" --config config.toml,config_version.toml
@@ -184,8 +179,7 @@ pipeline {
     stage("Commit and push web site") {
       steps {
         sshagent(["git.eclipse.org-bot-ssh"]) {
-          sh '''
-            #!/bin/bash
+          sh '''#!/bin/bash
             cd "${WEBSITE_TARGET_DIR}"
             git add -A
             if git diff --cached --exit-code; then
