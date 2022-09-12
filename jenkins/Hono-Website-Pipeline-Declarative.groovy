@@ -72,7 +72,7 @@ pipeline {
   environment {
     HONO_HOMEPAGE_DIR="${WORKSPACE}/hono/site/homepage"
     HONO_DOCUMENTATION_DIR="${WORKSPACE}/hono/site/documentation"
-    WEBSITE_TARGET_DIR="${WORKSPACE}/hono-web-site"
+    WEBSITE_REPO_DIR="${WORKSPACE}/hono-website"
     DOC_ASSEMBLY_DIR="${WORKSPACE}/hono-documentation-assembly"
   }
 
@@ -92,12 +92,12 @@ pipeline {
 
     stage("Clone Hono web site repository") {
       steps {
-        sshagent(["git.eclipse.org-bot-ssh"]) {
+        sshagent(credentials: [ "github-bot-ssh" ]) {
           sh '''#!/bin/bash
             echo "cloning Hono web site repository..."
-            git clone ssh://genie.hono@git.eclipse.org:29418/www.eclipse.org/hono.git "${WEBSITE_TARGET_DIR}"
-            echo "scrubbing web site target directory..."
-            rm -rf "${WEBSITE_TARGET_DIR}"/*
+            git clone ssh://git@github.com/eclipse-hono/hono-website.git "${WEBSITE_REPO_DIR}"
+            echo "scrubbing web site directory..."
+            (cd "${WEBSITE_REPO_DIR}"; git rm -r --quiet -- ':!README.md'; cp "${WORKSPACE}/hono/LICENSE" .)
           '''
         }
       }
@@ -114,7 +114,7 @@ pipeline {
             # removing them, so they don't get deployed.
             rm themes/hugo-universal-theme/static/img/*
             echo "building home page..."
-            hugo -v -d "${WEBSITE_TARGET_DIR}"
+            hugo -v -d "${WEBSITE_REPO_DIR}"
           '''
         }
       }
@@ -170,7 +170,7 @@ pipeline {
           sh '''#!/bin/bash
             echo "building documentation..."
             cd "${DOC_ASSEMBLY_DIR}"
-            hugo -v -d "${WEBSITE_TARGET_DIR}/docs" --config config.toml,config_version.toml
+            hugo -v -d "${WEBSITE_REPO_DIR}/docs" --config config.toml,config_version.toml
           '''
         }
       }
@@ -178,19 +178,18 @@ pipeline {
 
     stage("Commit and push web site") {
       steps {
-        sshagent(["git.eclipse.org-bot-ssh"]) {
+        sshagent(credentials: [ "github-bot-ssh" ]) {
           sh '''#!/bin/bash
-            cd "${WEBSITE_TARGET_DIR}"
+            cd "${WEBSITE_REPO_DIR}"
             git add -A
-            if git diff --cached --exit-code; then
+            if git diff --cached --quiet; then
               echo "no changes have been detected since last build, nothing to publish"
             else
-              echo "changes have been detected, publishing to repo 'www.eclipse.org/hono'"
+              echo "changes have been detected, publishing to Hono website repo on GitHub"
               git config user.email "hono-bot@eclipse.org"
               git config user.name "Hono Bot"
               git commit -s -m "Website build ${JOB_NAME}-${BUILD_NUMBER}"
-              git log --graph --abbrev-commit --date=relative -n 5
-              git push origin HEAD:refs/heads/master
+              git push origin HEAD:refs/heads/main
               echo "done" 
             fi
           '''
