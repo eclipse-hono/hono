@@ -35,6 +35,10 @@
       <artifactId>hono-client-amqp-connection</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-registry</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
