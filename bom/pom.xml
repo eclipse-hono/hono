@@ -53,10 +53,10 @@
     <mongodb-image.name>mongo:4.4</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
-    <netty.version>4.1.78.Final</netty.version>
+    <netty.version>4.1.79.Final</netty.version>
     <postgresql-image.name>postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.6.0</qpid-jms.version>
-    <quarkus.platform.version>2.11.3.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.12.2.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
     <spring-security-crypto.version>5.7.3</spring-security-crypto.version>
     <truth.version>1.1.3</truth.version>
