@@ -10,7 +10,8 @@ resources:
 
 {{< figure src="overview_hono.svg?width=70pc" title="Diagram showing data flowing from devices through Hono to Business Applications and back" >}}
 
-The place of Eclipse Hono&trade; is within an IoT cloud. The goal is simplified device connectivity for _Business Applications_ (or _Solutions_).
+The place of Eclipse Hono&trade; is within an IoT cloud. The goal is simplified device connectivity for _Business Applications_
+(or _Solutions_).
 It abstracts away the multiple specifics of different device-side connection protocols from a backend application
 perspective. Hono defines a small set of APIs to communicate in a unified way with very different devices, whether they
 use, for example, connection-oriented protocols such as MQTT and AMQP 1.0 or stateless protocols such as HTTP. As a
@@ -31,8 +32,9 @@ but more important messages. Depending on the provided messaging network, events
 if an application faces a limited downtime. The Command & Control API allows to send messages, like commands, from
 northbound applications upstream and optionally return a response from a device.
 
-The [Getting Started]({{% homelink "getting-started/" %}}) guide helps to familiarize oneself with Hono by practical example.
-If interested in a specific protocol, the corresponding [User Guide]({{< relref "/user-guide" >}}) explains the usage comprehensively.
+The [Getting Started]({{< relref "/getting-started" >}}) guide helps to familiarize oneself with Hono by practical example.
+If interested in a specific protocol, the corresponding [User Guide]({{< relref "/user-guide" >}}) explains the usage
+comprehensively.
 
 To learn the concepts more in-depth, start reading about the [architecture]({{< relref "/architecture" >}})
 and Hono's concept of a [Device Identity]({{< relref "/concepts/device-identity" >}}). 
