@@ -15,9 +15,18 @@ The sandbox used to be available at `hono.eclipse.org`. That domain name will st
 will eventually be disabled. Please update your URLs accordingly.
 {{% /note %}}
 
-The sandbox hosts a Hono instance consisting of the same components as described in the
-[Getting started Guide]({{% doclink "getting-started" %}}).
-All services are exposed via the same ports as used in the guide.
+The sandbox hosts a Hono instance consisting of the components listed in the table below.
+The components can be accessed as described in the [Getting started Guide]({{% doclink "/getting-started/" %}}).
+
+| Component | Service Port(s) |
+| :-------- | :------ |
+| Device Registry | 28080 (HTTP 1.1/TCP)<br>28443 (HTTP 1.1/TLS) |
+| AMQP Protocol Adapter | 5672 (AMQP 1.0/TCP)<br>5671 (AMQP 1.0/TLS) |
+| CoAP Protocol Adapter | 5684 (CoAP/DTLS) |
+| HTTP Protocol Adapter | 8080 (HTTP 1.1/TCP)<br>8443 (HTTP 1.1/TLS) |
+| MQTT Protocol Adapter | 1883 (MQTT 3.1.1/TCP)<br>8883 (MQTT 3.1.1/TLS) |
+| Messaging Infrastructure (AMQP 1.0) | 15672 (AMQP 1.0/TCP)<br>15671 (AMQP 1.0/TLS) |
+| Messaging Infrastructure (Kafka) | 9094 (Kafka/TCP) |
 
 ## Take note
 
