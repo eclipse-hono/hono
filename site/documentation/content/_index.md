@@ -31,7 +31,7 @@ but more important messages. Depending on the provided messaging network, events
 if an application faces a limited downtime. The Command & Control API allows to send messages, like commands, from
 northbound applications upstream and optionally return a response from a device.
 
-The [Getting Started]({{% homelink "getting-started/" %}}) guide helps to familiarize oneself with Hono by practical example.
+The [Getting Started]({{< relref "/getting-started" >}}) guide helps to familiarize oneself with Hono by practical example.
 If interested in a specific protocol, the corresponding [User Guide]({{< relref "/user-guide" >}}) explains the usage comprehensively.
 
 To learn the concepts more in-depth, start reading about the [architecture]({{< relref "/architecture" >}})
