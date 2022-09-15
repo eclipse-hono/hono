@@ -25,7 +25,6 @@ import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.CachingClientFactory;
@@ -131,7 +130,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                 notification -> {
                     Optional.ofNullable(mappingAndDelegatingCommandConsumerFactory
                             .getClient(notification.getTenantId()))
-                            .ifPresent(commandConsumer -> commandConsumer.close(null));
+                            .ifPresent(CommandConsumer::close);
                 });
         NotificationEventBusSupport.registerConsumer(connection.getVertx(), TenantChangeNotification.TYPE,
                 notification -> {
@@ -140,7 +139,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                                     && !notification.isTenantEnabled())) {
                         Optional.ofNullable(mappingAndDelegatingCommandConsumerFactory
                                 .getClient(notification.getTenantId()))
-                                .ifPresent(commandConsumer -> commandConsumer.close(null));
+                                .ifPresent(CommandConsumer::close);
                     }
                 });
     }
@@ -195,7 +194,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
                     consumerLinkTenants.add(tenantId);
                     return (CommandConsumer) new CommandConsumer() {
                         @Override
-                        public Future<Void> close(final SpanContext spanContext) {
+                        public Future<Void> close() {
                             log.debug("MappingAndDelegatingCommandConsumer consumer [tenant-id: {}] closed locally", tenantId);
                             mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
                             consumerLinkTenants.remove(tenantId);
@@ -247,4 +246,16 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         connection.getVertx().setTimer(RECREATE_CONSUMERS_DELAY, tid -> recreateConsumers());
     }
 
+    /**
+     * A command consumer representation, letting associated resources be closed via the {@link #close()} method.
+     */
+    private interface CommandConsumer {
+
+        /**
+         * Closes the consumer.
+         *
+         * @return A future indicating the outcome of the operation.
+         */
+        Future<Void> close();
+    }
 }
