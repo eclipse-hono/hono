@@ -13,7 +13,7 @@ to Hono without the need for setting up a local instance.
 ## Accessing the Sandbox
 
 The sandbox hosts a Hono instance consisting of the components listed in the table below.
-The components can be accessed as described in the [Getting started Guide]({{% doclink "getting-started" %}}).
+The components can be accessed as described in the [Getting started Guide]({{% doclink "/getting-started/" %}}).
 
 | Component | Service Port(s) |
 | :-------- | :-------------- |
