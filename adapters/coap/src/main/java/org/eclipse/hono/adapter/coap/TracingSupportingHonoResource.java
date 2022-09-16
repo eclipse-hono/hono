@@ -168,10 +168,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
 
         final Span currentSpan = newSpan(exchange);
         final AtomicReference<ResponseCode> responseCode = new AtomicReference<>(null);
-        final CoapExchange coapExchange = new CoapExchange(exchange, this) {
-            /**
-             * {@inheritDoc}
-             */
+        final CoapExchange coapExchange = new CoapExchange(exchange) {
             @Override
             public void respond(final Response response) {
                 super.respond(response);
