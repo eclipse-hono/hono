@@ -79,8 +79,6 @@ hono:
       max.block.ms: 1000
 
 quarkus:
-  application:
-    name: "${hono.http-adapter.host}"
   opentelemetry:
     tracer:
       exporter:

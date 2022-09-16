@@ -57,8 +57,6 @@ hono:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
 
 quarkus:
-  application:
-    name: "${hono.registration.host}"
   opentelemetry:
     tracer:
       exporter:

@@ -85,8 +85,6 @@ hono:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
-  application:
-    name: "${hono.amqp-adapter.host}"
   opentelemetry:
     tracer:
       exporter:

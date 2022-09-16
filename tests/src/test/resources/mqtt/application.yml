@@ -76,8 +76,6 @@ hono:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
-  application:
-    name: "${hono.mqtt-adapter.host}"
   opentelemetry:
     tracer:
       exporter:
