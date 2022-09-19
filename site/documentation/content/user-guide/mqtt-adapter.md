@@ -574,20 +574,21 @@ An authenticated gateway MUST use one of the following topic filters for subscri
 
 | Topic Filter | Description |
 | :----------- | :---------- |
-| `c/[${tenant-id}]/+/q/#`<br>`command/[${tenant-id}]/+/req/#` | Subscribe to commands for **all** devices that the gateway is authorized to act on behalf of. |
+| `c/[${tenant-id}]/+/q/#`<br>`command/[${tenant-id}]/+/req/#` | Subscribe to commands for **all** devices that the gateway is authorized to act on behalf of. Also commands explicitly directed at the gateway itself will be received. |
 | `c/[${tenant-id}]/${device-id}/q/#`<br>`command/[${tenant-id}]/${device-id}/req/#` | Subscribe to commands for **one specific** device that the gateway is authorized to act on behalf of. |
 
 
 The protocol adapter will publish **one-way** commands for devices to the following topic names respectively:
-* `c/[${tenant-id}]/${device-id}/q//${command}`
-* `command/[${tenant-id}]/${device-id}/req//${command}`
+* `c/[${tenant-id}]/[${device-id}]/q//${command}`
+* `command/[${tenant-id}]/[${device-id}]/req//${command}`
 
 The protocol adapter will publish **request-response** commands for devices to the following topic names respectively:
-* `c/[${tenant-id}]/${device-id}/q/${req-id}/${command}`
-* `command/[${tenant-id}]/${device-id}/req/${req-id}/${command}`
+* `c/[${tenant-id}]/[${device-id}]/q/${req-id}/${command}`
+* `command/[${tenant-id}]/[${device-id}]/req/${req-id}/${command}`
 
 The topic name will contain
 * the *tenant-id* segment if the tenant identifier had been included in the topic filter used for subscribing,
+* the *device-id* segment in all cases except when the command was explicitly directed at the gateway itself,
 * `command` and `req` if the topic filter used for subscribing also contained the spelled-out segments.
 
 When processing an incoming command message, the protocol adapter will give precedence to a device-specific command
