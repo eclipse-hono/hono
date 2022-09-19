@@ -142,7 +142,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     }
 
     /**
-     * Verifies that the adapter forwards on-way commands from
+     * Verifies that the adapter forwards one-way commands from
      * an application to a device.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.

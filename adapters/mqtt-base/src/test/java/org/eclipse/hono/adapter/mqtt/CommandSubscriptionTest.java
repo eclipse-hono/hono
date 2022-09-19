@@ -323,6 +323,17 @@ public class CommandSubscriptionTest {
         when(command.getRequestId()).thenReturn("requestId");
         when(command.getName()).thenReturn("doSomething");
 
+        // command directed at gateway-device itself, i.e. no gateway-mapping happens here...
+        final Command commandDirectedAtGatewayItself = mock(Command.class);
+        // ... meaning the command target itself has no association with the Hono 'gateway' term
+        when(commandDirectedAtGatewayItself.isTargetedAtGateway()).thenReturn(false);
+        when(commandDirectedAtGatewayItself.getTenant()).thenReturn(gw.getTenantId());
+        when(commandDirectedAtGatewayItself.getGatewayId()).thenReturn(null);
+        when(commandDirectedAtGatewayItself.getGatewayOrDeviceId()).thenReturn(gw.getDeviceId());
+        when(commandDirectedAtGatewayItself.getDeviceId()).thenReturn(gw.getDeviceId());
+        when(commandDirectedAtGatewayItself.getRequestId()).thenReturn("requestId");
+        when(commandDirectedAtGatewayItself.getName()).thenReturn("doSomething");
+
         // WHEN subscribing to commands for a specific device omitting tenant
         MqttTopicSubscription mqttTopicSubscription = new MqttTopicSubscriptionImpl(
                 String.format("%s//%s/%s/#", endpointName, gatewayManagedDeviceId, reqPartName),
@@ -390,11 +401,17 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s/%s/%s/%s/requestId/doSomething",
                     endpointName, gw.getTenantId(), gatewayManagedDeviceId, reqPartName));
+        // AND THEN handling a command directed at the gateway itself
+        // means the command topic includes an empty string in place of the target device id
+        assertThat(subscription.getCommandPublishTopic(commandDirectedAtGatewayItself))
+                .isEqualTo(String.format("%s/%s/%s/%s/requestId/doSomething",
+                        endpointName, gw.getTenantId(), "", reqPartName));
 
-        // using a tenant other than the tenant that the gateway belongs to should fail
+        // WHEN using a tenant other than the tenant that the gateway belongs
         mqttTopicSubscription = new MqttTopicSubscriptionImpl(
                 String.format("%s/otherTenant/+/%s/#", endpointName, reqPartName),
                 qos);
+        // THEN subscription creation should fail
         assertThat(CommandSubscription.fromTopic(mqttTopicSubscription, gw)).isNull();
     }
 
