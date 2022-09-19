@@ -108,15 +108,16 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
         try {
             // first we try to use explicitly configured key material
             useConfiguredKeys(authServerClientConfig.getValidation());
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             // then fall back to retrieving a JWK set
-            LOG.info("using JWK set retrieved from Authentication service vor validating tokens");
+            LOG.info("using JWK set retrieved from Authentication service for validating tokens");
             this.isJwksSignatureAlgorithmRequired = authServerClientConfig.isJwksSignatureAlgorithmRequired();
             this.pollingIntervalMillis = authServerClientConfig.getJwksPollingInterval().toMillis();
             final var clientOptions = new HttpClientOptions()
                     .setTrustOptions(authServerClientConfig.getTrustOptions());
             this.httpClient = vertx.createHttpClient(clientOptions);
             this.requestOptions = new RequestOptions()
+                    .setTraceOperation("get token-validation keys")
                     .setHost(authServerClientConfig.getHost())
                     .setPort(authServerClientConfig.getJwksEndpointPort())
                     .setSsl(authServerClientConfig.isJwksEndpointTlsEnabled())
