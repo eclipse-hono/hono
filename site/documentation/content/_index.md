@@ -8,7 +8,7 @@ resources:
 
 # Documentation 
 
-{{< figure src="overview_hono.svg?width=70pc" title="Diagram showing data flowing from devices through Hono to Business Applications and back" >}}
+{{< figure src="overview_hono.svg?width=70pc" title="Data flowing from Devices via Hono to Business Applications and back" >}}
 
 The place of Eclipse Hono&trade; is within an IoT cloud. The goal is simplified device connectivity for _Business Applications_
 (or _Solutions_).
