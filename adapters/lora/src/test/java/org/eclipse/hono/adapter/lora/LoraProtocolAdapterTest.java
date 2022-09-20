@@ -121,11 +121,14 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(mock(Sample.class));
 
+        final LoraCommandSubscriptions commandSubscriptions = new LoraCommandSubscriptions(vertx, tracer);
+
         adapter = new LoraProtocolAdapter(webClient);
         adapter.setConfig(properties);
         adapter.setTracer(tracer);
         adapter.init(vertx, context);
         adapter.setMetrics(metrics);
+        adapter.setCommandSubscriptions(commandSubscriptions);
         setServiceClients(adapter);
     }
 

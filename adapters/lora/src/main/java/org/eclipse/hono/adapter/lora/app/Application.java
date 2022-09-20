@@ -22,6 +22,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.LoraCommandSubscriptions;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 
@@ -40,6 +41,9 @@ public class Application extends AbstractProtocolAdapterApplication<HttpProtocol
 
     @Inject
     Instance<LoraProvider> loraProviders;
+
+    @Inject
+    LoraCommandSubscriptions commandSubscriptions;
 
     /**
      * {@inheritDoc}
@@ -62,6 +66,7 @@ public class Application extends AbstractProtocolAdapterApplication<HttpProtocol
         adapter.setConfig(protocolAdapterProperties);
         adapter.setLoraProviders(providers);
         adapter.setMetrics(metrics);
+        adapter.setCommandSubscriptions(commandSubscriptions);
         setCollaborators(adapter);
         return adapter;
     }

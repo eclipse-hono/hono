@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
@@ -39,8 +38,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
-import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
-import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -50,8 +47,8 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,11 +59,9 @@ import io.opentracing.log.Fields;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -96,7 +91,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private final Map<SubscriptionKey, Pair<ProtocolAdapterCommandConsumer, LoraProvider>> commandSubscriptions = new ConcurrentHashMap<>();
+    private LoraCommandSubscriptions commandSubscriptions;
 
     /**
      * Creates an adapter for a web client.
@@ -144,41 +139,12 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
     }
 
-    @Override
-    protected void onStartupSuccess() {
-        vertx.eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, this::handleTenantTimeout);
-    }
-
-    private void handleTenantTimeout(final Message<String> msg) {
-        final String tenantId = msg.body();
-        log.debug("check command subscriptions on timeout of tenant [{}]", tenantId);
-        final Span span = TracingHelper
-                .buildSpan(tracer, null, "check command subscriptions on tenant timeout", getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .start();
-        TracingHelper.setDeviceTags(span, tenantId, null);
-        // check if tenant still exists
-        getTenantConfiguration(tenantId, span.context())
-                .recover(thr -> {
-                    if (thr instanceof TenantDisabledOrNotRegisteredException) {
-                        log.debug("tenant [{}] disabled or removed, removing corresponding command consumers", tenantId);
-                        span.log("tenant disabled or removed, corresponding command consumers will be closed");
-                        @SuppressWarnings("rawtypes")
-                        final List<Future> consumerCloseFutures = new ArrayList<>();
-                        for (final var iter = commandSubscriptions.entrySet().iterator(); iter.hasNext();) {
-                            final var entry = iter.next();
-                            if (entry.getKey().getTenant().equals(tenantId)) {
-                                final ProtocolAdapterCommandConsumer commandConsumer = entry.getValue().one();
-                                consumerCloseFutures.add(commandConsumer.close(false, span.context()));
-                                iter.remove();
-                            }
-                        }
-                        return CompositeFuture.join(consumerCloseFutures).mapEmpty();
-                    } else {
-                        return Future.failedFuture(thr);
-                    }
-                }).onFailure(thr -> TracingHelper.logError(span, thr))
-                .onComplete(ar -> span.finish());
+    /**
+     * Sets a shared map class for handling command subscriptions for multiple Lora Protocol Adapter verticles.
+     * @param commandSubscriptions Lora command subscription class.
+     */
+    public void setCommandSubscriptions(final LoraCommandSubscriptions commandSubscriptions) {
+        this.commandSubscriptions = commandSubscriptions;
     }
 
     @Override
@@ -317,7 +283,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final String tenantId = gatewayDevice.getTenantId();
         final String gatewayId = gatewayDevice.getDeviceId();
         final SubscriptionKey key = new SubscriptionKey(tenantId, gatewayId);
-        if (commandSubscriptions.containsKey(key)) {
+        if (commandSubscriptions.contains(key)) {
             return;
         }
         // use FOLLOWS_FROM span since this operation is decoupled from the rest of the request handling
@@ -348,7 +314,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                             null,
                             currentSpan.context())
                         .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                        .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)))
+                        .map(commandConsumer -> commandSubscriptions.add(key, commandConsumer, provider, vertx.getOrCreateContext()))
                         .mapEmpty();
                 }).onComplete(ar -> currentSpan.finish());
     }
@@ -368,8 +334,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final String tenant = command.getTenant();
         final String gatewayId = command.getGatewayId();
 
-        final LoraProvider loraProvider = Optional.ofNullable(commandSubscriptions.get(new SubscriptionKey(tenant, gatewayId)))
-                .map(Pair::two).orElse(null);
+        final LoraProvider loraProvider = Optional.ofNullable(commandSubscriptions.getSubscription(new SubscriptionKey(tenant, gatewayId)))
+                .map(TriTuple::two).orElse(null);
         if (loraProvider == null) {
             LOG.debug("received command for unknown gateway [{}] for tenant [{}]", gatewayId, tenant);
             TracingHelper.logError(commandContext.getTracingSpan(),
