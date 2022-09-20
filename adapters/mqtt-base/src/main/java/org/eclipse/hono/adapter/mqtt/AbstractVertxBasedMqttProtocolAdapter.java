@@ -1839,7 +1839,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String reason;
             if (protocolLevelException != null) {
                 span = newSpan("close connection due to protocol error");
-                TracingHelper.logError(span, protocolLevelException);
+                TracingHelper.logError(span, null, protocolLevelException, true);
                 reason = "protocol error: " + protocolLevelException.toString();
             } else if (stopCalled()) {
                 span = newSpan("close device connection (server shutdown)");
