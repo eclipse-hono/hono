@@ -51,11 +51,8 @@ public class SamplerProducer {
     @Produces
     Sampler sampler(final TracerRuntimeConfig tracerRuntimeConfig) {
         final TracerRuntimeConfig.SamplerConfig samplerConfig = tracerRuntimeConfig.sampler;
-        if (!tracerRuntimeConfig.suppressNonApplicationUris) {
-            LOG.info("'quarkus.opentelemetry.tracer.suppress-non-application-uris' set to 'false' - will be ignored");
-        }
-        if (!samplerConfig.parentBased) {
-            LOG.info("'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'false' - will be ignored");
+        if (samplerConfig.parentBased) {
+            LOG.warn("'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - custom Hono Sampler will not be applied to child spans");
         }
 
         final String samplerName = Optional.ofNullable(getProperty(SAMPLER_NAME_PROPERTY))
