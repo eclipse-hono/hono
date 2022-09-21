@@ -63,6 +63,8 @@ public final class Caches {
             return null;
         }
 
+        final long defaultTimeoutNanos = Duration.ofSeconds(config.getResponseCacheDefaultTimeout()).toNanos();
+
         return Caffeine.newBuilder()
                 .initialCapacity(config.getResponseCacheMinSize())
                 .maximumSize(Math.max(config.getResponseCacheMinSize(), config.getResponseCacheMaxSize()))
@@ -70,10 +72,8 @@ public final class Caches {
 
                     private long getMaxAge(final CacheDirective directive) {
                         return Optional.ofNullable(directive)
-                            .map(d -> {
-                                return Duration.ofSeconds(Math.min(d.getMaxAge(), config.getResponseCacheDefaultTimeout())).toNanos();
-                            })
-                            .orElse(Duration.ofSeconds(config.getResponseCacheDefaultTimeout()).toNanos());
+                            .map(d -> Duration.ofSeconds(Math.min(d.getMaxAge(), config.getResponseCacheDefaultTimeout())).toNanos())
+                            .orElse(defaultTimeoutNanos);
                     }
 
                     @Override

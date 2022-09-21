@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -90,7 +90,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
 
         super(connection, samplerFactory);
         this.clientFactory = Objects.requireNonNull(clientFactory);
-        this.responseCache = Optional.ofNullable(responseCache).orElse(null);
+        this.responseCache = responseCache;
     }
 
     /**
@@ -293,11 +293,22 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
             Objects.requireNonNull(response);
 
             final boolean resultCanBeCached = Optional.ofNullable(response.getCacheDirective())
-                    .map(directive -> directive.isCachingAllowed())
-                    .orElse(isCacheableStatusCode(response.getStatus()));
+                    .map(CacheDirective::isCachingAllowed)
+                    .orElseGet(() -> isCacheableStatusCode(response.getStatus()));
 
             if (resultCanBeCached) {
+                if (log.isTraceEnabled()) {
+                    log.trace("adding {} response to cache [key: {}]",
+                            response.getClass().getSimpleName(),
+                            key.toString());
+                }
                 responseCache.put(key, response);
+            } else {
+                if (log.isTraceEnabled()) {
+                    log.trace("caching of {} response [cache directive: {}] is not allowed",
+                            response.getClass().getSimpleName(),
+                            response.getCacheDirective().toString());
+                }
             }
         }
     }
