@@ -39,6 +39,8 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.tracing.TracingPolicy;
 
 /**
  * Micrometer based metrics implementation.
@@ -445,7 +447,9 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         registry.find(METER_AMQP_DELIVERY_DURATION).tags(tenantTag).meters().forEach(registry::remove);
         registry.find(METER_AMQP_TIMEOUT).tags(tenantTag).meters().forEach(registry::remove);
 
-        vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
+        final DeliveryOptions options = new DeliveryOptions();
+        options.setTracingPolicy(TracingPolicy.IGNORE);
+        vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId, options);
     }
 
     /**

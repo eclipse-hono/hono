@@ -37,6 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.tracing.TracingPolicy;
 
 /**
  * An authentication service that verifies credentials by means of sending authentication
@@ -90,7 +91,9 @@ public final class EventBusAuthenticationService implements AuthenticationServic
     public Future<HonoUser> authenticate(final JsonObject authRequest) {
 
         final Promise<HonoUser> result = Promise.promise();
-        final DeliveryOptions options = new DeliveryOptions().setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
+        final DeliveryOptions options = new DeliveryOptions();
+        options.setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
+        options.setTracingPolicy(TracingPolicy.IGNORE);
         vertx.eventBus().request(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
             if (reply.succeeded()) {
                 final JsonObject resultBody = (JsonObject) reply.result().body();
