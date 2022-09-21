@@ -27,6 +27,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.MessageCodec;
+import io.vertx.core.tracing.TracingPolicy;
 
 /**
  * Support for sending and receiving notifications via the vert.x event bus.
@@ -97,6 +98,7 @@ public class NotificationEventBusSupport {
         final DeliveryOptions options = new DeliveryOptions();
         options.setCodecName(NOTIFICATION_EVENT_BUS_CONTAINER_LOCAL_CODEC);
         options.setLocalOnly(true);
+        options.setTracingPolicy(TracingPolicy.IGNORE);
         vertx.eventBus().publish(getEventBusAddress(notification.getType()), notification, options);
     }
 
