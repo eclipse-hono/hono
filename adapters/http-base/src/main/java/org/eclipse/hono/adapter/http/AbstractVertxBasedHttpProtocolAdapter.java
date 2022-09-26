@@ -1052,6 +1052,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -1059,6 +1060,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());

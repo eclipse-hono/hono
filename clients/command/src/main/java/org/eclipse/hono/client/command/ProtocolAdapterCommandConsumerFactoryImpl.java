@@ -164,17 +164,6 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
     public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Function<CommandContext, Future<Void>> commandHandler,
-            final Duration lifespan,
-            final SpanContext context) {
-
-        return createCommandConsumer(tenantId, deviceId, false, commandHandler, lifespan, context);
-    }
-
-    @Override
-    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
             final boolean sendEvent,
             final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
@@ -185,18 +174,6 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         Objects.requireNonNull(commandHandler);
 
         return doCreateCommandConsumer(tenantId, deviceId, null, sendEvent, commandHandler, lifespan, context);
-    }
-
-    @Override
-    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId,
-            final Function<CommandContext, Future<Void>> commandHandler,
-            final Duration lifespan,
-            final SpanContext context) {
-
-        return createCommandConsumer(tenantId, deviceId, gatewayId, false, commandHandler, lifespan, context);
     }
 
     @Override

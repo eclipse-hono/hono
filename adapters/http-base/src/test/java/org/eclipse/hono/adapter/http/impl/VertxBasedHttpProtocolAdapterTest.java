@@ -147,8 +147,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
-                thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
@@ -508,9 +508,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null, MessagingType.amqp);
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(), any(), any()))
-                .thenAnswer(invocation -> {
-                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), eq(false), any(), any(),
+                any())).thenAnswer(invocation -> {
+                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(3);
                     consumer.apply(commandContext);
                     return Future.succeededFuture(commandConsumer);
                 });
@@ -536,7 +536,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                any(), any(), any());
+                                eq(false), any(), any(), any());
                         // and the command consumer has been closed again
                         verify(commandConsumer).close(eq(false), any());
                         verify(commandContext).accept();
@@ -561,8 +561,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
-            thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         // WHEN the device posts a telemetry message including a TTD
         httpClient.post("/telemetry")
@@ -573,11 +573,11 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             // THEN the response fails with 503 - error thrown by sending telemetry
             .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
             .expect(this::assertCorsHeaders)
-            .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
-                ctx.verify(() -> {
-                    verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                        any(), any(), any());
-                    // and the command consumer has been closed again
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> {
+                        verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                                eq(false), any(), any(), any());
+                        // and the command consumer has been closed again
                     verify(commandConsumer).close(eq(false), any());
                 });
                 ctx.completeNow();

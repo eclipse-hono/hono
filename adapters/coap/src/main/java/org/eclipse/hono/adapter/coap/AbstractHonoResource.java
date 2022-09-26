@@ -633,6 +633,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -640,6 +641,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             commandConsumerFuture = getAdapter().getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());

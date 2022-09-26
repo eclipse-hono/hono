@@ -517,7 +517,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     /**
-     * Creates a new factory for creating command consumers.
+     * Creates a new Protocol Adapter factory for creating command consumers.
      * <p>
      * The returned factory creates consumers that receive commands forwarded by the Command Router.
      * The factory does not support routing commands to target adapter instances.
@@ -527,7 +527,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected ProtocolAdapterCommandConsumerFactoryImpl commandConsumerFactory(final CommandRouterClient commandRouterClient) {
 
-        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [commandRouterClient: {}]",
+        LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 ProtocolAdapterCommandConsumerFactoryImpl.class.getName());
         return new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, getComponentName());
     }

@@ -120,8 +120,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -240,7 +240,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), eq(false), any(), any(),
+                any());
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and has not been reported as processed
@@ -291,7 +292,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), eq(false), any(), any(),
+                any());
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -684,7 +686,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         });
         // and the creation of the command consumer completes at a later point
         final Promise<ProtocolAdapterCommandConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.doUploadMessage(ctx, "tenant", "device");

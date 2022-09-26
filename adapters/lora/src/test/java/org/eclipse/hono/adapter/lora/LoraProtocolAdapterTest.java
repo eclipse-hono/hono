@@ -154,7 +154,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(any(), any(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);
 
@@ -196,13 +197,15 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(any(), any(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);
 
         verify(commandConsumerFactory).createCommandConsumer(
                 eq("myTenant"),
                 eq("myLoraGateway"),
+                eq(false),
                 any(),
                 isNull(),
                 any());
@@ -232,7 +235,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(any(), any(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         adapter.handleProviderRoute(httpContext, providerMock);
 
@@ -241,6 +245,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         verify(commandConsumerFactory).createCommandConsumer(
                 eq(TEST_TENANT_ID),
                 eq(TEST_GATEWAY_ID),
+                eq(false),
                 handlerArgumentCaptor.capture(),
                 isNull(),
                 any());

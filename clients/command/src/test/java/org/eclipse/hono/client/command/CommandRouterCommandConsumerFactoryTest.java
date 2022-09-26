@@ -28,26 +28,20 @@ import static com.google.common.truth.Truth.assertThat;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
-import io.vertx.junit5.Timeout;
-import io.vertx.junit5.VertxExtension;
 
 /**
  * Tests verifying behavior of {@link ProtocolAdapterCommandConsumerFactoryImpl}.
  *
  */
-@ExtendWith(VertxExtension.class)
-@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class CommandRouterCommandConsumerFactoryTest {
 
     private CommandRouterClient commandRouterClient;
@@ -74,9 +68,9 @@ public class CommandRouterCommandConsumerFactoryTest {
         verify(conLifecycle).addReconnectListener(reconnectListener.capture());
         factory.setMaxTenantIdsPerRequest(2);
 
-        factory.createCommandConsumer("tenant1", "device1", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant2", "device2", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant3", "device3", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant1", "device1", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant2", "device2", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant3", "device3", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
 
         // WHEN connection is lost and re-established
         final List<String> enabledTenants = new ArrayList<>();

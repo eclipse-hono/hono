@@ -1045,6 +1045,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(),
                     authenticatedDevice.getDeviceId(),
+                    false,
                     commandHandler,
                     null,
                     span.context()));
@@ -1052,6 +1053,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
                     sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(),
+                    false,
                     commandHandler,
                     null,
                     span.context()));

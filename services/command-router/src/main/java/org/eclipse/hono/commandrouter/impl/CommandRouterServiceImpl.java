@@ -275,7 +275,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         LOG.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
                                 deviceId, thr);
                         // for no precon-failed errors continue and send the event
-                        return sendDisconnectEvent(tenantId, deviceId, sendEvent, adapterInstanceId, span)
+                        return sendDisconnectEventIfNeeded(tenantId, deviceId, sendEvent, adapterInstanceId, span)
                                 // keep the original error and not propagate the event send result
                                 .recover(thr2 -> Future.failedFuture(thr)).compose(v -> Future.failedFuture(thr));
                     } else {
@@ -283,13 +283,13 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         return Future.failedFuture(thr);
                     }
                 })
-                .compose(v -> sendDisconnectEvent(tenantId, deviceId, sendEvent, adapterInstanceId, span))
+                .compose(v -> sendDisconnectEventIfNeeded(tenantId, deviceId, sendEvent, adapterInstanceId, span))
                 .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
-    private Future<Void> sendDisconnectEvent(final String tenantId, final String deviceId, final boolean sendEvent,
-            final String adapterInstanceId, final Span span) {
+    private Future<Void> sendDisconnectEventIfNeeded(final String tenantId, final String deviceId,
+            final boolean sendEvent, final String adapterInstanceId, final Span span) {
         if (sendEvent) {
             return tenantClient.get(tenantId, span.context()).compose(
                     tenantObject -> sendDisconnectedTtdEvent(tenantObject, deviceId, adapterInstanceId,

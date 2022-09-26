@@ -69,10 +69,10 @@ abstract class CoapProtocolAdapterMockSupport<T extends CoapProtocolAdapter, P e
 
         commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), eq(false), any(),
+                any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
 
         properties = newDefaultConfigurationProperties();
         properties.setInsecurePortEnabled(true);

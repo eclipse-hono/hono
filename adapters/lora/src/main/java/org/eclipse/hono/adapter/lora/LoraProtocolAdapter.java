@@ -343,6 +343,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     return getCommandConsumerFactory().createCommandConsumer(
                             tenantId,
                             gatewayId,
+                            false,
                             this::handleCommand,
                             null,
                             currentSpan.context())

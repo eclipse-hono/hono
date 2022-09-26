@@ -1749,7 +1749,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 removedSubscription.set(subscription);
                                 subscription.logUnsubscribe(span);
                                 removalDoneFutures.add(
-                                        onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span, true));
+                                        closeCommandConsumer(subscriptionCommandConsumerPair, span, true));
                             });
                 } else if (ErrorSubscription.hasErrorEndpointPrefix(topic)) {
                     Optional.ofNullable(ErrorSubscription.getKey(topic, authenticatedDevice))
@@ -1773,7 +1773,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
         }
 
-        private Future<Void> onCommandSubscriptionRemoved(
+        private Future<Void> closeCommandConsumer(
                 final Pair<CommandSubscription, ProtocolAdapterCommandConsumer> subscriptionConsumerPair,
                 final Span span,
                 final boolean sendDisconnectedEvent) {
@@ -1890,7 +1890,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Pair<CommandSubscription, ProtocolAdapterCommandConsumer> pair = iter.next();
                 pair.one().logUnsubscribe(span);
                 if (closeCommandConsumers) {
-                    removalFutures.add(onCommandSubscriptionRemoved(pair, span, sendDisconnectedEvent));
+                    removalFutures.add(closeCommandConsumer(pair, span, sendDisconnectedEvent));
                 } else {
                     removalFutures.add(Future.succeededFuture());
                 }
