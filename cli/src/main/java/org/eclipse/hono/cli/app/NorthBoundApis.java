@@ -177,15 +177,12 @@ public class NorthBoundApis {
         producerProps.setCommonClientConfig(commonClientConfig);
 
         System.err.printf("Connecting to Kafka based messaging infrastructure [%s]%n", bootstrapServers);
-        final Promise<Void> readyTracker = Promise.promise();
         final var kafkaClient = new KafkaApplicationClientImpl(
                 vertx,
                 consumerProps,
                 CachingKafkaProducerFactory.sharedFactory(vertx),
                 producerProps);
-        kafkaClient.addOnKafkaProducerReadyHandler(readyTracker);
-        return kafkaClient.start()
-                .compose(ok -> readyTracker.future())
+        return startClientAndWaitForReadiness(kafkaClient)
                 .map(ok -> {
                     this.client = kafkaClient;
                     return kafkaClient;
@@ -222,17 +219,23 @@ public class NorthBoundApis {
         final var amqpClient = new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, clientConfig));
         System.err.printf("Connecting to AMQP 1.0 based messaging infrastructure [%s:%d]%n",
                 clientConfig.getHost(), clientConfig.getPort());
-        return amqpClient.connect()
-                .onSuccess(con -> {
+        return startClientAndWaitForReadiness(amqpClient)
+                .map(ok -> {
                     this.client = amqpClient;
-                })
-                .map(amqpClient);
+                    return amqpClient;
+                });
+    }
+
+    private Future<Void> startClientAndWaitForReadiness(final ApplicationClient<? extends MessageContext> client) {
+        final Promise<Void> readyTracker = Promise.promise();
+        client.addOnClientReadyHandler(readyTracker);
+        return client.start()
+                .compose(ok -> readyTracker.future());
     }
 
     /**
      * Gets a ready to use application client.
      *
-     * the AMQP 1.0 based endpoint has been reestablished.
      * @return The client.
      */
     public Future<ApplicationClient<? extends MessageContext>> getApplicationClient() {
