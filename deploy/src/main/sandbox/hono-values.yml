@@ -185,6 +185,16 @@ deviceRegistryExample:
         cpu:
         memory: "400Mi"
 
+dataGridExample:
+  enabled: true
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "100Mi"
+    limits:
+      cpu: "1"
+      memory: "200Mi"
+
 commandRouterService:
   imageName: "eclipse/hono-service-command-router-native"
   tlsKeysSecret: "sandbox-tls"
