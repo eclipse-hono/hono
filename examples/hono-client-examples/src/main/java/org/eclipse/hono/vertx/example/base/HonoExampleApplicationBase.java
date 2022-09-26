@@ -48,6 +48,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -184,10 +185,13 @@ public class HonoExampleApplicationBase {
             ac.addReconnectListener(c -> LOG.info("reconnected to Hono"));
         }
 
+        final Promise<Void> readyTracker = Promise.promise();
+        client.addOnClientReadyHandler(readyTracker);
         client.start()
-            .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
-            .onSuccess(ok -> startup.complete(client))
-            .onFailure(startup::completeExceptionally);
+                .compose(ok -> readyTracker.future())
+                .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
+                .onSuccess(ok -> startup.complete(client))
+                .onFailure(startup::completeExceptionally);
 
         try {
             startup.join();
