@@ -30,6 +30,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.TimeUntilDisconnectNotification;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
+import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -173,10 +175,17 @@ public class HonoExampleApplicationBase {
             ac.addReconnectListener(c -> LOG.info("reconnected to Hono"));
         }
 
+        final Promise<Void> readyTracker = Promise.promise();
+        if (client instanceof KafkaApplicationClient kafkaApplicationClient) {
+            kafkaApplicationClient.addOnClientReadyHandler(readyTracker);
+        } else {
+            readyTracker.complete();
+        }
         client.start()
-            .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
-            .onSuccess(ok -> startup.complete(client))
-            .onFailure(startup::completeExceptionally);
+                .compose(ok -> readyTracker.future())
+                .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
+                .onSuccess(ok -> startup.complete(client))
+                .onFailure(startup::completeExceptionally);
 
         try {
             startup.join();
