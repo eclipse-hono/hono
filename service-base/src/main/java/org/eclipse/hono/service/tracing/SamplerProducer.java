@@ -113,8 +113,7 @@ public final class SamplerProducer {
         if (samplerConfig.parentBased) {
             LOG.warn("""
                     'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - \
-                    custom Hono Sampler will not be applied to child spans
-                    """);
+                    custom Hono Sampler will not be applied to child spans""");
         }
         LOG.debug("using OTEL configuration [{}: {}, {}: {}]",
                 PROPERTY_OTEL_TRACES_SAMPLER, otelTracesSampler.orElse(null),
@@ -123,6 +122,7 @@ public final class SamplerProducer {
 
         Sampler sampler = getBaseSampler(samplerName, samplerConfig);
         sampler = Sampler.parentBased(sampler);
+        LOG.info("using OpenTelemetry Sampler [{}]", sampler.toString());
         sampler = new SamplingPrioritySampler(sampler);
 
         // drop spans for event bus message prefixes
@@ -133,18 +133,23 @@ public final class SamplerProducer {
     }
 
     private Sampler getBaseSampler(final String samplerName, final TracerRuntimeConfig.SamplerConfig samplerConfig) {
-        LOG.info("creating OpenTelemetry Sampler [type: {}]", samplerName);
-
-        return switch (samplerName) {
-            // see https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/
-            case "jaeger_remote" -> jaegerRemoteSampler();
-            case "always_on", "on" -> Sampler.alwaysOn();
-            case "always_off", "off" -> Sampler.alwaysOff();
-            case "traceidratio", "ratio" -> traceIdRatioBasedSampler(samplerConfig);
-            // also support rate-limiting sampler directly, i.e. without using Jaeger remote sampler
-            case "rate_limiting", "rate-limiting" -> rateLimitingSampler();
-            default -> Sampler.alwaysOn();
-        };
+        switch (samplerName) {
+        // see https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/
+        case "jaeger_remote", "parentbased_jaeger_remote":
+            return jaegerRemoteSampler();
+        case "always_on", "parentbased_always_on", "on":
+            return Sampler.alwaysOn();
+        case "always_off", "parentbased_always_off", "off":
+            return Sampler.alwaysOff();
+        case "traceidratio", "parentbased_traceidratio", "ratio":
+            return traceIdRatioBasedSampler(samplerConfig);
+        // also support rate-limiting sampler directly, i.e. without using Jaeger remote sampler
+        case "rate_limiting", "parentbased_rate_limiting", "rate-limiting":
+            return rateLimitingSampler();
+        default:
+            LOG.warn("unsupported sampler type [{}], falling back to always_on sampler", samplerName);
+            return Sampler.alwaysOn();
+        }
     }
 
     private Sampler jaegerRemoteSampler() {
