@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,18 @@ import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
  */
 public final class Credentials {
 
+    private static final int MAX_BCRYPT_COST_FACTOR = Integer.getInteger("max.bcrypt.costFactor", 10);
+
     private Credentials() {
+    }
+
+    /**
+     * Gets the maximum BCrypt cost factor supported by Hono.
+     *
+     * @return The cost factor.
+     */
+    public static int getMaxBcryptCostFactor() {
+        return MAX_BCRYPT_COST_FACTOR;
     }
 
     /**
@@ -41,6 +52,17 @@ public final class Credentials {
         final PskSecret s = new PskSecret();
         s.setKey(psk.getBytes(StandardCharsets.UTF_8));
         return new PskCredential(authId, List.of(s));
+    }
+
+    /**
+     * Create a password type based credential containing a password secret.
+     *
+     * @param authId The authentication to use.
+     * @param password The password to use.
+     * @return The fully populated credential.
+     */
+    public static PasswordCredential createPasswordCredential(final String authId, final String password) {
+        return createPasswordCredential(authId, password, OptionalInt.empty());
     }
 
     /**
@@ -76,17 +98,6 @@ public final class Credentials {
     }
 
     /**
-     * Create a password type based credential containing a password secret.
-     *
-     * @param authId The authentication to use.
-     * @param password The password to use.
-     * @return The fully populated credential.
-     */
-    public static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return createPasswordCredential(authId, password, OptionalInt.empty());
-    }
-
-    /**
      * Create a new password secret.
      *
      * @param password The password to use.
@@ -95,8 +106,7 @@ public final class Credentials {
      */
     public static PasswordSecret createPasswordSecret(final String password, final OptionalInt bcryptCostFactor) {
 
-        final SpringBasedHonoPasswordEncoder encoder = new SpringBasedHonoPasswordEncoder(
-                bcryptCostFactor.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
+        final var encoder = new SpringBasedHonoPasswordEncoder(bcryptCostFactor.orElse(MAX_BCRYPT_COST_FACTOR));
         final EncodedPassword encodedPwd = EncodedPassword.fromHonoSecret(encoder.encode(password));
 
         final PasswordSecret s = new PasswordSecret();

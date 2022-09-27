@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
@@ -491,10 +492,9 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.registerDevice(tenantId, deviceId);
                 })
                 .compose(ok -> {
-                    final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(deviceId,
-                            password);
+                    final PasswordCredential secret = Credentials.createPasswordCredential(deviceId, password);
                     secret.setEnabled(false);
-                    return helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(secret));
+                    return helper.registry.addCredentials(tenantId, deviceId, List.of(secret));
                 })
                 // WHEN a device connects using the correct credentials
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
@@ -502,7 +502,8 @@ public class MqttConnectionIT extends MqttTestBase {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(((MqttConnectionException) t).code())
+                            .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
                     });
                     ctx.completeNow();
                 }));
@@ -527,8 +528,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.registerDevice(tenantId, deviceId, device);
                 })
                 .compose(ok -> {
-                    final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(deviceId,
-                            password);
+                    final PasswordCredential secret = Credentials.createPasswordCredential(deviceId, password);
                     return helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(secret));
                 })
                 // WHEN a device connects using the correct credentials
@@ -537,7 +537,8 @@ public class MqttConnectionIT extends MqttTestBase {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        assertThat(((MqttConnectionException) t).code())
+                            .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
                     });
                     ctx.completeNow();
                 }));

@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Queue;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -68,9 +67,6 @@ import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProper
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.service.management.credentials.Credentials;
-import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.CommandConstants;
@@ -154,10 +150,6 @@ public final class IntegrationTestSupport {
      * The default TLS secured port exposed by the HTTP adapter.
      */
     public static final int DEFAULT_HTTPS_PORT = 8443;
-    /**
-     * The default cost factor to use with the BCrypt hash algorithm.
-     */
-    public static final int DEFAULT_MAX_BCRYPT_COST_FACTOR = 10;
     /**
      * The default port exposed by the MQTT adapter.
      */
@@ -328,11 +320,6 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_AMQPS_PORT = "adapter.amqps.port";
     /**
-     * The name of the system property to use for setting the maximum BCrypt cost factor supported
-     * by Hono.
-     */
-    public static final String PROPERTY_MAX_BCRYPT_COST_FACTOR = "max.bcrypt.costFactor";
-    /**
      * The name of the system property to use for setting the maximum time (in ms) that adapters
      * wait for an acknowledgement of a command sent to a device.
      */
@@ -475,11 +462,6 @@ public final class IntegrationTestSupport {
      * The number of messages to send by default in protocol adapter tests.
      */
     public static final int MSG_COUNT = Integer.getInteger("msg.count", 200);
-
-    /**
-     * The maximum BCrypt cost factor supported by Hono.
-     */
-    public static final int MAX_BCRYPT_COST_FACTOR = Integer.getInteger(PROPERTY_MAX_BCRYPT_COST_FACTOR, DEFAULT_MAX_BCRYPT_COST_FACTOR);
 
     /**
      * The maximum time (in ms) that adapters wait for an acknowledgement of a command sent to a device.
@@ -1466,30 +1448,6 @@ public final class IntegrationTestSupport {
 
         final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
         return gen.generateKeyPair();
-    }
-
-    /**
-     * Create a new password credential, suitable for use in the integration test environment.
-     *
-     * @param authId The auth ID to use.
-     * @param password The password to use.
-     * @return The new instance.
-     */
-    public static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return Credentials.createPasswordCredential(authId, password,
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
-    }
-
-    /**
-     * Create a new PSK credential, suitable for use in the integration test environment.
-     *
-     * @param authId The auth ID to use.
-     * @param key The shared key to use.
-     * @return The new instance.
-     */
-    public static PskCredential createPskCredentials(final String authId, final String key) {
-
-        return Credentials.createPSKCredential(authId, key);
     }
 
     /**

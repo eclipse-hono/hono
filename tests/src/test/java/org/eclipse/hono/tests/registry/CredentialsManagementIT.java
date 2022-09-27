@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,14 +72,9 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
 
     private static final String PREFIX_AUTH_ID = "my_sensor.20=ext";
-    private static final String ORIG_BCRYPT_PWD;
+    private static final String ORIG_BCRYPT_PWD = "thePassword";
 
     private DeviceRegistryHttpClient registry;
-
-    static {
-        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR);
-        ORIG_BCRYPT_PWD = encoder.encode("thePassword");
-    }
 
     private String tenantId;
     private String deviceId;
@@ -104,8 +99,8 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
         deviceId = getHelper().getRandomDeviceId(tenantId);
         authId = getRandomAuthId(PREFIX_AUTH_ID);
         resourceVersion = new AtomicReference<>();
-        hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
-        pskCredentials = IntegrationTestSupport.createPskCredentials(authId, "secret");
+        hashedPasswordCredential = Credentials.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
+        pskCredentials = Credentials.createPSKCredential(authId, "secret");
         registry.addTenant(tenantId)
             .compose(response -> registry.registerDevice(tenantId, deviceId))
             .onComplete(ctx.succeedingThenComplete());
@@ -127,10 +122,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddCredentialsSucceeds(final VertxTestContext context) {
 
-        final PasswordCredential pwdCredential = IntegrationTestSupport.createPasswordCredential(authId, "thePassword");
+        final PasswordCredential pwdCredential = Credentials.createPasswordCredential(authId, "thePassword");
         pwdCredential.getExtensions().put("client-id", "MQTT-client-2384236854");
 
-        final PskCredential pskCredential = IntegrationTestSupport.createPskCredentials("psk-id", "psk-key");
+        final var pskCredential = Credentials.createPSKCredential("psk-id", "psk-key");
 
         final var x509Credential = X509CertificateCredential.fromSubjectDn(
                 "emailAddress=foo@bar.com, CN=foo, O=bar",
@@ -182,7 +177,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddCredentialsSucceedsForAdditionalProperties(final VertxTestContext context) {
 
-        final PasswordCredential credential = IntegrationTestSupport.createPasswordCredential(authId, "thePassword");
+        final PasswordCredential credential = Credentials.createPasswordCredential(authId, "thePassword");
         credential.getExtensions().put("client-id", "MQTT-client-2384236854");
 
         registry.addCredentials(tenantId, deviceId, List.of(credential))
@@ -235,7 +230,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     public void testAddCredentialsFailsForBCryptWithTooManyIterations(final VertxTestContext context)  {
 
         // GIVEN a hashed password using bcrypt with more than the configured max iterations
-        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR + 1);
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(Credentials.getMaxBcryptCostFactor() + 1);
 
         final PasswordSecret secret = new PasswordSecret();
         secret.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);

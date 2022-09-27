@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,8 +28,8 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
@@ -1105,7 +1105,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenant);
 
-        final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(deviceId, password);
+        final PasswordCredential secret = Credentials.createPasswordCredential(deviceId, password);
 
         return addTenant(tenantId, tenant)
                 .compose(ok -> registerDevice(tenantId, deviceId, device))
@@ -1155,7 +1155,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(data);
         Objects.requireNonNull(password);
 
-        final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(deviceId, password);
+        final PasswordCredential secret = Credentials.createPasswordCredential(deviceId, password);
 
         return registerDevice(tenantId, deviceId, data)
                 .compose(ok -> addCredentials(tenantId, deviceId, Collections.singletonList(secret)));
@@ -1183,16 +1183,16 @@ public final class DeviceRegistryHttpClient {
                 .compose(ok -> registerDevice(tenantId, deviceId))
                 .compose(ok -> {
 
-                    final String authId = deviceCert.getSubjectDN().getName();
+                    final String authId = deviceCert.getSubjectX500Principal().getName();
                     final var credential = X509CertificateCredential.fromSubjectDn(authId, List.of(new X509CertificateSecret()));
 
                     return addCredentials(tenantId, deviceId, Collections.singleton(credential));
 
-                }).map(ok -> {
-                    LOG.debug("registered device with client certificate [tenant-id: {}, device-id: {}, auth-id: {}]",
-                            tenantId, deviceId, deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
-                    return null;
-                });
+                })
+                .onSuccess(ok -> LOG.debug(
+                        "registered device with client certificate [tenant-id: {}, device-id: {}, auth-id: {}]",
+                        tenantId, deviceId, deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253)))
+                .mapEmpty();
     }
 
     /**
@@ -1239,12 +1239,11 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(deviceData);
         Objects.requireNonNull(key);
 
-        final PskCredential credential = IntegrationTestSupport.createPskCredentials(deviceId, key);
+        final var pskCredentials = Credentials.createPSKCredential(deviceId, key);
 
         return addTenant(tenantId, tenant)
                 .compose(ok -> registerDevice(tenantId, deviceId, deviceData))
-                .compose(ok -> addCredentials(tenantId, deviceId, Collections.singleton(credential)));
-
+                .compose(ok -> addCredentials(tenantId, deviceId, List.of(pskCredentials)));
     }
 
     /**
@@ -1261,10 +1260,10 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<HttpResponse<Buffer>> addPskDeviceToTenant(final String tenantId, final String deviceId, final String key) {
 
-        final PskCredential credential = IntegrationTestSupport.createPskCredentials(deviceId, key);
+        final var pskCredentials = Credentials.createPSKCredential(deviceId, key);
 
         return registerDevice(tenantId, deviceId)
-                .compose(ok -> addCredentials(tenantId, deviceId, Collections.singleton(credential)));
+                .compose(ok -> addCredentials(tenantId, deviceId, List.of(pskCredentials)));
     }
 
     private static ResponsePredicate okOrIgnoreMissing(final boolean ignoreMissing) {

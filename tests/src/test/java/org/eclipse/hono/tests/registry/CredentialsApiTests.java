@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,6 @@ import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -539,13 +538,11 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
     private static CommonCredential getRandomHashedPasswordCredential(final String authId) {
 
-        final var secret1 = Credentials.createPasswordSecret("ClearTextPWD",
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
+        final var secret1 = Credentials.createPasswordSecret("ClearTextPWD", OptionalInt.empty());
         secret1.setNotBefore(Instant.parse("2017-05-01T14:00:00Z"));
         secret1.setNotAfter(Instant.parse("2037-06-01T14:00:00Z"));
 
-        final var secret2 = Credentials.createPasswordSecret("hono-password",
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_COST_FACTOR));
+        final var secret2 = Credentials.createPasswordSecret("hono-password", OptionalInt.empty());
 
         return new PasswordCredential(authId, List.of(secret1, secret2));
     }
