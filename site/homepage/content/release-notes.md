@@ -4,6 +4,15 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 2.1.1
+
+### Fixes & Enhancements
+
+* A vulnerability in the CoAP adapter has been fixed which could have been exploited by malicious devices causing a
+  denial of service.
+* The MQTT adapter's user guide has been improved to be more specific about the topic names being used for publishing
+  commands to gateway devices.
+
 ## 2.1.0
 
 ### New features
