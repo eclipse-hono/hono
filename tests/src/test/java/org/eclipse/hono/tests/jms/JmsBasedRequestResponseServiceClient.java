@@ -25,7 +25,6 @@ import javax.jms.Message;
 import javax.jms.TextMessage;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -48,25 +47,18 @@ public abstract class JmsBasedRequestResponseServiceClient<T, R extends RequestR
     private static final Logger LOG = LoggerFactory.getLogger(JmsBasedRequestResponseServiceClient.class);
 
     /**
-     * The configuration properties for the connection to the service.
+     * The connection to the service.
      */
-    protected final ClientConfigProperties config;
-
     protected final JmsBasedHonoConnection connection;
 
     /**
      * Creates a new client.
      *
      * @param connection The JMS connection to use.
-     * @param clientConfig The client configuration properties.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if connection is {@code null}.
      */
-    protected JmsBasedRequestResponseServiceClient(
-            final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig) {
-
+    protected JmsBasedRequestResponseServiceClient(final JmsBasedHonoConnection connection) {
         this.connection = Objects.requireNonNull(connection);
-        this.config = Objects.requireNonNull(clientConfig);
     }
 
     /**

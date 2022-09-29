@@ -61,9 +61,7 @@ public class TenantJmsIT extends TenantApiTests {
         final ClientConfigProperties allTenantConfig = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.TENANT_ADMIN_USER, IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        allTenantClient = new JmsBasedTenantClient(
-                JmsBasedHonoConnection.newConnection(allTenantConfig),
-                allTenantConfig);
+        allTenantClient = new JmsBasedTenantClient(JmsBasedHonoConnection.newConnection(allTenantConfig));
 
         allTenantClient.start()
             .onComplete(ctx.succeeding(client -> {
@@ -73,9 +71,7 @@ public class TenantJmsIT extends TenantApiTests {
         final ClientConfigProperties defaultTenantConfig = IntegrationTestSupport.getDeviceRegistryProperties(
                 IntegrationTestSupport.HONO_USER, IntegrationTestSupport.HONO_PWD);
 
-        defaultTenantClient = new JmsBasedTenantClient(
-                JmsBasedHonoConnection.newConnection(defaultTenantConfig),
-                defaultTenantConfig);
+        defaultTenantClient = new JmsBasedTenantClient(JmsBasedHonoConnection.newConnection(defaultTenantConfig));
 
         defaultTenantClient.start()
             .onComplete(ctx.succeeding(client -> {

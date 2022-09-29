@@ -22,7 +22,6 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -52,14 +51,11 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseServiceCli
      * Creates a new client.
      *
      * @param connection The JMS connection to use.
-     * @param clientConfig The client configuration properties.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public JmsBasedCredentialsClient(
-            final JmsBasedHonoConnection connection,
-            final ClientConfigProperties clientConfig) {
+    public JmsBasedCredentialsClient(final JmsBasedHonoConnection connection) {
 
-        super(connection, clientConfig);
+        super(connection);
     }
 
     /**

@@ -54,9 +54,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
                 IntegrationTestSupport.TENANT_ADMIN_USER,
                 IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        client = new JmsBasedCredentialsClient(
-                JmsBasedHonoConnection.newConnection(props),
-                props);
+        client = new JmsBasedCredentialsClient(JmsBasedHonoConnection.newConnection(props));
         client.start().onComplete(ctx.succeedingThenComplete());
 
     }

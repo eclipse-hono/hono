@@ -53,9 +53,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
                 IntegrationTestSupport.TENANT_ADMIN_USER,
                 IntegrationTestSupport.TENANT_ADMIN_PWD);
 
-        registrationClient = new JmsBasedRegistrationClient(
-                JmsBasedHonoConnection.newConnection(props),
-                props);
+        registrationClient = new JmsBasedRegistrationClient(JmsBasedHonoConnection.newConnection(props));
         registrationClient.start().onComplete(ctx.succeedingThenComplete());
     }
 
