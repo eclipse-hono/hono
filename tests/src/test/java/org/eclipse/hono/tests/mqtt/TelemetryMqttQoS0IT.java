@@ -111,7 +111,9 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
             final String tenantId,
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
 
-        return helper.applicationClient
-                .createTelemetryConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
+        return helper.applicationClient.createTelemetryConsumer(
+                tenantId,
+                messageConsumer::handle,
+                close -> {});
     }
 }

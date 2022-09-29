@@ -64,7 +64,10 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     protected Future<MessageConsumer> createConsumer(
             final String tenantId,
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
-        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, close -> {});
+        return helper.applicationClient.createEventConsumer(
+                tenantId,
+                messageConsumer::handle,
+                close -> {});
     }
 
     @Override

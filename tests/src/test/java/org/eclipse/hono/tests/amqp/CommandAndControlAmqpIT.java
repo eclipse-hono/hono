@@ -125,7 +125,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private Future<MessageConsumer> createEventConsumer(
             final String tenantId,
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
-        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
+        return helper.applicationClient.createEventConsumer(
+                tenantId,
+                messageConsumer::handle,
+                remoteClose -> {});
     }
 
     private Future<ProtonReceiver> subscribeToCommands(

@@ -119,7 +119,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     private Future<MessageConsumer> createConsumer(
             final String tenantId,
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
-        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
+        return helper.applicationClient.createEventConsumer(
+                tenantId,
+                messageConsumer::handle,
+                close -> {});
     }
 
     private Future<Void> subscribeToCommands(

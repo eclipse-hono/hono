@@ -58,7 +58,10 @@ public class EventCoapIT extends CoapTestBase {
             final String tenantId,
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
 
-        return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
+        return helper.applicationClient.createEventConsumer(
+                tenantId,
+                messageConsumer::handle,
+                close -> {});
     }
 
     @Override
