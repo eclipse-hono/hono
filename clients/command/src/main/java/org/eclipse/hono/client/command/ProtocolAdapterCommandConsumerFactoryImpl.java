@@ -228,9 +228,17 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
                     // handler association failed - unregister the handler
                     commandHandlers.removeCommandHandler(tenantId, deviceId);
                 })
-                .map(v -> (ProtocolAdapterCommandConsumer) (sendEvent1, spanContext) -> removeCommandConsumer(
-                        commandHandlerWrapper, sendEvent1, sanitizedLifespan,
-                        lifespanStart, spanContext));
+                .map(v -> {
+                    return new ProtocolAdapterCommandConsumer() {
+
+                        @Override
+                        public Future<Void> close(final boolean sendEvent, final SpanContext spanContext) {
+                            return removeCommandConsumer(
+                                    commandHandlerWrapper, sendEvent, sanitizedLifespan,
+                                    lifespanStart, spanContext);
+                        }
+                    };
+                });
     }
 
     private Future<Void> removeCommandConsumer(

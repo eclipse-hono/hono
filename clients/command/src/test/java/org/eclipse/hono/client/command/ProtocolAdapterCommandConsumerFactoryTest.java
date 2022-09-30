@@ -42,7 +42,7 @@ import io.vertx.core.Future;
  * Tests verifying behavior of {@link ProtocolAdapterCommandConsumerFactoryImpl}.
  *
  */
-public class CommandRouterCommandConsumerFactoryTest {
+public class ProtocolAdapterCommandConsumerFactoryTest {
 
     private CommandRouterClient commandRouterClient;
     private ProtocolAdapterCommandConsumerFactoryImpl factory;

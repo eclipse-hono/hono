@@ -291,12 +291,13 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private Future<Void> sendDisconnectEventIfNeeded(final String tenantId, final String deviceId,
             final boolean sendEvent, final String adapterInstanceId, final Span span) {
         if (sendEvent) {
-            return tenantClient.get(tenantId, span.context()).compose(
-                    tenantObject -> sendDisconnectedTtdEvent(tenantObject, deviceId, adapterInstanceId,
-                            span.context()).onFailure(thr -> {
-                                LOG.info("error sending disconnected Ttd event [tenant: {}, device: {}]",
-                                        tenantId, deviceId, thr);
-                            }));
+            return tenantClient.get(tenantId, span.context())
+                    .compose(tenantObject -> sendDisconnectedTtdEvent(tenantObject, deviceId, adapterInstanceId,
+                            span.context())
+                                    .onFailure(thr -> {
+                                        LOG.info("error sending disconnected Ttd event [tenant: {}, device: {}]",
+                                                tenantId, deviceId, thr);
+                                    }));
         } else {
             return Future.succeededFuture();
         }
