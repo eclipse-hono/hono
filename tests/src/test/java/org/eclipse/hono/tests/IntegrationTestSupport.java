@@ -24,19 +24,20 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -529,7 +531,7 @@ public final class IntegrationTestSupport {
                 return runningOnTestEnvironment;
             });
 
-    private static final Queue<Pair<List<String>, Instant>> tenantsToDeleteTopicsForAfterDelay = new LinkedList<>();
+    private static final Deque<Pair<List<String>, Instant>> tenantsToDeleteTopicsForAfterDelay = new ConcurrentLinkedDeque<>();
 
     /**
      * A client for managing tenants/devices/credentials.
@@ -1008,10 +1010,10 @@ public final class IntegrationTestSupport {
         final var timeAtWhichTopicsShouldGetDeleted = Instant.now()
                 .plus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL)
                 .plusSeconds(2);
-        tenantsToDeleteTopicsForAfterDelay.add(Pair.of(tenantsToDelete, timeAtWhichTopicsShouldGetDeleted));
+        tenantsToDeleteTopicsForAfterDelay.addLast(Pair.of(tenantsToDelete, timeAtWhichTopicsShouldGetDeleted));
 
         // now determine topics that are "due"
-        final var tenantsToDeleteTopicsForNow = new LinkedList<String>();
+        final var tenantsToDeleteTopicsForNow = new ArrayList<String>();
         final var now = Instant.now();
         final var iterator = tenantsToDeleteTopicsForAfterDelay.iterator();
         while (iterator.hasNext()) {
@@ -1038,12 +1040,14 @@ public final class IntegrationTestSupport {
                 LOGGER.info("deleting {} topics for temporary tenants", topicNames.size());
                 adminClient.deleteTopics(topicNames)
                     .recover(t -> {
-                        LOGGER.warn("error deleting topics", t);
+                        if (t instanceof UnknownTopicOrPartitionException) {
+                            LOGGER.debug("one or more topics/partitions could not be deleted, maybe because they didn't exist yet");
+                        } else {
+                            LOGGER.warn("error deleting topics", t);
+                        }
                         return Future.succeededFuture();
                     })
-                    .compose(ar -> {
-                        // note that the result will probably have failed with an UnknownTopicOrPartitionException here;
-                        // not necessarily all tenant topics may have been created before
+                    .compose(ok -> {
                         LOGGER.debug("done triggering deletion of topics for tenants {}", tenantsToDeleteTopicsForNow);
                         return adminClient.close();
                     })
