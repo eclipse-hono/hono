@@ -18,27 +18,38 @@ import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.extension.trace.jaeger.sampler.JaegerRemoteSamplerProvider;
+import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
+import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.quarkus.arc.properties.IfBuildProperty;
 import io.quarkus.opentelemetry.runtime.tracing.TracerRuntimeConfig;
 
 /**
- * A producer for an OpenTelemetry Sampler.
+ * A producer for a custom OpenTelemetry Sampler.
  */
 @ApplicationScoped
-public class SamplerProducer {
+public final class SamplerProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(SamplerProducer.class);
 
-    private static final String SAMPLER_NAME_PROPERTY = "OTEL_TRACES_SAMPLER";
-    private static final String SAMPLER_ARG_PROPERTY = "OTEL_TRACES_SAMPLER_ARG";
     private static final int DEFAULT_MAX_TRACES_PER_SECOND = 1;
+
+    private static final String PROPERTY_OTEL_SERVICE_NAME = "otel.service.name";
+    private static final String PROPERTY_OTEL_TRACES_SAMPLER = "otel.traces.sampler";
+    private static final String PROPERTY_OTEL_TRACES_SAMPLER_ARG = "otel.traces.sampler.arg";
+    private static final String PROPERTY_QUARKUS_APPLICATION_NAME = "quarkus.application.name";
 
     private static final List<String> EVENT_BUS_ADDRESS_PREFIXES_TO_IGNORE = List.of(
             Constants.EVENT_BUS_ADDRESS_NOTIFICATION_PREFIX,
@@ -47,25 +58,71 @@ public class SamplerProducer {
 
     private static final String INVALID_HTTP_REQUEST_SPAN_NAME = "/bad-request"; // see netty HttpRequestDecoder.createInvalidMessage()
 
+    @Inject
+    @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER)
+    Optional<String> otelTracesSampler;
+
+    @Inject
+    @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER_ARG)
+    Optional<String> otelTracesSamplerArg;
+
+    private String serviceName;
+
+    @Inject
+    void setServiceName(
+            @ConfigProperty(name = PROPERTY_OTEL_SERVICE_NAME)
+            final Optional<String> otelServiceName,
+            @ConfigProperty(name = PROPERTY_QUARKUS_APPLICATION_NAME)
+            final String quarkusApplicationName) {
+        this.serviceName = otelServiceName.orElse(quarkusApplicationName);
+    }
+
+    /**
+     * Creates additional properties to be included in tracing information that is being reported to a Collector.
+     * <p>
+     * In particular, the properties include the <em>service.name</em> and <em>service.namespace</em> of the
+     * reporting component.
+     *
+     * @return The additional properties.
+     */
     @Singleton
     @Produces
-    Sampler sampler(final TracerRuntimeConfig tracerRuntimeConfig) {
-        final TracerRuntimeConfig.SamplerConfig samplerConfig = tracerRuntimeConfig.sampler;
-        if (samplerConfig.parentBased) {
-            LOG.warn("'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - custom Hono Sampler will not be applied to child spans");
-        }
+    @IfBuildProperty(name = "quarkus.opentelemetry.enabled", stringValue = "true")
+    Resource resource() {
 
-        final String samplerName = Optional.ofNullable(getProperty(SAMPLER_NAME_PROPERTY))
-                .orElse(samplerConfig.samplerName);
-        final Optional<Object> samplerArg = Optional.ofNullable((Object) getProperty(SAMPLER_ARG_PROPERTY))
-                .or(() -> {
-                    if (samplerName.equals("ratio")) {
-                        return samplerConfig.ratio;
-                    }
-                    return Optional.empty();
-                });
-        Sampler sampler = getBaseSampler(samplerName, samplerArg);
+        final var attributes = Attributes.of(
+                ResourceAttributes.SERVICE_NAME, serviceName,
+                ResourceAttributes.SERVICE_NAMESPACE, "org.eclipse.hono");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("using OTEL resources: {}", attributes);
+        }
+        return Resource.create(attributes);
+    }
+
+    /**
+     * Creates a custom sampler based configuration properties.
+     *
+     * @param tracerRuntimeConfig The Quarkus specific OTEL configuration properties.
+     * @return The sampler.
+     */
+    @Singleton
+    @Produces
+    @IfBuildProperty(name = "quarkus.opentelemetry.enabled", stringValue = "true")
+    Sampler sampler(final TracerRuntimeConfig tracerRuntimeConfig) {
+        final var samplerConfig = tracerRuntimeConfig.sampler;
+        if (samplerConfig.parentBased) {
+            LOG.warn("""
+                    'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - \
+                    custom Hono Sampler will not be applied to child spans""");
+        }
+        LOG.debug("using OTEL configuration [{}: {}, {}: {}]",
+                PROPERTY_OTEL_TRACES_SAMPLER, otelTracesSampler.orElse(null),
+                PROPERTY_OTEL_TRACES_SAMPLER_ARG, otelTracesSamplerArg.orElse(null));
+        final String samplerName = otelTracesSampler.orElse(samplerConfig.samplerName);
+
+        Sampler sampler = getBaseSampler(samplerName, samplerConfig);
         sampler = Sampler.parentBased(sampler);
+        LOG.info("using OpenTelemetry Sampler [{}]", sampler.toString());
         sampler = new SamplingPrioritySampler(sampler);
 
         // drop spans for event bus message prefixes
@@ -75,46 +132,67 @@ public class SamplerProducer {
         return new DropBySpanNamePrefixSampler(sampler, prefixesOfSpansToDrop);
     }
 
-    private static String getProperty(final String name) {
-        return System.getProperty(name, System.getenv(name));
+    private Sampler getBaseSampler(final String samplerName, final TracerRuntimeConfig.SamplerConfig samplerConfig) {
+        switch (samplerName) {
+        // see https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/
+        case "jaeger_remote", "parentbased_jaeger_remote":
+            return jaegerRemoteSampler();
+        case "always_on", "parentbased_always_on", "on":
+            return Sampler.alwaysOn();
+        case "always_off", "parentbased_always_off", "off":
+            return Sampler.alwaysOff();
+        case "traceidratio", "parentbased_traceidratio", "ratio":
+            return traceIdRatioBasedSampler(samplerConfig);
+        // also support rate-limiting sampler directly, i.e. without using Jaeger remote sampler
+        case "rate_limiting", "parentbased_rate_limiting", "rate-limiting":
+            return rateLimitingSampler();
+        default:
+            LOG.warn("unsupported sampler type [{}], falling back to always_on sampler", samplerName);
+            return Sampler.alwaysOn();
+        }
     }
 
-    private static Sampler getBaseSampler(final String samplerName, final Optional<Object> samplerArg) {
-        LOG.info("using OpenTelemetry tracing sampler mode '{}' [arg: {}]", samplerName, samplerArg.orElse(null));
-        return switch (samplerName) {
-            case "on" -> Sampler.alwaysOn();
-            case "off" -> Sampler.alwaysOff();
-            case "ratio" -> Sampler.traceIdRatioBased(mapSamplerRatio(samplerArg));
-            case "rate-limiting" -> new RateLimitingSampler(mapSamplerMaxTracesPerSecond(samplerArg));
-            default -> throw new IllegalArgumentException("Unrecognized value for sampler: " + samplerName);
-        };
+    private Sampler jaegerRemoteSampler() {
+
+        // we want to use the SDK's capability to parse the sampler's configuration
+        // from Java system properties
+        System.setProperty(PROPERTY_OTEL_SERVICE_NAME, serviceName);
+        otelTracesSampler.ifPresent(s -> System.setProperty(PROPERTY_OTEL_TRACES_SAMPLER, s));
+        otelTracesSamplerArg.ifPresent(s -> System.setProperty(PROPERTY_OTEL_TRACES_SAMPLER_ARG, s));
+        // but we do not want to register the SDK globally because that would conflict
+        // with the Quarkus OpenTelemetry extension which also tries to do so
+        final var sdkBuilder = AutoConfiguredOpenTelemetrySdk.builder().setResultAsGlobal(false);
+        final var sdk = sdkBuilder.build();
+        final var provider = new JaegerRemoteSamplerProvider();
+        return provider.createSampler(sdk.getConfig());
     }
 
-    private static Double mapSamplerRatio(final Optional<Object> samplerArg) {
-        return samplerArg.map(arg -> {
-            if (arg instanceof Double doubleArg) {
-                return doubleArg;
-            }
-            try {
-                return Double.parseDouble(arg.toString());
-            } catch (final NumberFormatException e) {
-                LOG.warn("invalid sampler ratio config (will use 1.0)", e);
-                return 1.0d;
-            }
-        }).orElse(1.0d);
+    private Sampler traceIdRatioBasedSampler(final TracerRuntimeConfig.SamplerConfig samplerConfig) {
+        final Optional<Double> samplerArg = otelTracesSamplerArg
+                .map(s -> {
+                    try {
+                        return Double.parseDouble(s);
+                    } catch (final NumberFormatException e) {
+                        LOG.warn("invalid sampler ratio config (will use 1.0)", e);
+                        return 1.0d;
+                    }
+                })
+                .or(() -> samplerConfig.ratio);
+
+        return Sampler.traceIdRatioBased(samplerArg.orElse(1.0d));
     }
 
-    private static Integer mapSamplerMaxTracesPerSecond(final Optional<Object> samplerArg) {
-        return samplerArg.map(arg -> {
-            if (arg instanceof Integer intArg) {
-                return intArg;
-            }
-            try {
-                return Integer.parseInt(arg.toString());
-            } catch (final NumberFormatException e) {
-                LOG.warn("invalid sampler rate-limit config (will use {})", DEFAULT_MAX_TRACES_PER_SECOND, e);
-                return DEFAULT_MAX_TRACES_PER_SECOND;
-            }
-        }).orElse(DEFAULT_MAX_TRACES_PER_SECOND);
+    private RateLimitingSampler rateLimitingSampler() {
+        final int tracesPerSecond = otelTracesSamplerArg
+                .map(s -> {
+                    try {
+                        return Integer.parseInt(s);
+                    } catch (final NumberFormatException e) {
+                        LOG.warn("invalid sampler rate-limit config (will use {})", DEFAULT_MAX_TRACES_PER_SECOND, e);
+                        return DEFAULT_MAX_TRACES_PER_SECOND;
+                    }
+                })
+                .orElse(DEFAULT_MAX_TRACES_PER_SECOND);
+        return new RateLimitingSampler(tracesPerSecond);
     }
 }
