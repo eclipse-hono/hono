@@ -12,8 +12,11 @@
  */
 package org.eclipse.hono.service.tracing;
 
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -28,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
+import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.extension.trace.jaeger.sampler.JaegerRemoteSamplerProvider;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
@@ -42,14 +45,14 @@ import io.quarkus.opentelemetry.runtime.tracing.TracerRuntimeConfig;
 @ApplicationScoped
 public final class SamplerProducer {
 
+    static final String PROPERTY_OTEL_SERVICE_NAME = "otel.service.name";
+    static final String PROPERTY_OTEL_TRACES_SAMPLER = "otel.traces.sampler";
+    static final String PROPERTY_OTEL_TRACES_SAMPLER_ARG = "otel.traces.sampler.arg";
+    static final String PROPERTY_QUARKUS_APPLICATION_NAME = "quarkus.application.name";
+
     private static final Logger LOG = LoggerFactory.getLogger(SamplerProducer.class);
 
     private static final int DEFAULT_MAX_TRACES_PER_SECOND = 1;
-
-    private static final String PROPERTY_OTEL_SERVICE_NAME = "otel.service.name";
-    private static final String PROPERTY_OTEL_TRACES_SAMPLER = "otel.traces.sampler";
-    private static final String PROPERTY_OTEL_TRACES_SAMPLER_ARG = "otel.traces.sampler.arg";
-    private static final String PROPERTY_QUARKUS_APPLICATION_NAME = "quarkus.application.name";
 
     private static final List<String> EVENT_BUS_ADDRESS_PREFIXES_TO_IGNORE = List.of(
             Constants.EVENT_BUS_ADDRESS_NOTIFICATION_PREFIX,
@@ -58,23 +61,108 @@ public final class SamplerProducer {
 
     private static final String INVALID_HTTP_REQUEST_SPAN_NAME = "/bad-request"; // see netty HttpRequestDecoder.createInvalidMessage()
 
-    @Inject
-    @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER)
-    Optional<String> otelTracesSampler;
-
-    @Inject
-    @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER_ARG)
-    Optional<String> otelTracesSamplerArg;
-
+    private ConfigProperties otelConfig;
     private String serviceName;
 
+    static class OtelConfigProperties implements ConfigProperties {
+
+        private final String otelServiceName;
+        private final String otelTracesSampler;
+        private final String otelTracesSamplerArg;
+
+        OtelConfigProperties(
+                final String serviceName,
+                final String tracesSampler,
+                final String tracesSamplerArg) {
+            this.otelServiceName = serviceName;
+            this.otelTracesSampler = tracesSampler;
+            this.otelTracesSamplerArg = tracesSamplerArg;
+            LOG.debug("using OTEL configuration [{}: {}, {}: {}]",
+                    PROPERTY_OTEL_TRACES_SAMPLER, tracesSampler,
+                    PROPERTY_OTEL_TRACES_SAMPLER_ARG, tracesSamplerArg);
+        }
+
+
+        @Override
+        public String getString(final String name) {
+            switch (name) {
+            case PROPERTY_OTEL_SERVICE_NAME:
+                return otelServiceName;
+            case PROPERTY_OTEL_TRACES_SAMPLER:
+                return otelTracesSampler;
+            default:
+                return null;
+            }
+        }
+
+        @Override
+        public Map<String, String> getMap(final String name) {
+            switch (name) {
+            case PROPERTY_OTEL_TRACES_SAMPLER_ARG:
+                return Optional.ofNullable(otelTracesSamplerArg)
+                        .map(s -> {
+                            final HashMap<String, String> map = new HashMap<>();
+                            final var kvPairs = s.split(",", -1);
+                            for (String kv : kvPairs) {
+                                final int idx = kv.indexOf("=");
+                                if (idx > 0 && kv.length() > idx) {
+                                    map.put(kv.substring(0, idx), kv.substring(idx + 1));
+                                }
+                            }
+                            return map;
+                        })
+                        .orElseGet(HashMap::new);
+            default:
+                return Map.of();
+            }
+        }
+
+        @Override
+        public Long getLong(final String name) {
+            return null;
+        }
+
+        @Override
+        public List<String> getList(final String name) {
+            return null;
+        }
+
+        @Override
+        public Integer getInt(final String name) {
+            return null;
+        }
+
+        @Override
+        public Duration getDuration(final String name) {
+            return null;
+        }
+
+        @Override
+        public Double getDouble(final String name) {
+            return null;
+        }
+
+        @Override
+        public Boolean getBoolean(final String name) {
+            return null;
+        }
+    }
+
     @Inject
-    void setServiceName(
+    SamplerProducer(
             @ConfigProperty(name = PROPERTY_OTEL_SERVICE_NAME)
             final Optional<String> otelServiceName,
+            @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER)
+            final Optional<String> otelTracesSampler,
+            @ConfigProperty(name = PROPERTY_OTEL_TRACES_SAMPLER_ARG)
+            final Optional<String> otelTracesSamplerArg,
             @ConfigProperty(name = PROPERTY_QUARKUS_APPLICATION_NAME)
             final String quarkusApplicationName) {
         this.serviceName = otelServiceName.orElse(quarkusApplicationName);
+        this.otelConfig = new OtelConfigProperties(
+                otelServiceName.orElse(null),
+                otelTracesSampler.orElse(null),
+                otelTracesSamplerArg.orElse(null));
     }
 
     /**
@@ -115,14 +203,14 @@ public final class SamplerProducer {
                     'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - \
                     custom Hono Sampler will not be applied to child spans""");
         }
-        LOG.debug("using OTEL configuration [{}: {}, {}: {}]",
-                PROPERTY_OTEL_TRACES_SAMPLER, otelTracesSampler.orElse(null),
-                PROPERTY_OTEL_TRACES_SAMPLER_ARG, otelTracesSamplerArg.orElse(null));
-        final String samplerName = otelTracesSampler.orElse(samplerConfig.samplerName);
+        final String samplerName = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER))
+                .orElse(samplerConfig.samplerName);
 
         Sampler sampler = getBaseSampler(samplerName, samplerConfig);
         sampler = Sampler.parentBased(sampler);
-        LOG.info("using OpenTelemetry Sampler [{}]", sampler.toString());
+        if (LOG.isInfoEnabled()) {
+            LOG.info("using OpenTelemetry Sampler [{}]", sampler.toString());
+        }
         sampler = new SamplingPrioritySampler(sampler);
 
         // drop spans for event bus message prefixes
@@ -153,22 +241,11 @@ public final class SamplerProducer {
     }
 
     private Sampler jaegerRemoteSampler() {
-
-        // we want to use the SDK's capability to parse the sampler's configuration
-        // from Java system properties
-        System.setProperty(PROPERTY_OTEL_SERVICE_NAME, serviceName);
-        otelTracesSampler.ifPresent(s -> System.setProperty(PROPERTY_OTEL_TRACES_SAMPLER, s));
-        otelTracesSamplerArg.ifPresent(s -> System.setProperty(PROPERTY_OTEL_TRACES_SAMPLER_ARG, s));
-        // but we do not want to register the SDK globally because that would conflict
-        // with the Quarkus OpenTelemetry extension which also tries to do so
-        final var sdkBuilder = AutoConfiguredOpenTelemetrySdk.builder().setResultAsGlobal(false);
-        final var sdk = sdkBuilder.build();
-        final var provider = new JaegerRemoteSamplerProvider();
-        return provider.createSampler(sdk.getConfig());
+        return new JaegerRemoteSamplerProvider().createSampler(otelConfig);
     }
 
     private Sampler traceIdRatioBasedSampler(final TracerRuntimeConfig.SamplerConfig samplerConfig) {
-        final Optional<Double> samplerArg = otelTracesSamplerArg
+        final Optional<Double> samplerArg = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER_ARG))
                 .map(s -> {
                     try {
                         return Double.parseDouble(s);
@@ -183,7 +260,7 @@ public final class SamplerProducer {
     }
 
     private RateLimitingSampler rateLimitingSampler() {
-        final int tracesPerSecond = otelTracesSamplerArg
+        final int tracesPerSecond = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER_ARG))
                 .map(s -> {
                     try {
                         return Integer.parseInt(s);
