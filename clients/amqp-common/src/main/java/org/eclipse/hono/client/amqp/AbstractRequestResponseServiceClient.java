@@ -307,7 +307,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
                 if (log.isTraceEnabled()) {
                     log.trace("caching of {} response [cache directive: {}] is not allowed",
                             response.getClass().getSimpleName(),
-                            response.getCacheDirective().toString());
+                            response.getCacheDirective());
                 }
             }
         }
