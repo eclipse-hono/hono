@@ -28,7 +28,7 @@ The Command Router API is defined by means of AMQP 1.0 message exchanges, i.e. a
 
 Clients use this command to *register* a protocol adapter instance as the consumer of command & control messages for a device or gateway currently connected to that particular adapter instance.
 
-Clients can provide an optional `send_event` parameter with value `true` to trigger [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `-1` indicating the device is ready to receive commands.
+Clients can provide an optional `send_event` parameter with value `true` to trigger a [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `-1` indicating the device is ready to receive commands.
 
 Clients can provide an optional `lifespan` parameter to make the registration entry expire after the given number of seconds. Note that implementations of this API have to support this feature, otherwise the Command Router service component might fail to correctly route command messages.
 
@@ -48,7 +48,7 @@ The following table provides an overview of the properties a client needs to set
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `register-cmd-consumer`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance that currently handles commands for the device or gateway identified by the *device_id* property. |
 | *device_id*           | yes       | *application-properties* | *string*  | MUST contain the ID of the device that is subject to the operation. |
-| *send_event*          | no        | *application-properties* | *boolean* | If set to `true` [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `-1` should be sent indicating the device is ready to receive commands. |
+| *send_event*          | no        | *application-properties* | *boolean* | If set to `true`, a [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `-1` should be sent indicating the device is ready to receive commands. |
 | *lifespan*            | no        | *application-properties* | *int*     | The lifespan of the mapping entry in seconds. After that period, the registration entry shall be treated as non-existent by the Command Router service component. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
@@ -72,7 +72,7 @@ For status codes indicating an error (codes in the `400 - 499` range) the messag
 
 Clients use this command to *unregister* a command consumer for the given device. The consumer registration entry to be removed is identified by the provided protocol adapter instance handling command & control messages for a given device. The registration entry for the device is only removed, if the adapter instance identifier of the current registration entry matches the one given in the request.
 
-Clients can provide an optional `send_event` parameter with value `true` to trigger [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `0` indicating the device is not ready to receive commands.
+Clients can provide an optional `send_event` parameter with value `true` to trigger a [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `0` indicating the device is not ready to receive commands.
 
 This API doesn't mandate checks on the validity of the given device in order not to introduce a dependency on the *Device Registration API*. However, implementations of this API may choose to perform such checks or impose a restriction on the overall amount of data that can be stored per tenant in order to protect against malicious requests.
 
@@ -90,7 +90,7 @@ The following table provides an overview of the properties a client needs to set
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `unregister-cmd-consumer`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance to remove the registration entry for. Only if this adapter instance is currently associated with the device or gateway identified by the *device_id* property, the registration entry will be removed. |
 | *device_id*           | yes       | *application-properties* | *string*  | MUST contain the ID of the device that is subject to the operation. |
-| *send_event*          | no        | *application-properties* | *boolean* | If set to `true` [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `0` should be sent indicating the device is not ready to receive commands. |
+| *send_event*          | no        | *application-properties* | *boolean* | If set to `true`, a [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}}) with *ttd* value `0` should be sent indicating the device is not ready to receive commands. |
 
 
 The body of the message SHOULD be empty and will be ignored if it is not.
