@@ -89,6 +89,11 @@ public final class MessageHelper {
     public static final String APP_PROPERTY_CMD_VIA = "via";
 
     /**
+     * The name of the AMQP 1.0 message application property containing flag if connection event should be sent.
+     */
+    public static final String APP_PROPERTY_SEND_EVENT = "send_event";
+
+    /**
      * The AMQP 1.0 <em>delivery-count</em> message header property.
      */
     public static final String SYS_HEADER_PROPERTY_DELIVERY_COUNT = "delivery-count";

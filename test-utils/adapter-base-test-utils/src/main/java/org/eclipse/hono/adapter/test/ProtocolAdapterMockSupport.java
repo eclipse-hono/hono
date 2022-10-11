@@ -30,12 +30,12 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -68,14 +68,14 @@ public abstract class ProtocolAdapterMockSupport {
     protected CredentialsClient credentialsClient;
     protected CommandRouterClient commandRouterClient;
     protected EventSender eventSender;
-    protected CommandConsumerFactory commandConsumerFactory;
+    protected ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     protected CommandResponseSender commandResponseSender;
     protected DeviceRegistrationClient registrationClient;
     protected TenantClient tenantClient;
     protected TelemetrySender telemetrySender;
 
-    private CommandConsumerFactory createCommandConsumerFactory() {
-        final CommandConsumerFactory factory = mock(CommandConsumerFactory.class);
+    private ProtocolAdapterCommandConsumerFactory createCommandConsumerFactory() {
+        final ProtocolAdapterCommandConsumerFactory factory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(factory.start()).thenReturn(Future.succeededFuture());
         when(factory.stop()).thenReturn(Future.succeededFuture());
         return factory;

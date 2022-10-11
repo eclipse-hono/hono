@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client.command;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -38,15 +38,14 @@ import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
 
-
 /**
- * Tests verifying behavior of {@link CommandRouterCommandConsumerFactory}.
+ * Tests verifying behavior of {@link ProtocolAdapterCommandConsumerFactoryImpl}.
  *
  */
-public class CommandRouterCommandConsumerFactoryTest {
+public class ProtocolAdapterCommandConsumerFactoryTest {
 
     private CommandRouterClient commandRouterClient;
-    private CommandRouterCommandConsumerFactory factory;
+    private ProtocolAdapterCommandConsumerFactoryImpl factory;
 
     /**
      * Sets up the fixture.
@@ -54,9 +53,9 @@ public class CommandRouterCommandConsumerFactoryTest {
     @BeforeEach
     void setUp() {
         commandRouterClient = mock(CommandRouterClient.class, withSettings().extraInterfaces(ConnectionLifecycle.class));
-        when(commandRouterClient.registerCommandConsumer(anyString(), anyString(), anyString(), any(Duration.class), any()))
+        when(commandRouterClient.registerCommandConsumer(anyString(), anyString(), anyBoolean(), anyString(), any(Duration.class), any()))
             .thenReturn(Future.succeededFuture());
-        factory = new CommandRouterCommandConsumerFactory(commandRouterClient, "test-adapter");
+        factory = new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, "test-adapter");
     }
 
     @SuppressWarnings("unchecked")
@@ -69,9 +68,9 @@ public class CommandRouterCommandConsumerFactoryTest {
         verify(conLifecycle).addReconnectListener(reconnectListener.capture());
         factory.setMaxTenantIdsPerRequest(2);
 
-        factory.createCommandConsumer("tenant1", "device1", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant2", "device2", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant3", "device3", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant1", "device1", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant2", "device2", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant3", "device3", "adapter", true, ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
 
         // WHEN connection is lost and re-established
         final List<String> enabledTenants = new ArrayList<>();

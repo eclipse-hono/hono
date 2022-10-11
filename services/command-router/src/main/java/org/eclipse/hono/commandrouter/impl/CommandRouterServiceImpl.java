@@ -30,6 +30,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
@@ -40,9 +41,15 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
+import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +77,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
     private final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider;
+    private final MessagingClientProvider<EventSender> eventSenderProvider;
     private final AdapterInstanceStatusService adapterInstanceStatusService;
     private final Tracer tracer;
     private final Deque<Pair<String, Integer>> tenantsToEnable = new ArrayDeque<>();
@@ -90,6 +98,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
      * @param commandConsumerFactoryProvider The factory provider to use for creating clients to receive commands.
+     * @param eventSenderProvider The factory provider to use for creating clients to send events.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
      * @param tracer The Open Tracing tracer to use for tracking processing of requests.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -100,6 +109,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
             final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider,
+            final MessagingClientProvider<EventSender> eventSenderProvider,
             final AdapterInstanceStatusService adapterInstanceStatusService,
             final Tracer tracer) {
 
@@ -108,6 +118,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
         this.commandConsumerFactoryProvider = Objects.requireNonNull(commandConsumerFactoryProvider);
+        this.eventSenderProvider = Objects.requireNonNull(eventSenderProvider);
         this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
         this.tracer = Objects.requireNonNull(tracer);
     }
@@ -142,6 +153,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 ((Lifecycle) deviceConnectionInfo).start();
             }
             commandConsumerFactoryProvider.start();
+            eventSenderProvider.start();
             adapterInstanceStatusService.start();
         }
 
@@ -160,6 +172,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             if (deviceConnectionInfo instanceof Lifecycle) {
                 results.add(((Lifecycle) deviceConnectionInfo).stop());
             }
+            results.add(eventSenderProvider.stop());
             results.add(commandConsumerFactoryProvider.stop());
             results.add(adapterInstanceStatusService.stop());
             tenantsToEnable.clear();
@@ -192,20 +205,23 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     }
 
     @Override
-    public Future<CommandRouterResult> registerCommandConsumer(final String tenantId,
-            final String deviceId, final String adapterInstanceId, final Duration lifespan,
-            final Span span) {
+    public Future<CommandRouterResult> registerCommandConsumer(final String tenantId, final String deviceId,
+            final boolean sendEvent, final String adapterInstanceId, final Duration lifespan, final Span span) {
 
-        return tenantClient.get(tenantId, span.context())
+        final Future<TenantObject> tenantObjectFuture = tenantClient.get(tenantId, span.context());
+        return tenantObjectFuture
                 .compose(tenantObject -> {
-                    final CommandConsumerFactory primaryFactory = commandConsumerFactoryProvider.getClient(tenantObject);
-                    final Future<Void> primaryConsumerFuture = primaryFactory.createCommandConsumer(tenantId, span.context());
+                    final CommandConsumerFactory primaryFactory = commandConsumerFactoryProvider
+                            .getClient(tenantObject);
+                    final Future<Void> primaryConsumerFuture = primaryFactory.createCommandConsumer(tenantId,
+                            span.context());
 
                     if (primaryFactory.getMessagingType() == MessagingType.kafka
                             && commandConsumerFactoryProvider.getClient(MessagingType.amqp) != null) {
                         // tenant is configured to use Kafka but AMQP is also configured
                         span.log("also creating secondary, AMQP-based consumer");
-                        final Future<Void> amqpConsumerFuture = commandConsumerFactoryProvider.getClient(MessagingType.amqp)
+                        final Future<Void> amqpConsumerFuture = commandConsumerFactoryProvider
+                                .getClient(MessagingType.amqp)
                                 .createCommandConsumer(tenantId, span.context());
                         return CompositeFuture.join(primaryConsumerFuture, amqpConsumerFuture)
                                 .map(v -> (Void) null)
@@ -221,11 +237,24 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                     return primaryConsumerFuture;
                 })
                 .compose(v -> deviceConnectionInfo
-                        .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
+                        .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId,
+                                getSanitizedLifespan(lifespan), span)
                         .onFailure(thr -> {
-                            LOG.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId, deviceId, thr);
+                            LOG.info("error setting command handling adapter instance [tenant: {}, device: {}]",
+                                    tenantId, deviceId, thr);
                         }))
-                .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
+                .compose(v2 -> {
+                    if (sendEvent) {
+                        return sendConnectedTtdEvent(tenantObjectFuture.result(), deviceId, adapterInstanceId,
+                                span.context()).onFailure(thr -> {
+                                    LOG.info("error sending connected Ttd event [tenant: {}, device: {}]",
+                                            tenantId, deviceId, thr);
+                                });
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                })
+                .map(v3 -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
@@ -237,18 +266,41 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     @Override
     public Future<CommandRouterResult> unregisterCommandConsumer(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Span span) {
+            final boolean sendEvent, final String adapterInstanceId, final Span span) {
 
         return deviceConnectionInfo
                 .removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
                 .recover(thr -> {
                     if (ServiceInvocationException.extractStatusCode(thr) != HttpURLConnection.HTTP_PRECON_FAILED) {
-                        LOG.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId, deviceId, thr);
+                        LOG.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
+                                deviceId, thr);
+                        // for no precon-failed errors continue and send the event
+                        return sendDisconnectEventIfNeeded(tenantId, deviceId, sendEvent, adapterInstanceId, span)
+                                // keep the original error and not propagate the event send result
+                                .recover(thr2 -> Future.failedFuture(thr)).compose(v -> Future.failedFuture(thr));
+                    } else {
+                        // for precon-failed errors do not send the event
+                        return Future.failedFuture(thr);
                     }
-                    return Future.failedFuture(thr);
                 })
+                .compose(v -> sendDisconnectEventIfNeeded(tenantId, deviceId, sendEvent, adapterInstanceId, span))
                 .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));
+    }
+
+    private Future<Void> sendDisconnectEventIfNeeded(final String tenantId, final String deviceId,
+            final boolean sendEvent, final String adapterInstanceId, final Span span) {
+        if (sendEvent) {
+            return tenantClient.get(tenantId, span.context())
+                    .compose(tenantObject -> sendDisconnectedTtdEvent(tenantObject, deviceId, adapterInstanceId,
+                            span.context())
+                                    .onFailure(thr -> {
+                                        LOG.info("error sending disconnected Ttd event [tenant: {}, device: {}]",
+                                                tenantId, deviceId, thr);
+                                    }));
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     @Override
@@ -404,5 +456,87 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         procedure.tryComplete(Status.OK());
                     }
                 });
+    }
+
+    /**
+     * Sends an <em>empty notification</em> event for a device that will remain connected for an indeterminate amount of
+     * time.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(TenantObject, String, String, Integer, SpanContext)} with a TTD of
+     * {@code -1}.
+     *
+     * @param tenant The tenant that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param adapterInstanceId The adapter instanceId or {@code null}.
+     * @param context The currently active OpenTracing span that is used to trace the sending of the event.
+     * @return A future indicating the outcome of the operation. The future will be succeeded if the TTD event has been
+     *         sent downstream successfully. Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<Void> sendConnectedTtdEvent(
+            final TenantObject tenant,
+            final String deviceId,
+            final String adapterInstanceId,
+            final SpanContext context) {
+
+        return sendTtdEvent(tenant, deviceId, adapterInstanceId, MessageHelper.TTD_VALUE_UNLIMITED, context);
+    }
+
+    /**
+     * Sends an <em>empty notification</em> event for a device that has disconnected from a protocol adapter.
+     * <p>
+     * This method invokes {@link #sendTtdEvent(TenantObject, String, String, Integer, SpanContext)} with a TTD of
+     * {@code 0}.
+     *
+     * @param tenant The tenant object that the device belongs to, who owns the device.
+     * @param deviceId The device for which the TTD is reported.
+     * @param adapterInstanceId The authenticated device or {@code null}.
+     * @param context The currently active OpenTracing span that is used to trace the sending of the event.
+     * @return A future indicating the outcome of the operation. The future will be succeeded if the TTD event has been
+     *         sent downstream successfully. Otherwise, it will be failed with a {@link ServiceInvocationException}.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<Void> sendDisconnectedTtdEvent(
+            final TenantObject tenant,
+            final String deviceId,
+            final String adapterInstanceId,
+            final SpanContext context) {
+
+        return sendTtdEvent(tenant, deviceId, adapterInstanceId, 0, context);
+    }
+
+    private EventSender getEventSender(final TenantObject tenant) {
+        return eventSenderProvider.getClient(tenant);
+    }
+
+    private Future<Void> sendTtdEvent(
+            final TenantObject tenant,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Integer ttd,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(ttd);
+
+        final Map<String, Object> props = new HashMap<>();
+        props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterInstanceId);
+        props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
+        props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd);
+        return getEventSender(tenant).sendEvent(
+                tenant,
+                new RegistrationAssertion(deviceId),
+                EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION,
+                null,
+                props,
+                context)
+                .onSuccess(s -> LOG.debug(
+                        "successfully sent TTD notification [tenant: {}, device-id: {}, TTD: {}]",
+                        tenant, deviceId, ttd))
+                .onFailure(t -> LOG.debug(
+                        "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}]",
+                        tenant, deviceId, ttd));
+
     }
 }

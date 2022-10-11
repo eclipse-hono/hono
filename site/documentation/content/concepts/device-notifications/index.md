@@ -98,9 +98,10 @@ with a *ttd* value of `0`.
 
 ### MQTT protocol adapter
 
-The MQTT protocol adapter automatically sends a *Time till disconnect notification* with a *ttd* value of `-1`
-for a device that subscribes to the appropriate command topic. Please refer to the
+The MQTT protocol adapter automatically initiates sending a *Time till disconnect notification* via the *Command Router*
+with a *ttd* value of `-1` for a device that subscribes to the appropriate command topic. Please refer to the
 [MQTT Adapter user guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details).
 
-When a device unsubscribes again, the adapter automatically sends a *Time till disconnect notification* with a *ttd* value of `0`.
+When a device unsubscribes again, the adapter automatically initiates a *Time till disconnect notification* via the
+*Command Router* with a *ttd* value of `0`.
 

@@ -394,11 +394,13 @@ packet with the *Failure* value is received, provided a valid filter is used. Wh
 commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been
 used to subscribe.
 
-When a device has successfully subscribed, the adapter sends an
-[empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream
-messaging infrastructure with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands
-until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a
-device unsubscribes from commands.
+When a device has successfully subscribed, the adapter initiates sending an
+[empty notification]({{< relref "/api/event#empty-notification" >}}) via the
+[Command Router]({{< relref "/api/command-router#register-command-consumer-for-device" >}}) on behalf of the device to
+the downstream messaging infrastructure with the *ttd* header set to `-1`, indicating that the device will be ready to
+receive commands until further notice. Analogously, the adapter initiates sending an empty notification via the
+[Command Router]({{< relref "/api/command-router#unregister-command-consumer-for-device" >}}) with the *ttd* header set
+to `0` when a device unsubscribes from commands.
 
 Commands can be sent following a *request/response* pattern or being *one-way*. 
 

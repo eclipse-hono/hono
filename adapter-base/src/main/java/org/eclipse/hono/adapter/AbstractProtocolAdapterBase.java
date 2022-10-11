@@ -27,11 +27,11 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -87,7 +87,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
-    private CommandConsumerFactory commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private CommandRouterClient commandRouterClient;
     private ConnectionLimitManager connectionLimitManager;
     private ConnectionEventProducer connectionEventProducer;
@@ -244,12 +244,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param factory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    public final void setCommandConsumerFactory(final CommandConsumerFactory factory) {
+    public final void setCommandConsumerFactory(final ProtocolAdapterCommandConsumerFactory factory) {
         this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
 
     @Override
-    public final CommandConsumerFactory getCommandConsumerFactory() {
+    public final ProtocolAdapterCommandConsumerFactory getCommandConsumerFactory() {
         return this.commandConsumerFactory;
     }
 

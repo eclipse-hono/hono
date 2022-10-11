@@ -39,11 +39,11 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -100,7 +100,7 @@ public class AbstractProtocolAdapterBaseTest {
     private TelemetrySender kafkaTelemetrySender;
     private EventSender amqpEventSender;
     private EventSender kafkaEventSender;
-    private CommandConsumerFactory commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private CommandResponseSender amqpCommandResponseSender;
     private CommandResponseSender kafkaCommandResponseSender;
     private CommandRouterClient commandRouterClient;
@@ -130,7 +130,7 @@ public class AbstractProtocolAdapterBaseTest {
         kafkaEventSender = mockMessagingClient(EventSender.class, MessagingType.kafka);
         when(kafkaEventSender.start()).thenReturn(Future.succeededFuture());
 
-        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
 
         amqpCommandResponseSender = mockMessagingClient(CommandResponseSender.class, MessagingType.amqp);

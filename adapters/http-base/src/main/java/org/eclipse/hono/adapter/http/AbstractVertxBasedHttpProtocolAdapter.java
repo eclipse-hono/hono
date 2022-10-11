@@ -30,9 +30,9 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -1045,13 +1045,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
         };
 
-        final Future<CommandConsumer> commandConsumerFuture;
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -1059,6 +1060,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -1112,7 +1114,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                                     .start();
                             TracingHelper.setDeviceTags(closeConsumerSpan, tenantObject.getTenantId(), deviceId);
-                            return consumer.close(closeConsumerSpan.context())
+                            return consumer.close(false, closeConsumerSpan.context())
                                     .onComplete(ar -> {
                                         if (ar.failed()) {
                                             TracingHelper.logError(closeConsumerSpan, ar.cause());

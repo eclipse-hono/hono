@@ -41,14 +41,14 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
- * A factory for creating consumers of command messages.
+ * A Protocol Adapter factory for creating consumers of command messages.
  * <p>
  * This implementation uses the Command Router service and receives commands forwarded by the Command Router
  * on the internal command endpoint.
  */
-public class CommandRouterCommandConsumerFactory implements CommandConsumerFactory, ServiceClient {
+public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapterCommandConsumerFactory, ServiceClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CommandRouterCommandConsumerFactory.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ProtocolAdapterCommandConsumerFactoryImpl.class);
 
     private static final AtomicInteger ADAPTER_INSTANCE_ID_COUNTER = new AtomicInteger();
 
@@ -71,11 +71,12 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
      * @param adapterName The name of the protocol adapter.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public CommandRouterCommandConsumerFactory(final CommandRouterClient commandRouterClient, final String adapterName) {
+    public ProtocolAdapterCommandConsumerFactoryImpl(final CommandRouterClient commandRouterClient, final String adapterName) {
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
         Objects.requireNonNull(adapterName);
 
-        this.adapterInstanceId = CommandConstants.getNewAdapterInstanceId(adapterName, ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
+        this.adapterInstanceId = CommandConstants.getNewAdapterInstanceId(adapterName,
+                ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
         if (commandRouterClient instanceof ConnectionLifecycle<?>) {
             ((ConnectionLifecycle<?>) commandRouterClient).addReconnectListener(con -> reenableCommandRouting());
         }
@@ -160,9 +161,10 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
     }
 
     @Override
-    public final Future<CommandConsumer> createCommandConsumer(
+    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
+            final boolean sendEvent,
             final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
@@ -171,14 +173,15 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
 
-        return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler, lifespan, context);
+        return doCreateCommandConsumer(tenantId, deviceId, null, sendEvent, commandHandler, lifespan, context);
     }
 
     @Override
-    public final Future<CommandConsumer> createCommandConsumer(
+    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final String gatewayId,
+            final boolean sendEvent,
             final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
@@ -188,23 +191,27 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(commandHandler);
 
-        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler, lifespan, context);
+        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, sendEvent, commandHandler, lifespan, context);
     }
 
-    private Future<CommandConsumer> doCreateCommandConsumer(
+    private Future<ProtocolAdapterCommandConsumer> doCreateCommandConsumer(
             final String tenantId,
             final String deviceId,
             final String gatewayId,
+            final boolean sendEvent,
             final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
-        // lifespan greater than what can be expressed in nanoseconds (i.e. 292 years) is considered unlimited, preventing ArithmeticExceptions down the road
+        // lifespan greater than what can be expressed in nanoseconds (i.e. 292 years) is considered unlimited,
+        // preventing ArithmeticExceptions down the road
         final Duration sanitizedLifespan = lifespan == null || lifespan.isNegative()
                 || lifespan.getSeconds() > (Long.MAX_VALUE / 1000_000_000L) ? Duration.ofSeconds(-1) : lifespan;
-        LOG.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId, gatewayId);
+        LOG.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId,
+                gatewayId);
 
         // register the command handler
-        // for short-lived command consumers, let the consumer creation span context be used as reference in the command span
+        // for short-lived command consumers, let the consumer creation span context be used as reference in the command
+        // span
         final SpanContext consumerCreationContextToUse = !sanitizedLifespan.isNegative()
                 && sanitizedLifespan.toSeconds() <= TenantConstants.DEFAULT_MAX_TTD ? context : null;
         final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(tenantId, deviceId, gatewayId,
@@ -213,18 +220,21 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         final Instant lifespanStart = Instant.now();
 
         return commandRouterClient
-                .registerCommandConsumer(tenantId, deviceId, adapterInstanceId, sanitizedLifespan, context)
+                .registerCommandConsumer(tenantId, deviceId, sendEvent, adapterInstanceId, sanitizedLifespan, context)
                 .onFailure(thr -> {
-                    LOG.info("error registering consumer with the command router service [tenant: {}, device: {}]",
-                            tenantId, deviceId, thr);
+                    LOG.info(
+                            "error registering consumer with the command router service [tenant: {}, device: {}, sendEvent: {}]",
+                            tenantId, deviceId, sendEvent, thr);
                     // handler association failed - unregister the handler
                     commandHandlers.removeCommandHandler(tenantId, deviceId);
                 })
                 .map(v -> {
-                    return new CommandConsumer() {
+                    return new ProtocolAdapterCommandConsumer() {
+
                         @Override
-                        public Future<Void> close(final SpanContext spanContext) {
-                            return removeCommandConsumer(commandHandlerWrapper, sanitizedLifespan,
+                        public Future<Void> close(final boolean sendEvent, final SpanContext spanContext) {
+                            return removeCommandConsumer(
+                                    commandHandlerWrapper, sendEvent, sanitizedLifespan,
                                     lifespanStart, spanContext);
                         }
                     };
@@ -233,6 +243,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
 
     private Future<Void> removeCommandConsumer(
             final CommandHandlerWrapper commandHandlerWrapper,
+            final boolean sendEvent,
             final Duration lifespan,
             final Instant lifespanStart,
             final SpanContext onCloseSpanContext) {
@@ -257,10 +268,11 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
                     "local command handler already replaced or removed"));
         }
         return commandRouterClient.unregisterCommandConsumer(
-                    tenantId,
-                    deviceId,
-                    adapterInstanceId,
-                    onCloseSpanContext)
+                tenantId,
+                deviceId,
+                sendEvent,
+                adapterInstanceId,
+                onCloseSpanContext)
                 .recover(thr -> {
                     if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
                         final boolean entryMayHaveExpired = !lifespan.isNegative() && Instant.now().isAfter(lifespanStart.plus(lifespan));

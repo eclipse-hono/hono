@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -77,6 +77,7 @@ public interface CommandRouterService {
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
+     * @param sendEvent {@code true} if <em>connected notification</em> event should be sent.
      * @param adapterInstanceId The protocol adapter instance id.
      * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan. The guaranteed granularity taken into account
@@ -88,7 +89,7 @@ public interface CommandRouterService {
      *         The <em>status</em> will be <em>204 No Content</em> if the operation completed successfully.
      * @throws NullPointerException if any of the parameters except lifespan is {@code null}.
      */
-    Future<CommandRouterResult> registerCommandConsumer(String tenantId, String deviceId,
+    Future<CommandRouterResult> registerCommandConsumer(String tenantId, String deviceId, boolean sendEvent,
             String adapterInstanceId, Duration lifespan, Span span);
 
     /**
@@ -98,6 +99,7 @@ public interface CommandRouterService {
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
+     * @param sendEvent {@code true} if <em>disconnected notification</em> event should be sent.
      * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
@@ -106,7 +108,8 @@ public interface CommandRouterService {
      *         The <em>status</em> will be <em>204 No Content</em> if the entry was successfully removed.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<CommandRouterResult> unregisterCommandConsumer(String tenantId, String deviceId, String adapterInstanceId, Span span);
+    Future<CommandRouterResult> unregisterCommandConsumer(String tenantId, String deviceId, boolean sendEvent,
+            String adapterInstanceId, Span span);
 
     /**
      * Adds tenants for which command routing should be enabled.

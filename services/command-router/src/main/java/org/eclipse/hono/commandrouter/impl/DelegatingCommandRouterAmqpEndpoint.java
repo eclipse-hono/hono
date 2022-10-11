@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
@@ -200,6 +201,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 getClass().getSimpleName()
         ).start();
 
+        final Boolean sendEvent = getSendEvent(request);
+
         final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
@@ -212,7 +215,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             logger.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
-            resultFuture = getService().registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, span)
+            resultFuture = getService().registerCommandConsumer(tenantId, deviceId, sendEvent, adapterInstanceId, lifespan, span)
                     .map(res -> AbstractRequestResponseEndpoint.getAmqpReply(
                             CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
                             tenantId,
@@ -247,6 +250,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 getClass().getSimpleName()
         ).start();
 
+        final Boolean sendEvent =  getSendEvent(request);
+
         final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
@@ -257,7 +262,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             logger.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
                     tenantId, deviceId, adapterInstanceId);
 
-            resultFuture = getService().unregisterCommandConsumer(tenantId, deviceId, adapterInstanceId, span)
+            resultFuture = getService().unregisterCommandConsumer(tenantId, deviceId, sendEvent, adapterInstanceId, span)
                     .map(res -> AbstractRequestResponseEndpoint.getAmqpReply(
                             CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
                             tenantId,
@@ -346,5 +351,12 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     @Override
     public final String getName() {
         return CommandRouterConstants.COMMAND_ROUTER_ENDPOINT;
+    }
+
+    private static Boolean getSendEvent(final Message request) {
+        return Optional.ofNullable(AmqpUtils.getApplicationProperty(
+                request,
+                MessageHelper.APP_PROPERTY_SEND_EVENT,
+                Boolean.class)).orElse(false);
     }
 }

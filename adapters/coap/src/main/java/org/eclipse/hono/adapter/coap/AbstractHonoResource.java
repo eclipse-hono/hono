@@ -33,8 +33,8 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -306,7 +306,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 .onSuccess(effectiveTtd -> Optional.ofNullable(effectiveTtd)
                                         .ifPresent(v -> TracingHelper.TAG_DEVICE_TTD.set(currentSpan, v)));
                     });
-            final Future<CommandConsumer> commandConsumerTracker = ttdTracker
+            final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
                     .compose(ttd -> createCommandConsumer(
                             ttd,
                             tenantTracker.result(),
@@ -354,7 +354,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     // device in order to prevent a race condition when the device immediately sends a new
                     // request and the CommandConsumer from the current request has not been closed yet
                     return Optional.ofNullable(commandConsumerTracker.result())
-                            .map(consumer -> consumer.close(currentSpan.context())
+                            .map(consumer -> consumer.close(false, currentSpan.context())
                                     .otherwise(thr -> null))
                             .orElseGet(Future::succeededFuture);
 
@@ -395,7 +395,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     LOG.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenantId, deviceId, endpoint.getCanonicalName(), t);
                     final Future<Void> commandConsumerClosedTracker = Optional.ofNullable(commandConsumerTracker.result())
-                            .map(consumer -> consumer.close(currentSpan.context())
+                            .map(consumer -> consumer.close(false, currentSpan.context())
                                     .otherwise(thr -> null))
                             .orElseGet(Future::succeededFuture);
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
@@ -520,7 +520,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      *         created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
-    protected final Future<CommandConsumer> createCommandConsumer(
+    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
@@ -626,13 +626,14 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             }
         };
 
-        final Future<CommandConsumer> commandConsumerFuture;
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getAdapter().getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -640,6 +641,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             commandConsumerFuture = getAdapter().getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
+                    false,
                     commandHandler,
                     Duration.ofSeconds(ttdSecs),
                     waitForCommandSpan.context());
@@ -656,16 +658,16 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                         context.startAcceptTimer(vertx, tenantObject, getAdapter().getConfig().getTimeoutToAck());
                     }
                     // wrap the consumer to be able to create a separate span on closing the consumer (errors should just be logged on that span, not the parent)
-                    return new CommandConsumer() {
+                    return new ProtocolAdapterCommandConsumer() {
                         @Override
-                        public Future<Void> close(final SpanContext spanContext) {
+                        public Future<Void> close(final boolean sendEvent, final SpanContext spanContext) {
                             final Span closeConsumerSpan = TracingHelper
                                     .buildChildSpan(getTracer(), spanContext, "close command consumer",
                                             getAdapter().getTypeName())
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                                     .start();
                             TracingHelper.setDeviceTags(closeConsumerSpan, tenantObject.getTenantId(), deviceId);
-                            return consumer.close(closeConsumerSpan.context())
+                            return consumer.close(sendEvent, closeConsumerSpan.context())
                                     .onFailure(thr -> TracingHelper.logError(closeConsumerSpan, thr))
                                     .onComplete(ar -> closeConsumerSpan.finish());
                         }

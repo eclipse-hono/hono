@@ -32,8 +32,8 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -145,10 +145,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         prepareClients();
         setServiceClients(adapter);
 
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
-                thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(2);
@@ -506,11 +506,11 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         final CommandContext commandContext = givenARequestResponseCommandContext(
                 "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null, MessagingType.amqp);
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(), any(), any()))
-                .thenAnswer(invocation -> {
-                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), eq(false), any(), any(),
+                any())).thenAnswer(invocation -> {
+                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(3);
                     consumer.apply(commandContext);
                     return Future.succeededFuture(commandConsumer);
                 });
@@ -536,9 +536,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                any(), any(), any());
+                                eq(false), any(), any(), any());
                         // and the command consumer has been closed again
-                        verify(commandConsumer).close(any());
+                        verify(commandConsumer).close(eq(false), any());
                         verify(commandContext).accept();
                     });
                     ctx.completeNow();
@@ -559,10 +559,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         sendTelemetryOutcome.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         givenATelemetrySenderForAnyTenant(sendTelemetryOutcome);
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
-            thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         // WHEN the device posts a telemetry message including a TTD
         httpClient.post("/telemetry")
@@ -573,12 +573,12 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             // THEN the response fails with 503 - error thrown by sending telemetry
             .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
             .expect(this::assertCorsHeaders)
-            .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
-                ctx.verify(() -> {
-                    verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                        any(), any(), any());
-                    // and the command consumer has been closed again
-                    verify(commandConsumer).close(any());
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> {
+                        verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                                eq(false), any(), any(), any());
+                        // and the command consumer has been closed again
+                    verify(commandConsumer).close(eq(false), any());
                 });
                 ctx.completeNow();
             }));

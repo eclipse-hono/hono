@@ -432,9 +432,9 @@ public class TelemetryResourceTest extends ResourceTestBase {
         }
 
         when(commandContext.get(anyString())).thenReturn(commandTimer);
-        when(commandConsumerFactory.createCommandConsumer(eq(tenantId), eq(deviceId), any(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(tenantId), eq(deviceId), eq(false), any(), any(), any()))
             .thenAnswer(invocation -> {
-                final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+                final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(3);
                 consumer.apply(commandContext);
                 return Future.succeededFuture(commandConsumer);
             });
@@ -516,12 +516,12 @@ public class TelemetryResourceTest extends ResourceTestBase {
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(), any(), any()))
-            .thenAnswer(invocation -> {
-                final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
-                consumer.apply(commandContext);
-                return Future.succeededFuture(commandConsumer);
-            });
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), eq(false), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(3);
+                    consumer.apply(commandContext);
+                    return Future.succeededFuture(commandConsumer);
+                });
 
         // WHEN a device publishes a telemetry message with a hono-ttd parameter
         final Buffer payload = Buffer.buffer("some payload");

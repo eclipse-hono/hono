@@ -36,8 +36,8 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -93,7 +93,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     private static final String ADAPTER_TYPE = "http";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private CommandConsumer commandConsumer;
+    private ProtocolAdapterCommandConsumer commandConsumer;
     private Vertx vertx;
     private Context context;
     private HttpAdapterMetrics metrics;
@@ -118,10 +118,10 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         createClients();
         prepareClients();
 
-        commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
+        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -240,7 +240,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), eq(false), any(), any(),
+                any());
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and has not been reported as processed
@@ -291,7 +292,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), eq(false), any(), any(),
+                any());
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -683,8 +685,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
             return 0;
         });
         // and the creation of the command consumer completes at a later point
-        final Promise<CommandConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
+        final Promise<ProtocolAdapterCommandConsumer> commandConsumerPromise = Promise.promise();
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(false), any(), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.doUploadMessage(ctx, "tenant", "device");
@@ -703,7 +705,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(TtdStatus.NONE),
                 any());
         // and the command consumer is closed
-        verify(commandConsumer).close(any());
+        verify(commandConsumer).close(eq(false), any());
     }
 
     /**

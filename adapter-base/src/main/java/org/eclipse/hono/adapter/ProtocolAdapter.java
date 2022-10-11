@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
@@ -94,7 +94,7 @@ public interface ProtocolAdapter {
      *
      * @return The factory.
      */
-    CommandConsumerFactory getCommandConsumerFactory();
+    ProtocolAdapterCommandConsumerFactory getCommandConsumerFactory();
 
     /**
      * Gets the client being used for sending command response messages downstream.

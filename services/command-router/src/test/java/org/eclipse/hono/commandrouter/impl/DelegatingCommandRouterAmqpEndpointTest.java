@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.commandrouter.impl;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +30,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.commandrouter.CommandRouterResult;
 import org.eclipse.hono.commandrouter.CommandRouterService;
-import org.eclipse.hono.commandrouter.impl.DelegatingCommandRouterAmqpEndpoint;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +43,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonHelper;
-
 
 /**
  * Tests verifying behavior of {@link DelegatingCommandRouterAmqpEndpoint}.

@@ -59,11 +59,11 @@ import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationType;
@@ -480,8 +480,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(mock(CommandConsumer.class)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(), any()))
+            .thenReturn(Future.succeededFuture(mock(ProtocolAdapterCommandConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -549,10 +549,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnEventSenderForAnyTenant();
 
         // and a device that wants to receive commands
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+                any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
@@ -568,7 +568,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         closeHookCaptor.getValue().handle(null);
 
         // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(any());
+        verify(commandConsumer).close(eq(false), any());
 
         // AND sends an empty notification downstream
         assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
@@ -641,10 +641,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(), any(), any()))
-            .thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+                any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -654,7 +654,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectionLossTrigger.handle(deviceConnection);
 
         // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(any());
+        verify(commandConsumer).close(eq(false), any());
         // and sends an empty event with TTD = 0 downstream
         assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
     }
@@ -691,10 +691,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(), any(), any()))
-                .thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+                any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -706,7 +706,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
         // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(any());
+        verify(commandConsumer).close(eq(false), any());
         // and since closing the command consumer fails with a precon-failed exception
         // there is only one notification sent during consumer creation,
         assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
@@ -1435,10 +1435,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
         // that wants to receive commands
-        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
-        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(), any(), any()))
-                .thenReturn(Future.succeededFuture(commandConsumer));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(false), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+                any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -1455,7 +1455,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // and the connection count is decremented
         verify(metrics).decrementConnections(TEST_TENANT_ID);
         // and the adapter has closed the command consumer
-        verify(commandConsumer).close(any());
+        verify(commandConsumer).close(eq(false), any());
     }
 
     private <T extends AbstractNotification> ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> getEventBusConsumerHandlerArgumentCaptor(

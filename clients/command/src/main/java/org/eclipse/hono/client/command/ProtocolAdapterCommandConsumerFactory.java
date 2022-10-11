@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,9 +22,9 @@ import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 
 /**
- * A factory for creating consumers for commands targeted at devices.
+ * A Protocol Adapter factory for creating consumers for commands targeted at devices.
  */
-public interface CommandConsumerFactory extends Lifecycle {
+public interface ProtocolAdapterCommandConsumerFactory extends Lifecycle {
 
     /**
      * Creates a command consumer for a device.
@@ -33,11 +33,12 @@ public interface CommandConsumerFactory extends Lifecycle {
      * with the same parameters will each time overwrite the previous entry.
      * <p>
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed by invoking its {@link CommandConsumer#close(SpanContext)}
+     * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(boolean, SpanContext)}
      * method.
      *
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
+     * @param sendEvent {@code true} if <em>connected notification</em> event should be sent.
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
@@ -57,9 +58,10 @@ public interface CommandConsumerFactory extends Lifecycle {
      *         error code indicating the cause of the failure.
      * @throws NullPointerException if any of tenant, device ID or command handler is {@code null}.
      */
-    Future<CommandConsumer> createCommandConsumer(
+    Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
+            boolean sendEvent,
             Function<CommandContext, Future<Void>> commandHandler,
             Duration lifespan,
             SpanContext context);
@@ -71,12 +73,13 @@ public interface CommandConsumerFactory extends Lifecycle {
      * with the same parameters will each time overwrite the previous entry.
      * <p>
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed by invoking its {@link CommandConsumer#close(SpanContext)}
+     * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(boolean, SpanContext)}
      * method.
      *
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
      * @param gatewayId The gateway that wants to act on behalf of the device.
+     * @param sendEvent {@code true} if <em>connected notification</em> event should be sent.
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
@@ -96,10 +99,11 @@ public interface CommandConsumerFactory extends Lifecycle {
      *         the cause of the failure.
      * @throws NullPointerException if any of tenant, device ID, gateway ID or command handler is {@code null}.
      */
-    Future<CommandConsumer> createCommandConsumer(
+    Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             String gatewayId,
+            boolean sendEvent,
             Function<CommandContext, Future<Void>> commandHandler,
             Duration lifespan,
             SpanContext context);
