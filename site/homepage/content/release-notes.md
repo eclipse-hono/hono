@@ -13,6 +13,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The build process now supports creating container images for the `arm64` platform. Please refer to the
   [Developer Guide]({{% doclink "/dev-guide/building_hono/" %}}) for details.
 
+### Fixes & Enhancements
+
+* Documentation for versions up to 1.11 is removed as outdated.
+
 ## 2.1.0
 
 ### New features
