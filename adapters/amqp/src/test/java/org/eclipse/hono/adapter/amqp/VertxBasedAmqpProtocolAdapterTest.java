@@ -467,9 +467,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
     /**
      * Verifies that if a client device opens a receiver link to receive commands, then the AMQP adapter opens a link
-     * for sending commands to the device and notifies the downstream application by sending an
-     * <em>EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION</em> event a with TTD -1. An unauthenticated device is used in
-     * this test setup to simulate the client device.
+     * for sending commands to the device. An unauthenticated device is used in this test setup to simulate the client
+     * device.
      */
     @Test
     public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
@@ -480,7 +479,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(true), any(), any(), any()))
             .thenReturn(Future.succeededFuture(mock(ProtocolAdapterCommandConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
@@ -489,9 +488,6 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // THEN the adapter opens the link upon success
         verify(sender).open();
-
-        // AND sends an empty notification downstream (with a TTD of -1)
-        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
     }
 
     /**
@@ -538,8 +534,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
     /**
      * Verify that if a client device closes the link for receiving commands, then the AMQP
-     * adapter sends an empty notification downstream with TTD 0 and closes the command
-     * consumer.
+     * adapter closes the command consumer.
      */
     @Test
     public void testAdapterClosesCommandConsumerWhenDeviceClosesReceiverLink() {
@@ -550,8 +545,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // and a device that wants to receive commands
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
-        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+        when(commandConsumer.close(eq(true), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(true), any(), any(),
                 any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
@@ -568,10 +563,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         closeHookCaptor.getValue().handle(null);
 
         // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(eq(false), any());
-
-        // AND sends an empty notification downstream
-        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
+        verify(commandConsumer).close(eq(true), any());
     }
 
     /**
@@ -642,8 +634,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // that wants to receive commands
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
-        when(commandConsumer.close(eq(false), any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+        when(commandConsumer.close(eq(true), any())).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(true), any(), any(),
                 any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
@@ -654,64 +646,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         connectionLossTrigger.handle(deviceConnection);
 
         // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(eq(false), any());
-        // and sends an empty event with TTD = 0 downstream
-        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
-    }
-
-    /**
-     * Verifies that the adapter doesn't send a 'disconnectedTtdEvent' on connection loss
-     * when removal of the command consumer mapping entry fails (which would be the case
-     * when another command consumer mapping had been registered in the mean time, meaning
-     * the device has already reconnected).
-     *
-     * @param ctx The vert.x test context.
-     * @throws InterruptedException if the test execution gets interrupted.
-     */
-    @Test
-    public void testAdapterSkipsTtdEventOnCmdConnectionCloseIfRemoveConsumerFails(final VertxTestContext ctx) throws InterruptedException {
-
-        // GIVEN an AMQP adapter
-        givenAnAdapter(properties);
-        givenAnEventSenderForAnyTenant();
-
-        final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.succeedingThenComplete());
-        adapter.start(startupTracker);
-        assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
-
-        // to which a device is connected
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
-        final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
-        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
-        when(deviceConnection.attachments()).thenReturn(record);
-        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
-        verify(server).connectHandler(connectHandler.capture());
-        connectHandler.getValue().handle(deviceConnection);
-
-        // that wants to receive commands
-        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
-        when(commandConsumer.close(eq(false), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
-                any())).thenReturn(Future.succeededFuture(commandConsumer));
-        final String sourceAddress = getCommandEndpoint();
-        final ProtonSender sender = getSender(sourceAddress);
-
-        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
-
-        // WHEN the connection to the device is lost
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = VertxMockSupport.argumentCaptorHandler();
-        verify(deviceConnection).closeHandler(closeHandler.capture());
-        closeHandler.getValue().handle(Future.succeededFuture(deviceConnection));
-
-        // THEN the adapter closes the command consumer
-        verify(commandConsumer).close(eq(false), any());
-        // and since closing the command consumer fails with a precon-failed exception
-        // there is only one notification sent during consumer creation,
-        assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
-        //  no 'disconnectedTtdEvent' event with TTD = 0
-        assertEmptyNotificationHasNotBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, 0);
+        verify(commandConsumer).close(eq(true), any());
     }
 
     /**
@@ -1437,7 +1372,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // that wants to receive commands
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(eq(false), any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(false), any(), any(),
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(true), any(), any(),
                 any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
@@ -1456,6 +1391,57 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         verify(metrics).decrementConnections(TEST_TENANT_ID);
         // and the adapter has closed the command consumer
         verify(commandConsumer).close(eq(false), any());
+    }
+
+    /**
+     * Verifies that CommandConsumer is not closed on adapter stop.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
+     */
+    @Test
+    public void testCommandConsumerIsNotClosedOnAdapterStop(final VertxTestContext ctx) throws InterruptedException {
+
+        // GIVEN an AMQP adapter
+        givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
+
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().onComplete(ctx.succeedingThenComplete());
+        adapter.start(startupTracker);
+        assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
+
+        // to which a device is connected
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
+        verify(server).connectHandler(connectHandler.capture());
+        connectHandler.getValue().handle(deviceConnection);
+
+        // that wants to receive commands
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(eq(true), any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), eq(true), any(), any(),
+                any())).thenReturn(Future.succeededFuture(commandConsumer));
+        final String sourceAddress = getCommandEndpoint();
+        final ProtonSender sender = getSender(sourceAddress);
+
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
+
+        final Promise<Void> startPromise = Promise.promise();
+        adapter.doStart(startPromise);
+        assertThat(startPromise.future().succeeded()).isTrue();
+
+        // WHEN adapter is stopped
+        adapter.doStop(startPromise);
+        adapter.onConnectionLoss(deviceConnection);
+
+        // THEN the adapter didn't closed the command consumer
+        verify(commandConsumer, times(0)).close(eq(true), any());
     }
 
     private <T extends AbstractNotification> ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> getEventBusConsumerHandlerArgumentCaptor(

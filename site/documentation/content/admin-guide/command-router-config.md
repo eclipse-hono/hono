@@ -113,6 +113,8 @@ The Command Router component uses a connection to an *AMQP 1.0 Messaging Network
   address/topic so that they can be received by protocol adapters,
 * send delivery failure command response messages in case no consumer exists for a received command (only with Kafka messaging),
 * receive notification messages about changes to tenant/device/credentials data sent from the device registry.
+* send an event message for [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}})
+  indicating the device readiness to receive commands.
 
 Command messages are received on each configured messaging system.
 
@@ -122,8 +124,8 @@ is used.
 ### AMQP 1.0 Messaging Network Connection Configuration
 
 The connection to the *AMQP 1.0 Messaging Network* is configured according to the 
-[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_COMMAND` being used as `${PREFIX}`.
-The properties for configuring response caching can be ignored.
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` and `HONO_COMMAND` being
+used as `${PREFIX}`. The properties for configuring response caching can be ignored.
 
 ### Kafka based Messaging Configuration
 

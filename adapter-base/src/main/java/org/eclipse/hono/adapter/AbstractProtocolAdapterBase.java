@@ -904,58 +904,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
     }
 
-    /**
-     * Sends an <em>empty notification</em> event for a device that will remain
-     * connected for an indeterminate amount of time.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
-     * with a TTD of {@code -1}.
-     *
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param context The currently active OpenTracing span that is used to
-     *                trace the sending of the event.
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     */
-    protected final Future<Void> sendConnectedTtdEvent(
-            final String tenant,
-            final String deviceId,
-            final Device authenticatedDevice,
-            final SpanContext context) {
-
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, MessageHelper.TTD_VALUE_UNLIMITED, context);
-    }
-
-    /**
-     * Sends an <em>empty notification</em> event for a device that has disconnected
-     * from a protocol adapter.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
-     * with a TTD of {@code 0}.
-     *
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param context The currently active OpenTracing span that is used to
-     *                trace the sending of the event.
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     */
-    protected final Future<Void> sendDisconnectedTtdEvent(
-            final String tenant,
-            final String deviceId,
-            final Device authenticatedDevice,
-            final SpanContext context) {
-
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0, context);
-    }
-
     @Override
     public final Future<Void> sendTtdEvent(
             final String tenant,
