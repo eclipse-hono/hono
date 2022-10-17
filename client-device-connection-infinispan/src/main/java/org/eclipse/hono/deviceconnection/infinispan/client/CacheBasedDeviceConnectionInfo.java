@@ -16,7 +16,9 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -79,6 +82,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     final Cache<String, String> cache;
     final Tracer tracer;
     final AdapterInstanceStatusProvider adapterInstanceStatusProvider;
+
+    private DeviceToAdapterMappingErrorListener deviceToAdapterMappingErrorListener;
 
     /**
      * Creates a client for accessing device connection information.
@@ -270,10 +275,10 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
         final Future<JsonObject> resultFuture;
         if (viaGateways.isEmpty()) {
-             // get the command handling adapter instance for the device (no gateway involved)
+            // get the command handling adapter instance for the device (no gateway involved)
             resultFuture = cache.get(getAdapterInstanceEntryKey(tenantId, deviceId))
                     .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                    .map(adapterInstanceId -> checkAdapterInstanceId(adapterInstanceId, tenantId, deviceId, span))
+                    .compose(adapterInstanceId -> checkAdapterInstanceId(adapterInstanceId, tenantId, deviceId, span))
                     .compose(adapterInstanceId -> {
                         if (adapterInstanceId == null) {
                             LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
@@ -298,6 +303,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return resultFuture;
     }
 
+    @Override
+    public void setDeviceToAdapterMappingErrorListener(
+            final DeviceToAdapterMappingErrorListener obsoleteMappingListener) {
+        this.deviceToAdapterMappingErrorListener = obsoleteMappingListener;
+    }
+
     private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(
             final String tenantId,
             final String deviceId,
@@ -309,7 +320,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                .compose(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
                 .compose(deviceToInstanceMap -> {
                     final Future<JsonObject> resultFuture;
                     if (deviceToInstanceMap.isEmpty()) {
@@ -401,7 +412,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                         // fetch command handling instances for lastKnownGateway and device
                         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, lastKnownGateway))
                                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                                .compose(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
                                 .compose(deviceToInstanceMap -> {
                                     if (deviceToInstanceMap.isEmpty()) {
                                         // no adapter instances found for last-known-gateway and device - check all via gateways
@@ -436,7 +447,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                .compose(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
                 .compose(deviceToInstanceMap -> {
                     final Future<JsonObject> resultFuture;
                     if (deviceToInstanceMap.isEmpty()) {
@@ -551,15 +562,26 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return getAdapterInstancesResultJson(Map.of(deviceId, adapterInstanceId));
     }
 
-    private Map<String, String> checkAdapterInstanceIds(final String tenantId,
+    private Future<Map<String, String>> checkAdapterInstanceIds(final String tenantId,
             final Map<String, String> deviceToInstanceIdMap, final Span span) {
-        return deviceToInstanceIdMap.entrySet().stream()
-                .filter(deviceToInstanceId -> checkAdapterInstanceId(deviceToInstanceId.getValue(), tenantId,
-                        deviceToInstanceId.getKey(), span) != null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        final List<Future> mappingFutures = new ArrayList<>();
+        final Map<String, String> deviceToInstanceIdMapResult = new HashMap<>();
+        deviceToInstanceIdMap.entrySet().forEach(entry -> {
+            final Future<String> mappingFuture = checkAdapterInstanceId(entry.getValue(), tenantId, entry.getKey(), span)
+                    .map(adapterId -> {
+                        if (adapterId != null) {
+                            deviceToInstanceIdMapResult.put(entry.getKey(), entry.getValue());
+                        }
+                        return adapterId;
+                    });
+            mappingFutures.add(mappingFuture);
+        });
+
+        return CompositeFuture.join(mappingFutures).map(deviceToInstanceIdMapResult);
     }
 
-    private String checkAdapterInstanceId(
+    private Future<String> checkAdapterInstanceId(
             final String adapterInstanceId,
             final String tenantId,
             final String deviceId,
@@ -568,29 +590,60 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         if (adapterInstanceId != null) {
             final AdapterInstanceStatus status = adapterInstanceStatusProvider.getStatus(adapterInstanceId);
             if (status == AdapterInstanceStatus.DEAD) {
-                LOG.debug("ignoring found adapter instance id, belongs to already terminated container [tenant: {}, device-id: {}, adapter-instance-id: {}]",
+                LOG.debug(
+                        "ignoring found adapter instance id, belongs to already terminated container [tenant: {}, device-id: {}, adapter-instance-id: {}]",
                         tenantId, deviceId, adapterInstanceId);
-                span.log("ignoring found adapter instance id [" + adapterInstanceId + "], belongs to already terminated container");
-                cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
+                span.log("ignoring found adapter instance id [" + adapterInstanceId
+                        + "], belongs to already terminated container");
+                final Future<Void> listenerResult;
+                if (deviceToAdapterMappingErrorListener != null) {
+                    listenerResult = deviceToAdapterMappingErrorListener.onObsoleteEntryFound(tenantId, deviceId,
+                            adapterInstanceId,
+                            span);
+                } else {
+                    listenerResult = Future.succeededFuture();
+                }
+                return listenerResult
                         .onSuccess(removed -> {
-                            if (removed) {
-                                LOG.debug("removed entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                            if (deviceToAdapterMappingErrorListener != null) {
+                                LOG.debug(
+                                        "called listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
                                         adapterInstanceId, tenantId, deviceId);
                             }
                         })
-                        .onFailure(thr -> LOG.debug(
-                                "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
-                                adapterInstanceId, tenantId, deviceId, thr));
-                return null;
+                        .recover(thr -> {
+                            LOG.debug(
+                                    "error calling listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                    adapterInstanceId, tenantId, deviceId, thr);
+                            return Future.succeededFuture();
+                        })
+                        .compose(s -> {
+                            return cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
+                                    .onSuccess(removed -> {
+                                        if (removed) {
+                                            LOG.debug(
+                                                    "removed entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                                    adapterInstanceId, tenantId, deviceId);
+                                        }
+                                    })
+                                    .recover(thr -> {
+                                        LOG.debug(
+                                                "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                                adapterInstanceId, tenantId, deviceId, thr);
+                                        return Future.succeededFuture();
+                                    });
+
+                        }).mapEmpty();
             } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
-                LOG.debug("ignoring found adapter instance id, belongs to container with state 'SUSPECTED_DEAD' [tenant: {}, device-id: {}, adapter-instance-id: {}]",
+                LOG.debug(
+                        "ignoring found adapter instance id, belongs to container with state 'SUSPECTED_DEAD' [tenant: {}, device-id: {}, adapter-instance-id: {}]",
                         tenantId, deviceId, adapterInstanceId);
                 span.log("ignoring found adapter instance id [" + adapterInstanceId +
                         "], belongs to container with state 'SUSPECTED_DEAD'");
-                return null;
+                return Future.succeededFuture();
             }
         }
-        return adapterInstanceId;
+        return Future.succeededFuture(adapterInstanceId);
     }
 
     /**

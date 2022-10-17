@@ -54,6 +54,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -398,6 +399,12 @@ public class CacheBasedDeviceConnectionInfoTest {
         final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
 
+        final Promise<Void> listenerTracker = Promise.promise();
+        info.setDeviceToAdapterMappingErrorListener((tenantId, deviceId, adapterInstanceId, span) -> {
+            listenerTracker.complete();
+            return Future.succeededFuture();
+        });
+
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
 
@@ -414,9 +421,11 @@ public class CacheBasedDeviceConnectionInfoTest {
                         assertThat(t).isInstanceOf(ClientErrorException.class);
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        assertTrue(listenerTracker.future().isComplete());
                         // verify mapping entry for terminated adapter instance has been removed
                         verify(cache).remove(
-                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId),
+                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT,
+                                        deviceId),
                                 adapterInstance);
                     });
                     ctx.completeNow();

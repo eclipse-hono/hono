@@ -176,4 +176,11 @@ public interface DeviceConnectionInfo {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<JsonObject> getCommandHandlingAdapterInstances(String tenantId, String deviceId, Set<String> viaGateways, Span span);
+
+    /**
+     * Sets listener to be notified when an incorrect device to adapter mapping is identified.
+     *
+     * @param deviceToAdapterMappingErrorListener The listener.
+     */
+    void setDeviceToAdapterMappingErrorListener(DeviceToAdapterMappingErrorListener deviceToAdapterMappingErrorListener);
 }
