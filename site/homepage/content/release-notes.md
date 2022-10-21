@@ -16,6 +16,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### Fixes & Enhancements
 
 * Documentation for versions up to 1.11 is removed as outdated.
+* Optimized handling of MQTT / AMQP protocol adapter shutdown. The purpose is removal of redundant operations for all
+  the time connected devices during adapter stop and following start. This prevents delays and possible errors due the
+  higher rate of Command Consumer unregister calls.
+  On stop, the adapter no longer explicitly unregisters Command Consumers and no longer sends `disconnectedTtdEvent`.
+  The sending of `connectedTtdEvent` / `disconnectedTtdEvent` is moved from adapter to Command Router.
+  Command Router config now also requires a `hono.messaging` configuration (in case AMQP messaging is used).
 
 ## 2.1.0
 

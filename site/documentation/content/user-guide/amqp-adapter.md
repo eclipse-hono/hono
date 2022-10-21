@@ -481,11 +481,13 @@ The AMQP adapter enables devices to receive commands that have been sent by busi
 a receiver link using a device specific *source address* as described below. When a device no longer wants to receive
 commands anymore, it can simply close the link.
 
-When a device has successfully opened a receiver link for commands, the adapter sends an
-[empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream
-messaging infrastructure with the *ttd* header set to `-1`, indicating that the device will be ready to receive
-commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0`
-when a device closes the link or disconnects.
+When a device has successfully opened a receiver link for commands, the adapter initiates sending an
+[empty notification]({{< relref "/api/event#empty-notification" >}}) via the
+[Command Router]({{< relref "/api/command-router#register-command-consumer-for-device" >}}) on behalf of the device to
+the downstream messaging infrastructure with the *ttd* header set to `-1`, indicating that the device will be ready to
+receive commands until further notice. Analogously, the adapter initiates sending an empty notification via the
+ [Command Router]({{< relref "/api/command-router#unregister-command-consumer-for-device" >}}) with the *ttd* header set
+ to `0` when a device closes the link or disconnects.
 
 Devices send their responses to commands by means of sending an AMQP message with properties specific to the command
 that has been executed. The AMQP adapter accepts responses being published using either *at most once* (QoS 0) or

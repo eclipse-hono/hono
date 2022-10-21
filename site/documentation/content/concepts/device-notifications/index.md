@@ -89,18 +89,18 @@ via the HTTP protocol adapter:
 
 ### AMQP protocol adapter
 
-The AMQP protocol adapter automatically sends a *Time till disconnect notification* with a *ttd* value of `-1`
-for a device that opens a receiver link for the command source address. Please refer to the
-[AMQP Adapter user guide]({{< relref "/user-guide/amqp-adapter.md" >}}) for details).
+The AMQP protocol adapter automatically initiates sending  a *Time till disconnect notification* via the *Command Router*
+with a *ttd* value of `-1` for a device that opens a receiver link for the command source address. Please refer to the
+[AMQP Adapter user guide]({{< relref "/user-guide/amqp-adapter.md" >}}) for details.
 
-When a device closes the receiver link again, the adapter automatically sends a *Time until disconnect notification*
-with a *ttd* value of `0`.
+When a device closes the receiver link again, the adapter automatically initiates a *Time until disconnect notification*
+via the *Command Router* with a *ttd* value of `0`.
 
 ### MQTT protocol adapter
 
 The MQTT protocol adapter automatically initiates sending a *Time till disconnect notification* via the *Command Router*
 with a *ttd* value of `-1` for a device that subscribes to the appropriate command topic. Please refer to the
-[MQTT Adapter user guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details).
+[MQTT Adapter user guide]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details.
 
 When a device unsubscribes again, the adapter automatically initiates a *Time till disconnect notification* via the
 *Command Router* with a *ttd* value of `0`.

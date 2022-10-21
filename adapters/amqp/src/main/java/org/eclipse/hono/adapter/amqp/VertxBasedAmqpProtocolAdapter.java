@@ -458,29 +458,44 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.close();
         con.disconnect();
 
-        handleConnectionLossInternal(con, span, authenticatedDevice, sendDisconnectedEvent)
+        handleConnectionLossInternal(con, span, sendDisconnectedEvent, true)
                 .onComplete(ar -> span.finish());
     }
 
     /**
      * To be called by the connection closeHandler / disconnectHandler.
+     *
+     * @param con The closed connection.
      */
-    private void onConnectionLoss(final ProtonConnection con) {
-        final String spanOperationName = stopCalled() ? "close device connection (server shutdown)" : "handle closing of connection";
+    void onConnectionLoss(final ProtonConnection con) {
+        final String spanOperationName;
+        final boolean closeCommandConsumers;
+        if (stopCalled()) {
+            spanOperationName = "close device connection (server shutdown)";
+            closeCommandConsumers = false;
+        } else {
+            spanOperationName = "handle closing of connection";
+            closeCommandConsumers = true;
+        }
         final Device authenticatedDevice = getAuthenticatedDevice(con);
         final Span span = newSpan(spanOperationName, authenticatedDevice, getTraceSamplingPriority(con));
-        handleConnectionLossInternal(con, span, authenticatedDevice, true)
+        handleConnectionLossInternal(con, span, true, closeCommandConsumers)
                 .onComplete(ar -> span.finish());
     }
 
-    private Future<Void> handleConnectionLossInternal(final ProtonConnection con, final Span span, final Device authenticatedDevice,
-            final boolean sendDisconnectedEvent) {
+    private Future<Void> handleConnectionLossInternal(final ProtonConnection con, final Span span,
+            final boolean sendDisconnectedEvent, final boolean closeCommandConsumers) {
         authenticatedDeviceConnections.remove(con);
         @SuppressWarnings("rawtypes")
-        final List<Future> handlerResults = getCommandSubscriptions(con).stream()
-                .map(commandSubscription -> closeCommandConsumer(commandSubscription.getConsumer(), commandSubscription.getAddress(),
-                        authenticatedDevice, sendDisconnectedEvent, span))
-                .collect(Collectors.toList());
+        final List<Future> handlerResults;
+        if (closeCommandConsumers) {
+            handlerResults = getCommandSubscriptions(con).stream()
+                    .map(commandSubscription -> closeCommandConsumer(commandSubscription.getConsumer(),
+                            commandSubscription.getAddress(), sendDisconnectedEvent, span))
+                    .collect(Collectors.toList());
+        } else {
+            handlerResults = Collections.emptyList();
+        }
         decrementConnectionCount(con, span.context(), sendDisconnectedEvent);
         return CompositeFuture.join(handlerResults)
                 .recover(thr -> {
@@ -922,7 +937,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 authenticatedDevice, traceSamplingPriority);
                         removeCommandSubscription(connection, address.toString());
                         onLinkDetach(sender);
-                        closeCommandConsumer(consumer, address, authenticatedDevice, true, detachHandlerSpan)
+                        closeCommandConsumer(consumer, address, true, detachHandlerSpan)
                                 .onComplete(v -> detachHandlerSpan.finish());
                     };
                     HonoProtonHelper.setCloseHandler(sender, detachHandler);
@@ -930,10 +945,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     sender.open();
 
                     log.debug("established link [address: {}] for sending commands to device", address);
-
-                    // At this point, the remote peer's receiver link is successfully opened and is ready to receive
-                    // commands. Send "device ready for command" notification downstream.
-                    sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
 
                     registerCommandSubscription(connection, new CommandSubscription(consumer, address));
                     return consumer;
@@ -952,27 +963,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private Future<Void> closeCommandConsumer(
             final ProtocolAdapterCommandConsumer consumer,
             final ResourceIdentifier address,
-            final Device authenticatedDevice,
-            final boolean sendDisconnectedEvent, 
+            final boolean sendDisconnectedEvent,
             final Span span) {
 
         final String tenantId = address.getTenantId();
         final String deviceId = address.getResourceId();
-        return consumer.close(false, span.context())
+        return consumer.close(sendDisconnectedEvent, span.context())
                 .recover(thr -> {
                     TracingHelper.logError(span, thr);
                     // ignore all but precon-failed errors
                     if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
-                        log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
+                        log.debug("command consumer wasn't active anymore [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
-                        span.log("command consumer wasn't active anymore - skip sending disconnected event");
+                        span.log("command consumer wasn't active anymore");
                         return Future.failedFuture(thr);
-                    }
-                    return Future.succeededFuture();
-                })
-                .compose(v -> {
-                    if (sendDisconnectedEvent) {
-                        return sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
                     }
                     return Future.succeededFuture();
                 })
@@ -1045,7 +1049,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(),
                     authenticatedDevice.getDeviceId(),
-                    false,
+                    true,
                     commandHandler,
                     null,
                     span.context()));
@@ -1053,7 +1057,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
                     sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(),
-                    false,
+                    true,
                     commandHandler,
                     null,
                     span.context()));
