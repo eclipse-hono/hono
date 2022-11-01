@@ -21,8 +21,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   higher rate of Command Consumer unregister calls.
   On stop, the adapter no longer explicitly unregisters Command Consumers and no longer sends `disconnectedTtdEvent`.
   The sending of `connectedTtdEvent` / `disconnectedTtdEvent` is moved from adapter to Command Router.
-  Command Router sends `disconnectedTtdEvent` in case of command from north bound application to disconnected device,
-  that is marked as connected to adapter that was already stopped.
+  Command Router now sends a disconnectedTtdEvent when a command is received that is targeted at a device that got
+  disconnected (and didn't reconnect) when a protocol adapter was stopped. This happens only once - during the
+  processing of the first command.
   Command Router config now also requires a `hono.messaging` configuration (in case AMQP messaging is used).
 
 ## 2.1.0

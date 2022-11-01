@@ -565,6 +565,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private Future<Map<String, String>> checkAdapterInstanceIds(final String tenantId,
             final Map<String, String> deviceToInstanceIdMap, final Span span) {
 
+        @SuppressWarnings("rawtypes")
         final List<Future> mappingFutures = new ArrayList<>();
         final Map<String, String> deviceToInstanceIdMapResult = new HashMap<>();
         deviceToInstanceIdMap.entrySet().forEach(entry -> {
@@ -604,18 +605,17 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                     listenerResult = Future.succeededFuture();
                 }
                 return listenerResult
-                        .onSuccess(removed -> {
+                        .onSuccess(v -> {
                             if (deviceToAdapterMappingErrorListener != null) {
                                 LOG.debug(
                                         "called listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
                                         adapterInstanceId, tenantId, deviceId);
                             }
                         })
-                        .recover(thr -> {
+                        .onFailure(thr -> {
                             LOG.debug(
                                     "error calling listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
                                     adapterInstanceId, tenantId, deviceId, thr);
-                            return Future.succeededFuture();
                         })
                         .compose(s -> {
                             return cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
@@ -626,14 +626,17 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                                     adapterInstanceId, tenantId, deviceId);
                                         }
                                     })
-                                    .recover(thr -> {
+                                    .onFailure(thr -> {
                                         LOG.debug(
                                                 "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
                                                 adapterInstanceId, tenantId, deviceId, thr);
-                                        return Future.succeededFuture();
                                     });
-
-                        }).mapEmpty();
+                        })
+                        .recover(thr -> {
+                            // errors treated as not found adapter instance
+                            return Future.succeededFuture();
+                        })
+                        .mapEmpty();
             } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
                 LOG.debug(
                         "ignoring found adapter instance id, belongs to container with state 'SUSPECTED_DEAD' [tenant: {}, device-id: {}, adapter-instance-id: {}]",
