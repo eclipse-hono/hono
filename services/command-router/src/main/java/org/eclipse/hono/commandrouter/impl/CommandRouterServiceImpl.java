@@ -157,6 +157,10 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             adapterInstanceStatusService.start();
         }
 
+        deviceConnectionInfo.setDeviceToAdapterMappingErrorListener((tenantId, deviceId, adapterInstanceId, span) -> {
+            return sendDisconnectEventIfNeeded(tenantId, deviceId, true, adapterInstanceId, span);
+
+        });
         return Future.succeededFuture();
     }
 
