@@ -147,7 +147,7 @@ follow these steps:
 1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster" >}})
    for setting up a local single-node Minikube cluster.
 1. Make sure to run `minikube tunnel` in order to support creating Kubernetes services of type *LoadBalancer*.
-1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md#using-kafka-based-messaging)
+1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md)
    of Hono's Helm chart in order to install Hono with a single-node Kafka instance to your local Minikube cluster.
 
 Hono consists of a set of micro services which are deployed as Docker containers. The diagram below provides an overview
@@ -210,7 +210,8 @@ follow these steps:
 1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster" >}})
    for setting up a local single-node Minikube cluster.
 1. Make sure to run `minikube tunnel` in order to support creating Kubernetes services of type *LoadBalancer*.
-1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md)
+1. Follow the instructions given in the
+   [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md#using-amqp-10-based-messaging-infrastructure)
    of Hono's Helm chart in order to install Hono with a single-node Qpid Dispatch Router instance to your local Minikube
    cluster.
 
