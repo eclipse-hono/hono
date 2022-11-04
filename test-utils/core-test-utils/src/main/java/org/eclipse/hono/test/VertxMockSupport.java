@@ -31,6 +31,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.future.PromiseInternal;
 
@@ -62,7 +63,9 @@ public final class VertxMockSupport {
     }
 
     /**
-     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
+     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its
+     * {@link ContextInternal#runOnContext(Handler)} or {@link ContextInternal#executeBlocking(Handler, TaskQueue)}
+     * methods.
      *
      * @param owner The vert.x instance that will be the owner of the created context.
      * @return The mocked context.
@@ -72,11 +75,18 @@ public final class VertxMockSupport {
         final ContextInternal context = mock(ContextInternal.class);
 
         when(context.owner()).thenReturn(owner);
+        when(context.unwrap()).thenReturn(context);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
+        doAnswer(invocation -> {
+            final Handler<Promise<Void>> handler = invocation.getArgument(0);
+            final Promise<Void> prom = Promise.promise();
+            handler.handle(prom);
+            return prom;
+        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), any(TaskQueue.class));
         return context;
     }
 
