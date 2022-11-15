@@ -1,0 +1,51 @@
+{
+  "deduplicationId": "eb1ec3c9-6629-4088-b3b5-604cd691793e",
+  "time": "2019-11-08T13:59:25.048445Z",
+  "deviceInfo": {
+    "applicationId": "123",
+    "applicationName": "temperature-sensor",
+    "deviceProfileId": "40d32660-4d04-4892-b053-09f0df3add5b",
+    "deviceProfileName": "generic device",
+    "deviceName": "garden-sensor",
+    "devEui": "0102030405060708",
+    "tags": {
+      "key": "value"
+    }
+  },
+  "devAddr": "01ccfd2c",
+  "adr": true,
+  "dr": 1,
+  "fCnt": 10,
+  "fPort": 5,
+  "confirmed": true,
+  "data": "YnVtbHV4",
+  "rxInfo": [
+    {
+      "gatewayId": "0303030303030303",
+      "uplinkId": 123,
+      "rssi": -48,
+      "snr": 9,
+      "channel": 5,
+      "location": {
+        "latitude": 52.3740364,
+        "longitude": 4.9144401,
+        "altitude": 10.5
+      },
+      "context": "9u/uvA==",
+      "metadata": {
+        "region_common_name": "US915",
+        "region_name": "us915_0"
+      }
+    }
+  ],
+  "txInfo": {
+    "frequency": 868100000,
+    "modulation": {
+      "lora": {
+        "bandwidth": 125,
+        "spreadingFactor": 11,
+        "codeRate": "CR_4_5"
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   ECPrivateKey as described in [RFC 5915, Section 4](https://datatracker.ietf.org/doc/html/rfc5915#section-4).
 * The build process now supports creating container images for the `arm64` platform. Please refer to the
   [Developer Guide]({{% doclink "/dev-guide/building_hono/" %}}) for details.
+* The LoraWAN protocol adapter has been extended with support for *Chirpstack V4* provider.
 
 ### Fixes & Enhancements
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,12 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
 
@@ -31,57 +33,54 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A LoRaWAN provider with API for ChirpStack.
+ * A LoRaWAN provider with API for ChirpStack v4.
  * <p>
  * This provider supports uplink messages only and expects the messages
- * to comply with the <a href="https://www.chirpstack.io/application-server/integrations/events/">
+ * to comply with the <a href="https://www.chirpstack.io/docs/chirpstack/integrations/events.html">
  * Protobuf based JSON format</a>.
  */
 @ApplicationScoped
-public class ChirpStackProvider extends JsonBasedLoraProvider {
+public class ChirpStackV4Provider extends JsonBasedLoraProvider {
 
     private static final String FIELD_CHIRPSTACK_ADR = "adr";
     private static final String FIELD_CHIRPSTACK_ALTITUDE = "altitude";
     private static final String FIELD_CHIRPSTACK_BANDWIDTH = "bandwidth";
     private static final String FIELD_CHIRPSTACK_CHANNEL = "channel";
     private static final String FIELD_CHIRPSTACK_CODE_RATE = "codeRate";
-    private static final String FIELD_CHIRPSTACK_DEVICE = "devEUI";
+    private static final String FIELD_CHIRPSTACK_DEVICE = "devEui";
+    private static final String FIELD_CHIRPSTACK_DEVICE_INFO = "deviceInfo";
     private static final String FIELD_CHIRPSTACK_FRAME_COUNT = "fCnt";
     private static final String FIELD_CHIRPSTACK_FREQUENCY = "frequency";
     private static final String FIELD_CHIRPSTACK_FUNCTION_PORT = "fPort";
-    private static final String FIELD_CHIRPSTACK_GATEWAY_ID = "gatewayID";
+    private static final String FIELD_CHIRPSTACK_GATEWAY_ID = "gatewayId";
     private static final String FIELD_CHIRPSTACK_LATITUDE = "latitude";
     private static final String FIELD_CHIRPSTACK_LOCATION = "location";
     private static final String FIELD_CHIRPSTACK_LONGITUDE = "longitude";
-    private static final String FIELD_CHIRPSTACK_LORA_MODULATION_INFO = "loRaModulationInfo";
-    private static final String FIELD_CHIRPSTACK_LSNR = "loRaSNR";
+    private static final String FIELD_CHIRPSTACK_LORA = "lora";
+    private static final String FIELD_CHIRPSTACK_LSNR = "snr";
+    private static final String FIELD_CHIRPSTACK_MODULATION_INFO = "modulation";
     private static final String FIELD_CHIRPSTACK_PAYLOAD = "data";
     private static final String FIELD_CHIRPSTACK_RSSI = "rssi";
     private static final String FIELD_CHIRPSTACK_RX_INFO = "rxInfo";
     private static final String FIELD_CHIRPSTACK_SPREADING_FACTOR = "spreadingFactor";
     private static final String FIELD_CHIRPSTACK_TX_INFO = "txInfo";
 
-    private static final String COMMAND_FIELD_CHIRPSTACK_CONFIRMED = "confirmed";
-    private static final String COMMAND_FIELD_CHIRPSTACK_DATA = "data";
-    private static final String COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM = "deviceQueueItem";
-    private static final String COMMAND_FIELD_CHIRPSTACK_PORT = "fPort";
-
     @Override
     public String getProviderName() {
-        return "chirpStack";
+        return "chirpStackV4";
     }
 
     @Override
     public Set<String> pathPrefixes() {
-        return Set.of("/chirpstack");
+        return Set.of("/chirpstackV4");
     }
 
     @Override
     protected String getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
-        return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE, String.class)
-                .map(s -> LoraUtils.convertFromBase64ToHex(s))
-                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded device ID property"));
+        return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE_INFO, JsonObject.class)
+            .flatMap(deviceInfo -> LoraUtils.getChildObject(deviceInfo, FIELD_CHIRPSTACK_DEVICE, String.class))
+            .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain device ID property"));
     }
 
     @Override
@@ -121,16 +120,18 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
             .map(txInfo -> {
                 LoraUtils.getChildObject(txInfo, FIELD_CHIRPSTACK_FREQUENCY, Integer.class)
                     .ifPresent(v -> data.setFrequency(v.doubleValue() / 1_000_000));
-                return txInfo.getValue(FIELD_CHIRPSTACK_LORA_MODULATION_INFO);
+                return txInfo.getValue(FIELD_CHIRPSTACK_MODULATION_INFO);
             })
             .filter(JsonObject.class::isInstance)
             .map(JsonObject.class::cast)
-            .ifPresent(modulationInfo -> {
-                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_SPREADING_FACTOR, Integer.class)
+            .flatMap(modulationInfo -> LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_LORA, JsonObject.class))
+            .ifPresent(loraModulationInfo -> {
+                LoraUtils.getChildObject(loraModulationInfo, FIELD_CHIRPSTACK_SPREADING_FACTOR, Integer.class)
                     .ifPresent(data::setSpreadingFactor);
-                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_BANDWIDTH, Integer.class)
+                LoraUtils.getChildObject(loraModulationInfo, FIELD_CHIRPSTACK_BANDWIDTH, Integer.class)
                     .ifPresent(data::setBandwidth);
-                LoraUtils.getChildObject(modulationInfo, FIELD_CHIRPSTACK_CODE_RATE, String.class)
+                LoraUtils.getChildObject(loraModulationInfo, FIELD_CHIRPSTACK_CODE_RATE, String.class)
+                    .map(codingRate -> Arrays.stream(codingRate.split("_")).skip(1).collect(Collectors.joining("/")))
                     .ifPresent(data::setCodingRate);
             });
 
@@ -142,7 +143,7 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
                     .forEach(rxInfo -> {
                         final GatewayInfo gateway = new GatewayInfo();
                         LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_GATEWAY_ID, String.class)
-                            .ifPresent(v -> gateway.setGatewayId(LoraUtils.convertFromBase64ToHex(v)));
+                            .ifPresent(gateway::setGatewayId);
                         LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_RSSI, Integer.class)
                             .ifPresent(gateway::setRssi);
                         LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LSNR, Double.class)
@@ -169,21 +170,5 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
             HttpHeaders.CONTENT_TYPE.toString(), MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
             HttpHeaders.ACCEPT.toString(), MessageHelper.CONTENT_TYPE_APPLICATION_JSON
         );
-    }
-
-    @Override
-    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId, final String subject) {
-        final JsonObject deviceQueueItem = new JsonObject();
-        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_CONFIRMED, false);
-        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, payload.getBytes());
-        try {
-            deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_PORT, Integer.parseInt(subject));
-        } catch (final NumberFormatException ignored) {
-            // port is not mandatory
-        }
-
-        final JsonObject json = new JsonObject();
-        json.put(COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM, deviceQueueItem);
-        return json;
     }
 }
