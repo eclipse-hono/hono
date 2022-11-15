@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,20 +18,18 @@ import static com.google.common.truth.Truth.assertThat;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 
-import io.vertx.core.json.JsonObject;
-
 /**
  * Verifies behavior of {@link ChirpStackProvider}.
  */
-public class ChirpStackProviderTest extends LoraProviderTestBase<ChirpStackProvider> {
+public class ChirpStackV4ProviderTest extends LoraProviderTestBase<ChirpStackV4Provider> {
 
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected ChirpStackProvider newProvider() {
-        return new ChirpStackProvider();
+    protected ChirpStackV4Provider newProvider() {
+        return new ChirpStackV4Provider();
     }
 
     /**
@@ -55,18 +53,5 @@ public class ChirpStackProviderTest extends LoraProviderTestBase<ChirpStackProvi
         assertThat(metaData.getGatewayInfo().get(0).getLocation().getLongitude()).isEqualTo(4.9144401);
         assertThat(metaData.getGatewayInfo().get(0).getLocation().getLatitude()).isEqualTo(52.3740364);
         assertThat(metaData.getGatewayInfo().get(0).getLocation().getAltitude()).isEqualTo(10.5);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void assertCommandFormat(final JsonObject command) {
-        assertThat(command.containsKey("deviceQueueItem")).isTrue();
-        final JsonObject deviceQueueItem = (JsonObject) command.getValue("deviceQueueItem");
-        assertThat(deviceQueueItem.containsKey("confirmed")).isTrue();
-        assertThat((boolean) deviceQueueItem.getValue("confirmed")).isFalse();
-        assertThat(deviceQueueItem.containsKey("data")).isTrue();
-        assertThat(deviceQueueItem.getValue("data")).isEqualTo("YnVtbHV4");
     }
 }
