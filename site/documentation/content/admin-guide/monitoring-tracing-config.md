@@ -79,14 +79,22 @@ specific default value that differs from the Quarkus default:
 | `QUARKUS_SMALLRYE_HEALTH_LIVENESS_PATH`<br>`quarkus.smallrye-health.liveness-path`   | `liveness`   |
 | `QUARKUS_SMALLRYE_HEALTH_READINESS_PATH`<br>`quarkus.smallrye-health.readiness-path` | `readiness`  |
 | `QUARKUS_SMALLRYE_HEALTH_ROOT_PATH`<br>`quarkus.smallrye-health.root-path`          | `/`         |
- 
+
 ## Logging
 
-The Hono components contain support for sending log messages to a centralized log management system like Graylog,
-Logstash or Fluentd. This is done by means of the [*quarkus-logging-gelf* extension](https://quarkus.io/guides/centralized-log-management),
-using TCP or UDP to send logs in the Graylog Extended Log Format (GELF). The logging configuration can be done using
-environment variables with the `QUARKUS_LOG_HANDLER_GELF_` prefix or using corresponding system properties. See the
+By default, all Hono components will log to the system console and can be configured using environment variables
+with the `QUARKUS_LOG_CONSOLE_` prefix or using corresponding system properties. Logging to a file and syslog is
+also available. See the [configuration reference](https://quarkus.io/guides/logging#quarkus-log-logging-log-config_quarkus.log.console-console-logging)
+for details. Log formatting can be configured by either setting `QUARKUS_LOG_CONSOLE_FORMAT`, or, to
+enable logging in JSON format, by setting `QUARKUS_LOG_CONSOLE_JSON` to `"true"`. Follow the [Quarkus documentation](https://quarkus.io/guides/logging#quarkus-logging-json_quarkus.log.console-json-console-logging)
+for more details.
+
+Additionally, the Hono components contain support for sending log messages to a centralized log management system like
+Graylog, Logstash or Fluentd. This is done by means of the [*quarkus-logging-gelf* extension](https://quarkus.io/guides/centralized-log-management),
+using TCP or UDP to send logs in the Graylog Extended Log Format (GELF). This can also be enabled using environment
+variables with the `QUARKUS_LOG_HANDLER_GELF_` prefix or using corresponding system properties. See the
 [configuration reference](https://quarkus.io/guides/centralized-log-management#configuration-reference) for details.
+
 
 ## Tracing
 
