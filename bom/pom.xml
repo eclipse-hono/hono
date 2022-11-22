@@ -79,8 +79,8 @@
     <quarkus.application.properties>
 quarkus.http.non-application-root-path=${health.check.non-application-root-path}
 quarkus.http.port=${health.check.port}
-# this needs to be configured at build time in order for native images to be able to log at TRACE level
 quarkus.log.console.json=false
+# this needs to be configured at build time in order for native images to be able to log at TRACE level
 quarkus.log.min-level=TRACE
 quarkus.micrometer.binder-enabled-default=false
 quarkus.micrometer.binder.jvm=true

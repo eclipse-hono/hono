@@ -134,6 +134,7 @@ io.quarkus:quarkus-kafka-client:jar:2.13.4.Final
 io.quarkus:quarkus-kubernetes-client-internal:jar:2.13.4.Final
 io.quarkus:quarkus-kubernetes-client:jar:2.13.4.Final
 io.quarkus:quarkus-logging-gelf:jar:2.13.4.Final
+io.quarkus:quarkus-logging-json:jar:2.13.4.Final
 io.quarkus:quarkus-micrometer:jar:2.13.4.Final
 io.quarkus:quarkus-micrometer-registry-prometheus:jar:2.13.4.Final
 io.quarkus:quarkus-mongodb-client:jar:2.13.4.Final

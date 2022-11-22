@@ -129,6 +129,7 @@ maven/mavencentral/io.quarkus/quarkus-kafka-client/2.13.4.Final, Apache-2.0, app
 maven/mavencentral/io.quarkus/quarkus-kubernetes-client/2.13.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-kubernetes-client-internal/2.13.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-logging-gelf/2.13.4.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-logging-json/2.13.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer/2.13.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer-registry-prometheus/2.13.4.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-mongodb-client/2.13.4.Final, Apache-2.0, approved, clearlydefined
