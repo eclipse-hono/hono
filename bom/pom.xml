@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
-   
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -72,7 +72,7 @@
     <health.check.readiness-path>readiness</health.check.readiness-path>
     <health.check.startup-path>started</health.check.startup-path>
 
-    <!-- 
+    <!--
       These properties will be copied into the application.properties of all service components and
       adapters.
     -->
@@ -80,6 +80,7 @@
 quarkus.http.non-application-root-path=${health.check.non-application-root-path}
 quarkus.http.port=${health.check.port}
 # this needs to be configured at build time in order for native images to be able to log at TRACE level
+quarkus.log.console.json=false
 quarkus.log.min-level=TRACE
 quarkus.micrometer.binder-enabled-default=false
 quarkus.micrometer.binder.jvm=true
