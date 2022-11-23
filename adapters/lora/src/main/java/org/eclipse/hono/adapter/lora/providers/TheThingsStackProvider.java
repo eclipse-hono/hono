@@ -32,6 +32,10 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for The Thing Stack.
+ * <p>
+ * This provider supports messages that comply with the
+ * <a href="https://www.thethingsnetwork.org/docs/applications/http/#uplink">
+ * TTS V2 data format</a>.
  */
 @ApplicationScoped
 public class TheThingsStackProvider extends JsonBasedLoraProvider {

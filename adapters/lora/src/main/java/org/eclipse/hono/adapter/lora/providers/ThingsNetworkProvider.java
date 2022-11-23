@@ -34,6 +34,10 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for Things Network.
+ * <p>
+ * This provider supports messages that comply with the
+ * <a href="https://www.thethingsnetwork.org/docs/applications/http/#uplink">
+ * TTN V2 data format</a>.
  */
 @ApplicationScoped
 public class ThingsNetworkProvider extends JsonBasedLoraProvider {

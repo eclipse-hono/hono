@@ -13,7 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The build process now supports creating container images for the `arm64` platform. Please refer to the
   [Developer Guide]({{% doclink "/dev-guide/building_hono/" %}}) for details.
 * The LoraWAN protocol adapter has been extended with support for *Chirpstack V4* provider.
-
+* The LoraWAN protocol adapter has been extended with support for *The things stack V3* provider.
+* 
 ### Fixes & Enhancements
 
 * Documentation for versions up to 1.11 is removed as outdated.
