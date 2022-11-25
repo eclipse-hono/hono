@@ -18,7 +18,7 @@
 
 FROM debian:stable-slim
 
-ARG MANDREL_VERSION=22.2.0.0-Final
+ARG MANDREL_VERSION=22.3.0.1-Final
 # either java11 or java17
 ARG JDK_VERSION=java17
 ARG MVN_VERSION=3.8.6

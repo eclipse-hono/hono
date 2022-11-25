@@ -33,7 +33,7 @@ pipeline {
             - name: "HOME"
               value: "/home/jenkins"
           - name: "hono-builder"
-            image: "eclipse/hono-builder:2.1.0"
+            image: "eclipse/hono-builder:2.2.0"
             imagePullPolicy: "Always"
             tty: true
             command:
