@@ -8,10 +8,21 @@ using the `--help` and/or `-h` command line options.
 
 ## Building
 
+The CLI can be built as a standard Java archive which requires a VM to run or it can be built as a native
+(x86_64) Linux executable.
+
+### Building the JVM based CLI
+
 ```bash 
 # in directory hono/cli/
 mvn clean install
-cd target/
+```
+
+### Building the Native Executable
+
+```bash 
+# in directory hono/cli/
+mvn clean install -Pbuild-cli-native-executable
 ```
 
 ## Usage
