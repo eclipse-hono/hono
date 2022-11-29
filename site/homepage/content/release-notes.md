@@ -8,24 +8,35 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### New features
 
-* All Hono components now support reading ECC based keys from PEM files that contain the Base64 encoded DER-encoding of an
-  ECPrivateKey as described in [RFC 5915, Section 4](https://datatracker.ietf.org/doc/html/rfc5915#section-4).
+* All Hono components now support reading ECC based keys from PEM files that contain the Base64
+  encoded DER-encoding of an ECPrivateKey as described in
+  [RFC 5915, Section 4](https://datatracker.ietf.org/doc/html/rfc5915#section-4).
 * The build process now supports creating container images for the `arm64` platform. Please refer to the
   [Developer Guide]({{% doclink "/dev-guide/building_hono/" %}}) for details.
 * The LoraWAN protocol adapter has been extended with support for *Chirpstack V4* provider.
+* Hono components now support producing JSON formatted log messages. Please refer to the
+  [Admin Guide]({{% doclink "/admin-guide/monitoring-tracing-config/#logging" %}}) for details.
+* Hono components can now be configured to use the OTEL Jaeger Remote Sampler extension which allows
+  the sampling strategy to be retrieved from a Jaeger back-end dynamically during runtime.
+  Please refer to the [Admin Guide]({{% doclink "/admin-guide/monitoring-tracing-config/#tracing" %}})
+  for details.
 
 ### Fixes & Enhancements
 
 * Documentation for versions up to 1.11 is removed as outdated.
-* Optimized handling of MQTT / AMQP protocol adapter shutdown. The purpose is removal of redundant operations for all
-  the time connected devices during adapter stop and following start. This prevents delays and possible errors due the
-  higher rate of Command Consumer unregister calls.
-  On stop, the adapter no longer explicitly unregisters Command Consumers and no longer sends `disconnectedTtdEvent`.
-  The sending of `connectedTtdEvent` / `disconnectedTtdEvent` is moved from adapter to Command Router.
-  Command Router now sends a disconnectedTtdEvent when a command is received that is targeted at a device that got
-  disconnected (and didn't reconnect) when a protocol adapter was stopped. This happens only once - during the
-  processing of the first command.
-  Command Router config now also requires a `hono.messaging` configuration (in case AMQP messaging is used).
+* Optimized handling of MQTT and AMQP protocol adapter shutdown. The purpose is removal of redundant
+  operations for devices which maintain a permanent connection during the restarting of adapter
+  instances. This prevents delays and possible errors due the higher rate of invocations of the
+  *unregister Command Consumer* operation on the Command Router service.
+  When shutting down, the adapters no longer explicitly unregister Command Consumers and no longer send
+  *disconnectedTtdEvent*s. Instead, the Command Router now sends the *connectedTtdEvent* and
+  *disconnectedTtdEvent* on behalf of the protocol adapters.
+  The Command Router now also sends a *disconnectedTtdEvent* when a command is received that is
+  targeted at a device that got disconnected (and didn't reconnect) when a protocol adapter was
+  shut down. This happens only once - during the processing of the first command.
+  The Command Router configuration now also requires *hono.messaging* configuration if AMQP 1.0
+  based messaging infrastructure is being used.
+* The Mongo DB based device registry is now continuously tested to work with Mongo DB 5.0.
 
 ## 2.1.0
 
