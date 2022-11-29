@@ -21,8 +21,8 @@ for installation instructions.
 
 A command line client for interacting with Hono's north bound APIs and its AMQP adapter is available for download from
 
-* [Eclipse Hono 2.1.0 Command Line Client (Java Archive)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0-exec.jar)
-* [Eclipse Hono 2.1.0 Command Line Client (Linux x86_64)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0)
+* [Eclipse Hono 2.2.0 Command Line Client (Java Archive)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.2.0-exec.jar)
+* [Eclipse Hono 2.2.0 Command Line Client (Linux x86_64)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.2.0)
 
 The Java client requires a Java 17 runtime environment to run. The Linux binary should run on most (modern) Linux distributions.
 
@@ -40,6 +40,7 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 ## Previous versions
 
-* [Eclipse Hono 2.0.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.2-exec.jar)
-* [Eclipse Hono 2.0.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.1-exec.jar)
-* [Eclipse Hono 2.0.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.0.0-exec.jar)
+* [Eclipse Hono 2.1.1 Command Line Client (Java Archive)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.1-exec.jar)
+* [Eclipse Hono 2.1.1 Command Line Client (Linux x86_64)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.1)
+* [Eclipse Hono 2.1.0 Command Line Client (Java Archive)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0-exec.jar)
+* [Eclipse Hono 2.1.0 Command Line Client (Linux x86_64)](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-2.1.0)
