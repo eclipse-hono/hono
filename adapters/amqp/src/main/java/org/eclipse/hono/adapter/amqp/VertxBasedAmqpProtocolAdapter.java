@@ -926,8 +926,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return createCommandConsumer(sender, address, authenticatedDevice, span)
                 .map(consumer -> {
 
-                    final String tenantId = address.getTenantId();
-                    final String deviceId = address.getResourceId();
                     sender.setSource(sender.getRemoteSource());
                     sender.setTarget(sender.getRemoteTarget());
 
