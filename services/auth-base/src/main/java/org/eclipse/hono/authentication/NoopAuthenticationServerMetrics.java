@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,15 +22,15 @@ import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttempt
  */
 public final class NoopAuthenticationServerMetrics implements AuthenticationServerMetrics {
 
+    /**
+     * An instance to be shared.
+     */
     public static final NoopAuthenticationServerMetrics INSTANCE = new NoopAuthenticationServerMetrics();
 
     private NoopAuthenticationServerMetrics() {
         // prevent instantiation
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void reportConnectionAttempt(final AuthenticationAttemptOutcome outcome) {
         // do nothing

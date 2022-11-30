@@ -22,7 +22,13 @@ import java.util.Objects;
  */
 public class ConnectionEventProducerConfig {
 
+    /**
+     * The level to log events at by default.
+     */
     public static final String DEFAULT_LOG_LEVEL = "info";
+    /**
+     * The default event producer type to use if not set explicitly.
+     */
     public static final ConnectionEventProducerType DEFAULT_TYPE = ConnectionEventProducerType.LOGGING;
 
     private ConnectionEventProducerType type = DEFAULT_TYPE;
@@ -101,10 +107,20 @@ public class ConnectionEventProducerConfig {
         }
     }
 
+    /**
+     * Gets the level to log events at.
+     *
+     * @return The log level.
+     */
     public final String getLogLevel() {
         return logLevel;
     }
 
+    /**
+     * Checks if events should be logged at debug level.
+     *
+     * @return {@code true} if events are to be logged at debug level.
+     */
     public final boolean isDebugLogLevel() {
         return debugLogLevel;
     }
@@ -114,8 +130,18 @@ public class ConnectionEventProducerConfig {
      *
      */
     public enum ConnectionEventProducerType {
-
-        NONE, LOGGING, EVENTS;
+        /**
+         * The type indicating that no events should be produced at all.
+         */
+        NONE,
+        /**
+         * The type indicating that events should be logged only.
+         */
+        LOGGING,
+        /**
+         * The type indicating that events should be sent downstream via the messaging infrastructure.
+         */
+        EVENTS;
 
         /**
          * Gets a type for a type name.

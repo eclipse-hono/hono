@@ -465,9 +465,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     /**
      * Sends an <em>empty notification</em> event for a device that will remain connected for an indeterminate amount of
      * time.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(TenantObject, String, String, Integer, SpanContext)} with a TTD of
-     * {@code -1}.
      *
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
@@ -488,9 +485,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     /**
      * Sends an <em>empty notification</em> event for a device that has disconnected from a protocol adapter.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(TenantObject, String, String, Integer, SpanContext)} with a TTD of
-     * {@code 0}.
      *
      * @param tenant The tenant object that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
@@ -541,6 +535,5 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 .onFailure(t -> LOG.debug(
                         "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}]",
                         tenant, deviceId, ttd));
-
     }
 }
