@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,17 @@
 package org.eclipse.hono.util;
 
 /**
- * The type of messaging.
+ * The particular type of messaging infrastructure being used.
  */
 public enum MessagingType {
 
+    /**
+     * AMQP 1.0 based messaging infrastructure.
+     */
     amqp,
+    /**
+     * Apache Kafka based messaging infrastructure.
+     */
     kafka
 
 }

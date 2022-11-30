@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,19 @@
 package org.eclipse.hono.util;
 
 /**
- * Denotes the QoS level (in Hono's terms) with which a message was sent by the device.
+ * Denotes the quality-of-service level (in Hono's terms) used for sending a message.
  */
 public enum QoS {
 
+    /**
+     * Indicates that the message will be sent at most once, i.e. the sender does not care about
+     * whether the message is successfully transferred and/or processed by receivers.
+     */
     AT_MOST_ONCE,
+    /**
+     * Indicates that a message might be sent multiple times, for example if the sender believes
+     * that the message might have not reached its recipient due to a network problem.
+     */
     AT_LEAST_ONCE;
 
     /**
