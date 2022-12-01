@@ -136,7 +136,7 @@ The `${PREFIX}_ADDRESSREWRITERULE` variable contains rewrite rule for addresses 
 | `${PREFIX}_ADDRESSREWRITERULE`<br>`${prefix}.addressRewriteRule` | no | - | The address rewrite rule in the `"$PATTERN $REPLACEMENT"` format. |
 
 The rule is defined in the `"$PATTERN $REPLACEMENT"` format, where the pattern and replacement use the standard
-[Java regular expression](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html)
+[Java regular expression](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html)
 syntax. The pattern should match the address or otherwise the original address will be used.
 
 For example, setting `HONO_ADDRESSREWRITERULE` to `([a-z_]+)/([\\w-]+) test-vhost/$1/$2` would result in adding the
