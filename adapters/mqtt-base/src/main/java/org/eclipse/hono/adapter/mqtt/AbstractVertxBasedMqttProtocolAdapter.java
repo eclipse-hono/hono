@@ -45,9 +45,10 @@ import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
-import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
+import org.eclipse.hono.adapter.auth.device.jwt.JwtAuthProvider;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
+import org.eclipse.hono.adapter.auth.device.x509.TenantServiceBasedX509Authentication;
+import org.eclipse.hono.adapter.auth.device.x509.X509AuthProvider;
 import org.eclipse.hono.adapter.limiting.ConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
@@ -221,6 +222,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .append(new X509AuthHandler(
                         new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
                         new X509AuthProvider(getCredentialsClient(), tracer)))
+                .append(new JwtAuthHandler(
+                        new JwtAuthProvider(getCredentialsClient(), tracer)))
                 .append(new ConnectPacketAuthHandler(
                         new UsernamePasswordAuthProvider(
                                 getCredentialsClient(),

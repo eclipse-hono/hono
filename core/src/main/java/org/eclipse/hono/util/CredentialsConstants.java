@@ -101,6 +101,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
     /**
+     * The type name that indicates a asymmetric key secret.
+     */
+    public static final String SECRETS_TYPE_ASYMMETRIC_KEY = "asymmetric-key";
+    /**
      * The name of the field that contains the pattern to use for matching authentication identifiers.
      */
     public static final String SPECIFIER_WILDCARD                = "*";
@@ -122,6 +126,14 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String DEFAULT_HASH_FUNCTION             = HASH_FUNCTION_SHA256;
     /**
+     * The name of the supported rsa algorithm.
+     */
+    public static final String RS_ALG = "RS256";
+    /**
+     * The name of the supported elliptic curve algorithm.
+     */
+    public static final String ES_ALG = "ES256";
+    /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
@@ -129,6 +141,22 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The regular expression to validate that the type field supplied in credentials is legal.
      */
     public static final Pattern PATTERN_TYPE_VALUE = Pattern.compile("^[a-z0-9-]+$");
+    /**
+     * The beginning of every public key String.
+     */
+    public static final String BEGIN_KEY = "-----BEGIN PUBLIC KEY-----";
+    /**
+     * The ending of every public key String.
+     */
+    public static final String END_KEY = "-----END PUBLIC KEY-----";
+    /**
+     * The beginning of every X.509 Certificate String.
+     */
+    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    /**
+     * The ending of every X.509 Certificate String.
+     */
+    public static final String END_CERT = "-----END CERTIFICATE-----";
 
     /**
      * Request actions that belong to the Credentials API.

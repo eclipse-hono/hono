@@ -20,8 +20,8 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.auth.Device;

@@ -10,10 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.auth.device;
+package org.eclipse.hono.adapter.auth.device.usernamepassword;
 
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

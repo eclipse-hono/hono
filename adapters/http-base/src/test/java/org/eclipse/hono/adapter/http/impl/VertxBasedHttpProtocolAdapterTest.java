@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;

@@ -23,8 +23,8 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
-import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.adapter.auth.device.X509Authentication;
+import org.eclipse.hono.adapter.auth.device.x509.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.x509.X509Authentication;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.SniExtensionHelper;
 

@@ -40,8 +40,8 @@ import javax.net.ssl.SSLSession;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.adapter.auth.device.X509Authentication;
+import org.eclipse.hono.adapter.auth.device.x509.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.x509.X509Authentication;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
