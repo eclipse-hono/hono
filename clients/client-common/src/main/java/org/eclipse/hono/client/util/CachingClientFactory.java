@@ -14,14 +14,11 @@
 package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -37,16 +34,13 @@ import io.vertx.core.Vertx;
 /**
  * A factory for creating clients.
  * <p>
- * The {@link #createClient(Supplier, Handler)} method makes sure that all ongoing creation attempts are failed
- * when the {@link #onDisconnect()} method gets invoked.
- * <p>
  * Created clients are being cached.
  * <p>
  * Note that this class is not thread-safe - an instance is intended to be used by the same vert.x event loop thread.
  *
  * @param <T> The type of client to be created.
  */
-public final class CachingClientFactory<T> extends ClientFactory<T> {
+public final class CachingClientFactory<T> {
 
     private static final Logger log = LoggerFactory.getLogger(CachingClientFactory.class);
 
@@ -56,24 +50,14 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
 
     private final Predicate<T> livenessCheck;
     /**
-     * The clients that can be used to send messages.
-     * The target address is used as the key, e.g. <em>telemetry/DEFAULT_TENANT</em>.
+     * Client instances for keys.
      */
     private final Map<String, T> activeClients = new HashMap<>();
     /**
-     * The locks for guarding the creation of new instances. Map key is the client cache key.
+     * List of client creation requests that are put on hold because a concurrent request (for the same key)
+     * is not yet completed.
      */
-    private final Map<String, Boolean> creationLocks = new HashMap<>();
-    /**
-     * List of request data for client creation requests that are put on hold because
-     * a concurrent request is still not completed.
-     */
-    private final List<CreationRequestData> waitingCreationRequests = new ArrayList<>();
-    /**
-     * Set of client keys for which the client creation request has succeeded but for which
-     * all corresponding {@link #waitingCreationRequests} have not been processed yet.
-     */
-    private final Set<String> keysOfBeingCompletedConcurrentCreationRequests = new HashSet<>();
+    private final Map<String, Deque<CreationRequest>> waitingCreationRequests = new HashMap<>();
     /**
      * See {@link #setWaitingCreationRequestsCompletionBatchSize(int)}.
      */
@@ -91,6 +75,20 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
     }
 
     /**
+     * Fails all pending creation requests with a {@link ServerErrorException} with status 503
+     * and clears all state of this factory.
+     */
+    public void onDisconnect() {
+        final var connectionLostException = new ServerErrorException(
+                HttpURLConnection.HTTP_UNAVAILABLE,
+                "no connection to service");
+        activeClients.clear();
+        waitingCreationRequests.keySet().forEach(key -> {
+            failCreationRequests(key, connectionLostException);
+        });
+    }
+
+    /**
      * Sets the number of client creation requests to complete in a row, when a creation request has
      * succeeded and corresponding concurrently started creation requests are to be completed.
      * <p>
@@ -100,19 +98,20 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
      * A higher number here means more requests for one key get completed right away, without being delayed.
      * A smaller number means more requests concerning different keys get completed sooner.
      *
-     * @param waitingCreationRequestsCompletionBatchSize The size to set.
+     * @param batchSize The size to set.
      */
-    void setWaitingCreationRequestsCompletionBatchSize(final int waitingCreationRequestsCompletionBatchSize) {
-        this.waitingCreationRequestsCompletionBatchSize = waitingCreationRequestsCompletionBatchSize;
+    void setWaitingCreationRequestsCompletionBatchSize(final int batchSize) {
+        this.waitingCreationRequestsCompletionBatchSize = batchSize;
     }
 
     /**
      * Removes a client from the cache.
      *
      * @param key The key of the client to remove.
+     * @return The client that has been associated with the key or {@code null}.
      */
-    public void removeClient(final String key) {
-        activeClients.remove(key);
+    public T removeClient(final String key) {
+        return activeClients.remove(key);
     }
 
     /**
@@ -120,21 +119,14 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
      *
      * @param key The key of the client to remove.
      * @param postProcessor A handler to invoke with the removed client.
+     * @return The client that has been associated with the key or {@code null}.
      */
-    public void removeClient(final String key, final Handler<T> postProcessor) {
-        final T client = activeClients.remove(key);
+    public T removeClient(final String key, final Handler<T> postProcessor) {
+        final T client = removeClient(key);
         if (client != null) {
             postProcessor.handle(client);
         }
-    }
-
-    /**
-     * Clears this factory's internal state, i.e. its cache and creation locks.
-     */
-    @Override
-    protected void doClearStateAfterCreationRequestsCleared() {
-        activeClients.clear();
-        creationLocks.clear();
+        return client;
     }
 
     /**
@@ -163,146 +155,127 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
      *         the client or with a failed future containing a
      *         {@link org.eclipse.hono.client.ServiceInvocationException} if no client could be
      *         created using the factory.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void getOrCreateClient(
             final String key,
             final Supplier<Future<T>> clientInstanceSupplier,
             final Handler<AsyncResult<T>> result) {
 
-        if (keysOfBeingCompletedConcurrentCreationRequests.contains(key)) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(clientInstanceSupplier);
+        Objects.requireNonNull(result);
+        getOrCreateClient(new CreationRequest(key, clientInstanceSupplier, result));
+    }
+
+    private void getOrCreateClient(final CreationRequest creationRequest) {
+
+        final var requestsForKey = waitingCreationRequests.computeIfAbsent(creationRequest.key, k -> new ArrayDeque<>());
+        if (requestsForKey.isEmpty()) {
+            final T sender = activeClients.get(creationRequest.key);
+            if (sender != null && livenessCheck.test(sender)) {
+                log.debug("reusing cached client [key: {}]", creationRequest.key);
+                creationRequest.complete(sender);
+                return;
+            } else {
+                requestsForKey.add(creationRequest);
+            }
+        } else {
             log.debug("""
                     delaying client creation request, previous requests still being finished for [{}] \
                     ({} waiting creation requests for all keys)\
-                    """, key, waitingCreationRequests.size());
+                    """, creationRequest.key, waitingCreationRequests.size());
             // this ensures that requests for a given key are completed in the order that the requests were made
-            waitingCreationRequests.add(new CreationRequestData(key, clientInstanceSupplier, result));
+            requestsForKey.add(creationRequest);
             return;
         }
 
-        final T sender = activeClients.get(key);
-        if (sender != null && livenessCheck.test(sender)) {
-            log.debug("reusing cached client [{}]", key);
-            result.handle(Future.succeededFuture(sender));
-            return;
-        }
 
-        if (creationLocks.putIfAbsent(key, Boolean.TRUE) == null) {
-            // register a handler to be notified if the underlying connection to the server fails
-            // so that we can fail the result handler passed in
-            final Handler<ServerErrorException> connectionFailureHandler = connectionLostException -> {
-                // remove lock so that next attempt to open a sender doesn't fail
-                if (creationLocks.remove(key, Boolean.TRUE)) {
-                    log.debug("failed to create new client for [{}]: {}", key, connectionLostException.toString());
-                    result.handle(Future.failedFuture(connectionLostException));
-                    failWaitingCreationRequests(key, connectionLostException);
-                } else {
-                    log.debug("creation attempt already finished for [{}]", key);
-                }
-            };
-            creationRequests.add(connectionFailureHandler);
-            log.debug("creating new client for [{}]", key);
+        log.debug("creating new client for [key: {}]", creationRequest.key);
 
-            Future<T> clientInstanceSupplierFuture = null;
-            try {
-                clientInstanceSupplierFuture = clientInstanceSupplier.get();
-                if (clientInstanceSupplierFuture == null) {
-                    throw new NullPointerException("clientInstanceSupplier result is null");
-                }
-            } catch (final Exception ex) {
-                creationLocks.remove(key);
-                creationRequests.remove(connectionFailureHandler);
-                log.error("exception creating new client for [{}]", key, ex);
-                activeClients.remove(key);
-                final ServerErrorException exception = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                        String.format("exception creating new client for [%s]: %s", key, ex.getMessage()));
-                result.handle(Future.failedFuture(exception));
-                failWaitingCreationRequests(key, exception);
-            }
-            if (clientInstanceSupplierFuture != null) {
-                clientInstanceSupplierFuture.onComplete(creationAttempt -> {
-                    creationRequests.remove(connectionFailureHandler);
-                    if (creationLocks.remove(key, Boolean.TRUE)) {
-                        if (creationAttempt.succeeded()) {
-                            final T newClient = creationAttempt.result();
-                            log.debug("successfully created new client for [{}]", key);
-                            activeClients.put(key, newClient);
-                            result.handle(Future.succeededFuture(newClient));
-                            processWaitingCreationRequests();
-                        } else {
-                            log.debug("failed to create new client for [{}]", key, creationAttempt.cause());
-                            activeClients.remove(key);
-                            result.handle(Future.failedFuture(creationAttempt.cause()));
-                            failWaitingCreationRequests(key, creationAttempt.cause());
-                        }
+        try {
+            final Future<T> creationAttempt = creationRequest.clientInstanceSupplier.get();
+            if (creationAttempt == null) {
+                throw new NullPointerException("clientInstanceSupplier result is null");
+            } else {
+                creationAttempt.onComplete(ar -> {
+                    if (creationAttempt.succeeded()) {
+                        log.debug("successfully created new client for [key: {}]", creationRequest.key);
+                        final T newClient = creationAttempt.result();
+                        completeCreationRequests(creationRequest.key, newClient);
                     } else {
-                        log.debug("creation attempt already finished for [{}]", key);
+                        failCreationRequests(creationRequest.key, creationAttempt.cause());
                     }
                 });
             }
-
-        } else {
-            waitingCreationRequests.add(new CreationRequestData(key, clientInstanceSupplier, result));
-            log.debug("already trying to create a client for [{}] ({} waiting creation requests for all keys)", key,
-                    waitingCreationRequests.size());
+        } catch (final Exception ex) {
+            log.error("exception creating new client for [key: {}]", creationRequest.key, ex);
+            activeClients.remove(creationRequest.key);
+            failCreationRequests(creationRequest.key, new ServerErrorException(
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    String.format("exception creating new client for [key: %s]: %s", creationRequest.key, ex.getMessage())));
         }
     }
 
-    private void failWaitingCreationRequests(final String key, final Throwable cause) {
-        int count = 0;
-        for (final Iterator<CreationRequestData> iter = waitingCreationRequests.iterator(); iter.hasNext();) {
-            final CreationRequestData creationRequestData = iter.next();
-            if (key.equals(creationRequestData.key)) {
-                iter.remove();
-                count++;
-                creationRequestData.result.handle(Future.failedFuture(cause));
-            }
+    private void failCreationRequests(final String key, final Throwable cause) {
+
+        activeClients.remove(key);
+
+        final var requestsForKey = waitingCreationRequests.computeIfAbsent(key, k -> new ArrayDeque<>());
+        final int count = requestsForKey.size();
+        while (!requestsForKey.isEmpty()) {
+            requestsForKey.removeFirst().fail(cause);
         }
-        keysOfBeingCompletedConcurrentCreationRequests.remove(key);
         if (count > 0 && log.isDebugEnabled()) {
-            log.debug("failed {} concurrent requests to create new client for [{}]: {}", count, key, cause.toString());
+            log.debug("failed {} concurrent requests to create new client for [key: {}]: {}",
+                    count, key, cause.getMessage());
         }
     }
 
-    private void processWaitingCreationRequests() {
-        int removedEntriesCount = 0;
-        keysOfBeingCompletedConcurrentCreationRequests.clear(); // map contents will get rebuilt here
-        for (final Iterator<CreationRequestData> iter = waitingCreationRequests.iterator(); iter.hasNext();) {
-            final CreationRequestData creationRequestData = iter.next();
-            if (!creationLocks.containsKey(creationRequestData.key)) {
-                if (removedEntriesCount < waitingCreationRequestsCompletionBatchSize) {
-                    iter.remove();
-                    removedEntriesCount++;
-                    getOrCreateClient(creationRequestData.key, creationRequestData.clientInstanceSupplier,
-                            creationRequestData.result);
-                } else {
-                    // batch size limit reached; handling of next entry will be decoupled via vertx.runOnContext(),
-                    // leaving room for entries with other keys to be finished in between
-                    keysOfBeingCompletedConcurrentCreationRequests.add(creationRequestData.key);
-                }
+    private void completeCreationRequests(final String key, final T newClient) {
+
+        activeClients.put(key, newClient);
+        final var requestsForKey = waitingCreationRequests.computeIfAbsent(key, k -> new ArrayDeque<>());
+
+        for (int i = 0; i <= waitingCreationRequestsCompletionBatchSize; i++) {
+            final CreationRequest req = requestsForKey.pollFirst();
+            if (req == null) {
+                break;
+            } else {
+                req.complete(newClient);
             }
         }
-        if (!keysOfBeingCompletedConcurrentCreationRequests.isEmpty()) {
+        if (!requestsForKey.isEmpty()) {
             log.trace("decoupling completion of remaining waiting creation requests");
-            vertx.runOnContext(v -> processWaitingCreationRequests());
-        } else if (!waitingCreationRequests.isEmpty()) {
-            log.trace("no more waiting creation requests to complete at this time ({} remaining requests overall)",
-                    waitingCreationRequests.size());
+            vertx.runOnContext(v -> completeCreationRequests(key, newClient));
         }
     }
 
     /**
      * Keeps values used for a {@link #getOrCreateClient(String, Supplier, Handler)} invocation.
      */
-    private class CreationRequestData {
+    private class CreationRequest {
         final String key;
         final Supplier<Future<T>> clientInstanceSupplier;
         final Handler<AsyncResult<T>> result;
 
-        CreationRequestData(final String key, final Supplier<Future<T>> clientInstanceSupplier,
+        CreationRequest(
+                final String key,
+                final Supplier<Future<T>> clientInstanceSupplier,
                 final Handler<AsyncResult<T>> result) {
+
             this.key = key;
             this.clientInstanceSupplier = clientInstanceSupplier;
             this.result = result;
+        }
+
+        void complete(final T createdInstance) {
+            result.handle(Future.succeededFuture(createdInstance));
+        }
+
+        void fail(final Throwable cause) {
+            log.debug("failed to create new client for [key: {}]: {}", key, cause.getMessage());
+            result.handle(Future.failedFuture(cause));
         }
     }
 }
