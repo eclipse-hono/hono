@@ -22,4 +22,5 @@ set -ue
 
 curl -sfL https://get.k3s.io | sh -s - server --node-name hono.eclipseprojects.io \
   --kubelet-arg container-log-max-files=3 \
-  --kubelet-arg container-log-max-size=1Mi
+  --kubelet-arg container-log-max-size=1Mi \
+  --disable traefik
