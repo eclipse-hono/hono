@@ -150,8 +150,16 @@
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
                         <JAVA_MAIN_CLASS>io.quarkus.bootstrap.runner.QuarkusEntryPoint</JAVA_MAIN_CLASS>
                         <JAVA_LIB_DIR>app/*:quarkus/*:lib/boot/*:lib/main/*:extensions/*</JAVA_LIB_DIR>
-                        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+                        <!--
+                          - make sure that the size of (ephemeral) keys used for Diffie-Hellman exchanges
+                            match the length of the (private) key used for the service's identity
+                          - also make sure to not allow clients to initiate a renegotiation of a
+                            TLS session
+                          - use Base64 encoder/decoder that is compatible with vert.x 3
+                        -->
                         <JAVA_OPTIONS>
+                          -Djdk.tls.ephemeralDHKeySize=matched
+                          -Djdk.tls.rejectClientInitiatedRenegotiation=true
                           -Dvertx.json.base64=legacy
                           -Djava.util.logging.manager=org.jboss.logmanager.LogManager
                         </JAVA_OPTIONS>
