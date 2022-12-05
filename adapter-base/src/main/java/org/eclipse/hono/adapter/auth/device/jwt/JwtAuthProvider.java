@@ -14,7 +14,7 @@
 package org.eclipse.hono.adapter.auth.device.jwt;
 
 import java.net.HttpURLConnection;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
@@ -135,8 +135,8 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
             externalJwtAuthTokenValidator.setCredentialsObject(credentialsOnRecord);
             final Jws<Claims> claims = externalJwtAuthTokenValidator.expand(deviceCredentials.getJwt());
             final Claims claimsBody = claims.getBody();
-            final Date now = new Date();
-            return (claimsBody.getExpiration().after(now) && claimsBody.getIssuedAt().before(now));
+            final Instant now = Instant.now();
+            return claimsBody.getExpiration().toInstant().isAfter(now) && claimsBody.getIssuedAt().toInstant().isBefore(now);
         } catch (Exception e) {
             return false;
         }
