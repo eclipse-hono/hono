@@ -588,7 +588,7 @@ public abstract class AbstractConfig {
      * An empty list indicates that all cipher suites supported by the JVM can be used. This is also the default.
      * <p>
      * Please refer to
-     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
+     * <a href="https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
      * JSSE Cipher Suite Names</a> for a list of supported cipher suite names.
      *
      * @return The supported cipher suites in order of preference.
@@ -603,7 +603,7 @@ public abstract class AbstractConfig {
      * An empty list indicates that all cipher suites supported by the JVM can be used. This is also the default.
      * <p>
      * Please refer to
-     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
+     * <a href="https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#jsse-cipher-suite-names">
      * JSSE Cipher Suite Names</a> for a list of supported cipher suite names.
      *
      * @param cipherSuites The supported cipher suites in order of preference.
