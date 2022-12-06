@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -843,7 +844,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             }
         })).compose(msgConsumer -> {
             consumerIsSet.set(msgConsumer != null);
-            if (errorMsgHandler == null) {
+            if (!errorMessagesExpected) {
                 return Future.succeededFuture();
             }
             mqttClient.publishHandler(msg -> {
@@ -869,13 +870,14 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         customizeConnectedClient();
 
         final long start = System.currentTimeMillis();
+        final long timeout = start + getTimeToWait();
         while (messageCount.get() < MESSAGES_TO_SEND) {
             final CountDownLatch messageHandlingCompleted = new CountDownLatch(errorMessagesExpected ? 2 : 1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
                 sender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        LOGGER.error("error sending message {}", messageCount.get(), sendAttempt.cause());
+                        LOGGER.trace("error sending message {}", messageCount.get(), sendAttempt.cause());
                     }
                     if (messageCount.get() % 50 == 0) {
                         LOGGER.info("messages sent: " + messageCount.get());
@@ -911,11 +913,22 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                                 return oldValue != null ? null : promise; // remove mapping if oldValue is set
                             });
                         }
+                    } else {
+                        if (sendAttempt.failed()) {
+                            LOGGER.error("error sending message (success expected)l", sendAttempt.cause());;
+                            ctx.failNow(new IllegalStateException("error sending message (success expected)l"));
+                        }
                     }
                 });
             });
 
-            messageHandlingCompleted.await();
+            final long sendTimeout = timeout - System.currentTimeMillis();
+            // give some time for send to be run in context and to complete
+            if (sendTimeout <= 0 || !messageHandlingCompleted.await(sendTimeout, TimeUnit.MILLISECONDS)) {
+                LOGGER.info("Test timeout ({}ms) while sending message {}!", getTimeToWait(), messageCount.get());
+                ctx.failNow(new TimeoutException("Failed to send messages!"));
+                break;
+            }
         }
 
         // in case no consumer is set, waiting time needs to be longer (adapter will wait for credit when creating the first downstream sender)
