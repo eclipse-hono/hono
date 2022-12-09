@@ -22,6 +22,7 @@ public class ApplicationConfigProperties {
     private int maxInstances = 0;
     private boolean amqpMessagingDisabled = false;
     private boolean kafkaMessagingDisabled = false;
+    private boolean pubSubMessagingDisabled = false;
 
     /**
      * Creates new properties using default values.
@@ -40,6 +41,7 @@ public class ApplicationConfigProperties {
         setMaxInstances(options.maxInstances());
         this.amqpMessagingDisabled = options.amqpMessagingDisabled();
         this.kafkaMessagingDisabled = options.kafkaMessagingDisabled();
+        this.pubSubMessagingDisabled = options.pubSubMessagingDisabled();
     }
 
     /**
@@ -110,5 +112,23 @@ public class ApplicationConfigProperties {
      */
     public final void setKafkaMessagingDisabled(final boolean disabled) {
         this.kafkaMessagingDisabled = disabled;
+    }
+
+    /**
+     * Checks if PubSub based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    public final boolean isPubSubMessagingDisabled() {
+        return pubSubMessagingDisabled;
+    }
+
+    /**
+     * Disables general support for PubSub based messaging.
+     *
+     * @param disabled {@code true} to disable explicitly.
+     */
+    public final void setPubSubMessagingDisabled(final boolean disabled) {
+        this.pubSubMessagingDisabled = disabled;
     }
 }

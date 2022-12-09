@@ -14,11 +14,13 @@ package org.eclipse.hono.service.management.tenant;
 
 import java.net.HttpURLConnection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.pubsub.PubSubBasedTopicManager;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
@@ -26,7 +28,9 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 
 import io.opentracing.Span;
 import io.vertx.core.CompositeFuture;
@@ -172,6 +176,18 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
             })
             .onSuccess(operationResult -> writeResponse(ctx, operationResult, (responseHeaders, status) -> {
                 if (status == HttpURLConnection.HTTP_CREATED) {
+                    final Map<String, Object> extensions = payload.result().getExtensions();
+                    if (extensions.containsKey(RegistryManagementConstants.FIELD_EXT_MESSAGING_TYPE) && extensions.containsKey(RegistryManagementConstants.FIELD_EXT_PROJECT_ID)) {
+                        final Object messagingType = extensions.get(RegistryManagementConstants.FIELD_EXT_MESSAGING_TYPE);
+                        final String projectId = (String) extensions.get(RegistryManagementConstants.FIELD_EXT_PROJECT_ID);
+                        if (messagingType.equals("pubsub") && projectId != null) {
+                            final PubSubBasedTopicManager pubSubBasedTopicManager = new PubSubBasedTopicManager(vertx, projectId, tenantId.result());
+                            pubSubBasedTopicManager.createTopic(EventConstants.EVENT_ENDPOINT);
+                            pubSubBasedTopicManager.createTopic(TelemetryConstants.TELEMETRY_ENDPOINT);
+                            pubSubBasedTopicManager.closeAdminClient();
+                        }
+
+                    }
                     Optional.ofNullable(operationResult.getPayload())
                         .map(Id::getId)
                         .ifPresent(id -> {

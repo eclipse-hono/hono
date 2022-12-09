@@ -59,6 +59,10 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
+import org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -70,13 +74,16 @@ import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
+import org.eclipse.hono.client.telemetry.pubsub.PubSubBasedDownstreamSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.service.NotificationSupportingServiceApplication;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
@@ -145,6 +152,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache;
 
+    private PubSubConfigProperties pubSubConfigProperties;
+
     /**
      * Creates an instance of the protocol adapter.
      *
@@ -172,6 +181,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         props.setServerRoleIfUnknown("Downstream");
         props.setNameIfNotSet(getComponentName());
         this.downstreamSenderConfig = props;
+    }
+
+    @Inject
+    void setPubSubClientOptions(
+            @ConfigMapping(prefix = "hono.pubsub") final PubSubPublisherOptions options) {
+        this.pubSubConfigProperties = new PubSubConfigProperties(options);
     }
 
     @Inject
@@ -357,6 +372,15 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             messageSamplerFactory,
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
+        if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
+            LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
+
+            final PubSubPublisherFactory pubSubFactory = CachingPubSubPublisherFactory.createFactory();
+
+            telemetrySenderProvider
+                    .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
+            eventSenderProvider.setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
+        }
 
         final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(
                 telemetrySenderProvider,
@@ -505,6 +529,17 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 messageSamplerFactory,
                 protocolAdapterProperties.isDefaultsEnabled(),
                 protocolAdapterProperties.isJmsVendorPropsEnabled());
+    }
+
+    /**
+     * Creates a new Pub/Sub downstream sender for telemetry and event messages.
+     *
+     * @return The sender.
+     */
+    private PubSubBasedDownstreamSender pubSubDownstreamSender(final PubSubPublisherFactory pubSubFactory,
+            final String topic) {
+        return new PubSubBasedDownstreamSender(vertx, pubSubFactory, topic, pubSubConfigProperties.getProjectId(),
+                protocolAdapterProperties.isDefaultsEnabled(), tracer);
     }
 
     /**

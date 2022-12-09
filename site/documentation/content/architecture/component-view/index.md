@@ -66,7 +66,7 @@ to receive and forward Command & Control messages as defined by the
 ## Messaging Infrastructure
 
 The *Messaging Infrastructure* is not *per se* a component being developed as part of Hono. Instead, Hono supports
-Kafka and/or AMQP 1.0 based messaging infrastructure that is being developed by other open source projects.
+Kafka, AMQP 1.0 and/or Google Pub/Sub based messaging infrastructure that is being developed by other open source projects.
 
 ### Kafka based Messaging Infrastructure
 
@@ -93,3 +93,11 @@ The diagram below provides an overview of the default implementation of the Mess
 Scaling out messaging infrastructure is a not a trivial task. Hono **does not** provide an out-of-the-box solution to
 this problem but instead integrates with the [EnMasse](https://enmasseproject.github.io) project which aims at
 providing *Messaging as a Service* infrastructure.
+
+### Google Pub/Sub based Messaging Infrastructure
+
+To use this setup, a Google project has to be provided with the Pub/Sub API enabled. There is no example deployment for
+this Messaging Infrastructure.
+
+Google Pub/Sub is an asynchronous messaging service designed to be highly scalable. There is no need to take care about scaling out
+messaging infrastructure.

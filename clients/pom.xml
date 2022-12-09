@@ -42,11 +42,13 @@
     <module>notification</module>
     <module>notification-amqp</module>
     <module>notification-kafka</module>
+    <module>pubsub-common</module>
     <module>registry</module>
     <module>registry-amqp</module>
     <module>telemetry</module>
     <module>telemetry-amqp</module>
     <module>telemetry-kafka</module>
+    <module>telemetry-pubsub</module>
   </modules>
 
   <dependencies>
@@ -58,7 +60,7 @@
     <!-- test -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

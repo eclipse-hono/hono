@@ -48,4 +48,12 @@ public interface ApplicationOptions {
      */
     @WithDefault("false")
     boolean kafkaMessagingDisabled();
+
+    /**
+     * Checks if PubSub based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    @WithDefault("false")
+    boolean pubSubMessagingDisabled();
 }
