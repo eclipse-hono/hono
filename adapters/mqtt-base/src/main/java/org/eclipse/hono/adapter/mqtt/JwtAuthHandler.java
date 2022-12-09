@@ -135,6 +135,6 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
         final String tenantId = clientIdSplit[splitLength - 3];
         final String authId = clientIdSplit[splitLength - 1];
 
-        return new String[] { tenantId, authId };
+        return new String[]{tenantId, authId};
     }
 }

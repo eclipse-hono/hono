@@ -215,7 +215,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The name of the field that contains the name of the algorithm used for the JWT validation.
      */
-    public static final String FIELD_SECRETS_ALG = "alg";
+    public static final String FIELD_SECRETS_ALG                 = "alg";
     /**
      * The name of the field that contains the earliest point in time a secret may be used for authentication.
      */
@@ -228,7 +228,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The name of the field that contains the comment about the secret.
      */
-    public static final String FIELD_SECRETS_COMMENT = "comment";
+    public static final String FIELD_SECRETS_COMMENT             = "comment";
 
     /**
      * The type name that indicates an X.509 client certificate secret.
@@ -245,7 +245,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The type name that indicates a asymmetric key secret.
      */
-    public static final String SECRETS_TYPE_ASYMMETRIC_KEY = "asymmetric-key";
+    public static final String SECRETS_TYPE_ASYMMETRIC_KEY       = "asymmetric-key";
 
     /**
      * The name of the BCrypt hash function.

@@ -63,6 +63,33 @@ for authentication. See [Device Identity]({{< relref "/concepts/device-identity.
 concepts.
 {{% /notice %}}
 
+### JSON Web Token
+
+The MQTT adapter supports authenticating clients based on credentials provided during MQTT connection establishment.
+This means that clients need to provide a *client identifier*, a *user* and a *password* field in their MQTT CONNECT
+packet as defined in
+[MQTT Version 3.1.1, Section 3.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028)
+when connecting to the MQTT adapter. The client identifier must match the pattern */*tenant-id*/device/*auth-id*,
+e.g. `tenant/example-tenant/device/device-1`. The content of the *user* field is ignored. The password field must
+contain the JSON Web Token (JWT).
+
+The adapter extracts the *auth-id*, *tenant* and JWT from the CONNECT packet and verifies them using the
+credentials that the
+[configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
+has on record for the client as described in
+[JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}}).
+If the JWT is verified in combination with the credentials and within its validity period, the client has been
+authenticated successfully and the connection is being established. The validity period is defined within the JWT's
+payload by the mandatory claims `iat` ("issued at") and `exp` ("expiration time"). Please refer to
+[JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}})
+for more detailed information.
+
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
+concepts.
+{{% /notice %}}
+
 ## Resource Limit Checks
 
 The adapter performs additional checks regarding [resource limits]({{< ref "/concepts/resource-limits.md" >}}) when

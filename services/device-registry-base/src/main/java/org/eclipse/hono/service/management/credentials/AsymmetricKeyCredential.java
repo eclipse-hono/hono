@@ -29,8 +29,8 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 /**
  * A credential type for storing an asymmetric key (public key / certificate) for a device.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">Asymmetric Key</a> for an example of
- * the configuration properties for this credential type. TODO: provide correct URL
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#asymmetric-key">Asymmetric Key</a> for an example
+ * of the configuration properties for this credential type.
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)

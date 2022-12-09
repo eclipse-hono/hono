@@ -34,8 +34,8 @@ the particular *provisioning process* being used to bring devices into life. In 
 implement the Device Registration API as a *facade* on top of the existing component.
 
 In addition to that, Hono defines a [Device Registry Management API]({{< relref "/api/management" >}}), which can be
-implemented to take advantage of standardized  operations for managing devices and credentials. This API is optional
-because Hono components do not require it during runtime. 
+implemented to take advantage of standardized operations for managing devices and credentials. This API is optional
+because Hono components do not require it during runtime.
 
 Hono comes with a [MongoDB]({{< relref "/admin-guide/mongodb-device-registry-config.md" >}}) and a
 [JDBC]({{< relref "/admin-guide/jdbc-device-registry-config.md" >}}) based implementation of both APIs.
@@ -147,3 +147,34 @@ After having verified the client certificate using the trust anchor(s), the prot
 the client certificate's *subject DN* and invokes the Credentials API's
 [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
 [*x509-cert* type credentials]({{< relref "/api/credentials#x509-certificate" >}}) that are on record for the device.
+
+### JSON Web Token based Authentication
+
+The MQTT protocol adapter supports authentication of devices with a JSON Web Token (JWT) based mechanism. In this case,
+the protocol adapter verifies the JWT by using the public key / certificate that is on record for the device in the
+device registry. Further more does the protocol adapter check if the JWT is valid. To be valid the JWT has to provide
+the following information in its header and payload.
+
+The JWT header has to provide two fields that indicate the type of token (`typ`) and the signing algorithm (`alg`).
+Both fields are mandatory and the type has to be `JWT`. For the signing algorithm `RS256` and `ES256` are supported.
+The algorithm specified in the header must match at least one of the
+[*asymmetric-key* type credentials]({{< relref "/api/credentials#asymmetric-key" >}}) registered for the device.
+
+The JWT payload must at least contain the claims `iat` ("issued at") and `exp` ("expiration time") with values provided
+in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The `iat` claim marks the timestamp the token was created at
+and will also represent the start of its validity period. The `nbf` ("not before") claim is therefore not required and
+will be ignored. The `exp` claim signifies the point in time after which the token becomes invalid.
+
+During connection establishment the device presents a client identifier, a username and a password to the protocol
+adapter. The JWT has to be provided in the password field. The username will be ignored; however, some MQTT client
+libraries will not send the password unless the username is specified. The client identifier must provide the
+*tenant-id* and *auth-id* in the following format: */*tenant-id*/device/*auth-id*. For example, a device that belongs
+to tenant `example-tenant` and for which *asymmetric-key* credentials with an *auth-id* of `device-1` have been
+registered, would present a client identifier of `tenant/example-tenant/device/device-1` when authenticating to the
+protocol adapter.
+
+The protocol adapter then extracts the tenant identifier from the client identifier and invokes the Credentials
+API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
+*asymmetric-key* type credentials that are on record for the device. The key contained in the credentials is then used
+by the protocol adapter to verify the JWT provided by the client. If both, the JWT and the key originate from
+the same private key and the JWT's header and claims are valid, than the device will be authenticated successfully.

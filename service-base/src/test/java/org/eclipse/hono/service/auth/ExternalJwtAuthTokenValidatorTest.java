@@ -116,12 +116,9 @@ class ExternalJwtAuthTokenValidatorTest {
                 "Y3ZdIGB74PWhr-XEnv_NdYt7tfZjyB5IjrdVJcVPVfrpRG1TQODIIn04hIi83jm3FRa8CbjHlZ2w-DVN-SUZeQ";
         invalidAlgFieldRsJwt = "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9." +
                 "eyJpYXQiOjE1MTYyMzkwMjIsImV4cCI6MTkxNjIzOTAyMn0." +
-                "ImvOzTOLztv0GHhcP3NG8oN6U0qWQN8ZzodwRUC7JlK0sdaZ9grYZIq4DA3hXbjd7tx-xFZtdNEfFRKIYRUOTPfiUftV249QzQ1rm"
-                +
-                "SUSBbd49Eu6QpcaIsz1CDXZcMFHscZrYepaZiTDSeUVkrp7Ci11GI7oavsJaSSVStIgH3xpnwgxi1NtZbVHCOesH8athEvaYdLmyK"
-                +
-                "3h53qlqBn7ujM_FGfZxe4Jx73FpHUtb9KVaNkTr1TNbDo6moC32N9oonoWCrew6hW6HJFsroYJg0sdB35xk1w8dWuFaBMMdEkSoON"
-                +
+                "ImvOzTOLztv0GHhcP3NG8oN6U0qWQN8ZzodwRUC7JlK0sdaZ9grYZIq4DA3hXbjd7tx-xFZtdNEfFRKIYRUOTPfiUftV249QzQ1rm" +
+                "SUSBbd49Eu6QpcaIsz1CDXZcMFHscZrYepaZiTDSeUVkrp7Ci11GI7oavsJaSSVStIgH3xpnwgxi1NtZbVHCOesH8athEvaYdLmyK" +
+                "3h53qlqBn7ujM_FGfZxe4Jx73FpHUtb9KVaNkTr1TNbDo6moC32N9oonoWCrew6hW6HJFsroYJg0sdB35xk1w8dWuFaBMMdEkSoON" +
                 "bpRmttiWAQhglJayJCoCcpfet4g1refjgKXm1vw";
     }
 

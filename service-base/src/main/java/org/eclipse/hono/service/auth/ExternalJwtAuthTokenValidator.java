@@ -62,20 +62,26 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
                 .setSigningKeyResolver(new SigningKeyResolverAdapter() {
 
                     @Override
-                    public Key resolveSigningKey(
-                            final JwsHeader header,
-                            final Claims claims) {
+                    public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
+
+                        final var tokenType = Optional.ofNullable(header.getType())
+                                .orElseThrow(
+                                        () -> new SignatureException("token does not contain required typ header."));
+                        if (!tokenType.equalsIgnoreCase("JWT")) {
+                            throw new SignatureException("typ field in token header is invalid. Must be \"JWT\".");
+                        }
 
                         final var algorithm = Optional.ofNullable(header.getAlgorithm())
                                 .orElseThrow(
-                                        () -> new SignatureException("token does not contain required alg header"));
-
+                                        () -> new SignatureException("token does not contain required alg header."));
                         if (!algorithm.equals(CredentialsConstants.RS_ALG)
                                 && !algorithm.equals(CredentialsConstants.ES_ALG)) {
                             throw new SignatureException(
-                                    String.format("alg field in token header invalid. Must be either \"%s\" or \"%s\"",
+                                    String.format(
+                                            "alg field in token header is invalid. Must be either \"%s\" or \"%s\".",
                                             CredentialsConstants.RS_ALG, CredentialsConstants.ES_ALG));
                         }
+
                         final List<JsonObject> secrets = getCredentialsObject().getCandidateSecrets();
                         final Optional<JsonObject> optionalSecret = secrets.stream()
                                 .filter(secret -> algorithm.equals(secret.getString(JwsHeader.ALGORITHM))).findFirst();

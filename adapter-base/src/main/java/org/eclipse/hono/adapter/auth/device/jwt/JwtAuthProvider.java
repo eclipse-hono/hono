@@ -136,8 +136,10 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
             final Jws<Claims> claims = externalJwtAuthTokenValidator.expand(deviceCredentials.getJwt());
             final Claims claimsBody = claims.getBody();
             final Instant now = Instant.now();
-            return claimsBody.getExpiration().toInstant().isAfter(now) && claimsBody.getIssuedAt().toInstant().isBefore(now);
+            return claimsBody.getExpiration().toInstant().isAfter(now)
+                    && claimsBody.getIssuedAt().toInstant().isBefore(now);
         } catch (Exception e) {
+            log.debug("JWT validity check failed.", e);
             return false;
         }
     }

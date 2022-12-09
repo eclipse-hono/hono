@@ -1323,12 +1323,14 @@ components:
             - $ref: '#/components/schemas/PasswordCredentials'
             - $ref: '#/components/schemas/PSKCredentials'
             - $ref: '#/components/schemas/X509CertificateCredentials'
+            - $ref: '#/components/schemas/AsymmetricKeyCredentials'
          discriminator:
             propertyName: type
             mapping:
                "hashed-password": '#/components/schemas/PasswordCredentials'
                "psk": '#/components/schemas/PSKCredentials'
                "x509-cert": '#/components/schemas/X509CertificateCredentials'
+               "asymmetric-key": '#/components/schemas/AsymmetricKeyCredentials'
 
       CommonCredentials:
          type: object
@@ -1438,6 +1440,32 @@ components:
                        by applying the template to the extracted *subject DN*. The certificate's validity
                        period MUST be stored in a single secret. The certificate itself must then be discarded.
 
+      AsymmetricKeyCredentials:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/AsymmetricKeyCredentials'
+            - type: object
+              required:
+                 - type
+                 - auth-id
+                 - secrets
+              additionalProperties: false
+              properties:
+                 "type":
+                    type: string
+                    pattern: "asymmetric-key"
+                 "auth-id":
+                    type: string
+                    description: |
+                       The authentication identifier provided by the device as part of the *client identifier*.
+                       Example: For client identifier `tenant/DEFAULT_TENANT/device/sensor1` the authentication
+                       identifier to be registered is `sensor1`.
+                 "secrets":
+                    type: array
+                    items:
+                       $ref: '#/components/schemas/AsymmetricKeySecret'
+                    minItems: 1
+
       CommonSecret:
          type: object
          additionalProperties: false
@@ -1529,6 +1557,26 @@ components:
                     type: string
                     format: byte
                     description: The secret key shared between device and Hono.
+
+      AsymmetricKeySecret:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonSecret'
+            - type: object
+              additionalProperties: false
+              required:
+                 - alg
+                 - key
+              properties:
+                 "alg":
+                    type: string
+                    description: The signing algorithm of the provided key (only `RS256` or `ES256` are supported).
+                 "key":
+                    type: string
+                    description: |
+                       The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer.
+                       Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public
+                       keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory.
 
       FilterJson:
         description: Filters to be applied to bulk queries.

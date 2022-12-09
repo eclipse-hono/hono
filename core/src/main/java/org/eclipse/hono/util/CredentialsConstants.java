@@ -103,7 +103,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The type name that indicates a asymmetric key secret.
      */
-    public static final String SECRETS_TYPE_ASYMMETRIC_KEY = "asymmetric-key";
+    public static final String SECRETS_TYPE_ASYMMETRIC_KEY       = "asymmetric-key";
     /**
      * The name of the field that contains the pattern to use for matching authentication identifiers.
      */
@@ -128,11 +128,11 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The name of the supported rsa algorithm.
      */
-    public static final String RS_ALG = "RS256";
+    public static final String RS_ALG                            = "RS256";
     /**
      * The name of the supported elliptic curve algorithm.
      */
-    public static final String ES_ALG = "ES256";
+    public static final String ES_ALG                            = "ES256";
     /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */
@@ -144,19 +144,19 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The beginning of every public key String.
      */
-    public static final String BEGIN_KEY = "-----BEGIN PUBLIC KEY-----";
+    public static final String BEGIN_KEY                         = "-----BEGIN PUBLIC KEY-----";
     /**
      * The ending of every public key String.
      */
-    public static final String END_KEY = "-----END PUBLIC KEY-----";
+    public static final String END_KEY                           = "-----END PUBLIC KEY-----";
     /**
      * The beginning of every X.509 Certificate String.
      */
-    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    public static final String BEGIN_CERT                        = "-----BEGIN CERTIFICATE-----";
     /**
      * The ending of every X.509 Certificate String.
      */
-    public static final String END_CERT = "-----END CERTIFICATE-----";
+    public static final String END_CERT                          = "-----END CERTIFICATE-----";
 
     /**
      * Request actions that belong to the Credentials API.
