@@ -41,7 +41,8 @@ public abstract class AbstractSubscription implements Subscription {
     private final String topic;
     private final boolean authenticated;
     private final boolean containsTenantId;
-    private final boolean containsDeviceId;
+    private final boolean containsSpecificDeviceId;
+    private final boolean containsWildcardDeviceId;
 
     private final MqttQoS qos;
 
@@ -71,8 +72,9 @@ public abstract class AbstractSubscription implements Subscription {
         this.endpoint = topicResource.getEndpoint();
         final String resourceTenant = topicResource.getTenantId();
         this.containsTenantId = !Strings.isNullOrEmpty(resourceTenant);
-        final String resourceDeviceId = "+".equals(topicResource.getResourceId()) ? null : topicResource.getResourceId();
-        this.containsDeviceId = !Strings.isNullOrEmpty(resourceDeviceId);
+        this.containsWildcardDeviceId = "+".equals(topicResource.getResourceId());
+        final String resourceDeviceId = containsWildcardDeviceId ? null : topicResource.getResourceId();
+        this.containsSpecificDeviceId = !Strings.isNullOrEmpty(resourceDeviceId);
 
         this.authenticated = authenticatedDevice != null;
 
@@ -139,13 +141,18 @@ public abstract class AbstractSubscription implements Subscription {
     }
 
     @Override
+    public final boolean isGatewaySubscriptionForAllDevices() {
+        return authenticatedDeviceId != null && containsWildcardDeviceId;
+    }
+
+    @Override
     public boolean containsTenantId() {
         return containsTenantId;
     }
 
     @Override
     public boolean containsDeviceId() {
-        return containsDeviceId;
+        return containsSpecificDeviceId;
     }
 
     @Override

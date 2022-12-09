@@ -1546,6 +1546,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 subscription.getDeviceId(),
                                 authenticatedDevice,
                                 commandContext.getTracingContext());
+                    } else {
+                        // in case of gateway having subscribed for itself as simple device do not forward messages for
+                        // devices behind that gateway
+                        if (!subscription.isGatewaySubscriptionForAllDevices() && command.isTargetedAtGateway()) {
+                            log.debug(
+                                    "no command subscription via gateway found [tenant: {}, device-id: {}, gateway-id: {}]",
+                                    command.getTenant(), command.getDeviceId(), command.getGatewayId());
+                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                    "no command subscription via gateway"));
+                        }
                     }
                     return Future.succeededFuture();
                 }).onFailure(t -> {

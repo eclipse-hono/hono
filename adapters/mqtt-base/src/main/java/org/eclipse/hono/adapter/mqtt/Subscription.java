@@ -87,6 +87,14 @@ public interface Subscription {
     boolean isGatewaySubscriptionForSpecificDevice();
 
     /**
+     * Checks whether this subscription represents the case of a gateway subscribing for all devices that
+     * it acts on behalf of.
+     *
+     * @return {@code true} if a gateway is subscribing for all devices.
+     */
+    boolean isGatewaySubscriptionForAllDevices();
+
+    /**
      * Checks if the topic contains a tenant identifier.
      *
      * @return {@code true} if the topic contains a tenant id.
