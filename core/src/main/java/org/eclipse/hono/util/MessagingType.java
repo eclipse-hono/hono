@@ -25,6 +25,10 @@ public enum MessagingType {
     /**
      * Apache Kafka based messaging infrastructure.
      */
-    kafka
+    kafka,
+    /**
+     * Pub/Sub based messaging infrastructure.
+     */
+    pubsub
 
 }

@@ -341,6 +341,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-pubsub-common</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-command</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -382,6 +387,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-telemetry-kafka</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-telemetry-pubsub</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -68,6 +68,10 @@
       <artifactId>hono-client-telemetry</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-pubsub-common</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
