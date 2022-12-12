@@ -33,7 +33,7 @@
     <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="337.2" x="54.6" y="79.6365" style="white-space: pre;">1.0 PUBLISH("e/TENANT/4711", qos=1, data)</text>
     <polygon fill="#A80036" points="939,115.875,951,120.675,939,125.475,943.8,120.675" style="stroke: #A80036; stroke-width: 1.2;"/>
     <line style="stroke: #A80036; stroke-width: 1.2;" x1="418.2" x2="946.2" y1="120.675" y2="120.675"/>
-    <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="512.4" x="426.6" y="114.5959" style="white-space: pre;">1.1 publish(topic: "projects/PROJECT/topics/4711.event", value: data)</text>
+    <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="512.4" x="426.6" y="114.5959" style="white-space: pre;">1.1 publish(topic: "projects/PROJECT/topics/TENANT.event", value: data)</text>
     <polygon fill="#A80036" points="431.4,150.8344,419.4,155.6344,431.4,160.4344,426.6,155.6344" style="stroke: #A80036; stroke-width: 1.2;"/>
     <line style="stroke: #A80036; stroke-width: 1.2;" x1="424.2" x2="958.2" y1="155.6344" y2="155.6344"/>
     <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="129.6" x="438.6" y="149.5553" style="white-space: pre;">1.2 acknowledge</text>

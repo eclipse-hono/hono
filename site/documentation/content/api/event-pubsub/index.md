@@ -1,7 +1,7 @@
 ---
-title: "Event API Specification for Pub/Sub"
+title: "Event API Specification for Google Pub/Sub"
 linkTitle: "Event API (Pub/Sub)"
-weight: 405
+weight: 421
 resources:
 - src: publish_pubsub.svg
 ---
@@ -15,24 +15,25 @@ Hono for Google Pub/Sub messaging infrastructure in order to use it and invoke o
 this page we will simply use *Pub/Sub* when referring to Google Pub/Sub.
 
 The Event API for Pub/Sub is an alternative to the [Event API for Kafka]({{< relref "/api/event-kafka" >}}) for
-applications that want to consume events from a Pub/Sub Messaging Network instead of an Apache Kafka&trade; broker.
+applications that want to consume events from Pub/Sub instead of an Apache Kafka&trade; broker.
 
 ## Southbound Operations
 
-The following operation can be used by *Protocol Adapters* to publish event data received from devices to
+The following operation can be used by *Protocol Adapters* to publish event messages received from devices to
 consumers like *Business Applications*.
 
 ### Publish Event Data
 
-The protocol adapter writes messages to the tenant-specific topic `projects/${project_id}/topics/${tenant_id}.event`
-where `${project_id}` is the ID of the Google project and `${tenant_id}` is the
-ID of the tenant that the client wants to upload telemetry data for.
+The protocol adapter writes messages to the tenant-specific topic `projects/${google_project_id}/topics/${tenant_id}.event`
+where `${google_project_id}` is the ID of the Google Cloud project and `${tenant_id}` is the
+ID of the tenant that the client wants to upload event messages for.
 
 **Preconditions**
 
-1. The projectId is declared in the deployment file.
-2. The client is authorized to write to the topic.
-3. The device for which the adapter wants to send telemetry data has been registered (see
+1. A Google Cloud Project is set up with the Pub/Sub API enabled.
+2. The ID of the Google Cloud Project is declared as mentioned in the [Publisher Configuration]({{< relref "/admin-guide/pubsub-config#publisher-configuration" >}}).
+3. The client is authorized to write to the topic.
+4. The device for which the adapter wants to send event messages has been registered (see
    [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 **Message Flow**
@@ -55,3 +56,25 @@ provides means to do so.
 **Message Format**
 
 See [Telemetry API for Pub/Sub]({{< relref "/api/telemetry-pubsub#publish-telemetry-data" >}}) for definition of message format.
+
+## Northbound Operations
+
+The following operation can be used by *Business Applications* to receive event messages from Pub/Sub.
+
+### Subscribe Events
+
+To receive event messages from Pub/Sub, a subscription must be created to the tenant-specific topic `projects/${google_project_id}/topics/${tenant_id}.event`
+where `${google_project_id}` is the ID of the Google Cloud project and `${tenant_id}` is the ID of the tenant the client wants to retrieve event messages for.
+Only messages published to the topic after the subscription is created are available to subscriber clients like Business Applications. Please refer to the
+[Pub/Sub Subscriber Documentation](https://cloud.google.com/pubsub/docs/subscriber) for more details.
+
+**Preconditions**
+
+1. The topic `projects/${google_project_id}/topics/${tenant_id}.event` exists.
+2. A subscription to that topic exists.
+3. The client is authorized to Pub/Sub.
+
+**Message Format**
+
+See [Telemetry API for Pub/Sub]({{< relref "/api/telemetry-pubsub#publish-telemetry-data" >}}) for the definition of the
+message format. 

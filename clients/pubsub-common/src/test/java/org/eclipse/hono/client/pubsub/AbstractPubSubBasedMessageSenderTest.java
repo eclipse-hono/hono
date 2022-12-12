@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
@@ -30,12 +31,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxTestContext;
 
 /**
@@ -125,7 +128,7 @@ public class AbstractPubSubBasedMessageSenderTest {
         final VertxTestContext ctx = new VertxTestContext();
         when(lifecycleStatus.isStarted()).thenReturn(false);
 
-        final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, "", Map.of(), NoopSpan.INSTANCE);
+        final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE);
 
         assertThat(result.failed()).isTrue();
         result.onFailure(t -> assertThat(t.getMessage()).isEqualTo("sender not started"));
@@ -146,6 +149,7 @@ public class AbstractPubSubBasedMessageSenderTest {
         try (MockedStatic<PubsubMessage> pubSubMessage = Mockito.mockStatic(PubsubMessage.class)) {
             final PubsubMessage.Builder builder = mock(PubsubMessage.Builder.class);
             when(builder.putAllAttributes(Mockito.any())).thenReturn(builder);
+            when(builder.setOrderingKey(DEVICE_ID)).thenReturn(builder);
             when(builder.setData(Mockito.any())).thenReturn(builder);
 
             final PubsubMessage message = mock(PubsubMessage.class);
@@ -153,8 +157,12 @@ public class AbstractPubSubBasedMessageSenderTest {
 
             pubSubMessage.when(PubsubMessage::newBuilder).thenReturn(builder);
 
+            assertThrows(NullPointerException.class,
+                    () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE));
+
             assertThrows(ServerErrorException.class,
-                    () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, "", Map.of(), NoopSpan.INSTANCE));
+                    () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
+                            Map.of(), NoopSpan.INSTANCE));
         }
 
     }
@@ -176,14 +184,20 @@ public class AbstractPubSubBasedMessageSenderTest {
         try (MockedStatic<PubsubMessage> pubSubMessage = Mockito.mockStatic(PubsubMessage.class)) {
             final PubsubMessage.Builder builder = mock(PubsubMessage.Builder.class);
             when(builder.putAllAttributes(attributes)).thenReturn(builder);
-            when(builder.setData(Mockito.any())).thenReturn(builder);
+            when(builder.setOrderingKey(DEVICE_ID)).thenReturn(builder);
+            final byte[] b = new byte[22];
+            new Random().nextBytes(b);
+            final ByteString bs = ByteString.copyFrom(b);
+            when(builder.setData(bs)).thenReturn(builder);
 
             final PubsubMessage message = mock(PubsubMessage.class);
             when(builder.build()).thenReturn(message);
 
             pubSubMessage.when(PubsubMessage::newBuilder).thenReturn(builder);
 
-            final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, "test-payload", properties,
+            final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID,
+                    Buffer.buffer(b),
+                    properties,
                     NoopSpan.INSTANCE);
             assertThat(result.succeeded()).isTrue();
         }
