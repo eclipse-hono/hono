@@ -316,10 +316,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
     /**
-     * The name of the property that defines the GCP projectId for a tenant.
-     */
-    public static final String FIELD_EXT_PROJECT_ID = "projectId";
-    /**
      * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
      */
     public static final String FIELD_MAX_BYTES = "max-bytes";

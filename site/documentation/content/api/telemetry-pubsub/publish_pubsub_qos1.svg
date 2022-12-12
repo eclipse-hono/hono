@@ -33,7 +33,7 @@
     <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="432" x="54.6" y="79.6365" style="white-space: pre;">1.0 PUT("telemetry/TENANT/4711", "QoS-Level: 1", data)</text>
     <polygon fill="#A80036" points="1065,115.875,1077,120.675,1065,125.475,1069.8,120.675" style="stroke: #A80036; stroke-width: 1.2;"/>
     <line style="stroke: #A80036; stroke-width: 1.2;" x1="513" x2="1072.2" y1="120.675" y2="120.675"/>
-    <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="543.6" x="521.4" y="114.5959" style="white-space: pre;">1.1 publish(topic: "projects/PROJECT/topics/4711.telemetry", value: data)</text>
+    <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="543.6" x="521.4" y="114.5959" style="white-space: pre;">1.1 publish(topic: "projects/PROJECT/topics/TENANT.telemetry", value: data)</text>
     <polygon fill="#A80036" points="526.2,150.8344,514.2,155.6344,526.2,160.4344,521.4,155.6344" style="stroke: #A80036; stroke-width: 1.2;"/>
     <line style="stroke: #A80036; stroke-width: 1.2;" x1="519" x2="1084.2" y1="155.6344" y2="155.6344"/>
     <text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="129.6" x="533.4" y="149.5553" style="white-space: pre;">1.2 acknowledge</text>

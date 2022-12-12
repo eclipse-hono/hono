@@ -12,18 +12,6 @@
   <name>Hono Client PubSub Common</name>
   <description>Classes required for implementing PubSub based Hono clients</description>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.google.cloud</groupId>
-        <artifactId>libraries-bom</artifactId>
-        <version>26.1.4</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
     <dependency>
       <groupId>org.slf4j</groupId>

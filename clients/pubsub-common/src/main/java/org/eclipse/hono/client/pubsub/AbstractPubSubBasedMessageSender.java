@@ -37,6 +37,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -183,7 +184,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
             final String topic,
             final String tenantId,
             final String deviceId,
-            final String payload,
+            final Buffer payload,
             final Map<String, Object> properties,
             final Span currentSpan) {
 
@@ -199,9 +200,9 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         }
 
         final Map<String, String> pubSubAttributes = encodePropertiesAsPubSubAttributes(properties, currentSpan);
-        final ByteString data = ByteString.copyFromUtf8(payload);
-        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().putAllAttributes(pubSubAttributes).setData(data)
-                .build();
+        final ByteString data = ByteString.copyFrom(payload.getBytes());
+        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().putAllAttributes(pubSubAttributes)
+                .setOrderingKey(deviceId).setData(data).build();
 
         log.trace("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);

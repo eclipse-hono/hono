@@ -1,7 +1,7 @@
 ---
-title: "Telemetry API Specification for Pub/Sub"
+title: "Telemetry API Specification for Google Pub/Sub"
 linkTitle: "Telemetry API (Pub/Sub)"
-weight: 405
+weight: 420
 resources:
 - src: publish_pubsub_qos0.svg
 - src: publish_pubsub_qos1.svg
@@ -16,7 +16,7 @@ Hono for Google Pub/Sub messaging infrastructure in order to use it and invoke o
 this page we will simply use *Pub/Sub* when referring to Google Pub/Sub.
 
 The Telemetry API for Pub/Sub is an alternative to the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka" >}})
-for applications that want to consume telemetry data from a Pub/Sub Messaging Network instead of an Apache Kafka&trade;
+for applications that want to consume telemetry data from Pub/Sub instead of an Apache Kafka&trade;
 broker.
 
 ## Southbound Operations
@@ -26,15 +26,16 @@ consumers like *Business Applications*.
 
 ### Publish Telemetry Data
 
-The protocol adapter writes messages to the tenant-specific topic `projects/${project_id}/topics/${tenant_id}.telemetry`
-where `${project_id}` is the ID of the Google project and `${tenant_id}` is the
+The protocol adapter writes messages to the tenant-specific topic `projects/${google_project_id}/topics/${tenant_id}.telemetry`
+where `${google_project_id}` is the ID of the Google Cloud project and `${tenant_id}` is the
 ID of the tenant that the client wants to upload telemetry data for.
 
 **Preconditions**
 
-1. The projectId is declared in the deployment file.
-1. The client is authorized to write to the topic.
-1. The device for which the adapter wants to send telemetry data has been registered (see
+1. A Google Cloud Project is set up with the Pub/Sub API enabled.
+2. The ID of the Google Cloud Project is declared as mentioned in the [Publisher Configuration]({{< relref "/admin-guide/pubsub-config#publisher-configuration" >}}).
+3. The client is authorized to write to the topic.
+4. The device for which the adapter wants to send telemetry data has been registered (see
    [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 **Message Flow**
@@ -67,7 +68,14 @@ provides means to do so.
 
 **Message Format**
 
-The key of the message MUST be the device ID.
+The following table provide an overview of the relevant properties of the message format for a Pub/Sub message as defined in the
+[Google Pub/Sub Documentation](https://cloud.google.com/pubsub/docs/reference/rest/v1/PubsubMessage). The message must contain either a non-empty data field or at least one attribute.
+
+| Name            | Type        | Description |
+| :-------------- | :---------- | :---------- |
+| *data*  | *string*    | The message data field contains the base64-encoded string representation of the payload. |
+| *attributes* | *map*      | Attributes for this message, which can be used to filter messages on the subscription. |
+| *orderingKey* | *string*      | Identifies related messages for which publish order should be respected. If a Subscription has enableMessageOrdering set to true, messages published with the same non-empty orderingKey value will be delivered to subscribers in the order in which they are received by the Pub/Sub system. The orderingKey MUST be the device ID. |
 
 Metadata MUST be set as attributes on a Pub/Sub message.
 The following table provides an overview a client needs to set on a *Publish Telemetry Data* message.
@@ -75,12 +83,33 @@ The following table provides an overview a client needs to set on a *Publish Tel
 | Name            | Mandatory       | Type        | Description |
 | :-------------- | :-------------: | :---------- | :---------- |
 | *content-type*  | yes             | *string*    | A content type indicating the type and characteristics of the data contained in the message value as a valid MIME type, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. The value may be set to `application/octet-stream` if the message message value is to be considered *opaque* binary data. See [RFC 2046](https://www.ietf.org/rfc/rfc2046.txt) for details. |
-| *creation-time* | no             | *long*      | The instant in time (UTC, milliseconds since the Unix epoch) when the message has been created. |
+| *content-encoding* | no           | *string*    | The content encoding as defined in section 3.5 of [RFC 2616](https://www.ietf.org/rfc/rfc2616.txt). |
+| *creation-time* | yes             | *long*      | The instant in time (UTC, milliseconds since the Unix epoch) when the message has been created. |
 | *device_id*     | yes             | *string*    | The identifier of the device that the data in the message value is originating from. |
-| *tenant_id*     | yes             | *string*    | The identifier of the tenant the device belongs to. |
 | *qos*           | no              | *int*       | The quality of service level of the message. Supported values are `0` for AT MOST ONCE and `1` for AT LEAST ONCE. |
+| *ttd*           | no              | *int*       | The *time 'til disconnect* indicates the number of seconds that the device will remain connected to the protocol adapter. The value of this header must be interpreted relative to the message's *creation-time*. A value of `-1` is used to indicate that the device will remain connected until further notice, i.e. until another message indicates a *ttd* value of `0`. In absence of this property, the connection status of the device is to be considered indeterminate. *Backend Applications* might use this information to determine a time window during which the device will be able to receive a command. |
+| *ttl*           | no              | *long*      | The *time-to-live* in milliseconds. A consumer of the message SHOULD discard the message if the sum of *creation-time* and *ttl* is greater than the current time (milliseconds since the Unix epoch). |
 
 Protocol adapters MAY set additional attributes on the Pub/Sub message.
 
-The value of the message MUST consist of a byte array containing the telemetry data. The format and encoding of the
-data MUST be indicated by the *content-type* and (optional) *content-encoding* attributes of the message.
+## Northbound Operations
+
+The following operation can be used by *Business Applications* to receive telemetry data from Pub/Sub.
+
+### Subscribe Telemetry Data
+
+To receive telemetry messages from Pub/Sub, a subscription must be created to the tenant-specific topic `projects/${google_project_id}/topics/${tenant_id}.telemetry`
+where `${google_project_id}` is the ID of the Google Cloud project and `${tenant_id}` is the ID of the tenant the client wants to retrieve telemetry data for. Only messages published
+to the topic after the subscription is created are available to subscriber clients like Business Applications. Please refer to the
+[Pub/Sub Subscriber Documentation](https://cloud.google.com/pubsub/docs/subscriber) for more details.
+
+**Preconditions**
+
+1. The topic `projects/${google_project_id}/topics/${tenant_id}.telemetry` exists.
+2. A subscription to that topic exists.
+3. The client is authorized to Pub/Sub.
+
+**Message Format**
+
+The format of the messages containing the telemetry data is the same as for the
+[Publish Telemetry Data operation]({{< relref "#publish-telemetry-data" >}}).

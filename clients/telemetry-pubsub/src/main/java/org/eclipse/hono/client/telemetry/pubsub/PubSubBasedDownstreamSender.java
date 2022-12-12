@@ -101,7 +101,6 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
         final String topicEndpoint = EventConstants.EVENT_ENDPOINT;
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
-        final String stringPayload = payload.toString();
 
         final Map<String, Object> propsWithDefaults = addDefaults(
                 topicEndpoint,
@@ -113,7 +112,7 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
 
         final Span currentSpan = startSpan("forward event", topicEndpoint, tenantId, deviceId, References.CHILD_OF,
                 context);
-        return sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, stringPayload, propsWithDefaults,
+        return sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
     }
@@ -140,7 +139,6 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
         final String topicEndpoint = TelemetryConstants.TELEMETRY_ENDPOINT;
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
-        final String stringPayload = payload.toString();
 
         final Map<String, Object> propsWithDefaults = addDefaults(
                 topicEndpoint,
@@ -158,7 +156,7 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
                 qos == QoS.AT_MOST_ONCE ? References.FOLLOWS_FROM : References.CHILD_OF,
                 context);
 
-        final var outcome = sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, stringPayload, propsWithDefaults,
+        final var outcome = sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
 
