@@ -332,7 +332,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             .minimumExpectedValue(0.0)
             .tags(tags)
             .register(this.registry)
-            .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
+            .record((double) ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
 
         updateLastSeenTimestamp(tenantId);
     }

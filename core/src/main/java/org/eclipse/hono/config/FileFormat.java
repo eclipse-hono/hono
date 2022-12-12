@@ -91,4 +91,14 @@ public enum FileFormat {
         final var extension = path.substring(idx + 1).toLowerCase();
         return EXTENSIONS.get(extension);
     }
+
+    /**
+     * Checks if a given file format represents a key store.
+     *
+     * @param format The file format to check.
+     * @return {@code true} if the given format is either {@link #JKS} or {@link #PKCS12}.
+     */
+    public static boolean isKeyStoreFormat(final FileFormat format) {
+        return format == JKS || format == PKCS12;
+    }
 }

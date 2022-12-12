@@ -130,22 +130,12 @@ public final class KeyLoader {
             throw new IllegalArgumentException("key store does not exist");
         }
 
-        final FileFormat format = FileFormat.detect(keyStorePath);
 
-        final String type;
-
-        switch (format) {
-        case JKS:
-            type = "JKS";
-            break;
-        case PKCS12:
-            type = "PKCS12";
-            break;
-        default:
-            throw new IllegalArgumentException("key store must be JKS or PKCS format but is: " + format);
-        }
-
-        return loadKeysFromStore(vertx, type, keyStorePath, password);
+        return Optional.ofNullable(FileFormat.detect(keyStorePath))
+                .filter(FileFormat::isKeyStoreFormat)
+                .map(format -> loadKeysFromStore(vertx, format.name(), keyStorePath, password))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "unsupported key store format, must be %s or %s".formatted(FileFormat.JKS, FileFormat.PKCS12)));
     }
 
     /**
