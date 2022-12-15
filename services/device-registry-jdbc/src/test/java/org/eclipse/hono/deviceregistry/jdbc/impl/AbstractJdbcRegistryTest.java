@@ -58,6 +58,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -185,7 +186,9 @@ abstract class AbstractJdbcRegistryTest {
                     final JdbcDatabaseContainer<?> container;
                     switch (DATABASE_TYPE) {
                         case POSTGRESQL:
-                            container = new PostgreSQLContainer<>(POSTGRESQL_IMAGE_NAME);
+                            container = new PostgreSQLContainer<>(DockerImageName
+                                    .parse(POSTGRESQL_IMAGE_NAME)
+                                    .asCompatibleSubstituteFor("postgres"));
                             final List<String> commandLine = new ArrayList<>(Arrays.asList(container.getCommandParts()));
                             // resolve issue "FATAL: sorry, too many clients already"
                             commandLine.add("-N");

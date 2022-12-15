@@ -37,7 +37,7 @@
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
-    <jaeger.image.name>jaegertracing/all-in-one:1.37</jaeger.image.name>
+    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.37</jaeger.image.name>
     <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
     <!--
       We want to allow users to run containers in a rootless Docker environment.
@@ -45,16 +45,16 @@
       specified on the containers. OpenJDK supports this starting with version 15:
       https://bugs.openjdk.java.net/browse/JDK-8230305
      -->
-    <java-base-image.name>docker.io/eclipse-temurin:17-jre-jammy</java-base-image.name>
+    <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
     <kafka-client.version>3.2.3</kafka-client.version>
-    <kafka.image.name>confluentinc/cp-kafka:7.2.2</kafka.image.name>
+    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.2.2</kafka.image.name>
     <logback.version>1.2.9</logback.version>
-    <mongodb-image.name>mongo:4.4</mongodb-image.name>
+    <mongodb-image.name>docker.io/library/mongo:4.4</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <netty.version>4.1.82.Final</netty.version>
-    <postgresql-image.name>postgres:14-alpine</postgresql-image.name>
+    <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.6.0</qpid-jms.version>
     <quarkus.platform.version>2.13.6.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
@@ -62,7 +62,7 @@
     <testcontainers.version>1.17.4</testcontainers.version>
     <truth.version>1.1.3</truth.version>
     <vertx.version>4.3.4</vertx.version>
-    <zookeeper.image.name>confluentinc/cp-zookeeper:7.2.2</zookeeper.image.name>
+    <zookeeper.image.name>docker.io/confluentinc/cp-zookeeper:7.2.2</zookeeper.image.name>
 
     <!-- The port at which the health check server should expose its resources -->
     <health.check.port>8088</health.check.port>

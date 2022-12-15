@@ -37,7 +37,9 @@ public final class MongoDbTestUtils {
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbTestUtils.class);
 
     static {
-        MONGO_DB_CONTAINER = new MongoDBContainer(DockerImageName.parse(MONGO_DB_IMAGE_NAME));
+        MONGO_DB_CONTAINER = new MongoDBContainer(DockerImageName
+                .parse(MONGO_DB_IMAGE_NAME)
+                .asCompatibleSubstituteFor("mongo"));
         MONGO_DB_CONTAINER.start();
     }
 
