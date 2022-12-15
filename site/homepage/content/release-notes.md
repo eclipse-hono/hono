@@ -12,9 +12,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* The MQTT adapter did forward command messages for devices behind gateway when the gateway subscription was targeting
-the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed and the commands for devices,
-for which the gateway acts on its behalf of, are not forwarded to the gateway.
+* The MQTT adapter did forward command messages for devices behind a gateway when the gateway subscription was targeting
+the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed. For a subscription with such a
+topic name, only commands for the gateway itself are forwarded, not commands for devices, that the gateway acts on
+behalf of.
 
 ## 2.2.0
 
