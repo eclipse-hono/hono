@@ -728,7 +728,6 @@
         <docker.host.address>localhost</docker.host.address>
         <auth.ip>localhost</auth.ip>
         <deviceregistry.ip>localhost</deviceregistry.ip>
-        <commandrouter.ip>localhost</commandrouter.ip>
         <amqp.ip>localhost</amqp.ip>
         <coap.ip>localhost</coap.ip>
         <http.ip>localhost</http.ip>
@@ -1544,10 +1543,9 @@
                   <run>
                     <skip>${hono.command-router.disabled}</skip>
                     <ports>
-                      <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
-                      <port>+commandrouter.ip:commandrouter.health.port:${health.check.port}</port>
+                      <port>commandrouter.amqp.port:5672</port>
+                      <port>commandrouter.health.port:${health.check.port}</port>
                     </ports>
-                    <portPropertyFile>${project.build.directory}/docker/commandrouter.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
@@ -1578,7 +1576,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${commandrouter.ip}:${commandrouter.health.port}${health.check.root-path}${health.check.readiness-path}</url>
+                        <url>http://${docker.host.address}:${commandrouter.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -2031,8 +2029,6 @@
                 <downstream.host>${qpid.ip}</downstream.host>
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                 <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
-                <commandrouter.host>${commandrouter.ip}</commandrouter.host>
-                <commandrouter.amqp.port>${commandrouter.amqp.port}</commandrouter.amqp.port>
                 <deviceregistry.type>${hono.deviceregistry.type}</deviceregistry.type>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
@@ -2117,7 +2113,6 @@
                     <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
-                    <file>${project.build.directory}/docker/commandrouter.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/kafka.port.properties</file>

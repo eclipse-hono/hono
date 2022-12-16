@@ -135,11 +135,12 @@ hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem
 hono.auth.validation.certPath=../../demo-certs/certs/auth-server-cert.pem
 hono.auth.jwksPollingInterval=PT20S
 
+# limit to a single service instance
+hono.app.maxInstances=1
 hono.app.amqpMessagingDisabled=${hono.amqp-messaging.disabled:true}
 hono.app.kafkaMessagingDisabled=${hono.kafka-messaging.disabled:false}
 
 hono.kafka.commonClientConfig."bootstrap.servers"=${docker.host.address:localhost}:${kafka.port:9094}
-hono.kafka.commonClientConfig."max.block.ms"=1000
 
 # AMQP connection to central AMQP message broker if configured
 #hono.command.hostnameVerificationRequired=false
@@ -178,28 +179,25 @@ hono.credentials.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.credentials.flowLatency=${flow.latency:1000}
 hono.credentials.requestTimeout=${request.timeout:500}
 
-hono.commandRouter.host=localhost
-hono.commandRouter.port=${fixed.commandrouter.amqps.port}
+hono.commandRouter.host=${docker.host.address:localhost}
+hono.commandRouter.port=${fixed.commandrouter.amqp.port}
 hono.commandRouter.username=${app.id}@HONO
 hono.commandRouter.password=${short.name}-secret
 hono.commandRouter.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.commandRouter.flowLatency=${flow.latency:1000}
 hono.commandRouter.requestTimeout=${request.timeout:500}
-    
+
 # Disable dev services - start them manually
 quarkus.devservices.enabled=false
 # app id
 quarkus.application.name=${app.id}
-# Service replicas
-hono.app.maxInstances=1
 # Telemetry endpoint
 quarkus.opentelemetry.tracer.exporter.otlp.endpoint=${otel-collector.endpoint:}
 # Log setup
 quarkus.log.console.color=true
 quarkus.log.level=INFO
-quarkus.log.min-level=TRACE
 quarkus.log.category."io.quarkus.vertx.core.runtime".level=DEBUG
-quarkus.log.category."org.eclipse.hono".level=${hono.debug.level:DEBUG}
+quarkus.log.category."org.eclipse.hono".level=${hono.debug.level:INFO}
 # Max exec time
 quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
     </quarkus.application-dev.properties>
