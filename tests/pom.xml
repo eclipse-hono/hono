@@ -93,10 +93,6 @@
     <hono.service-auth.disabled>false</hono.service-auth.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
-    <hono.infinispan.host>hono-data-grid</hono.infinispan.host>
-    <hono.infinispan.port>11222</hono.infinispan.port>
-    <hono.infinispan.username>hono</hono.infinispan.username>
-    <hono.infinispan.password>hono-secret</hono.infinispan.password>
 
     <!--
       Messaging related properties - Kafka is used as the default one.
@@ -740,7 +736,7 @@
         <mqtt.ip>localhost</mqtt.ip>
       </properties>
     </profile>
-    
+
     <profile>
       <id>fix-ports</id>
       <activation>
@@ -749,17 +745,16 @@
         </property>
       </activation>
       <properties>
-        <infinispan.port>11222</infinispan.port>
         <mongodb.port>27017</mongodb.port>
         <kafka.port>9094</kafka.port>
         <qpid.amqps.port>15671</qpid.amqps.port>
         <qpid.amqp.port>15672</qpid.amqp.port>
-        
+
         <auth.amqps.port>${fixed.auth.amqps.port}</auth.amqps.port>
         <deviceregistry.amqp.port>${fixed.deviceregistry.amqp.port}</deviceregistry.amqp.port>
         <deviceregistry.http.port>${fixed.deviceregistry.http.port}</deviceregistry.http.port>
         <commandrouter.amqp.port>${fixed.commandrouter.amqp.port}</commandrouter.amqp.port>
-                
+
         <amqp.port>${fixed.amqp.adapter.port}</amqp.port>
         <amqps.port>${fixed.amqps.adapter.port}</amqps.port>
         <coap.port>${fixed.coap.adapter.port}</coap.port>
@@ -790,7 +785,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <profile>
       <id>run-tests</id>
       <activation>
@@ -876,9 +871,12 @@
                       <arg>-Dquarkus.log.category."org.infinispan.SERVER".level=INFO</arg>
                     </cmd>
                     <ports>
-                      <port>+infinispan.ip:infinispan.port:${hono.infinispan.port}</port>
+                      <!--
+                        We need to map the port in order to be able to access the data grid
+                        from a Command Router process that is not running in Docker.
+                      -->
+                      <port>hono.infinispan.port:${hono.infinispan.port}</port>
                     </ports>
-                    <portPropertyFile>${project.build.directory}/docker/infinispan.port.properties</portPropertyFile>
                     <env>
                       <!-- 
                         In order to support running on a rootless Docker daemon which uses cgroups v2 for
@@ -2059,7 +2057,7 @@
                 <adapter.lora.host>${lora.ip}</adapter.lora.host>
                 <adapter.lora.port>${lora.port}</adapter.lora.port>
                 <adapter.lora.secure-port>${lora.secure-port}</adapter.lora.secure-port>
-                
+
                 <hono.username>hono-client</hono.username>
                 <hono.password>secret</hono.password>
                 <tenant.admin.username>http-adapter@HONO</tenant.admin.username>
@@ -2092,7 +2090,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <profile>
       <id>useRunningContainers</id>
       <activation>
@@ -2120,7 +2118,6 @@
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
                     <file>${project.build.directory}/docker/commandrouter.port.properties</file>
-                    <file>${project.build.directory}/docker/infinispan.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/kafka.port.properties</file>
@@ -2170,7 +2167,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <profile>
       <id>start</id>
       <activation>
@@ -2204,7 +2201,7 @@
         </plugins>
       </build>
     </profile>
-    
+
     <profile>
       <id>stopContainers</id>
       <activation>

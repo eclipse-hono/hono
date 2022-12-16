@@ -121,6 +121,11 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
     <fixed.lora.adapter.port>2080</fixed.lora.adapter.port>
     <fixed.loras.adapter.port>2443</fixed.loras.adapter.port>
 
+    <hono.infinispan.host>hono-data-grid</hono.infinispan.host>
+    <hono.infinispan.port>11222</hono.infinispan.port>
+    <hono.infinispan.username>hono</hono.infinispan.username>
+    <hono.infinispan.password>hono-secret</hono.infinispan.password>
+
     <quarkus.application-dev.properties>
 hono.auth=${hono.auth}
 hono.auth.host=localhost
