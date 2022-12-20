@@ -128,7 +128,7 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
 
     <quarkus.application-dev.properties>
 hono.auth=${hono.auth}
-hono.auth.host=localhost
+hono.auth.host=${docker.host.address:localhost}
 hono.auth.port=${fixed.auth.amqps.port}
 hono.auth.name=${app.id}
 hono.auth.trustStorePath=../../demo-certs/certs/trusted-certs.pem
@@ -153,7 +153,7 @@ hono.command.trustStorePath=../../demo-certs/certs/trusted-certs.pem
 #hono.command.trustStorePassword=../../demo-certs/certs/trust-store-password
 hono.command.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.command.flowLatency=${flow.latency:1000}
-hono.command.requestTimeout=${request.timeout:500}
+hono.command.requestTimeout=${request.timeout:1000}
 
 hono.registration.host=localhost
 hono.registration.port=${fixed.deviceregistry.amqp.port}
@@ -161,7 +161,7 @@ hono.registration.username=${app.id}@HONO
 hono.registration.password=${short.name}-secret
 hono.registration.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.registration.flowLatency=${flow.latency:1000}
-hono.registration.requestTimeout=${request.timeout:500}
+hono.registration.requestTimeout=${request.timeout:1000}
 
 hono.tenant.host=localhost
 hono.tenant.port=${fixed.deviceregistry.amqp.port}
@@ -169,7 +169,7 @@ hono.tenant.username=${app.id}@HONO
 hono.tenant.password=${short.name}-secret
 hono.tenant.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.tenant.flowLatency=${flow.latency:1000}
-hono.tenant.requestTimeout=${request.timeout:500}
+hono.tenant.requestTimeout=${request.timeout:1000}
 
 hono.credentials.host=localhost
 hono.credentials.port=${fixed.deviceregistry.amqp.port}
@@ -177,7 +177,7 @@ hono.credentials.username=${app.id}@HONO
 hono.credentials.password=${short.name}-secret
 hono.credentials.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.credentials.flowLatency=${flow.latency:1000}
-hono.credentials.requestTimeout=${request.timeout:500}
+hono.credentials.requestTimeout=${request.timeout:1000}
 
 hono.commandRouter.host=${docker.host.address:localhost}
 hono.commandRouter.port=${fixed.commandrouter.amqp.port}
@@ -185,14 +185,17 @@ hono.commandRouter.username=${app.id}@HONO
 hono.commandRouter.password=${short.name}-secret
 hono.commandRouter.linkEstablishmentTimeout=${link.establishment.timeout:5000}
 hono.commandRouter.flowLatency=${flow.latency:1000}
-hono.commandRouter.requestTimeout=${request.timeout:500}
+hono.commandRouter.requestTimeout=${request.timeout:2000}
+
+# Tracing
+# set to "always_on" to report every tracing span,
+otel.traces.sampler=always_off
+otel.traces.sampler.arg=endpoint=http://${docker.host.address:localhost}:4317
 
 # Disable dev services - start them manually
 quarkus.devservices.enabled=false
 # app id
 quarkus.application.name=${app.id}
-# Telemetry endpoint
-quarkus.opentelemetry.tracer.exporter.otlp.endpoint=${otel-collector.endpoint:}
 # Log setup
 quarkus.log.console.color=true
 quarkus.log.level=INFO

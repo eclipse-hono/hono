@@ -194,9 +194,10 @@
 
     <jaeger.disabled>true</jaeger.disabled>
     <jaeger.host>hono-jaeger</jaeger.host>
-    <jaeger.query.port>18080</jaeger.query.port>
+    <jaeger.otel-collector.port>4317</jaeger.otel-collector.port>
 
     <otel-collector.endpoint></otel-collector.endpoint>
+    <otel-traces-sampler>always_off</otel-traces-sampler>
 
     <!-- prevents circular dependency -->
     <quarkus.application-dev.properties>n/a</quarkus.application-dev.properties>
@@ -433,7 +434,8 @@
       <id>jaeger</id>
       <properties>
         <jaeger.disabled>false</jaeger.disabled>
-        <otel-collector.endpoint>http://${jaeger.host}:4317</otel-collector.endpoint>
+        <otel-collector.endpoint>http://${jaeger.host}:${jaeger.otel-collector.port}</otel-collector.endpoint>
+        <otel-traces-sampler>jaeger_remote</otel-traces-sampler>
       </properties>
     </profile>
 
@@ -928,10 +930,10 @@
                   <run>
                     <skip>${jaeger.disabled}</skip>
                     <ports>
-                      <port>+jaeger.ip:jaeger.health.port:14269</port><!-- admin-http -->
-                      <port>+jaeger.ip:jaeger.query.port:16686</port><!-- query-http -->
+                      <port>jaeger.health.port:14269</port><!-- admin-http -->
+                      <port>18080:16686</port><!-- query-http -->
+                      <port>jaeger.otel-collector.port:4317</port><!-- OTEL collector -->
                     </ports>
-                    <portPropertyFile>${project.build.directory}/docker/jaeger.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
@@ -962,7 +964,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${jaeger.ip}:${jaeger.health.port}/health</url>
+                        <url>http://${docker.host.address}:${jaeger.health.port}/health</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1044,7 +1046,7 @@
                       <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.auth.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1389,7 +1391,7 @@
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.registration.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1491,7 +1493,7 @@
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.registration.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1572,7 +1574,7 @@
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.commandrouter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1659,7 +1661,7 @@
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.http-adapter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1735,7 +1737,7 @@
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.mqtt-adapter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1812,7 +1814,7 @@
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.amqp-adapter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1888,7 +1890,7 @@
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.coap-adapter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -1964,7 +1966,7 @@
                       <JDK_JAVA_OPTIONS>${hono.lora-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.lora-adapter.host}</OTEL_SERVICE_NAME>
-                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
@@ -2115,7 +2117,6 @@
                 <configuration>
                   <quiet>true</quiet>
                   <files>
-                    <file>${project.build.directory}/docker/jaeger.port.properties</file>
                     <file>${project.build.directory}/docker/jdbc-db.port.properties</file>
                     <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>

@@ -193,33 +193,49 @@ mvn verify -Prun-tests -Dhono.mqtt-adapter.disabled=true
 
 ### Running the Tests with local services
 
-Hono services and adapters could be run locally - not as containers. 
-This could be done using the following steps:
+The integration tests are usually run against Hono components that have been started as
+containers using Docker. However, the tests can also be executed against protocol adapters and/or
+service components that have been started as normal Java applications.
+This is particularly helpful when developing a feature in one of the components and then running
+integration tests to verify the component's behavior. For example, when working on the HTTP protocol
+adapter, all of Hono's service components can be run as Docker containers while the HTTP adapter can
+be run as a Java application.
 
-1. Start dependencies
+1. Start Hono services as Docker containers:
 
-``` sh
-mvn verify -Dstart -Pno-adapters,no-services
-```
+   ``` sh
+   mvn verify -Dstart -Pno-adapters,jaeger
+   ```
 
-The command line above would start default dependencies (i.e. MongoDB and Kafka as data storage and messaging infrastructure). 
-The flavours, e.g. AMQP instead Kafka) could be specified via the same system properties as described above.
+   The command line above starts the infrastructure services like MongoDB, the Kafka messaging
+   infrastructure and the Jaeger tracing back end. Switching the type of messaging infrastructure is
+   supported by the Maven properties/profiles described above.
 
-Dependencies would be started as containers using fixed ports. This allows easy monitoring via external tools (e.g. database viewers).
+   The service container ports are all mapped to fixed host ports. This allows easy monitoring via external
+   tools (e.g. database viewers).
 
-2. Start services and adapters using Quarkus IDE integration or via maven (`mvn quarkus:dev`)
+2. Start relevant protocol adapters using Quarkus IDE integration or using the `quarkus:dev` Maven goal.
 
-Started this way, services and adapters would be configured in similar way as if they were started via containers.
+   Started this way, the protocol adapters are configured to connect to the services running as Docker
+   containers. By default, the components started as Java applications do not report tracing information
+   to the Jaeger back end. However, if Jaeger has been started as a Docker container (as in the command
+   used in step 1 above), then reporting of tracing information can be enabled by means of setting
+   the *otel.traces.sampler* Maven property to value `always_on`:
 
-Now integration tests could be run against them using:
+   ```sh
+   mvn quarkus:dev -Dotel.traces.sampler=always_on
+   ```
 
-```sh
-mvn verify -Plocal,fix-ports,useRunningContainers,run-tests
-```
+3. Run integration tests against local adapter. The command below will run all MQTT integration tests
+   (assuming that the MQTT adapter has been started as a Java application in step 2):
 
-Finaly all Hono related containers (e.g. dependencies) could be stopped as described above:
+   ```sh
+   mvn verify -Plocal,fix-ports,useRunningContainers,run-tests -Dit.test=mqtt/*IT
+   ```
 
-```sh
-mvn verify -PstopContainers
-```
+4. Finaly all Hono related containers (e.g. dependencies) could be stopped as described above:
+
+   ```sh
+   mvn verify -PstopContainers
+   ```
 
