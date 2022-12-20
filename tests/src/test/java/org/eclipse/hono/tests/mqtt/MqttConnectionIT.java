@@ -60,7 +60,7 @@ import io.vertx.mqtt.MqttConnectionException;
  *
  */
 @ExtendWith(VertxExtension.class)
-@Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
+@Timeout(timeUnit = TimeUnit.SECONDS, value = 15)
 @EnabledIfProtocolAdaptersAreRunning(mqttAdapter = true)
 public class MqttConnectionIT extends MqttTestBase {
 
