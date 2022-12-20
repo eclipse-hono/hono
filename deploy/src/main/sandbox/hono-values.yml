@@ -231,14 +231,6 @@ kafka:
     clientProtocol: "sasl"
     tls:
       existingSecrets: []
-  persistence:
-    size: 200Mi
-  zookeeper:
-    persistence:
-      size: 200Mi
-    resources:
-      requests:
-        cpu: "50m"
   externalAccess:
     autoDiscovery:
       enabled: false
@@ -246,13 +238,26 @@ kafka:
       type: "LoadBalancer"
       loadBalancerIPs:
       - "hono.eclipseprojects.io"
+      nodePorts: []
   serviceAccount:
     create: false
   rbac:
     create: false
-#  resources:
-#    requests:
-#      cpu:
+  heapOpts: "-Xms650M -Xmx650M"
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "800Mi"
+    limits:
+      memory: "800Mi"
+  zookeeper:
+    heapSize: 300
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "400Mi"
+      limits:
+        memory: "400Mi"
 
 jaegerBackendExample:
   enabled: false
