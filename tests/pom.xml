@@ -1255,6 +1255,7 @@
                     </wait>
                     <env>
                       <KAFKA_HEAP_OPTS>-Xms1024m -Xmx1024m</KAFKA_HEAP_OPTS>
+                      <KAFKA_JVM_PERFORMANCE_OPTS>-server -XX:+UseG1GC -XX:MaxGCPauseMillis=40 -XX:InitiatingHeapOccupancyPercent=35 -XX:+DisableExplicitGC -Djava.awt.headless=true</KAFKA_JVM_PERFORMANCE_OPTS>
                       <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
                       <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
                       <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
