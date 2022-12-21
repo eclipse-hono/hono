@@ -1212,8 +1212,8 @@
                       <name>${custom.network.name}</name>
                       <alias>zookeeper</alias>
                     </network>
-                    <memorySwap>300000000</memorySwap>
-                    <memory>300000000</memory>
+                    <memorySwap>400000000</memorySwap>
+                    <memory>400000000</memory>
                     <log>
                       <prefix>Zookeeper</prefix>
                       <color>${log.color.kafka}</color>
@@ -1243,8 +1243,8 @@
                       <name>${custom.network.name}</name>
                       <alias>kafka</alias>
                     </network>
-                    <memorySwap>800000000</memorySwap>
-                    <memory>800000000</memory>
+                    <memorySwap>1500000000</memorySwap>
+                    <memory>1500000000</memory>
                     <log>
                       <prefix>Kafka</prefix>
                       <color>${log.color.kafka}</color>
@@ -1254,7 +1254,7 @@
                       <log>.*(\[KafkaServer id=1\] started).*</log>
                     </wait>
                     <env>
-                      <KAFKA_HEAP_OPTS>-Xms650M -Xmx650M</KAFKA_HEAP_OPTS>
+                      <KAFKA_HEAP_OPTS>-Xms1024m -Xmx1024m</KAFKA_HEAP_OPTS>
                       <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
                       <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
                       <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
