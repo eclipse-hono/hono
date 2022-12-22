@@ -56,7 +56,7 @@
     <netty.version>4.1.82.Final</netty.version>
     <postgresql-image.name>postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.6.0</qpid-jms.version>
-    <quarkus.platform.version>2.13.5.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.13.6.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
     <spring-security-crypto.version>5.7.5</spring-security-crypto.version>
     <testcontainers.version>1.17.4</testcontainers.version>
