@@ -37,7 +37,7 @@
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
-    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.37</jaeger.image.name>
+    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.40</jaeger.image.name>
     <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
     <!--
       We want to allow users to run containers in a rootless Docker environment.
