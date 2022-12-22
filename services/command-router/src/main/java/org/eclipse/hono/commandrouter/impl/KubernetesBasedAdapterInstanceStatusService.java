@@ -40,8 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
@@ -91,7 +91,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
     private Clock clock = Clock.systemUTC();
 
     private KubernetesBasedAdapterInstanceStatusService() throws KubernetesClientException {
-        this(new DefaultKubernetesClient());
+        this(new KubernetesClientBuilder().build());
     }
 
     /**

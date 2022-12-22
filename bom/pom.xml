@@ -31,7 +31,7 @@
     <artemis.image.name>quay.io/artemiscloud/activemq-artemis-broker:1.0.6</artemis.image.name>
     <assertj.version>3.23.1</assertj.version>
     <bouncycastle.version>1.71</bouncycastle.version>
-    <caffeine.version>2.9.3</caffeine.version>
+    <caffeine.version>3.1.1</caffeine.version>
     <californium.version>3.7.0</californium.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
@@ -47,33 +47,20 @@
      -->
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
-    <kafka-client.version>3.2.3</kafka-client.version>
+    <kafka-client.version>3.3.2</kafka-client.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.3.1</kafka.image.name>
-    <logback.version>1.2.9</logback.version>
+    <logback.version>1.2.11</logback.version>
     <mongodb-image.name>docker.io/library/mongo:4.4</mongodb-image.name>
-    <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
-    <!--
-      On macOS you should use the "graalvm" type because the "mandrel" images
-      do not support macOS.
-    -->
-<!--
-  Temporarily replacing generic image type with specific image name
-  because the quay.io/quarkus/ubi-quarkus-mandrel:22.3-java17 image tag has been
-  (accidentally?) deleted from the quay.io repository.
-  In general, it will be better to use the generic type name and let the Quarkus
-  platform decide which version (tag) to use.
--->
-<!--    <native.builder-image.name>mandrel</native.builder-image.name>-->
-    <native.builder-image.name>quay.io/quarkus/ubi-quarkus-mandrel-builder-image:22.3-java17</native.builder-image.name>
-    <netty.version>4.1.82.Final</netty.version>
+    <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
+    <native.builder-image.name>mandrel</native.builder-image.name>
+    <netty.version>4.1.86.Final</netty.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.6.0</qpid-jms.version>
-    <quarkus.platform.version>2.13.6.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.16.3.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
-    <spring-security-crypto.version>5.7.5</spring-security-crypto.version>
-    <testcontainers.version>1.17.4</testcontainers.version>
+    <spring-security-crypto.version>5.7.6</spring-security-crypto.version>
     <truth.version>1.1.3</truth.version>
-    <vertx.version>4.3.4</vertx.version>
+    <vertx.version>4.3.7</vertx.version>
     <zookeeper.image.name>docker.io/confluentinc/cp-zookeeper:7.3.1</zookeeper.image.name>
 
     <!-- The port at which the health check server should expose its resources -->
@@ -784,18 +771,6 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
             <artifactId>junit</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>postgresql</artifactId>
-        <version>${testcontainers.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.testcontainers</groupId>
-        <artifactId>mongodb</artifactId>
-        <version>${testcontainers.version}</version>
-        <scope>test</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

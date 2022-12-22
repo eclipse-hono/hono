@@ -602,26 +602,26 @@
       </activation>
       <properties>
         <hono.amqp-adapter.image>hono-adapter-amqp-native</hono.amqp-adapter.image>
-        <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
+        <hono.amqp-adapter.max-mem>70000000</hono.amqp-adapter.max-mem>
 
         <hono.coap-adapter.image>hono-adapter-coap-native</hono.coap-adapter.image>
         <hono.coap-adapter.max-mem>90000000</hono.coap-adapter.max-mem>
 
         <hono.http-adapter.image>hono-adapter-http-native</hono.http-adapter.image>
-        <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
+        <hono.http-adapter.max-mem>70000000</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
 
         <hono.lora-adapter.image>hono-adapter-lora-native</hono.lora-adapter.image>
-        <hono.lora-adapter.max-mem>67108864</hono.lora-adapter.max-mem>
+        <hono.lora-adapter.max-mem>70000000</hono.lora-adapter.max-mem>
 
         <hono.mqtt-adapter.image>hono-adapter-mqtt-native</hono.mqtt-adapter.image>
-        <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
+        <hono.mqtt-adapter.max-mem>70000000</hono.mqtt-adapter.max-mem>
 
         <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
-        <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
+        <hono.auth-server.max-mem>40000000</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
         <hono.command-router.image>hono-service-command-router-native</hono.command-router.image>
-        <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
+        <hono.command-router.max-mem>100000000</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
       </properties>
