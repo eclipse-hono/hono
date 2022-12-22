@@ -1104,10 +1104,6 @@
                   </build>
                   <run>
                     <skip>${hono.amqp-messaging.disabled}</skip>
-                    <ports>
-                      <port>+broker.ip:broker.amqp.port:5671</port>
-                    </ports>
-                    <portPropertyFile>${project.build.directory}/docker/broker.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
@@ -1308,9 +1304,8 @@
                       <arg>/etc/mongo/mongod.conf</arg>
                     </cmd>
                     <ports>
-                      <port>+mongodb.ip:mongodb.port:${hono.mongodb.port}</port>
+                      <port>mongodb.port:${hono.mongodb.port}</port>
                     </ports>
-                    <portPropertyFile>${project.build.directory}/docker/mongodb.port.properties</portPropertyFile>
                     <env>
                       <MONGO_INITDB_DATABASE>${hono.mongodb.database.name}</MONGO_INITDB_DATABASE>
                     </env>
@@ -1417,7 +1412,6 @@
                     <ports>
                       <port>5432:5432</port>
                     </ports>
-                    <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
@@ -2117,11 +2111,8 @@
                 <configuration>
                   <quiet>true</quiet>
                   <files>
-                    <file>${project.build.directory}/docker/jdbc-db.port.properties</file>
-                    <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
-                    <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/kafka.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.http.port.properties</file>
@@ -2134,7 +2125,7 @@
               </execution>
             </executions>
           </plugin>
-          <!-- disable kafka.port aut generation -->
+          <!-- disable kafka.port auto generation -->
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
