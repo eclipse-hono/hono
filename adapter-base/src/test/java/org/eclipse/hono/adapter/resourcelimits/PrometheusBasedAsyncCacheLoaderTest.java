@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.resourcelimits;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
@@ -76,9 +77,13 @@ class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBase {
                 .setResourceLimits(new ResourceLimits().setMaxConnections(10));
 
         final var key = new LimitedResourceKey(tenant.getTenantId(), (tenantId, ctx) -> Future.succeededFuture(tenant));
-        final var result = loader.asyncLoad(key, executor);
-        assertThat(result.isDone()).isTrue();
-        verify(bufferReq).basicAuthentication(eq("hono"), eq("hono-secret"));
+        try {
+            final CompletableFuture<? extends Long> result = loader.asyncLoad(key, executor);
+            assertThat(result.isDone()).isTrue();
+            verify(bufferReq).basicAuthentication(eq("hono"), eq("hono-secret"));
+        } catch (final Exception e) {
+            fail(e);
+        }
     }
 
     /**

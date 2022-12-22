@@ -468,6 +468,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         when(request.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn("application/json");
         when(request.getHeader(HttpHeaders.CONTENT_LENGTH)).thenReturn(String.valueOf(requestBody.length()));
         when(request.params()).thenReturn(requestParams);
+        when(request.resume()).thenReturn(request);
         when(request.response()).thenReturn(response);
         when(request.handler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Buffer> handler = invocation.getArgument(0);

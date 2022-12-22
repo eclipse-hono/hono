@@ -112,10 +112,12 @@ public class PrometheusBasedResourceLimitChecksTest {
 
     /**
      * Verifies that the function to compute a value asynchronously is invoked once only.
+     *
+     * @throws Exception if the async cache throws fails to load values.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCaffeineAsyncCacheComputesValueOnceOnly() {
+    public void testCaffeineAsyncCacheComputesValueOnceOnly() throws Exception {
 
         final var computationsTriggered = new AtomicInteger(0);
         final var result = new CompletableFuture<Long>();

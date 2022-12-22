@@ -37,7 +37,7 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
 import io.quarkus.arc.properties.IfBuildProperty;
-import io.quarkus.opentelemetry.runtime.tracing.TracerRuntimeConfig;
+import io.quarkus.opentelemetry.runtime.config.TracerRuntimeConfig;
 
 /**
  * A producer for a custom OpenTelemetry Sampler.
