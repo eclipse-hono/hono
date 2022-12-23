@@ -1252,22 +1252,22 @@
                       <log>.*(\[KafkaServer id=1\] started).*</log>
                     </wait>
                     <env>
-                      <KAFKA_HEAP_OPTS>-Xms1024m -Xmx1024m</KAFKA_HEAP_OPTS>
-                      <KAFKA_JVM_PERFORMANCE_OPTS>-server -XX:+UseG1GC -XX:MaxGCPauseMillis=40 -XX:InitiatingHeapOccupancyPercent=35 -XX:+DisableExplicitGC -Djava.awt.headless=true</KAFKA_JVM_PERFORMANCE_OPTS>
+                      <KAFKA_ADVERTISED_LISTENERS>DOCKER_INTERNAL://kafka:9092,DOCKER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
                       <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
-                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
+                      <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
+                      <KAFKA_HEAP_OPTS>-Xms1024m -Xmx1024m</KAFKA_HEAP_OPTS>
+                      <KAFKA_INTER_BROKER_LISTENER_NAME>DOCKER_INTERNAL</KAFKA_INTER_BROKER_LISTENER_NAME>
+                      <KAFKA_JVM_PERFORMANCE_OPTS>-server -XX:+UseG1GC -XX:MaxGCPauseMillis=40 -XX:InitiatingHeapOccupancyPercent=35 -XX:+DisableExplicitGC -Djava.awt.headless=true</KAFKA_JVM_PERFORMANCE_OPTS>
                       <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
                       <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>DOCKER_INTERNAL:PLAINTEXT,DOCKER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
-                      <KAFKA_ADVERTISED_LISTENERS>DOCKER_INTERNAL://kafka:9092,DOCKER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
-                      <KAFKA_INTER_BROKER_LISTENER_NAME>DOCKER_INTERNAL</KAFKA_INTER_BROKER_LISTENER_NAME>
-                      <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
-                      <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
-                      <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
-                      <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
                       <!-- increase log cleaner check frequency (default is 5min) for test where records shall be removed -->
                       <KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>1100</KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>
                       <!-- log level for kafka.server.KafkaServer needs to stay on INFO so that docker-maven-plugin can wait for container startup -->
                       <KAFKA_LOG4J_LOGGERS>kafka.cluster=${hono.kafka.log-level},kafka.controller=${hono.kafka.log-level},kafka.coordinator=${hono.kafka.log-level},kafka.log=${hono.kafka.log-level},kafka.authorizer=${hono.kafka.log-level},kafka.zk=${hono.kafka.log-level},state.change.logger=${hono.kafka.log-level},kafka.server=${hono.kafka.log-level},kafka.server.KafkaServer=INFO</KAFKA_LOG4J_LOGGERS>
+                      <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
+                      <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
+                      <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
+                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
                     </env>
                   </run>
                 </image>
