@@ -292,6 +292,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/belaban/JGroups/).
 
+### JJWT
+
+This product includes software developed by [Stormpath](https://java.jsonwebtoken.io/).
+
+Your use of *JJWT* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/jwtk/jjwt).
+
 ### JLine
 
 This product includes software developed by the [JLine project](https://github.com/jline/jline3).
@@ -310,15 +320,15 @@ A copy of the license is contained in the file [LICENSE.JUL-to-SLF4J.txt](LICENS
 
 The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
-### JJWT ${jjwt.version}
+### juniversalchardet
 
-This product includes software developed by [Stormpath](https://java.jsonwebtoken.io/).
+This product includes software developed by [Google](https://code.google.com/archive/p/juniversalchardet/).
 
-Your use of *JJWT* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
+Your use of *juniversalchardet* is subject to the terms and conditions of the Mozilla Public License 1.1.
+A copy of the license is contained in the file [MPL-1.1.txt](MPL-1.1.txt) and is also available at
+https://www.mozilla.org/en-US/MPL/1.1/.
 
-The source code is available from [GitHub](https://github.com/jwtk/jjwt).
+The source code is available from [Google Code Archive](https://code.google.com/archive/p/juniversalchardet/).
 
 ### Kafka Clients
 
