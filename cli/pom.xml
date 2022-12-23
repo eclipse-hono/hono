@@ -104,6 +104,11 @@
       <artifactId>jansi</artifactId>
       <version>1.18</version>
     </dependency>
+    <dependency>
+      <groupId>com.googlecode.juniversalchardet</groupId>
+      <artifactId>juniversalchardet</artifactId>
+      <version>1.0.3</version>
+    </dependency>
 
     <!-- testing -->
     <dependency>
@@ -161,7 +166,7 @@
       <properties>
         <quarkus.package.type>native</quarkus.package.type>
         <!--
-          By default, use remote container based build which does not require local installation of the GraalVM SDK
+          By default, use container based build which does not require local installation of the GraalVM SDK
           and native-image compiler.
         -->
         <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
@@ -181,18 +186,6 @@
         </quarkus.native.additional-build-args>
         <quarkus.native.resources.includes>hono-cli-build.properties</quarkus.native.resources.includes>
       </properties>
-      <dependencies>
-        <!--
-          This is an optional dependency of picocli but without it, native executable compilation fails
-          due to unresolved classes.
-        -->
-        <dependency>
-            <groupId>com.googlecode.juniversalchardet</groupId>
-            <artifactId>juniversalchardet</artifactId>
-            <version>1.0.3</version>
-            <optional>true</optional>
-        </dependency>
-      </dependencies>
     </profile>
   </profiles>
 </project>

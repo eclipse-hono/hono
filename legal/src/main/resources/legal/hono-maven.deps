@@ -16,6 +16,7 @@ com.github.luben:zstd-jni:jar:1.5.2-1
 com.github.mifmif:generex:jar:1.0.2
 com.google.api.grpc:proto-google-common-protos:jar:2.9.1
 com.google.code.gson:gson:jar:2.9.0
+com.googlecode.juniversalchardet:juniversalchardet:jar:1.0.3
 com.google.guava:failureaccess:jar:1.0.1
 com.google.guava:guava:jar:31.1-jre
 com.google.protobuf:protobuf-java:jar:3.19.3
@@ -252,7 +253,7 @@ org.mongodb:mongodb-driver-sync:jar:4.6.1
 org.postgresql:postgresql:jar:42.4.2
 org.reactivestreams:reactive-streams:jar:1.0.3
 org.slf4j:slf4j-api:jar:1.7.36
-org.springframework.security:spring-security-crypto:jar:5.7.0
+org.springframework.security:spring-security-crypto:jar:5.7.5
 org.wildfly.common:wildfly-common:jar:1.5.4.Final-format-001
 org.wildfly.security:wildfly-elytron-asn1:jar:1.19.0.Final
 org.wildfly.security:wildfly-elytron-auth:jar:1.19.0.Final
