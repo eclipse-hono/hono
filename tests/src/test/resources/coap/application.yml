@@ -82,7 +82,10 @@ hono:
   kafka:
     commonClientConfig:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
-      max.block.ms: 1000
+    commandResponse:
+      producerConfig:
+        max.block.ms: 1800
+        request.timeout.ms: 2000
 
 quarkus:
   opentelemetry:
