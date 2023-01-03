@@ -33,6 +33,16 @@
       For services it is delegating, whle here we just desable hono auth  
     -->
     <hono.auth>n/a</hono.auth>
+
+    <quarkus.adapter.application-dev.properties>
+hono.kafka.telemetry.producerConfig."max.block.ms"=${kafka-client.producer.max-block-ms}
+hono.kafka.telemetry.producerConfig."request.timeout.ms"=${kafka-client.producer.request-timeout-ms}
+hono.kafka.event.producerConfig."max.block.ms"=${kafka-client.producer.max-block-ms}
+hono.kafka.event.producerConfig."request.timeout.ms"=${kafka-client.producer.request-timeout-ms}
+hono.kafka.commandResponse.producerConfig."max.block.ms"=${kafka-client.producer.max-block-ms}
+hono.kafka.commandResponse.producerConfig."request.timeout.ms"=${kafka-client.producer.request-timeout-ms}
+    </quarkus.adapter.application-dev.properties>
+
   </properties>
 
   <dependencies>

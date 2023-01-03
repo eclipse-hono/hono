@@ -126,6 +126,9 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
     <hono.infinispan.username>hono</hono.infinispan.username>
     <hono.infinispan.password>hono-secret</hono.infinispan.password>
 
+    <kafka-client.producer.max-block-ms>1800</kafka-client.producer.max-block-ms>
+    <kafka-client.producer.request-timeout-ms>2000</kafka-client.producer.request-timeout-ms>
+
     <quarkus.application-dev.properties>
 hono.auth=${hono.auth}
 hono.auth.host=${docker.host.address:localhost}

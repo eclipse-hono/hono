@@ -84,8 +84,16 @@ hono:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
     commandResponse:
       producerConfig:
-        max.block.ms: 1800
-        request.timeout.ms: 2000
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+    telemetry:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+    event:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
 
 quarkus:
   opentelemetry:

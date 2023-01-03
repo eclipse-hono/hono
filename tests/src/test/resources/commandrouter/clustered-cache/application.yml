@@ -66,6 +66,18 @@ hono:
   kafka:
     commonClientConfig:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
+    commandInternal:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+    commandResponse:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+    event:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
 
 quarkus:
   opentelemetry:
