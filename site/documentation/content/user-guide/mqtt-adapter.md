@@ -65,13 +65,20 @@ concepts.
 
 ### JSON Web Token
 
-The MQTT adapter supports authenticating clients based on credentials provided during MQTT connection establishment.
-This means that clients need to provide a *client identifier*, a *user* and a *password* field in their MQTT CONNECT
-packet as defined in
+The MQTT adapter supports authenticating clients based on a JSON Web Token (JWT) provided during MQTT connection
+establishment. This requires a client to provide a *client identifier*, a *user* and a *password* field in their MQTT
+CONNECT packet as defined in
 [MQTT Version 3.1.1, Section 3.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028)
-when connecting to the MQTT adapter. The client identifier must match the pattern */*tenant-id*/device/*auth-id*,
-e.g. `tenant/example-tenant/device/device-1`. The content of the *user* field is ignored. The password field must
-contain the JSON Web Token (JWT).
+when connecting to the MQTT adapter. The JWT must be sent in the password field. The content of the *user* field is
+ignored. The information about the tenant and the authentication identifier can be presented to the protocol adapter in
+one of two ways:
+
+1. Either as claims inside the JWT payload, in which case the *tenant-id* and *auth-id* must be provided in the `iss`
+   ("issuer") and `sub` ("subject") claims respectively,
+2. or inside the *client identifier*, in which case the *client identifier* must have the following format:
+   */*tenant-id*/[^/]\*/*auth-id*. For example, a client that belongs to tenant `example-tenant` and for which
+   *asymmetric-key* credentials with an *auth-id* of `device-1` have been registered, would present a *client identifier*
+   of `tenants/example-tenant/devices/device-1` when authenticating to the protocol adapter.
 
 The adapter extracts the *auth-id*, *tenant* and JWT from the CONNECT packet and verifies them using the
 credentials that the

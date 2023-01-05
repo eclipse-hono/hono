@@ -128,11 +128,11 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The name of the supported rsa algorithm.
      */
-    public static final String RS_ALG                            = "RS256";
+    public static final String RSA_ALG                            = "RSA";
     /**
      * The name of the supported elliptic curve algorithm.
      */
-    public static final String ES_ALG                            = "ES256";
+    public static final String EC_ALG                            = "EC";
     /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */

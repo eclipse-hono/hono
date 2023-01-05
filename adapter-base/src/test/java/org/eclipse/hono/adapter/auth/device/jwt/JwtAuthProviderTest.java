@@ -169,31 +169,6 @@ class JwtAuthProviderTest {
     }
 
     /**
-     * Verifies that doValidateCredentials returns a failing future, when AuthTokenValidator.expand() returns invalid
-     * JWS Claims.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testDoValidateCredentialsAuthTokenValidatorExpandReturnsInValidJwsClaims(final VertxTestContext ctx) {
-        final Instant now = Instant.now();
-        final Jws<Claims> claimsJws = mock(Jws.class);
-        final Claims claims = mock(Claims.class);
-
-        when(claimsJws.getBody()).thenReturn(claims);
-        when(claims.getExpiration()).thenReturn(Date.from(now.minusSeconds(1)));
-        when(claims.getIssuedAt()).thenReturn(Date.from(now.minusSeconds(10000)));
-
-        when(authTokenValidator.expand(anyString())).thenReturn(claimsJws);
-
-        final Promise<DeviceUser> result = Promise.promise();
-        vertx.runOnContext(go -> authProvider.authenticate(deviceCredentials, null, result));
-        result.future().onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
-            ctx.completeNow();
-        }));
-    }
-
-    /**
      * Verifies that doValidateCredentials returns a failing future, when AuthTokenValidator.expand() throws an
      * Exception.
      */

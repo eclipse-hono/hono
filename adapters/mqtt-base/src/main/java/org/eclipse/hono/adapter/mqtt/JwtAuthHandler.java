@@ -20,6 +20,7 @@ import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 
 import io.vertx.core.Future;
@@ -33,13 +34,15 @@ import io.vertx.mqtt.MqttAuth;
  */
 public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> {
 
+    private final ExternalJwtAuthTokenValidator authTokenValidator;
+
     /**
      * Creates a new handler for a Hono client based auth provider.
      *
      * @param authProvider The provider to use for verifying a device's credentials.
      */
     public JwtAuthHandler(final DeviceCredentialsAuthProvider<?> authProvider) {
-        this(authProvider, null);
+        this(authProvider, null, new ExternalJwtAuthTokenValidator());
     }
 
     /**
@@ -50,10 +53,15 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
      *            before they get validated. Can be used to perform checks using the credentials and tenant information
      *            before the potentially expensive credentials validation is done. A failed future returned by the
      *            handler will fail the corresponding authentication attempt.
+     * @param authTokenValidator The authentication token validator used to extract the
+     *            {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and {@value CredentialsConstants#FIELD_AUTH_ID}
+     *            from the claims of the JWT in case they are not provided in the MQTT CONNECT client identifier.
      */
     protected JwtAuthHandler(final DeviceCredentialsAuthProvider<?> authProvider,
-            final PreCredentialsValidationHandler<MqttConnectContext> preCredentialsValidationHandler) {
+            final PreCredentialsValidationHandler<MqttConnectContext> preCredentialsValidationHandler,
+            final ExternalJwtAuthTokenValidator authTokenValidator) {
         super(authProvider, preCredentialsValidationHandler);
+        this.authTokenValidator = authTokenValidator;
     }
 
     /**
@@ -62,12 +70,16 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
      * The JSON object returned will contain
      * <ul>
      * <li>a {@value CredentialsConstants#FIELD_AUTH_ID} property and
-     * <li>a {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} property both extracted from the client identifier of
-     * the MQTT CONNECT packet,</li>
+     * <li>a {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} property both either extracted from the client
+     * identifier of the MQTT CONNECT packet or from the Claims inside the JWT
+     * ({@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} in 'iss' claim and
+     * {@value CredentialsConstants#FIELD_AUTH_ID} in 'sub' claim),</li>
      * <li>a <em>password</em> property containing a JWT from the password field of the MQTT CONNECT packet</li>
      * </ul>
-     * The client identifier must have the following format: *
-     * /{@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID}/device/{@value CredentialsConstants#FIELD_AUTH_ID}.
+     * To extract the {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and
+     * {@value CredentialsConstants#FIELD_AUTH_ID} from the client identifier, it must have the following format:
+     * {@literal *}/{@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID}/[^/]{@literal *}/{@value CredentialsConstants#FIELD_AUTH_ID}.
+     * For example: tenants/example-tenant/devices/example-device.
      *
      * @param context The MQTT context for the client's CONNECT packet.
      * @return A future indicating the outcome of the operation. The future will succeed with the client's credentials
@@ -88,32 +100,29 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
         final Promise<JsonObject> result = Promise.promise();
         final MqttAuth auth = context.deviceEndpoint().auth();
 
-        if (auth == null) {
-
+        if (auth == null || !passwordMatchesJwtSyntax(auth.getPassword())) {
             result.fail(new ClientErrorException(
                     HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device did not provide credentials in CONNECT packet"));
-
-        } else if (!passwordMatchesJwtSyntax(auth.getPassword())) {
-
-            result.fail(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "device provided malformed credentials in CONNECT packet"));
-
+                    "device credentials in CONNECT packet are empty or malformed"));
         } else {
-            final String[] tenantIdAuthId = getTenantIdAndAuthIdFromClientIdentifier(
+            String[] tenantIdAuthId = getTenantIdAndAuthIdFromClientIdentifier(
                     context.deviceEndpoint().clientIdentifier());
             if (tenantIdAuthId == null) {
-                result.fail(new ClientErrorException(
-                        HttpURLConnection.HTTP_UNAUTHORIZED,
-                        "device provided malformed client identifier in CONNECT packet"));
-            } else {
+                try {
+                    tenantIdAuthId = getTenantIdAndAuthIdFromJwtClaims(auth.getPassword());
+                } catch (Exception e) {
+                    result.fail(new ClientErrorException(
+                            HttpURLConnection.HTTP_UNAUTHORIZED,
+                            "Could not get tenant identifier and authentication identifier. They must be either " +
+                                    "provided in the client identifier in CONNECT packet or in the 'iss' and 'sub'" +
+                                    "claims of the JWT."));
+                }
+            }
+            if (tenantIdAuthId != null) {
                 final JsonObject credentialsJSON = new JsonObject()
                         .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenantIdAuthId[0])
                         .put(CredentialsConstants.FIELD_AUTH_ID, tenantIdAuthId[1])
                         .put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword());
-                // spanContext of MqttContext not injected into json here since authenticateDevice(mqttContext) will
-                // pass on the MqttContext as well as the json into authProvider.authenticate()
                 result.complete(credentialsJSON);
             }
         }
@@ -131,10 +140,14 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
         if (splitLength < 3) {
             return null;
         }
-
         final String tenantId = clientIdSplit[splitLength - 3];
         final String authId = clientIdSplit[splitLength - 1];
 
-        return new String[]{tenantId, authId};
+        return new String[] { tenantId, authId };
+    }
+
+    private String[] getTenantIdAndAuthIdFromJwtClaims(final String jwt) {
+        final JsonObject claims = authTokenValidator.getJwtClaims(jwt);
+        return new String[] { claims.getString("iss"), claims.getString("sub") };
     }
 }

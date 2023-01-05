@@ -321,7 +321,7 @@ Example:
   "auth-id": "sensor1",
   "secrets": [
     {
-      "alg": "RS256",
+      "alg": "RSA",
       "key": "-----BEGIN PUBLIC KEY-----MIIBIj...IDAQAB-----END PUBLIC KEY-----"
     }
   ]
@@ -332,7 +332,7 @@ Example:
 |:----------|:---------:|:----------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | *type*    |   *yes*   | *string*  | The credential type name, always `asymmetric-key`.                                                                                                                                                                                                                                                         |
 | *auth-id* |   *yes*   | *string*  | The identity that the device should be authenticated as.                                                                                                                                                                                                                                                   |
-| *alg*     |   *yes*   | *string*  | The signing algorithm of the provided key (only `RS256` or `ES256` are supported).                                                                                                                                                                                                                         |
+| *alg*     |   *yes*   | *string*  | The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).                                                                                                                                                                       |
 | *key*     |   *yes*   | *string*  | The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer. Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory. |
 
 {{% notice note %}}

@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.adapter.auth.device.jwt.JwtAuthProvider;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttAuth;
@@ -43,6 +45,8 @@ public class JwtAuthHandlerTest {
     private Span span;
     private MqttAuth auth;
     private MqttEndpoint endpoint;
+    private ExternalJwtAuthTokenValidator authTokenValidator;
+    private JsonObject claims;
 
     /**
      * Sets up the fixture.
@@ -51,8 +55,12 @@ public class JwtAuthHandlerTest {
     public void setUp() {
         auth = mock(MqttAuth.class);
         endpoint = mock(MqttEndpoint.class);
+        authTokenValidator = mock(ExternalJwtAuthTokenValidator.class);
+        claims = mock(JsonObject.class);
         span = TracingMockSupport.mockSpan();
-        authHandler = new JwtAuthHandler(mock(JwtAuthProvider.class));
+        authHandler = new JwtAuthHandler(mock(JwtAuthProvider.class), null, authTokenValidator);
+
+        when(endpoint.auth()).thenReturn(auth);
     }
 
     /**
@@ -62,7 +70,7 @@ public class JwtAuthHandlerTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testParseCredentialsIncludesMqttClientId(final VertxTestContext ctx) {
+    public void testParseCredentialsMqttClientIdIncludesIds(final VertxTestContext ctx) {
 
         final String authId = "authId";
         final String tenantId = "tenantId";
@@ -70,9 +78,39 @@ public class JwtAuthHandlerTest {
 
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
+        when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
 
-        when(endpoint.auth()).thenReturn(auth);
-        when(endpoint.clientIdentifier()).thenReturn(String.format("Tenant/%s/Device/%s", tenantId, authId));
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
+        authHandler.parseCredentials(context)
+                .onComplete(ctx.succeeding(info -> {
+                    ctx.verify(() -> {
+                        assertThat(info.getString(CredentialsConstants.FIELD_AUTH_ID)).isEqualTo(authId);
+                        assertThat(info.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
+                        assertThat(info.getString(CredentialsConstants.FIELD_PASSWORD)).isEqualTo(jwt);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the handler includes a valid MQTT client identifier in the authentication information retrieved
+     * from a device's CONNECT packet.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testParseCredentialsJwtClaimsIncludeIds(final VertxTestContext ctx) {
+
+        final String authId = "authId";
+        final String tenantId = "tenantId";
+        final String jwt = "header.claims.signature";
+
+        when(auth.getUsername()).thenReturn("");
+        when(auth.getPassword()).thenReturn(jwt);
+        when(endpoint.clientIdentifier()).thenReturn("client identifier");
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
+        when(claims.getString("iss")).thenReturn(tenantId);
+        when(claims.getString("sub")).thenReturn(authId);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
@@ -93,7 +131,7 @@ public class JwtAuthHandlerTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testParseCredentialsMalformedMqttClientId(final VertxTestContext ctx) {
+    public void testParseCredentialsMalformedMqttClientIdAndJwtClaims(final VertxTestContext ctx) {
 
         final String authId = "authId";
         final String tenantId = "tenantId";
@@ -101,9 +139,8 @@ public class JwtAuthHandlerTest {
 
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
-
-        when(endpoint.auth()).thenReturn(auth);
-        when(endpoint.clientIdentifier()).thenReturn(String.format("Tenant.%s.Device.%s", tenantId, authId));
+        when(endpoint.clientIdentifier()).thenReturn(String.format("tenants.%s.devices.%s", tenantId, authId));
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(null);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
@@ -128,9 +165,33 @@ public class JwtAuthHandlerTest {
 
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
+        when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
 
-        when(endpoint.auth()).thenReturn(auth);
-        when(endpoint.clientIdentifier()).thenReturn(String.format("Tenant/%s/Device/%s", tenantId, authId));
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
+        authHandler.parseCredentials(context)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the handler returns the correct Exception in case the device endpoint provides a MqttAuth that is
+     * null.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testParseCredentialsMqttAuthNull(final VertxTestContext ctx) {
+
+        final String authId = "authId";
+        final String tenantId = "tenantId";
+        final String jwt = "jwt";
+
+        when(auth.getUsername()).thenReturn("");
+        when(auth.getPassword()).thenReturn(jwt);
+        when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
+        when(endpoint.auth()).thenReturn(null);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)

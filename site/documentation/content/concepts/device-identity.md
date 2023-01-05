@@ -156,24 +156,30 @@ device registry. Further more does the protocol adapter check if the JWT is vali
 the following information in its header and payload.
 
 The JWT header has to provide two fields that indicate the type of token (`typ`) and the signing algorithm (`alg`).
-Both fields are mandatory and the type has to be `JWT`. For the signing algorithm `RS256` and `ES256` are supported.
-The algorithm specified in the header must match at least one of the
+Both fields are mandatory and the type has to be `JWT`. For the signing algorithm `RS256`, `PS256`, `ES256` and their
+respective stronger variants are supported. The algorithm specified in the header must match at least one of the
 [*asymmetric-key* type credentials]({{< relref "/api/credentials#asymmetric-key" >}}) registered for the device.
 
 The JWT payload must at least contain the claims `iat` ("issued at") and `exp` ("expiration time") with values provided
 in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The `iat` claim marks the timestamp the token was created at
-and will also represent the start of its validity period. The `nbf` ("not before") claim is therefore not required and
-will be ignored. The `exp` claim signifies the point in time after which the token becomes invalid.
+and will also represent the start of its validity period. It must not be too far in the past or the future (allowing 10
+minutes for skew). The `nbf` ("not before") claim is therefore not required and will be ignored. The `exp` claim
+signifies the point in time after which the token becomes invalid. The lifetime of the token must be at most 24 hours
+plus skew.
 
 During connection establishment the device presents a client identifier, a username and a password to the protocol
 adapter. The JWT has to be provided in the password field. The username will be ignored; however, some MQTT client
-libraries will not send the password unless the username is specified. The client identifier must provide the
-*tenant-id* and *auth-id* in the following format: */*tenant-id*/device/*auth-id*. For example, a device that belongs
-to tenant `example-tenant` and for which *asymmetric-key* credentials with an *auth-id* of `device-1` have been
-registered, would present a client identifier of `tenant/example-tenant/device/device-1` when authenticating to the
-protocol adapter.
+libraries will not send the password unless the username is specified. There are two ways the device can
+provide the information about its tenant and authentication identifier:
 
-The protocol adapter then extracts the tenant identifier from the client identifier and invokes the Credentials
+1. Either as claims inside the JWT payload, in which case the *tenant-id* and *auth-id* must be provided in the `iss`
+   ("issuer") and `sub` ("subject") claims respectively,
+2. or inside the client identifier, in which case the client identifier must have the following format:
+   */*tenant-id*/[^/]\*/*auth-id*. For example, a device that belongs to tenant `example-tenant` and for which
+   *asymmetric-key* credentials with an *auth-id* of `device-1` have been registered, would present a client identifier
+   of `tenants/example-tenant/devices/device-1` when authenticating to the protocol adapter.
+
+The protocol adapter then extracts the tenant identifier and invokes the Credentials
 API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
 *asymmetric-key* type credentials that are on record for the device. The key contained in the credentials is then used
 by the protocol adapter to verify the JWT provided by the client. If both, the JWT and the key originate from

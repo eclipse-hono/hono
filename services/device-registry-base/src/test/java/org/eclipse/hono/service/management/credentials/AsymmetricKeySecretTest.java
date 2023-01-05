@@ -27,7 +27,7 @@ class AsymmetricKeySecretTest {
 
     private final String id = "id";
     private final String key = CredentialsConstants.BEGIN_KEY + "JWT" + CredentialsConstants.END_KEY;
-    private final String alg = "ES256";
+    private final String alg = CredentialsConstants.EC_ALG;
 
     /**
      * Verifies that the algorithm is correctly set, when a valid algorithm is provided.
@@ -35,7 +35,7 @@ class AsymmetricKeySecretTest {
     @Test
     public void testSetAlgValidAlgorithm() {
 
-        final String algRS = "RS256";
+        final String algRS = CredentialsConstants.RSA_ALG;
         final AsymmetricKeySecret secret = new AsymmetricKeySecret();
         secret.setAlg(algRS);
         assertThat(secret.getAlg()).isEqualTo(algRS);

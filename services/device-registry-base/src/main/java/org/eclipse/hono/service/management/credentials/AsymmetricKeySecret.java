@@ -73,15 +73,15 @@ public class AsymmetricKeySecret extends CommonSecret {
      *
      * @param alg the name of the algorithm.
      * @return a reference to this for fluent use.
-     * @throws IllegalArgumentException if {@code alg} is not either {@value CredentialsConstants#RS_ALG} or
-     *             {@value CredentialsConstants#ES_ALG}.
+     * @throws IllegalArgumentException if {@code alg} is not either {@value CredentialsConstants#RSA_ALG} or
+     *             {@value CredentialsConstants#EC_ALG}.
      */
     public final AsymmetricKeySecret setAlg(final String alg) {
         Objects.requireNonNull(alg);
-        if (!alg.equals(CredentialsConstants.RS_ALG) && !alg.equals(CredentialsConstants.ES_ALG)) {
+        if (!alg.equals(CredentialsConstants.RSA_ALG) && !alg.equals(CredentialsConstants.EC_ALG)) {
             throw new IllegalArgumentException(
-                    String.format("alg must be either \"%s\" or \"%s\"", CredentialsConstants.RS_ALG,
-                            CredentialsConstants.ES_ALG));
+                    String.format("alg must be either \"%s\" or \"%s\".", CredentialsConstants.RSA_ALG,
+                            CredentialsConstants.EC_ALG));
         }
         this.alg = alg;
         return this;

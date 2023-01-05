@@ -1458,7 +1458,7 @@ components:
                     type: string
                     description: |
                        The authentication identifier provided by the device as part of the *client identifier*.
-                       Example: For client identifier `tenant/DEFAULT_TENANT/device/sensor1` the authentication
+                       Example: For client identifier `tenants/DEFAULT_TENANT/devices/sensor1` the authentication
                        identifier to be registered is `sensor1`.
                  "secrets":
                     type: array
@@ -1570,7 +1570,7 @@ components:
               properties:
                  "alg":
                     type: string
-                    description: The signing algorithm of the provided key (only `RS256` or `ES256` are supported).
+                    description: The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).
                  "key":
                     type: string
                     description: |
