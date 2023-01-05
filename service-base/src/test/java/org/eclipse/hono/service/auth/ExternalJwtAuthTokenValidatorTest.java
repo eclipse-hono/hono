@@ -147,7 +147,7 @@ class ExternalJwtAuthTokenValidatorTest {
     void setUp() {
         authTokenValidator = new ExternalJwtAuthTokenValidator();
         jwtHeader = new HashMap<>();
-        jwtHeader.put("typ", "JWT");
+        jwtHeader.put(JwsHeader.TYPE, "JWT");
 
         final long epochSecondNow = Instant.now().getEpochSecond();
         instantNow = Instant.ofEpochSecond(epochSecondNow);
@@ -490,7 +490,7 @@ class ExternalJwtAuthTokenValidatorTest {
     }
 
     /**
-     * Verifies that expand throws a {@link SignatureException}, when the JWT header has no "typ" field.
+     * Verifies that expand throws a {@link SignatureException}, when the JWT header has no {@value JwsHeader#TYPE} field.
      */
     @Test
     public void testExpandTypFieldInJwtHeaderNull() {
@@ -507,7 +507,7 @@ class ExternalJwtAuthTokenValidatorTest {
     }
 
     /**
-     * Verifies that expand throws a {@link SignatureException}, when the "typ" field in the token header is not "JWT".
+     * Verifies that expand throws a {@link SignatureException}, when the {@value JwsHeader#TYPE} field in the token header is not "JWT".
      */
     @Test
     public void testExpandTypFieldInJwtHeaderInvalid() {
@@ -518,7 +518,7 @@ class ExternalJwtAuthTokenValidatorTest {
                 CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
-        jwtHeader.put("typ", "invalid");
+        jwtHeader.put(JwsHeader.TYPE, "invalid");
         final String jwt = generateJwt(jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
         assertThrows(SignatureException.class, () -> authTokenValidator.expand(jwt));
@@ -537,8 +537,8 @@ class ExternalJwtAuthTokenValidatorTest {
         final String jwt = generateJwt(jwtHeader,
                 generateJwtClaims(tenantId, authId, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
         final JsonObject claims = authTokenValidator.getJwtClaims(jwt);
-        assertThat(claims.getString("iss")).isEqualTo(tenantId);
-        assertThat(claims.getString("sub")).isEqualTo(authId);
+        assertThat(claims.getString(Claims.ISSUER)).isEqualTo(tenantId);
+        assertThat(claims.getString(Claims.SUBJECT)).isEqualTo(authId);
     }
 
     /**
@@ -607,13 +607,13 @@ class ExternalJwtAuthTokenValidatorTest {
     private Map<String, Object> generateJwtClaims(final String iss, final String sub, final Instant iat,
             final Instant exp) {
         final Map<String, Object> jwtClaims = new HashMap<>();
-        jwtClaims.put("iss", iss);
-        jwtClaims.put("sub", sub);
+        jwtClaims.put(Claims.ISSUER, iss);
+        jwtClaims.put(Claims.SUBJECT, sub);
         if (iat != null) {
-            jwtClaims.put("iat", iat.toString());
+            jwtClaims.put(Claims.ISSUED_AT, iat.toString());
         }
         if (exp != null) {
-            jwtClaims.put("exp", exp.toString());
+            jwtClaims.put(Claims.EXPIRATION, exp.toString());
         }
         return jwtClaims;
     }

@@ -14,6 +14,8 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
@@ -23,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 
+import io.jsonwebtoken.Claims;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -34,6 +37,7 @@ import io.vertx.mqtt.MqttAuth;
  */
 public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> {
 
+    static final String REQUIRED_AUD = "hono-adapter";
     private final ExternalJwtAuthTokenValidator authTokenValidator;
 
     /**
@@ -105,23 +109,32 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
                     HttpURLConnection.HTTP_UNAUTHORIZED,
                     "device credentials in CONNECT packet are empty or malformed"));
         } else {
-            String[] tenantIdAuthId = getTenantIdAndAuthIdFromClientIdentifier(
+            Map<String, String> map = getTenantIdAndAuthIdFromClientIdentifier(
                     context.deviceEndpoint().clientIdentifier());
-            if (tenantIdAuthId == null) {
-                try {
-                    tenantIdAuthId = getTenantIdAndAuthIdFromJwtClaims(auth.getPassword());
-                } catch (Exception e) {
+            boolean failed = false;
+            if (map == null) {
+                map = getTenantIdAuthIdAndAudienceFromJwtClaims(auth.getPassword());
+                if (map == null) {
+                    failed = true;
                     result.fail(new ClientErrorException(
                             HttpURLConnection.HTTP_UNAUTHORIZED,
                             "Could not get tenant identifier and authentication identifier. They must be either " +
                                     "provided in the client identifier in CONNECT packet or in the 'iss' and 'sub'" +
                                     "claims of the JWT."));
                 }
+                if (!failed && !REQUIRED_AUD.equalsIgnoreCase(map.get(Claims.AUDIENCE))) {
+                    failed = true;
+                    result.fail(new ClientErrorException(
+                            HttpURLConnection.HTTP_UNAUTHORIZED,
+                            String.format("JWT did not specify the correct audience (aud claim). In case the tenant " +
+                                    "identifier and authentication identifier are provided inside the claims of the " +
+                                    "JWT, it also has to provide \"%s\" within the aud claim.", REQUIRED_AUD)));
+                }
             }
-            if (tenantIdAuthId != null) {
+            if (!failed) {
                 final JsonObject credentialsJSON = new JsonObject()
-                        .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenantIdAuthId[0])
-                        .put(CredentialsConstants.FIELD_AUTH_ID, tenantIdAuthId[1])
+                        .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, map.get(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID))
+                        .put(CredentialsConstants.FIELD_AUTH_ID, map.get(CredentialsConstants.FIELD_AUTH_ID))
                         .put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword());
                 result.complete(credentialsJSON);
             }
@@ -133,21 +146,29 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
         return password != null && !password.trim().isEmpty() && password.split("\\.").length == 3;
     }
 
-    private String[] getTenantIdAndAuthIdFromClientIdentifier(final String clientId) {
+    private Map<String, String> getTenantIdAndAuthIdFromClientIdentifier(final String clientId) {
         final String[] clientIdSplit = clientId.split("/");
         final int splitLength = clientIdSplit.length;
 
         if (splitLength < 3) {
             return null;
         }
-        final String tenantId = clientIdSplit[splitLength - 3];
-        final String authId = clientIdSplit[splitLength - 1];
-
-        return new String[] { tenantId, authId };
+        final Map<String, String> result = new HashMap<>();
+        result.put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, clientIdSplit[splitLength - 3]);
+        result.put(CredentialsConstants.FIELD_AUTH_ID, clientIdSplit[splitLength - 1]);
+        return result;
     }
 
-    private String[] getTenantIdAndAuthIdFromJwtClaims(final String jwt) {
-        final JsonObject claims = authTokenValidator.getJwtClaims(jwt);
-        return new String[] { claims.getString("iss"), claims.getString("sub") };
+    private Map<String, String> getTenantIdAuthIdAndAudienceFromJwtClaims(final String jwt) {
+        try {
+            final JsonObject claims = authTokenValidator.getJwtClaims(jwt);
+            final Map<String, String> result = new HashMap<>();
+            result.put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, claims.getString(Claims.ISSUER));
+            result.put(CredentialsConstants.FIELD_AUTH_ID, claims.getString(Claims.SUBJECT));
+            result.put(Claims.AUDIENCE, claims.getString(Claims.AUDIENCE));
+            return result;
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 }

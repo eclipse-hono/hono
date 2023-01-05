@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.jsonwebtoken.Claims;
 import io.opentracing.Span;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -64,8 +65,8 @@ public class JwtAuthHandlerTest {
     }
 
     /**
-     * Verifies that the handler includes a valid MQTT client identifier in the authentication information retrieved
-     * from a device's CONNECT packet.
+     * Verifies that the handler can correctly extract the {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and
+     * {@value CredentialsConstants#FIELD_AUTH_ID} from the MQTT Client Identifier, if they are provided correctly.
      *
      * @param ctx The vert.x test context.
      */
@@ -93,8 +94,8 @@ public class JwtAuthHandlerTest {
     }
 
     /**
-     * Verifies that the handler includes a valid MQTT client identifier in the authentication information retrieved
-     * from a device's CONNECT packet.
+     * Verifies that the handler can correctly extract the {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and
+     * {@value CredentialsConstants#FIELD_AUTH_ID} from the JWT claims, if they are provided correctly.
      *
      * @param ctx The vert.x test context.
      */
@@ -109,8 +110,9 @@ public class JwtAuthHandlerTest {
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn("client identifier");
         when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
-        when(claims.getString("iss")).thenReturn(tenantId);
-        when(claims.getString("sub")).thenReturn(authId);
+        when(claims.getString(Claims.ISSUER)).thenReturn(tenantId);
+        when(claims.getString(Claims.SUBJECT)).thenReturn(authId);
+        when(claims.getString(Claims.AUDIENCE)).thenReturn(JwtAuthHandler.REQUIRED_AUD);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
@@ -125,8 +127,39 @@ public class JwtAuthHandlerTest {
     }
 
     /**
-     * Verifies that the handler returns the correct Exception in case the MQTT client identifier in the authentication
-     * information retrieved from a device's CONNECT packet is malformed.
+     * Verifies that the handler returns the correct Exception in case the
+     * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and {@value CredentialsConstants#FIELD_AUTH_ID} got
+     * extracted from the JWT claims, but they are missing the correct {@value Claims#AUDIENCE} claim.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testParseCredentialsJwtClaimsIncludeIdsButMissCorrectAud(final VertxTestContext ctx) {
+
+        final String authId = "authId";
+        final String tenantId = "tenantId";
+        final String jwt = "header.claims.signature";
+
+        when(auth.getUsername()).thenReturn("");
+        when(auth.getPassword()).thenReturn(jwt);
+        when(endpoint.clientIdentifier()).thenReturn("client identifier");
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
+        when(claims.getString(Claims.ISSUER)).thenReturn(tenantId);
+        when(claims.getString(Claims.SUBJECT)).thenReturn(authId);
+        when(claims.getString(Claims.AUDIENCE)).thenReturn("invalid aud claim");
+
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
+        authHandler.parseCredentials(context)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the handler returns the correct Exception in case the
+     * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and {@value CredentialsConstants#FIELD_AUTH_ID} could
+     * neither be extracted from the MQTT client identifier nor the JWT claims.
      *
      * @param ctx The vert.x test context.
      */
