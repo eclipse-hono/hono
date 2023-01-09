@@ -140,7 +140,9 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
     public JsonObject getJwtClaims(final String jwt) {
         try {
             final String[] jwtSplit = jwt.split("\\.");
-            final String payload = new String(Base64.getUrlDecoder().decode(jwtSplit[1].getBytes()), Charset.defaultCharset());
+            final String payload = new String(
+                    Base64.getUrlDecoder().decode(jwtSplit[1].getBytes(Charset.defaultCharset())),
+                    Charset.defaultCharset());
             return new JsonObject(payload);
         } catch (RuntimeException e) {
             throw new MalformedJwtException("Invalid JWT.", e);
