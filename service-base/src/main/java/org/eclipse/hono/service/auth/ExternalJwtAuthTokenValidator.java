@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.auth;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -139,7 +140,7 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
     public JsonObject getJwtClaims(final String jwt) {
         try {
             final String[] jwtSplit = jwt.split("\\.");
-            final String payload = new String(Base64.getUrlDecoder().decode(jwtSplit[1].getBytes()));
+            final String payload = new String(Base64.getUrlDecoder().decode(jwtSplit[1].getBytes()), Charset.defaultCharset());
             return new JsonObject(payload);
         } catch (RuntimeException e) {
             throw new MalformedJwtException("Invalid JWT.", e);

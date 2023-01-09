@@ -173,7 +173,7 @@ libraries will not send the password unless the username is specified. There are
 provide the information about its tenant and authentication identifier:
 
 1. Either as claims inside the JWT payload, in which case the *tenant-id* and *auth-id* must be provided in the `iss`
-   ("issuer") and `sub` ("subject") claims respectively,
+   ("issuer") and `sub` ("subject") claims, respectively, and the `aud` ("audience") claim must contain "hono-adapter"
 2. or inside the client identifier, in which case the client identifier must have the following format:
    */*tenant-id*/[^/]\*/*auth-id*. For example, a device that belongs to tenant `example-tenant` and for which
    *asymmetric-key* credentials with an *auth-id* of `device-1` have been registered, would present a client identifier
