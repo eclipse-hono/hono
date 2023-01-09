@@ -608,6 +608,9 @@ that gateway has created such a command subscription, that gateway will be chose
 on behalf of the command target device and that has an open subscription will be chosen randomly to receive the command
 message.
 
+It is not possible to use both topic names `command//+/req/#` and `command//[<gateway-id>]/req/#` at the same time. In
+that case only the last such subscription would be handled from the Command Router.
+
 **Subscribe to Commands for all Devices**
 
 A subscription to commands for all devices that a gateway acts on behalf of looks like this:

@@ -54,6 +54,7 @@ import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.adapter.mqtt.MqttContext.ErrorHandlingMode;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.Command;
@@ -1546,6 +1547,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 subscription.getDeviceId(),
                                 authenticatedDevice,
                                 commandContext.getTracingContext());
+                    } else {
+                        // in case of gateway having subscribed for itself as simple device do not forward messages for
+                        // devices behind that gateway
+                        if (!subscription.isGatewaySubscriptionForAllDevices() && command.isTargetedAtGateway()) {
+                            log.debug(
+                                    "Mapped target gateway not subscribed to commands for devices behind that gateway" +
+                                            " [tenant: {}, gateway-id: {}, device-id: {}]",
+                                    command.getTenant(), command.getGatewayId(), command.getDeviceId());
+                            return Future.failedFuture(new NoConsumerException(
+                                    "Mapped target gateway not subscribed to commands for devices behind that gateway"));
+                        }
                     }
                     return Future.succeededFuture();
                 }).onFailure(t -> {

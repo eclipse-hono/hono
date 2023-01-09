@@ -10,6 +10,13 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * Hono services and adapters could be started locally (not in containers) for development/test purposes.
 
+### Fixes & Enhancements
+
+* The MQTT adapter did forward command messages for devices behind a gateway when the gateway subscription was targeting
+the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed. For a subscription with such a
+topic name, only commands for the gateway itself are forwarded, not commands for devices, that the gateway acts on
+behalf of.
+
 ## 2.2.0
 
 ### New features

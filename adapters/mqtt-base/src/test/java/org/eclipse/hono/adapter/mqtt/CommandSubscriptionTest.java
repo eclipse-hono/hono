@@ -346,6 +346,7 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(gw.getDeviceId());
         assertThat(subscription.getQos()).isEqualTo(qos);
         assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(true);
+        assertThat(subscription.isGatewaySubscriptionForAllDevices()).isEqualTo(false);
         // THEN the command topic does not include the tenant either
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s//%s/%s/requestId/doSomething",
@@ -363,6 +364,7 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(gw.getDeviceId());
         assertThat(subscription.getQos()).isEqualTo(qos);
         assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(true);
+        assertThat(subscription.isGatewaySubscriptionForAllDevices()).isEqualTo(false);
         // THEN the command topic does include the tenant as well
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s/%s/%s/%s/requestId/doSomething",
@@ -380,6 +382,7 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(gw.getDeviceId());
         assertThat(subscription.getQos()).isEqualTo(qos);
         assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(false);
+        assertThat(subscription.isGatewaySubscriptionForAllDevices()).isEqualTo(true);
         // THEN the command topic does not include the tenant either
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s//%s/%s/requestId/doSomething",
@@ -397,6 +400,7 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(gw.getDeviceId());
         assertThat(subscription.getQos()).isEqualTo(qos);
         assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(false);
+        assertThat(subscription.isGatewaySubscriptionForAllDevices()).isEqualTo(true);
         // THEN the command topic does include the tenant as well
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s/%s/%s/%s/requestId/doSomething",
