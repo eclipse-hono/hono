@@ -69,7 +69,7 @@ provides means to do so.
 **Message Format**
 
 The following table provide an overview of the relevant properties of the message format for a Pub/Sub message as defined in the
-[Google Pub/Sub Documentation](https://cloud.google.com/pubsub/docs/reference/rest/v1/PubsubMessage). The message must contain either a non-empty data field or at least one attribute.
+[Google Pub/Sub Documentation](https://cloud.google.com/pubsub/docs/reference/rest/v1/PubsubMessage). The message must contain a non-empty data field or at least one attribute (or both).
 
 | Name            | Type        | Description |
 | :-------------- | :---------- | :---------- |

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,11 +49,11 @@ public class CachingPubSubPublisherFactoryTest {
     public void testThatPublisherIsAddedToCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
 
-        try (MockedStatic<PubSubPublisherClient> pubSubClient = Mockito.mockStatic(PubSubPublisherClient.class)) {
+        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
             final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClient.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
+            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
 
             final PubSubPublisherClient createPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
                     TENANT_ID);
@@ -71,11 +71,11 @@ public class CachingPubSubPublisherFactoryTest {
     public void testClosePublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
 
-        try (MockedStatic<PubSubPublisherClient> pubSubClient = Mockito.mockStatic(PubSubPublisherClient.class)) {
+        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
             final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClient.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
+            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
 
             final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
                     TENANT_ID);
@@ -95,11 +95,11 @@ public class CachingPubSubPublisherFactoryTest {
     public void testCloseAllPublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
 
-        try (MockedStatic<PubSubPublisherClient> pubSubClient = Mockito.mockStatic(PubSubPublisherClient.class)) {
+        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
             final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClient.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
+            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
 
             final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
                     TENANT_ID);

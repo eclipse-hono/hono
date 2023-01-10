@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import java.util.Random;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.util.LifecycleStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -39,7 +38,6 @@ import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies the generic behavior of {@link AbstractPubSubBasedMessageSender}.
@@ -56,9 +54,7 @@ public class AbstractPubSubBasedMessageSenderTest {
 
     private final Tracer tracer = NoopTracerFactory.create();
 
-    private LifecycleStatus lifecycleStatus;
-
-    private CachingPubSubPublisherFactory factory;
+    private PubSubPublisherFactory factory;
 
     private AbstractPubSubBasedMessageSender sender;
 
@@ -67,10 +63,10 @@ public class AbstractPubSubBasedMessageSenderTest {
      */
     @BeforeEach
     public void setUp() {
-        factory = mock(CachingPubSubPublisherFactory.class);
-        lifecycleStatus = mock(LifecycleStatus.class);
-        sender = new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, tracer, lifecycleStatus) {
+        factory = mock(PubSubPublisherFactory.class);
+        sender = new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, tracer) {
         };
+        sender.start();
     }
 
     /**
@@ -100,38 +96,16 @@ public class AbstractPubSubBasedMessageSenderTest {
     }
 
     /**
-     * Verifies that start up succeeded lifecycleStatus is set correctly.
-     */
-    @Test
-    public void testStartSucceedsWhenLifecycleStatusIsStartingOrStarted() {
-        when(lifecycleStatus.isStarting()).thenReturn(true);
-        assertThat(sender.start().succeeded()).isTrue();
-
-        when(lifecycleStatus.setStarting()).thenReturn(true);
-        assertThat(sender.start().succeeded()).isTrue();
-    }
-
-    /**
-     * Verifies that start up failed when component is already started and not in state stopped.
-     */
-    @Test
-    public void testStartFailedWhenLifecycleStatusIsNotInStateStopped() {
-        when(lifecycleStatus.setStarting()).thenReturn(false);
-        assertThat(sender.start().failed()).isTrue();
-    }
-
-    /**
      * Verifies that the send method returns a failed future wrapped in a {@link ServerErrorException}.
      */
     @Test
     public void testSendFailedWhenLifecycleStatusIsNotStarted() {
-        final VertxTestContext ctx = new VertxTestContext();
-        when(lifecycleStatus.isStarted()).thenReturn(false);
+        sender.stop();
 
         final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE);
 
         assertThat(result.failed()).isTrue();
-        result.onFailure(t -> assertThat(t.getMessage()).isEqualTo("sender not started"));
+        result.onFailure(t -> assertThat(t.getClass()).isEqualTo(ServerErrorException.class));
     }
 
     /**
@@ -139,8 +113,6 @@ public class AbstractPubSubBasedMessageSenderTest {
      */
     @Test
     public void testSendFailed() {
-        when(lifecycleStatus.isStarted()).thenReturn(true);
-
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
@@ -175,8 +147,6 @@ public class AbstractPubSubBasedMessageSenderTest {
         final Map<String, Object> properties = getProperties();
         final Map<String, String> attributes = getAttributes();
 
-        when(lifecycleStatus.isStarted()).thenReturn(true);
-
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
         when(factory.getOrCreatePublisher(TOPIC, PROJECT_ID, TENANT_ID)).thenReturn(client);
@@ -200,6 +170,10 @@ public class AbstractPubSubBasedMessageSenderTest {
                     properties,
                     NoopSpan.INSTANCE);
             assertThat(result.succeeded()).isTrue();
+            Mockito.verify(client, Mockito.times(1)).publish(message);
+            Mockito.verify(builder, Mockito.times(1)).putAllAttributes(attributes);
+            Mockito.verify(builder, Mockito.times(1)).setOrderingKey(DEVICE_ID);
+            Mockito.verify(builder, Mockito.times(1)).setData(bs);
         }
     }
 

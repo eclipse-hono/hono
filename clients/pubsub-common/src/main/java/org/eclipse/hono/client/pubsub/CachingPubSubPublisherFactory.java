@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,12 +24,13 @@ import io.vertx.core.Future;
 /**
  * A factory for creating PubSubPublisherClients. Created publishers are being cached.
  */
-public class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
+public final class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
 
-    private final Map<String, PubSubPublisherClient> activePublishers = new ConcurrentHashMap<>();
+    private final Map<String, PubSubPublisherClientImpl> activePublishers = new ConcurrentHashMap<>();
 
     /**
-     * Creates a new Factory that will produce {@link PubSubPublisherClient#createShared(String, String) publishers}.
+     * Creates a new Factory that will produce {@link PubSubPublisherClientImpl#createShared(String, String)
+     * publishers}.
      *
      * @return an instance of the Factory.
      */
@@ -67,8 +68,8 @@ public class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
         return Optional.ofNullable(activePublishers.get(topicTenantName));
     }
 
-    private PubSubPublisherClient getPubSubPublisherClient(final String projectId, final String topic) {
-        return PubSubPublisherClient.createShared(projectId, topic);
+    private PubSubPublisherClientImpl getPubSubPublisherClient(final String projectId, final String topic) {
+        return PubSubPublisherClientImpl.createShared(projectId, topic);
     }
 
     private String getTopicTenantName(final String topic, final String tenantId) {
@@ -76,7 +77,7 @@ public class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
     }
 
     private Future<Void> removePublisher(final String topicName) {
-        final PubSubPublisherClient publisher = activePublishers.remove(topicName);
+        final PubSubPublisherClientImpl publisher = activePublishers.remove(topicName);
         if (publisher == null) {
             return Future.succeededFuture();
         }

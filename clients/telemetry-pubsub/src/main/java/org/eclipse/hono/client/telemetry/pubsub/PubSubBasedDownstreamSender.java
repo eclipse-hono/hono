@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,8 +43,25 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A Pub/Sub based sender for publishing telemetry messages and events to Google Pub/Sub.
  */
-public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSender
+public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSender
         implements TelemetrySender, EventSender {
+
+    /**
+     * The name of the Pub/Sub message property containing the ID of the GCP project Pub/Sub belongs to.
+     */
+    private static final String PUBSUB_PROPERTY_PROJECT_ID = "projectId";
+    /**
+     * The name of Pub/Sub message property containing the ID of the tenant the device belongs to.
+     */
+    private static final String PUBSUB_PROPERTY_TENANT_ID = "tenantId";
+    /**
+     * The name of the Pub/Sub message property containing the ID of the device.
+     */
+    private static final String PUBSUB_PROPERTY_DEVICE_ID = "deviceId";
+    /**
+     * The name of the Pub/Sub message property containing the ID of the device registry the device belongs to.
+     */
+    private static final String PUBSUB_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
 
     private final boolean isDefaultsEnabled;
     private final String projectId;
@@ -110,7 +127,7 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
                 contentType,
                 properties);
 
-        final Span currentSpan = startSpan("forward event", topicEndpoint, tenantId, deviceId, References.CHILD_OF,
+        final Span currentSpan = startSpan("forward event", tenantId, deviceId, References.CHILD_OF,
                 context);
         return sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
@@ -150,7 +167,6 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
 
         final Span currentSpan = startSpan(
                 "forward telemetry",
-                topicEndpoint,
                 tenantId,
                 deviceId,
                 qos == QoS.AT_MOST_ONCE ? References.FOLLOWS_FROM : References.CHILD_OF,
@@ -184,10 +200,11 @@ public class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessageSende
                 .map(HashMap::new)
                 .orElseGet(HashMap::new);
 
-        messageProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId());
+        messageProperties.put(PUBSUB_PROPERTY_DEVICE_ID, device.getDeviceId());
         messageProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
-        messageProperties.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenant.getTenantId());
-        messageProperties.put(MessageHelper.APP_PROPERTY_PROJECT_ID, projectId);
+        messageProperties.put(PUBSUB_PROPERTY_TENANT_ID, tenant.getTenantId());
+        messageProperties.put(PUBSUB_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
+        messageProperties.put(PUBSUB_PROPERTY_PROJECT_ID, projectId);
 
         Optional.ofNullable(contentType)
                 .ifPresent(ct -> messageProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));
