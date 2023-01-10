@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.client.pubsub;
 /**
  * Common configuration properties required for access to Pub/Sub.
  */
-public class PubSubConfigProperties {
+public final class PubSubConfigProperties {
 
     private String projectId = null;
 
@@ -28,14 +28,29 @@ public class PubSubConfigProperties {
         setProjectId(options.projectId().orElse(null));
     }
 
+    /**
+     * Gets the Google Cloud Project ID that the Pub/Sub client is configured to connect to.
+     *
+     * @return The projectId or {@code null} if no projectId has been set.
+     */
     public String getProjectId() {
         return projectId;
     }
 
-    private void setProjectId(final String projectId) {
+    /**
+     * Sets the Google Cloud Project ID that the Pub/Sub client should connect to.
+     *
+     * @param projectId The Google Cloud Project ID.
+     */
+    public void setProjectId(final String projectId) {
         this.projectId = projectId;
     }
 
+    /**
+     * Checks if the projectId property has been explicitly set.
+     *
+     * @return {@code true} if the projectId property has been set via {@link #setProjectId(String)}.
+     */
     public boolean isProjectIdConfigured() {
         return projectId != null;
     }

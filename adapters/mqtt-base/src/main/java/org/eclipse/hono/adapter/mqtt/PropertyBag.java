@@ -59,6 +59,7 @@ public final class PropertyBag {
         Objects.requireNonNull(topic);
 
         if (topic.isEmpty() || topic.startsWith("/")) {
+            LOG.info("The provided topic '{}' is invalid, reason: empty or starts with a '/'", topic);
             return null;
         }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,7 +53,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     private final String topic;
     private final Tracer tracer;
     private final String projectId;
-    private LifecycleStatus lifecycleStatus = new LifecycleStatus();
+    private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     /**
      * Creates a new PubSub-based message sender.
@@ -80,33 +80,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         this.tracer = tracer;
     }
 
-    /**
-     * Creates a new PubSub-based message sender.
-     * <p>
-     * To be used for unit tests.
-     *
-     * @param publisherFactory The factory to use for creating Pub/Sub publishers.
-     * @param topic The topic to create the publisher for.
-     * @param projectId The Google project id to use.
-     * @param tracer The OpenTracing tracer.
-     * @param lifecycleStatus The lifecycle to use for this class.
-     */
-    protected AbstractPubSubBasedMessageSender(
-            final PubSubPublisherFactory publisherFactory,
-            final String topic,
-            final String projectId,
-            final Tracer tracer,
-            final LifecycleStatus lifecycleStatus) {
-
-        this.publisherFactory = publisherFactory;
-        this.topic = topic;
-        this.projectId = projectId;
-        this.tracer = tracer;
-        this.lifecycleStatus = lifecycleStatus;
-    }
-
-    private static Span newSpan(final Tracer tracer, final String operationName, final String topic,
-            final String referenceType, final SpanContext parent) {
+    private Span newSpan(final String operationName, final String referenceType, final SpanContext parent) {
 
         return TracingHelper.buildSpan(tracer, parent, operationName, referenceType)
                 .ignoreActiveSpan()
@@ -204,7 +178,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().putAllAttributes(pubSubAttributes)
                 .setOrderingKey(deviceId).setData(data).build();
 
-        log.trace("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
+        log.info("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);
 
         return getOrCreatePublisher(topic, tenantId).publish(pubsubMessage)
@@ -213,7 +187,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
                 })
                 .onFailure(t -> {
                     logError(currentSpan, topic, tenantId, deviceId, t);
-                    throw new ServerErrorException(tenantId, getErrorCode(), t);
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_UNAVAILABLE, t);
                 })
                 .mapEmpty();
 
@@ -223,7 +197,6 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
      * Creates a new <em>OpenTracing</em> span to trace publishing messages to Pub/Sub.
      *
      * @param operationName The operation name to set for the span.
-     * @param topic The topic to which the message is sent.
      * @param tenantId The tenant identifier related to the operation.
      * @param deviceId The device identifier related to the operation.
      * @param referenceType The type of reference towards the given span context.
@@ -231,12 +204,11 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
      * @return The new span.
      * @throws NullPointerException if tracer or topic is {@code null}.
      */
-    protected Span startSpan(final String operationName, final String topic, final String tenantId,
+    protected Span startSpan(final String operationName, final String tenantId,
             final String deviceId, final String referenceType, final SpanContext context) {
         Objects.requireNonNull(operationName);
-        Objects.requireNonNull(topic);
         Objects.requireNonNull(referenceType);
-        return newSpan(tracer, operationName, topic, referenceType, context)
+        return newSpan(operationName, referenceType, context)
                 .setTag(TracingHelper.TAG_TENANT_ID.getKey(), tenantId)
                 .setTag(TracingHelper.TAG_DEVICE_ID.getKey(), deviceId);
     }
@@ -246,7 +218,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     }
 
     private void logPubSubMessageId(final Span span, final String topic, final String messageId) {
-        log.trace("message published to PubSub [topic: {}, id: {}]", topic, messageId);
+        log.info("message published to PubSub [topic: {}, id: {}]", topic, messageId);
         span.log("message published to PubSub");
 
         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
@@ -255,9 +227,9 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     private void logPubSubMessage(final Span span, final PubsubMessage message, final String topic,
             final String tenantId) {
         final String attributesAsString = message.getAttributesMap()
-                .keySet()
+                .entrySet()
                 .stream()
-                .map(key -> key + "=" + message.getAttributesMap().get(key))
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
                 .collect(Collectors.joining(",", "{", "}"));
         log.trace("producing message [topic: {}, tenant: {}, key: {}, timestamp: {}, attributes: {}]",
                 topic, tenantId, message.getOrderingKey(), message.getPublishTime(), attributesAsString);
@@ -274,12 +246,8 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         log.debug("sending message failed [topic: {}, key: {}, tenantId: {}, deviceId: {}]", topic, deviceId, tenantId,
                 deviceId, cause);
 
-        Tags.HTTP_STATUS.set(span, getErrorCode());
+        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_UNAVAILABLE);
         TracingHelper.logError(span, cause);
-    }
-
-    private int getErrorCode() {
-        return HttpURLConnection.HTTP_UNAVAILABLE;
     }
 
     private Map<String, String> encodePropertiesAsPubSubAttributes(final Map<String, Object> properties,
