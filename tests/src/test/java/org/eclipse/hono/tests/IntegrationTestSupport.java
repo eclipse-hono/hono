@@ -73,6 +73,7 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -1450,7 +1451,7 @@ public final class IntegrationTestSupport {
      */
     public KeyPair newEcKeyPair() throws GeneralSecurityException {
 
-        final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
+        final KeyPairGenerator gen = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
         return gen.generateKeyPair();
     }
 

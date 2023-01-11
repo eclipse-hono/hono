@@ -33,7 +33,7 @@ class JwtCredentialsTest {
      * Verifies that create returns a valid JwtCredentials object, when valid input parameter are provided.
      */
     @Test
-    public void TestCreateValidParameter() {
+    void TestCreateValidParameter() {
         final String tenantId = "tenantId";
 
         final JwtCredentials jwtCredentials = JwtCredentials.create(tenantId, authId, jwt);
@@ -41,7 +41,7 @@ class JwtCredentialsTest {
         assertEquals(tenantId, jwtCredentials.getTenantId());
         assertEquals(authId, jwtCredentials.getAuthId());
         assertEquals(jwt, jwtCredentials.getJwt());
-        assertEquals(CredentialsConstants.SECRETS_TYPE_ASYMMETRIC_KEY, jwtCredentials.getType());
+        assertEquals(CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY, jwtCredentials.getType());
     }
 
     /**
@@ -49,7 +49,7 @@ class JwtCredentialsTest {
      * null.
      */
     @Test
-    public void TestCreateParameterNull() {
+    void TestCreateParameterNull() {
         assertThrows(NullPointerException.class, () -> JwtCredentials.create(null, authId, jwt));
     }
 }

@@ -151,14 +151,14 @@ the client certificate's *subject DN* and invokes the Credentials API's
 ### JSON Web Token based Authentication
 
 The MQTT protocol adapter supports authentication of devices with a JSON Web Token (JWT) based mechanism. In this case,
-the protocol adapter verifies the JWT by using the public key / certificate that is on record for the device in the
+the protocol adapter verifies the JWT by using the public key that is on record for the device in the
 device registry. Further more does the protocol adapter check if the JWT is valid. To be valid the JWT has to provide
 the following information in its header and payload.
 
 The JWT header has to provide two fields that indicate the type of token (`typ`) and the signing algorithm (`alg`).
 Both fields are mandatory and the type has to be `JWT`. For the signing algorithm `RS256`, `PS256`, `ES256` and their
 respective stronger variants are supported. The algorithm specified in the header must match at least one of the
-[*asymmetric-key* type credentials]({{< relref "/api/credentials#asymmetric-key" >}}) registered for the device.
+[*raw public key* type credentials]({{< relref "/api/credentials#raw-public-key" >}}) registered for the device.
 
 The JWT payload must at least contain the claims `iat` ("issued at") and `exp` ("expiration time") with values provided
 in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The `iat` claim marks the timestamp the token was created at
@@ -176,11 +176,11 @@ provide the information about its tenant and authentication identifier:
    ("issuer") and `sub` ("subject") claims, respectively, and the `aud` ("audience") claim must contain "hono-adapter"
 2. or inside the client identifier, in which case the client identifier must have the following format:
    */*tenant-id*/[^/]\*/*auth-id*. For example, a device that belongs to tenant `example-tenant` and for which
-   *asymmetric-key* credentials with an *auth-id* of `device-1` have been registered, would present a client identifier
+   *rpk* (raw public key) credentials with an *auth-id* of `device-1` have been registered, would present a client identifier
    of `tenants/example-tenant/devices/device-1` when authenticating to the protocol adapter.
 
 The protocol adapter then extracts the tenant identifier and invokes the Credentials
 API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
-*asymmetric-key* type credentials that are on record for the device. The key contained in the credentials is then used
+*rpk* (raw public key) type credentials that are on record for the device. The key contained in the credentials is then used
 by the protocol adapter to verify the JWT provided by the client. If both, the JWT and the key originate from
 the same private key and the JWT's header and claims are valid, than the device will be authenticated successfully.

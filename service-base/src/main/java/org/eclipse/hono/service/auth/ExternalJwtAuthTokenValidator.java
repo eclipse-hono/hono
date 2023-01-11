@@ -94,22 +94,22 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
                                         .startsWith(secret.getString(JwsHeader.ALGORITHM)))
                                 .findFirst();
 
-                        String asymmetricKey = Objects.requireNonNull(optionalSecret.orElseThrow()
+                        String rpk = Objects.requireNonNull(optionalSecret.orElseThrow()
                                 .getString(RegistryManagementConstants.FIELD_SECRETS_KEY));
 
                         final PublicKey publicKey;
                         try {
-                            if (asymmetricKey.contains(CredentialsConstants.BEGIN_KEY)
-                                    && asymmetricKey.contains(CredentialsConstants.END_KEY)) {
-                                asymmetricKey = asymmetricKey.replace(CredentialsConstants.BEGIN_KEY, "")
+                            if (rpk.contains(CredentialsConstants.BEGIN_KEY)
+                                    && rpk.contains(CredentialsConstants.END_KEY)) {
+                                rpk = rpk.replace(CredentialsConstants.BEGIN_KEY, "")
                                         .replace(CredentialsConstants.END_KEY, "");
-                                publicKey = convertPublicKeyStringToPublicKey(asymmetricKey, signatureAlgorithm);
+                                publicKey = convertPublicKeyStringToPublicKey(rpk, signatureAlgorithm);
 
-                            } else if (asymmetricKey.contains(CredentialsConstants.BEGIN_CERT)
-                                    && asymmetricKey.contains(CredentialsConstants.END_CERT)) {
-                                asymmetricKey = asymmetricKey.replace(CredentialsConstants.BEGIN_CERT, "")
+                            } else if (rpk.contains(CredentialsConstants.BEGIN_CERT)
+                                    && rpk.contains(CredentialsConstants.END_CERT)) {
+                                rpk = rpk.replace(CredentialsConstants.BEGIN_CERT, "")
                                         .replace(CredentialsConstants.END_CERT, "");
-                                publicKey = convertX509CertStringToPublicKey(asymmetricKey);
+                                publicKey = convertX509CertStringToPublicKey(rpk);
 
                             } else {
                                 throw new IllegalArgumentException(

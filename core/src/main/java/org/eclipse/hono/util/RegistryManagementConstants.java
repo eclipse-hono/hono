@@ -209,13 +209,13 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_SECRETS_HASH_FUNCTION       = "hash-function";
     /**
-     * The name of the field that contains a pre-shared or asymmetric key.
+     * The name of the field that contains a pre-shared or raw public key.
      */
     public static final String FIELD_SECRETS_KEY                 = "key";
     /**
      * The name of the field that contains the name of the algorithm used for the JWT validation.
      */
-    public static final String FIELD_SECRETS_ALG                 = "alg";
+    public static final String FIELD_SECRETS_ALGORITHM = "algorithm";
     /**
      * The name of the field that contains the earliest point in time a secret may be used for authentication.
      */
@@ -243,9 +243,9 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
     /**
-     * The type name that indicates a asymmetric key secret.
+     * The type name that indicates a raw public key secret.
      */
-    public static final String SECRETS_TYPE_ASYMMETRIC_KEY       = "asymmetric-key";
+    public static final String SECRETS_TYPE_RAW_PUBLIC_KEY       = "rpk";
 
     /**
      * The name of the BCrypt hash function.

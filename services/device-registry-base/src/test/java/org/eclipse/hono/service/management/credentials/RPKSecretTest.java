@@ -21,9 +21,9 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.Test;
 
 /**
- * Verifies behavior of {@link AsymmetricKeySecret}.
+ * Verifies behavior of {@link RPKSecret}.
  */
-class AsymmetricKeySecretTest {
+class RPKSecretTest {
 
     private final String id = "id";
     private final String key = CredentialsConstants.BEGIN_KEY + "JWT" + CredentialsConstants.END_KEY;
@@ -33,10 +33,10 @@ class AsymmetricKeySecretTest {
      * Verifies that the algorithm is correctly set, when a valid algorithm is provided.
      */
     @Test
-    public void testSetAlgValidAlgorithm() {
+    void testSetAlgValidAlgorithm() {
 
         final String algRS = CredentialsConstants.RSA_ALG;
-        final AsymmetricKeySecret secret = new AsymmetricKeySecret();
+        final RPKSecret secret = new RPKSecret();
         secret.setAlg(algRS);
         assertThat(secret.getAlg()).isEqualTo(algRS);
     }
@@ -45,9 +45,9 @@ class AsymmetricKeySecretTest {
      * Verifies that the setAlg throws a {@link IllegalArgumentException}, when an invalid algorithm is provided.
      */
     @Test
-    public void testSetAlgInvalidAlgorithm() {
+    void testSetAlgInvalidAlgorithm() {
 
-        final AsymmetricKeySecret secret = new AsymmetricKeySecret();
+        final RPKSecret secret = new RPKSecret();
         assertThrows(IllegalArgumentException.class, () -> secret.setAlg("Invalid"));
     }
 
@@ -55,9 +55,9 @@ class AsymmetricKeySecretTest {
      * Verifies that the key is correctly set, when a valid key is provided.
      */
     @Test
-    public void testSetKeyValidKey() {
+    void testSetKeyValidKey() {
 
-        final AsymmetricKeySecret secret = new AsymmetricKeySecret();
+        final RPKSecret secret = new RPKSecret();
 
         secret.setKey(key);
         assertThat(secret.getKey()).isEqualTo(key);
@@ -67,9 +67,9 @@ class AsymmetricKeySecretTest {
      * Verifies that the setKey throws a {@link IllegalArgumentException}, when an invalid key is provided.
      */
     @Test
-    public void testSetKeyInvalidKey() {
+    void testSetKeyInvalidKey() {
 
-        final AsymmetricKeySecret secret = new AsymmetricKeySecret();
+        final RPKSecret secret = new RPKSecret();
         assertThrows(IllegalArgumentException.class, () -> secret.setKey("JWT"));
     }
 
@@ -78,14 +78,14 @@ class AsymmetricKeySecretTest {
      * new key.
      */
     @Test
-    public void testMergePropertiesUsesNewKey() {
+    void testMergePropertiesUsesNewKey() {
 
         final String newKey = CredentialsConstants.BEGIN_KEY + "new-JWT" + CredentialsConstants.END_KEY;
-        final AsymmetricKeySecret updatedSecret = new AsymmetricKeySecret();
+        final RPKSecret updatedSecret = new RPKSecret();
         updatedSecret.setId(id);
         updatedSecret.setKey(newKey);
 
-        final AsymmetricKeySecret existingSecret = new AsymmetricKeySecret();
+        final RPKSecret existingSecret = new RPKSecret();
         existingSecret.setId(id);
         existingSecret.setAlg(alg);
         existingSecret.setKey(key);
@@ -102,12 +102,12 @@ class AsymmetricKeySecretTest {
      * only.
      */
     @Test
-    public void testMergePropertiesUsesExistingKey() {
+    void testMergePropertiesUsesExistingKey() {
 
-        final AsymmetricKeySecret updatedSecret = new AsymmetricKeySecret();
+        final RPKSecret updatedSecret = new RPKSecret();
         updatedSecret.setId(id);
 
-        final AsymmetricKeySecret existingSecret = new AsymmetricKeySecret();
+        final RPKSecret existingSecret = new RPKSecret();
         existingSecret.setId(id);
         existingSecret.setAlg(alg);
         existingSecret.setKey(key);
@@ -122,9 +122,9 @@ class AsymmetricKeySecretTest {
      * Verifies toStringHelper functionality.
      */
     @Test
-    public void testToStringHelper() {
+    void testToStringHelper() {
 
-        final AsymmetricKeySecret secret = new AsymmetricKeySecret();
+        final RPKSecret secret = new RPKSecret();
         secret.setId(id);
         secret.setAlg(alg);
         secret.setKey(key);
@@ -132,7 +132,7 @@ class AsymmetricKeySecretTest {
         final String outputString = secret.toStringHelper().toString();
 
         assertThat(outputString).isEqualTo(String.format(
-                "AsymmetricKeySecret{enabled=null, notBefore=null, notAfter=null, comment=null, key=%s, alg=%s}", key,
+                "RPKSecret{enabled=null, notBefore=null, notAfter=null, comment=null, key=%s, algorithm=%s}", key,
                 alg));
     }
 }

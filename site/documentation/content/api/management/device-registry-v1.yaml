@@ -1323,14 +1323,14 @@ components:
             - $ref: '#/components/schemas/PasswordCredentials'
             - $ref: '#/components/schemas/PSKCredentials'
             - $ref: '#/components/schemas/X509CertificateCredentials'
-            - $ref: '#/components/schemas/AsymmetricKeyCredentials'
+            - $ref: '#/components/schemas/RPKCredentials'
          discriminator:
             propertyName: type
             mapping:
                "hashed-password": '#/components/schemas/PasswordCredentials'
                "psk": '#/components/schemas/PSKCredentials'
                "x509-cert": '#/components/schemas/X509CertificateCredentials'
-               "asymmetric-key": '#/components/schemas/AsymmetricKeyCredentials'
+               "rpk": '#/components/schemas/RPKCredentials'
 
       CommonCredentials:
          type: object
@@ -1440,10 +1440,10 @@ components:
                        by applying the template to the extracted *subject DN*. The certificate's validity
                        period MUST be stored in a single secret. The certificate itself must then be discarded.
 
-      AsymmetricKeyCredentials:
+      RPKCredentials:
          additionalProperties: false
          allOf:
-            - $ref: '#/components/schemas/AsymmetricKeyCredentials'
+            - $ref: '#/components/schemas/CommonCredentials'
             - type: object
               required:
                  - type
@@ -1453,17 +1453,17 @@ components:
               properties:
                  "type":
                     type: string
-                    pattern: "asymmetric-key"
+                    pattern: "rpk"
                  "auth-id":
                     type: string
                     description: |
-                       The authentication identifier provided by the device as part of the *client identifier*.
-                       Example: For client identifier `tenants/DEFAULT_TENANT/devices/sensor1` the authentication
-                       identifier to be registered is `sensor1`.
+                       The authentication identifier provided by the device inside the JWT claim `sub` or as part of the
+                       *client identifier*. Example: For client identifier `tenants/DEFAULT_TENANT/devices/sensor1` the
+                       authentication identifier to be registered is `sensor1`.
                  "secrets":
                     type: array
                     items:
-                       $ref: '#/components/schemas/AsymmetricKeySecret'
+                       $ref: '#/components/schemas/RPKSecret'
                     minItems: 1
 
       CommonSecret:
@@ -1558,17 +1558,17 @@ components:
                     format: byte
                     description: The secret key shared between device and Hono.
 
-      AsymmetricKeySecret:
+      RPKSecret:
          additionalProperties: false
          allOf:
             - $ref: '#/components/schemas/CommonSecret'
             - type: object
               additionalProperties: false
               required:
-                 - alg
+                 - algorithm
                  - key
               properties:
-                 "alg":
+                 "algorithm":
                     type: string
                     description: The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).
                  "key":

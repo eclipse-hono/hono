@@ -43,6 +43,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
@@ -311,7 +312,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
 
-        final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=test-dn", "NotBased64Encoded".getBytes(), "RSA");
+        final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=test-dn", "NotBased64Encoded".getBytes(), CredentialsConstants.RSA_ALG);
         final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(

@@ -27,18 +27,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
- * A credential type for storing an asymmetric key (public key / certificate) for a device.
+ * A credential type for storing a raw public key for a device.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#asymmetric-key">Asymmetric Key</a> for an example
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#raw-public-key">Raw Public Key</a> for an example
  * of the configuration properties for this credential type.
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class AsymmetricKeyCredential extends CommonCredential {
+public class RPKCredential extends CommonCredential {
 
-    static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_ASYMMETRIC_KEY;
+    static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_RAW_PUBLIC_KEY;
 
-    private final List<AsymmetricKeySecret> secrets = new ArrayList<>();
+    private final List<RPKSecret> secrets = new ArrayList<>();
 
     /**
      * Creates a new credentials object for an authentication identifier.
@@ -48,9 +48,9 @@ public class AsymmetricKeyCredential extends CommonCredential {
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if secrets is empty.
      */
-    public AsymmetricKeyCredential(
+    public RPKCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<AsymmetricKeySecret> secrets) {
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<RPKSecret> secrets) {
         super(authId);
         setSecrets(secrets);
     }
@@ -71,19 +71,19 @@ public class AsymmetricKeyCredential extends CommonCredential {
      */
     @Override
     @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
-    public final List<AsymmetricKeySecret> getSecrets() {
+    public final List<RPKSecret> getSecrets() {
         return Collections.unmodifiableList(secrets);
     }
 
     /**
-     * Sets the list of asymmetric key secrets to use for authenticating a device to protocol adapters.
+     * Sets the list of raw public key secrets to use for authenticating a device to protocol adapters.
      *
      * @param secrets The list of secrets to set.
      * @return A reference to this for fluent use.
      * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public final AsymmetricKeyCredential setSecrets(final List<AsymmetricKeySecret> secrets) {
+    public final RPKCredential setSecrets(final List<RPKSecret> secrets) {
         Objects.requireNonNull(secrets);
         if (secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets must not be empty");

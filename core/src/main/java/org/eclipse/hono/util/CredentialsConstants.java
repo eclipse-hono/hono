@@ -101,9 +101,9 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
     /**
-     * The type name that indicates a asymmetric key secret.
+     * The type name that indicates a raw public key secret.
      */
-    public static final String SECRETS_TYPE_ASYMMETRIC_KEY       = "asymmetric-key";
+    public static final String SECRETS_TYPE_RAW_PUBLIC_KEY = "rpk";
     /**
      * The name of the field that contains the pattern to use for matching authentication identifiers.
      */

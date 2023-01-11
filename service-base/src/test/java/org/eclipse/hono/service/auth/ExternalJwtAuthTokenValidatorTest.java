@@ -173,14 +173,14 @@ class ExternalJwtAuthTokenValidatorTest {
      */
     @ParameterizedTest
     @MethodSource(value = "dataForParameterizedTest")
-    public void testExpandValidJwtWithValidPublicKey(final String data) {
+    void testExpandValidJwtWithValidPublicKey(final String data) {
         final String[] parameters = data.split(",");
         final SignatureAlgorithm alg = SignatureAlgorithm.forName(parameters[0]);
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, Integer.parseInt(parameters[1]));
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -196,13 +196,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * key is provided.
      */
     @Test
-    public void testExpandValidJwtWithValidRsaX509Certificate() {
+    void testExpandValidJwtWithValidRsaX509Certificate() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final Key privateKey = getPrivateKeyFromString(rsaPrivateKeyString, alg);
 
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, "RSA", validRsaX509CertString,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.RSA_ALG, validRsaX509CertString,
                         Instant.ofEpochSecond(1516239022), Instant.ofEpochSecond(1796239022)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -217,13 +217,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * is provided.
      */
     @Test
-    public void testExpandValidJwtWithValidEcX509Certificate() {
+    void testExpandValidJwtWithValidEcX509Certificate() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final Key privateKey = getPrivateKeyFromString(ecPrivateKeyString, alg);
 
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, "EC", validEcX509CertString,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, validEcX509CertString,
                         Instant.ofEpochSecond(1516239022), Instant.ofEpochSecond(1796239022)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -237,11 +237,11 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link RuntimeException}, when a valid but unsupported JWT is provided.
      */
     @Test
-    public void testExpandValidButUnsupportedJwt() {
+    void testExpandValidButUnsupportedJwt() {
         final SignatureAlgorithm alg = SignatureAlgorithm.HS256;
         final Key key = generateHmacKey();
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), generatePublicKeyString(key),
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), generatePublicKeyString(key),
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -257,13 +257,13 @@ class ExternalJwtAuthTokenValidatorTest {
      */
 
     @Test
-    public void testExpandInvalidJwtWithValidEcPublicKey() {
+    void testExpandInvalidJwtWithValidEcPublicKey() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -276,7 +276,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link UnsupportedJwtException}, when a JWT without an iat claim is provided.
      */
     @Test
-    public void testExpandIatClaimMissing() {
+    void testExpandIatClaimMissing() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
@@ -290,7 +290,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link UnsupportedJwtException}, when a JWT without an exp claim is provided.
      */
     @Test
-    public void testExpandExpClaimMissing() {
+    void testExpandExpClaimMissing() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
@@ -305,13 +305,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * (greater current timestamp plus skew) is provided.
      */
     @Test
-    public void testExpandNotYetValidJwtWithValidEcPublicKey() {
+    void testExpandNotYetValidJwtWithValidEcPublicKey() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final int timeShiftSeconds = ExternalJwtAuthTokenValidator.ALLOWED_CLOCK_SKEW + 10;
@@ -326,7 +326,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * (smaller current timestamp minus skew) is provided.
      */
     @Test
-    public void testExpandIatClaimTooFarInThePast() {
+    void testExpandIatClaimTooFarInThePast() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
@@ -343,7 +343,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * same time as the iat claim is provided.
      */
     @Test
-    public void testExpandExpClaimNotAfterIatClaim() {
+    void testExpandExpClaimNotAfterIatClaim() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
@@ -360,7 +360,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * (greater iat claim plus 24 hours plus skew) is provided.
      */
     @Test
-    public void testExpandExpClaimTooFarInTheFuture() {
+    void testExpandExpClaimTooFarInTheFuture() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
@@ -376,13 +376,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link RuntimeException}, when an invalid public key is provided.
      */
     @Test
-    public void testExpandInvalidEcPublicKey() {
+    void testExpandInvalidEcPublicKey() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 256);
         final String publicKey = generatePublicKeyString(keyPair.getPublic()).replaceFirst("M", "a");
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -395,13 +395,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * provided.
      */
     @Test
-    public void testExpandValidJwtWithNonMatchingEcPublicKey() {
+    void testExpandValidJwtWithNonMatchingEcPublicKey() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         KeyPair keyPair = generateKeyPair(alg, 256);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         keyPair = generateKeyPair(alg, 256);
@@ -415,13 +415,13 @@ class ExternalJwtAuthTokenValidatorTest {
      * encrypted public key with a different size is provided.
      */
     @Test
-    public void testExpandValidJwtWithEcPublicKeyWithDifferentKeySize() {
+    void testExpandValidJwtWithEcPublicKeyWithDifferentKeySize() {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         KeyPair keyPair = generateKeyPair(alg, 384);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         keyPair = generateKeyPair(alg, 256);
@@ -439,7 +439,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link NullPointerException}, when no secret exists.
      */
     @Test
-    public void testExpandNoExistingSecret() {
+    void testExpandNoExistingSecret() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 2048);
@@ -453,12 +453,12 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link NullPointerException}, when no matching secret exists.
      */
     @Test
-    public void testExpandNoExistingSecretWithSameAlgAsInJwtHeader() {
+    void testExpandNoExistingSecretWithSameAlgAsInJwtHeader() {
         SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         KeyPair keyPair = generateKeyPair(alg, 2048);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         alg = SignatureAlgorithm.ES256;
@@ -473,7 +473,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link IllegalArgumentException}, when the key in the secret has an invalid syntax.
      */
     @Test
-    public void testExpandKeyInSecretHasInvalidSyntax() {
+    void testExpandKeyInSecretHasInvalidSyntax() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
         final KeyPair keyPair = generateKeyPair(alg, 2048);
@@ -481,7 +481,7 @@ class ExternalJwtAuthTokenValidatorTest {
                 .replace(CredentialsConstants.BEGIN_KEY, "")
                 .replace(CredentialsConstants.END_KEY, "");
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
@@ -493,12 +493,12 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link SignatureException}, when the JWT header has no {@value JwsHeader#TYPE} field.
      */
     @Test
-    public void testExpandTypFieldInJwtHeaderNull() {
+    void testExpandTypFieldInJwtHeaderNull() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         final KeyPair keyPair = generateKeyPair(alg, 2048);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(new HashMap<>(),
@@ -510,12 +510,12 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that expand throws a {@link SignatureException}, when the {@value JwsHeader#TYPE} field in the token header is not "JWT".
      */
     @Test
-    public void testExpandTypFieldInJwtHeaderInvalid() {
+    void testExpandTypFieldInJwtHeaderInvalid() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         final KeyPair keyPair = generateKeyPair(alg, 2048);
         final String publicKey = generatePublicKeyString(keyPair.getPublic());
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromAsymmetricKey(deviceId, authId, alg.getFamilyName(), publicKey,
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         jwtHeader.put(JwsHeader.TYPE, "invalid");
@@ -528,7 +528,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that getJwtClaims returns JsonObject, when a valid JWT is provided.
      */
     @Test
-    public void testGetJwtClaimsValidJwt() {
+    void testGetJwtClaimsValidJwt() {
         final String tenantId = "tenant-id";
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getFamilyName());
@@ -545,7 +545,7 @@ class ExternalJwtAuthTokenValidatorTest {
      * Verifies that getJwtClaims throws a {@link MalformedJwtException}, when an invalid JWT is provided.
      */
     @Test
-    public void testGetJwtClaimsInvalidJwt() {
+    void testGetJwtClaimsInvalidJwt() {
         final String jwt = "header.payload.signature";
         assertThrows(MalformedJwtException.class, () -> authTokenValidator.getJwtClaims(jwt));
     }
@@ -559,7 +559,7 @@ class ExternalJwtAuthTokenValidatorTest {
     private KeyPair generateKeyPair(final SignatureAlgorithm alg, final int keySize) {
         String algType = alg.getFamilyName();
         if (alg.isEllipticCurve()) {
-            algType = "EC";
+            algType = CredentialsConstants.EC_ALG;
         }
         try {
             final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(algType);

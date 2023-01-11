@@ -23,7 +23,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 /**
  * Type resolver for credentials.
  * <p>
- * This type resolver knows the types Password, PSK, Asymmetric Key and X509 Certificate. All other credentials are
+ * This type resolver knows the types Password, PSK, Raw Public Key and X509 Certificate. All other credentials are
  * encoded in a {@link CommonCredential}.
  */
 @RegisterForReflection
@@ -65,8 +65,8 @@ public final class CredentialTypeResolver extends TypeIdResolverBase {
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
         switch (id) {
-        case AsymmetricKeyCredential.TYPE:
-            return context.constructSpecializedType(this.baseType, AsymmetricKeyCredential.class);
+        case RPKCredential.TYPE:
+            return context.constructSpecializedType(this.baseType, RPKCredential.class);
         case PasswordCredential.TYPE:
             return context.constructSpecializedType(this.baseType, PasswordCredential.class);
         case PskCredential.TYPE:

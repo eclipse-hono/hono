@@ -74,11 +74,11 @@ public class JwtCredentials extends AbstractDeviceCredentials {
     /**
      * {@inheritDoc}
      *
-     * @return Always {@link CredentialsConstants#SECRETS_TYPE_ASYMMETRIC_KEY}
+     * @return Always {@link CredentialsConstants#SECRETS_TYPE_RAW_PUBLIC_KEY}
      */
     @Override
     public String getType() {
-        return CredentialsConstants.SECRETS_TYPE_ASYMMETRIC_KEY;
+        return CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY;
     }
 
     /**

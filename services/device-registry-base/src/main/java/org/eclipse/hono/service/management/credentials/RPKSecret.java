@@ -26,16 +26,16 @@ import com.google.common.base.MoreObjects;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
- * This class encapsulates the secrets information for an asymmetric key credentials type.
+ * This class encapsulates the secrets information for a raw public key credentials type.
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class AsymmetricKeySecret extends CommonSecret {
+public class RPKSecret extends CommonSecret {
 
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_KEY)
     private String key;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_ALG)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)
     private String alg;
 
     public final String getKey() {
@@ -43,15 +43,15 @@ public class AsymmetricKeySecret extends CommonSecret {
     }
 
     /**
-     * Sets the asymmetric key (public key / certificate) value for this secret.
+     * Sets the raw public key value for this secret.
      *
-     * @param key the asymmetric key.
+     * @param key the raw public key.
      * @return a reference to this for fluent use.
-     * @throws IllegalArgumentException if the asymmetric key does not start and end with either
+     * @throws IllegalArgumentException if the raw public key does not start and end with either
      *             {@value CredentialsConstants#BEGIN_KEY} and {@value CredentialsConstants#END_KEY} or
      *             {@value CredentialsConstants#BEGIN_CERT} and {@value CredentialsConstants#END_CERT}.
      */
-    public final AsymmetricKeySecret setKey(final String key) {
+    public final RPKSecret setKey(final String key) {
         Objects.requireNonNull(key);
         if (!(key.contains(CredentialsConstants.BEGIN_KEY) && key.contains(CredentialsConstants.END_KEY))
                 && !(key.contains(CredentialsConstants.BEGIN_CERT) && key.contains(CredentialsConstants.END_CERT))) {
@@ -69,14 +69,14 @@ public class AsymmetricKeySecret extends CommonSecret {
     }
 
     /**
-     * Sets the name of the algorithm used in the creation of the asymmetric key.
+     * Sets the name of the algorithm used in the creation of the raw public key.
      *
      * @param alg the name of the algorithm.
      * @return a reference to this for fluent use.
      * @throws IllegalArgumentException if {@code alg} is not either {@value CredentialsConstants#RSA_ALG} or
      *             {@value CredentialsConstants#EC_ALG}.
      */
-    public final AsymmetricKeySecret setAlg(final String alg) {
+    public final RPKSecret setAlg(final String alg) {
         Objects.requireNonNull(alg);
         if (!alg.equals(CredentialsConstants.RSA_ALG) && !alg.equals(CredentialsConstants.EC_ALG)) {
             throw new IllegalArgumentException(
@@ -91,7 +91,7 @@ public class AsymmetricKeySecret extends CommonSecret {
     protected MoreObjects.ToStringHelper toStringHelper() {
         return super.toStringHelper()
                 .add(RegistryManagementConstants.FIELD_SECRETS_KEY, key)
-                .add(RegistryManagementConstants.FIELD_SECRETS_ALG, alg);
+                .add(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, alg);
     }
 
     /**
@@ -106,9 +106,9 @@ public class AsymmetricKeySecret extends CommonSecret {
         Objects.requireNonNull(otherSecret);
 
         if (containsOnlySecretId()) {
-            final AsymmetricKeySecret otherAsymmetricKeySecret = (AsymmetricKeySecret) otherSecret;
-            this.setAlg(otherAsymmetricKeySecret.getAlg());
-            this.setKey(otherAsymmetricKeySecret.getKey());
+            final RPKSecret otherRPKSecret = (RPKSecret) otherSecret;
+            this.setAlg(otherRPKSecret.getAlg());
+            this.setKey(otherRPKSecret.getKey());
         }
     }
 

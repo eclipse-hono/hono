@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.config.PemReader.Entry;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -215,19 +216,19 @@ public final class KeyLoader {
                 // in PKCS#8 the key algorithm is indicated at the beginning of the ASN.1 structure
                 // so we can use the corresponding key factory once we know the algorithm name
                 final String algorithm = PrivateKeyParser.getPKCS8EncodedKeyAlgorithm(pem.getPayload());
-                if ("RSA".equals(algorithm)) {
+                if (CredentialsConstants.RSA_ALG.equals(algorithm)) {
                     return generatePrivateKey(algorithm, new PKCS8EncodedKeySpec(pem.getPayload()));
-                } else if ("EC".equals(algorithm)) {
+                } else if (CredentialsConstants.EC_ALG.equals(algorithm)) {
                     return generatePrivateKey(algorithm, new PKCS8EncodedKeySpec(pem.getPayload()));
                 } else {
                     throw new IllegalArgumentException(String.format("%s: Unsupported key algorithm: %s", keyPath, algorithm));
                 }
 
             case "EC PRIVATE KEY":
-                return generatePrivateKey("EC", PrivateKeyParser.getECKeySpec(pem.getPayload()));
+                return generatePrivateKey(CredentialsConstants.EC_ALG, PrivateKeyParser.getECKeySpec(pem.getPayload()));
 
             case "RSA PRIVATE KEY":
-                return generatePrivateKey("RSA", PrivateKeyParser.getRSAKeySpec(pem.getPayload()));
+                return generatePrivateKey(CredentialsConstants.RSA_ALG, PrivateKeyParser.getRSAKeySpec(pem.getPayload()));
 
             default:
                 throw new IllegalArgumentException(String.format("%s: Unsupported key type: %s", keyPath, pem.getType()));

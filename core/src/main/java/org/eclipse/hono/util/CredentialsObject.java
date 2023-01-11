@@ -748,12 +748,12 @@ public final class CredentialsObject extends JsonBackedValueObject {
     }
 
     /**
-     * Creates a credentials object for a device, auth ID and asymmetric key.
+     * Creates a credentials object for a device, auth ID and raw public key.
      *
      * @param deviceId The device identifier.
      * @param authId The authentication identifier.
      * @param alg The name of the algorithm used in the creation of the key.
-     * @param key The asymmetric key.
+     * @param key The raw public key.
      * @param notBefore The point in time from which on the credentials are valid.
      * @param notAfter The point in time until the credentials are valid.
      * @return The credentials.
@@ -761,7 +761,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie before the <em>not after</em>
      *             instant.
      */
-    public static CredentialsObject fromAsymmetricKey(
+    public static CredentialsObject fromRawPublicKey(
             final String deviceId,
             final String authId,
             final String alg,
@@ -771,7 +771,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(key);
         final CredentialsObject result = new CredentialsObject(deviceId, authId,
-                CredentialsConstants.SECRETS_TYPE_ASYMMETRIC_KEY);
+                CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY);
         final JsonObject secret = emptySecret(notBefore, notAfter);
         secret.put("alg", alg);
         secret.put(CredentialsConstants.FIELD_SECRETS_KEY, key);

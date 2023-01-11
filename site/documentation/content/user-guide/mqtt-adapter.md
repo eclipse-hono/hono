@@ -77,7 +77,7 @@ one of two ways:
    ("issuer") and `sub` ("subject") claims, respectively, and the `aud` ("audience") claim must contain "hono-adapter"
 2. or inside the *client identifier*, in which case the *client identifier* must have the following format:
    */*tenant-id*/[^/]\*/*auth-id*. For example, a client that belongs to tenant `example-tenant` and for which
-   *asymmetric-key* credentials with an *auth-id* of `device-1` have been registered, would present a *client identifier*
+   *rpk* (raw public key) credentials with an *auth-id* of `device-1` have been registered, would present a *client identifier*
    of `tenants/example-tenant/devices/device-1` when authenticating to the protocol adapter.
 
 The adapter extracts the *auth-id*, *tenant* and JWT from the CONNECT packet and verifies them using the

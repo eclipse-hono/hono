@@ -84,7 +84,7 @@ class JwtAuthProviderTest {
         authTokenValidator = mock(ExternalJwtAuthTokenValidator.class);
         authProvider = new JwtAuthProvider(credentialsClient, NoopTracerFactory.create(), authTokenValidator);
         givenCredentialsOnRecord(
-                CredentialsObject.fromAsymmetricKey("device-id", authId, "RS256", "asymmetric-key", null, null));
+                CredentialsObject.fromRawPublicKey("device-id", authId, CredentialsConstants.RSA_ALG, "key", null, null));
 
     }
 
@@ -94,7 +94,7 @@ class JwtAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticationRequiresVertxContext(final VertxTestContext ctx) {
+    void testAuthenticationRequiresVertxContext(final VertxTestContext ctx) {
         authProvider.authenticate(deviceCredentials, null, ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(IllegalStateException.class));
             ctx.completeNow();
@@ -105,7 +105,7 @@ class JwtAuthProviderTest {
      * Verifies that getCredentials returns a JwtCredentials object, when valid authInfo is provided.
      */
     @Test
-    public void testGetCredentialsAuthInfoIsValid() {
+    void testGetCredentialsAuthInfoIsValid() {
         final JsonObject authInfo = new JsonObject()
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
@@ -122,7 +122,7 @@ class JwtAuthProviderTest {
      * Verifies that getCredentials returns null, when invalid authInfo is provided.
      */
     @Test
-    public void testGetCredentialsAuthInfoIsInvalid() {
+    void testGetCredentialsAuthInfoIsInvalid() {
         final JsonObject authInfo = new JsonObject()
                 .put(CredentialsConstants.FIELD_AUTH_ID, null)
                 .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
@@ -136,7 +136,7 @@ class JwtAuthProviderTest {
      * Verifies that getCredentials throws a {@link NullPointerException}, when provided authInfo is null.
      */
     @Test
-    public void testGetCredentialsAuthInfoIsNull() {
+    void testGetCredentialsAuthInfoIsNull() {
         assertThrows(NullPointerException.class, () -> authProvider.getCredentials(null));
     }
 
@@ -146,7 +146,7 @@ class JwtAuthProviderTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testDoValidateCredentialsAuthTokenValidatorExpandReturnsValidJwsClaims(final VertxTestContext ctx) {
+    void testDoValidateCredentialsAuthTokenValidatorExpandReturnsValidJwsClaims(final VertxTestContext ctx) {
         final Instant now = Instant.now();
         final Jws<Claims> claimsJws = mock(Jws.class);
         final Claims claims = mock(Claims.class);
@@ -173,7 +173,7 @@ class JwtAuthProviderTest {
      * Exception.
      */
     @Test
-    public void testDoValidateCredentialsAuthTokenValidatorExpandThrowsException(final VertxTestContext ctx) {
+    void testDoValidateCredentialsAuthTokenValidatorExpandThrowsException(final VertxTestContext ctx) {
 
         when(authTokenValidator.expand(anyString())).thenThrow(SignatureException.class);
 
@@ -188,7 +188,7 @@ class JwtAuthProviderTest {
     private void givenCredentialsOnRecord(final CredentialsObject credentials) {
         when(credentialsClient.get(
                 anyString(),
-                eq(CredentialsConstants.SECRETS_TYPE_ASYMMETRIC_KEY),
+                eq(CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY),
                 anyString(),
                 any(),
                 any())).thenReturn(Future.succeededFuture(credentials));

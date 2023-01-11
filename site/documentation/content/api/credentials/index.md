@@ -308,32 +308,32 @@ certificate's corresponding properties. It is still necessary to provide a (empt
 though.
 {{% /notice %}}
 
-### Asymmetric Key
+### Raw Public Key
 
-A credentials type for storing a public key / certificate as used in the [JSON Web Token based Authentication]({{< relref "concepts/device-identity.md#json-web-token-based-authentication" >}}) to authenticate a device.
+A credentials type for storing a public key as used in the [JSON Web Token based Authentication]({{< relref "concepts/device-identity.md#json-web-token-based-authentication" >}}) to authenticate a device.
 
 Example:
 
 ~~~json
 {
   "device-id": "4711",
-  "type": "asymmetric-key",
+  "type": "rpk",
   "auth-id": "sensor1",
   "secrets": [
     {
-      "alg": "RSA",
+      "algorithm": "RSA",
       "key": "-----BEGIN PUBLIC KEY-----MIIBIj...IDAQAB-----END PUBLIC KEY-----"
     }
   ]
 }
 ~~~
 
-| Name      | Mandatory | JSON Type | Description                                                                                                                                                                                                                                                                                                |
-|:----------|:---------:|:----------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *type*    |   *yes*   | *string*  | The credential type name, always `asymmetric-key`.                                                                                                                                                                                                                                                         |
-| *auth-id* |   *yes*   | *string*  | The identity that the device should be authenticated as.                                                                                                                                                                                                                                                   |
-| *alg*     |   *yes*   | *string*  | The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).                                                                                                                                                                       |
-| *key*     |   *yes*   | *string*  | The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer. Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory. |
+| Name        | Mandatory | JSON Type | Description                                                                                                                                                                                                                                                                                                |
+|:------------|:---------:|:----------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *type*      |   *yes*   | *string*  | The credential type name, always `rpk`.                                                                                                                                                                                                                                                                    |
+| *auth-id*   |   *yes*   | *string*  | The identity that the device should be authenticated as.                                                                                                                                                                                                                                                   |
+| *algorithm* |   *yes*   | *string*  | The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).                                                                                                                                                                                                                       |
+| *key*       |   *yes*   | *string*  | The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer. Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory. |
 
 {{% notice note %}}
 The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
