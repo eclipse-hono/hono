@@ -773,7 +773,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
         final CredentialsObject result = new CredentialsObject(deviceId, authId,
                 CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY);
         final JsonObject secret = emptySecret(notBefore, notAfter);
-        secret.put("alg", alg);
+        secret.put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, alg);
         secret.put(CredentialsConstants.FIELD_SECRETS_KEY, key);
         result.addSecret(secret);
         return result;

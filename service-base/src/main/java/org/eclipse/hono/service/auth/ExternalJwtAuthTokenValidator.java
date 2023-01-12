@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022-2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -66,35 +67,42 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
     @Override
     public Jws<Claims> expand(final String token) {
         Objects.requireNonNull(token);
+        Jws<Claims> claims;
+        SignatureException signatureException = null;
         final var builder = Jwts.parserBuilder()
-                .setSigningKeyResolver(new SigningKeyResolverAdapter() {
+                .setAllowedClockSkewSeconds(ALLOWED_CLOCK_SKEW);
+        for (int i = 0; true; i++) {
+            try {
+
+                final int index = i;
+                builder.setSigningKeyResolver(new SigningKeyResolverAdapter() {
 
                     @Override
                     public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
 
                         final var tokenType = Optional.ofNullable(header.getType())
                                 .orElseThrow(
-                                        () -> new SignatureException("token does not contain required typ header."));
+                                        () -> new MalformedJwtException("token does not contain required typ header."));
                         if (!tokenType.equalsIgnoreCase(EXPECTED_TOKEN_TYPE)) {
-                            throw new SignatureException(String.format(
+                            throw new MalformedJwtException(String.format(
                                     "typ field in token header is invalid. Must be \"%s\".", EXPECTED_TOKEN_TYPE));
                         }
 
                         final var algorithm = Optional.ofNullable(header.getAlgorithm())
                                 .orElseThrow(
-                                        () -> new SignatureException("token does not contain required alg header."));
+                                        () -> new MalformedJwtException("token does not contain required alg header."));
                         final SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.forName(algorithm);
 
                         checkValidityOfExpirationAndCreationTime(claims.getExpiration(), claims.getIssuedAt());
                         claims.setNotBefore(claims.getIssuedAt());
 
                         final List<JsonObject> secrets = getCredentialsObject().getCandidateSecrets();
-                        final Optional<JsonObject> optionalSecret = secrets.stream()
+                        final List<JsonObject> validSecretsList = secrets.stream()
                                 .filter(secret -> signatureAlgorithm.getFamilyName()
-                                        .startsWith(secret.getString(JwsHeader.ALGORITHM)))
-                                .findFirst();
+                                        .startsWith(secret.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)))
+                                .toList();
 
-                        String rpk = Objects.requireNonNull(optionalSecret.orElseThrow()
+                        String rpk = Objects.requireNonNull(validSecretsList.get(index)
                                 .getString(RegistryManagementConstants.FIELD_SECRETS_KEY));
 
                         final PublicKey publicKey;
@@ -124,10 +132,21 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
                         }
                         return publicKey;
                     }
-                })
-                .setAllowedClockSkewSeconds(ALLOWED_CLOCK_SKEW);
-
-        return builder.build().parseClaimsJws(token);
+                });
+                claims = builder.build().parseClaimsJws(token);
+                break;
+            } catch (SignatureException e) {
+                signatureException = e;
+            } catch (IndexOutOfBoundsException e) {
+                if (signatureException != null) {
+                    throw signatureException;
+                } else {
+                    throw new NoSuchElementException(
+                            "There is no valid raw public key (\"rpk\") saved with the same algorithm as the provided JWT.");
+                }
+            }
+        }
+        return claims;
     }
 
     /**
