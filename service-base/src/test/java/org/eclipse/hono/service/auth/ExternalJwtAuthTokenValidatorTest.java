@@ -230,7 +230,6 @@ class ExternalJwtAuthTokenValidatorTest {
 
         final String jwt = generateJwt(jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, privateKey);
-        System.out.println(jwt);
         final Jws<Claims> jws = authTokenValidator.expand(jwt);
         assertThat(jws).isNotNull();
         assertThat(jws.getHeader().getAlgorithm()).isEqualTo(alg.getValue());
@@ -246,13 +245,11 @@ class ExternalJwtAuthTokenValidatorTest {
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair1 = generateKeyPair(alg, 256);
         final String publicKey1 = generatePublicKeyString(keyPair1.getPublic());
-        System.out.println(publicKey1);
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey1,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
         final KeyPair keyPair2 = generateKeyPair(alg, 256);
         final String publicKey2 = generatePublicKeyString(keyPair2.getPublic());
-        System.out.println(publicKey2);
         final JsonObject secret = CredentialsObject.emptySecret(instantNow.minusSeconds(1500),
                 instantNow.plusSeconds(5000));
         secret.put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, CredentialsConstants.EC_ALG);
@@ -261,11 +258,9 @@ class ExternalJwtAuthTokenValidatorTest {
 
         final String jwt1 = generateJwt(jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair1.getPrivate());
-        System.out.println(jwt1);
         final Jws<Claims> jws1 = authTokenValidator.expand(jwt1);
         final String jwt2 = generateJwt(jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair2.getPrivate());
-        System.out.println(jwt2);
         final Jws<Claims> jws2 = authTokenValidator.expand(jwt2);
         assertThat(jws1).isNotNull();
         assertThat(jws1.getHeader().getAlgorithm()).isEqualTo(alg.getValue());
