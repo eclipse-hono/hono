@@ -14,19 +14,26 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.net.HttpURLConnection;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantWithId;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+
 
 /**
  * Implementation of a <em>Tenant management service</em>.
@@ -122,6 +129,25 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
                 })
                 .recover(e -> Services.recover(e));
 
+    }
+    @Override
+    protected Future<OperationResult<SearchResult<TenantWithId>>> processSearchTenants(
+        final int pageSize,
+        final int pageOffset,
+        final List<Filter> filters,
+        final List<Sort> sortOptions,
+        final Span span) {
+
+        Objects.requireNonNull(filters);
+        Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(span);
+
+        return store.find(pageSize, pageOffset, span.context())
+            .map(result -> OperationResult.ok(
+            HttpURLConnection.HTTP_OK,
+            result,
+            Optional.empty(),
+            Optional.empty()));
     }
 
 }
