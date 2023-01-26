@@ -1,5 +1,5 @@
 
-#  Copyright (c) 2020 Contributors to the Eclipse Foundation
+#  Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
 #
 #  See the NOTICE file(s) distributed with this work for additional
 #  information regarding copyright ownership.
@@ -28,7 +28,9 @@ mqttAdapterIp = "hono.eclipseprojects.io"
 amqpNetworkIp = "hono.eclipseprojects.io"
 
 # Register Tenant
-tenant = requests.post(f'http://{registryIp}:28080/v1/tenants').json()
+tenant = requests.post(f'http://{registryIp}:28080/v1/tenants',
+                       headers={"content-type": "application/json"},
+                       data=json.dumps({"ext": { "messaging-type": "amqp" }})).json()
 tenantId = tenant["id"]
 
 print(f'Registered tenant {tenantId}')
@@ -53,12 +55,9 @@ else:
     print("Unnable to set Password")
 
 # Now we can start the client application
-print("We could use the Hono Client now...")
+print("You could now start the Hono Command Line Client in another terminal to consume messages from devices:")
 print()
-cmd = f'java -jar hono-cli-*-exec.jar --hono.client.host={amqpNetworkIp} ' \
-    f'--hono.client.port=15672 --hono.client.username=consumer@HONO ' \
-    f'--hono.client.password=verysecret --spring.profiles.active=receiver ' \
-    f'--tenant.id={tenantId}'
+cmd = f'java -jar hono-cli-2.*-exec.jar app --sandbox --amqp consume --tenant={tenantId}'
 print(cmd)
 print()
 
@@ -100,7 +99,7 @@ print("Using address: " + address)
 container = Container(AmqpHandler(uri, address))
 
 # run container in separate thread
-print("Starting (northbound) AMQP Connection...")
+print("Starting (north bound) AMQP Connection...")
 thread = threading.Thread(target=lambda: container.run(), daemon=True)
 thread.start()
 
@@ -129,6 +128,6 @@ single("telemetry", payload=json.dumps({"temp": 17, "transport": "mqtt"}),
 time.sleep(2)
 
 # Stop container
-print("Stopping (northbound) AMQP Connection...")
+print("Stopping (north bound) AMQP Connection...")
 container.stop()
 thread.join(timeout=5)
