@@ -45,6 +45,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-cli/).
 
+### Apache Commons Codec
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons Codec* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-codec).
+
 ### Apache Commons Compress
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
@@ -74,6 +84,26 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-logging).
+
+### Apache HTTP Client
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache HTTP Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/httpcomponents-client).
+
+### Apache HTTP Core
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache HTTP Core* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/httpcomponents-core).
 
 ### Apache Log4j2 API
 
@@ -163,6 +193,25 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/ben-manes/caffeine).
+
+### Checker Framework
+
+This product includes software developed by the [Checker Framework](https://checkerframework.org/) project.
+
+Your use of *Checker Framework* is subject to the terms and conditions of the MIT License.
+A copy of the license is contained in the file [LICENSE.checker-qual.txt](LICENSE.checker-qual.txt).
+
+The source code is available from [GitHub](https://github.com/typetools/checker-framework/tree/master/checker-qual).
+
+### Conscrypt
+
+This product includes software developed by the [Conscrypt](https://www.conscrypt.org/) project.
+
+Your use of *Conscrypt* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/google/conscrypt).
 
 ### Cryptvault
 
@@ -438,6 +487,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 The source code is available from [GitHub](https://github.com/square/okhttp) and
 [GitHub](https://github.com/square/okio).
 
+### OpenCensus
+
+This product includes software developed by the [OpenCensus project](https://opencensus.io/).
+
+Your use of *OpenCensus* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/census-instrumentation).
+
 ### OpenTelemetry
 
 This product includes software developed by the [OpenTelemetry project](https://opentelemetry.io/).
@@ -556,6 +615,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/quarkusio/quarkus).
 
+### RE2/J
+
+This product includes software developed by the [RE2/J project](https://github.com/google/re2j).
+
+Your use of *RE2/J* is subject to the terms and conditions defined in the file
+[LICENSE.re2j.txt](LICENSE.re2j.txt).
+
+The source code is available from [GitHub](https://github.com/google/re2j).
+
 ### Reactor Core
 
 This product includes software developed by [Project Reactor](https://projectreactor.io/).
@@ -636,6 +704,15 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/spring-projects/spring-security).
+
+### ThreeTen
+
+This product includes software developed by the [ThreeTen](https://www.threeten.org/) project.
+
+Your use of *ThreeTen* is subject to the terms and conditions defined in the file
+[LICENSE.threetenbp.txt](LICENSE.threetenbp.txt).
+
+The source code is available from [GitHub](https://github.com/ThreeTen/threetenbp).
 
 ### vert.x Auth Common ${vertx.version}
 

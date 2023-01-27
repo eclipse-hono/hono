@@ -595,6 +595,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>io.perfmark</groupId>
+        <artifactId>perfmark-api</artifactId>
+        <version>0.26.0</version>
+      </dependency>
 
       <!-- Logging -->
       <dependency>
