@@ -57,10 +57,12 @@ hono:
       producerConfig:
         max.block.ms: ${kafka-client.producer.max-block-ms}
         request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+        delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
     event:
       producerConfig:
         max.block.ms: ${kafka-client.producer.max-block-ms}
         request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+        delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
 
 quarkus:
   opentelemetry:
