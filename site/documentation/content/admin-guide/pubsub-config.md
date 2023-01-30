@@ -7,20 +7,17 @@ Hono can be configured to support Google Pub/Sub as the messaging infrastructure
 Telemetry and Event messages, but not Command messages. The Pub/Sub client used for this purpose
 can be configured by means of operating system environment variables.
 
-Supporting Google Pub/Sub, Hono must run on Google Kubernetes Engine to authenticate to the Google Pub/Sub API. To authenticate to the Google Pub/Sub API, Workload Identity
-is used and has to be configured as described in the [Google Cloud Documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity).
+Supporting Google Pub/Sub, Hono must run on Google Kubernetes Engine to authenticate to the Google Pub/Sub API.
+To authenticate to the Google Pub/Sub API, Workload Identity is used and has to be configured as described in the
+[Google Cloud Documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity).
 
 ## Publisher Configuration
+
 The `org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory` factory can be used to create Pub/Sub publishers for Hono's
 Pub/Sub based APIs.
 
-The following table provides an overview of the environment variable for configuring a Pub/Sub publisher.
-Note that the variable map to the property of the class `org.eclipse.hono.client.pubsub.PubSubConfigProperties` which is
-used to configure a publisher.
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default Value | Description  |
-| :---------------------------------------------- | :-------: | :------------ | :------------|
-| `HONO_PUBSUB_PROJECTID`<br>`hono.pubsub.projectId`   | yes | - | The ID of the Google Cloud Project (GCP) where Pub/Sub is set up. The project ID is a globally unique identifier for a GCP Project used to differentiate the project from all others in Google Cloud. |
+Please refer to the [Quarkus Google Cloud Services extension](https://quarkiverse.github.io/quarkiverse-docs/quarkus-google-cloud-services/main/index.html)
+documentation for details regarding configuration of the PubSub client.
 
 ## Configuring Tenants to use Pub/Sub based Messaging
 

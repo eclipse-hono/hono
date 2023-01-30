@@ -143,6 +143,9 @@ maven/mavencentral/io.prometheus/simpleclient_common/0.15.0, Apache-2.0, approve
 maven/mavencentral/io.prometheus/simpleclient_tracer_common/0.15.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.prometheus/simpleclient_tracer_otel/0.15.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.prometheus/simpleclient_tracer_otel_agent/0.15.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkiverse.googlecloudservices/quarkus-google-cloud-common/1.2.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkiverse.googlecloudservices/quarkus-google-cloud-common-grpc/1.2.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkiverse.googlecloudservices/quarkus-google-cloud-pubsub/1.2.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus.arc/arc/2.13.6.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-arc/2.13.6.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-bootstrap-runner/2.13.6.Final, Apache-2.0, approved, clearlydefined

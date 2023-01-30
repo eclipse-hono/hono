@@ -35,7 +35,6 @@
     <californium.version>3.7.0</californium.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
-    <google.cloud.version>26.2.0</google.cloud.version>
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
     <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.40</jaeger.image.name>
@@ -218,8 +217,16 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
         and then override with Hono specific versions further down below.
       -->
       <dependency>
-        <groupId>io.quarkus</groupId>
+        <groupId>io.quarkus.platform</groupId>
         <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>io.quarkus.platform</groupId>
+        <artifactId>quarkus-google-cloud-services-bom</artifactId>
         <version>${quarkus.platform.version}</version>
         <type>pom</type>
         <scope>import</scope>
@@ -585,20 +592,6 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
           <version>${netty.version}</version>
           <type>pom</type>
           <scope>import</scope>
-      </dependency>
-
-      <!-- Google Cloud dependencies, imported as a BOM -->
-      <dependency>
-        <groupId>com.google.cloud</groupId>
-        <artifactId>libraries-bom</artifactId>
-        <version>${google.cloud.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.perfmark</groupId>
-        <artifactId>perfmark-api</artifactId>
-        <version>0.26.0</version>
       </dependency>
 
       <!-- Logging -->

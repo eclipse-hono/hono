@@ -17,17 +17,19 @@ import java.util.Optional;
 import io.smallrye.config.ConfigMapping;
 
 /**
- * Common options for configuring a client for access to Pub/Sub.
- *
+ * Common options for configuring a Google Pub/Sub client.
+ * <p>
+ * We are using the prefix and naming strategy to match the property name(s) defined by
+ * the <a href="https://quarkiverse.github.io/quarkiverse-docs/quarkus-google-cloud-services/main/index.html">
+ * Quarkus Google Cloud Services extension</a>
  */
-@ConfigMapping(prefix = "hono.pubsub", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
+@ConfigMapping(prefix = "quarkus.google.cloud", namingStrategy = ConfigMapping.NamingStrategy.KEBAB_CASE)
 public interface PubSubPublisherOptions {
 
     /**
-     * Gets the GCP ProjectId.
+     * Gets the Google Cloud Project identifier.
      *
-     * @return The projectId.
+     * @return The identifier.
      */
     Optional<String> projectId();
-
 }
