@@ -16,9 +16,9 @@ maven/mavencentral/com.github.luben/zstd-jni/1.5.2-1, BSD-2-Clause, approved, cl
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.android/annotations/4.1.1.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.api/api-common/2.2.1, BSD-3-Clause, approved, #6753
-maven/mavencentral/com.google.api/gax/2.19.1, NOASSERTION, restricted, clearlydefined
-maven/mavencentral/com.google.api/gax-grpc/2.19.1, NOASSERTION, restricted, clearlydefined
-maven/mavencentral/com.google.api/gax-httpjson/0.104.1, NOASSERTION, restricted, clearlydefined
+maven/mavencentral/com.google.api/gax/2.19.1, BSD-3-Clause, approved, #6862
+maven/mavencentral/com.google.api/gax-grpc/2.19.1, BSD-3-Clause, approved, #6861
+maven/mavencentral/com.google.api/gax-httpjson/0.104.1, BSD-3-Clause, approved, #6860
 maven/mavencentral/com.google.api.grpc/proto-google-cloud-pubsub-v1/1.102.16, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.api.grpc/proto-google-common-protos/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.api.grpc/proto-google-iam-v1/1.5.2, Apache-2.0, approved, clearlydefined

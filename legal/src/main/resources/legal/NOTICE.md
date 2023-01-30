@@ -144,9 +144,37 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/hyperxpro/Brotli4j).
 
+### Google API Extensions for Java
+
+This product includes software developed by the [Google APIs project](https://googleapis.github.io/).
+
+Your use of *API Extensions* is subject to the terms and conditions defined in the file
+[LICENSE.gax.txt](LICENSE.gax.txt).
+
+The source code is available from [GitHub](https://github.com/googleapis/gax-java).
+
+### Google Auth Library
+
+This product includes software developed by the [Google APIs project](https://googleapis.github.io/).
+
+Your use of *Auth Library* is subject to the terms and conditions defined in the file
+[LICENSE.google-auth.txt](LICENSE.google-auth.txt).
+
+The source code is available from [GitHub](https://github.com/googleapis/google-auth-library-java).
+
+### Google Cloud Pub/Sub Client for Java
+
+This product includes software developed by the [Google APIs project](https://googleapis.github.io/).
+
+Your use of *Pub/Sub Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/googleapis/java-pubsub).
+
 ### Google Common Protos
 
-This product includes software developed by the [Google Common Protos project](https://github.com/googleapis/java-common-protos).
+This product includes software developed by the [Google APIs project](https://googleapis.github.io/).
 
 Your use of *Common Protos* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
@@ -173,6 +201,16 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/google/gson).
+
+### Google HTTP Client
+
+This product includes software developed by the [Google APIs project](https://googleapis.github.io/).
+
+Your use of *HTTP Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/googleapis/google-http-java-client).
 
 ### c3p0
 
