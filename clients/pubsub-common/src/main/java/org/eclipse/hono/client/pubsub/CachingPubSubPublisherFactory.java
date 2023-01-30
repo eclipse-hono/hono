@@ -14,10 +14,14 @@ package org.eclipse.hono.client.pubsub;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
+
+import com.google.api.gax.core.CredentialsProvider;
 
 import io.vertx.core.Future;
 
@@ -26,16 +30,35 @@ import io.vertx.core.Future;
  */
 public final class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
 
-    private final Map<String, PubSubPublisherClientImpl> activePublishers = new ConcurrentHashMap<>();
+    private final Map<String, PubSubPublisherClient> activePublishers = new ConcurrentHashMap<>();
+    private final String projectId;
+    private final CredentialsProvider credentialsProvider;
+    private Supplier<PubSubPublisherClient> clientSupplier;
 
     /**
-     * Creates a new Factory that will produce {@link PubSubPublisherClientImpl#createShared(String, String)
-     * publishers}.
+     * Creates a new factory for {@link PubSubPublisherClient} instances.
      *
-     * @return an instance of the Factory.
+     * @param projectId The identifier of the Google Cloud Project to connect to.
+     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
+     *                            or {@code null} if the default provider should be used.
+     * @throws NullPointerException if project ID is {@code null}.
      */
-    public static CachingPubSubPublisherFactory createFactory() {
-        return new CachingPubSubPublisherFactory();
+    public CachingPubSubPublisherFactory(
+            final String projectId,
+            final CredentialsProvider credentialsProvider) {
+        this.projectId = Objects.requireNonNull(projectId);
+        this.credentialsProvider = credentialsProvider;
+    }
+
+    /**
+     * Sets a supplier for the publisher(s) this factory creates.
+     * <p>
+     * This method is mainly intended to be used in test cases.
+     *
+     * @param supplier The supplier.
+     */
+    public void setClientSupplier(final Supplier<PubSubPublisherClient> supplier) {
+        this.clientSupplier = supplier;
     }
 
     @Override
@@ -55,8 +78,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     @Override
-    public PubSubPublisherClient getOrCreatePublisher(final String topic, final String projectId,
-            final String tenantId) {
+    public PubSubPublisherClient getOrCreatePublisher(final String topic, final String tenantId) {
         final String topicName = getTopicTenantName(topic, tenantId);
         return activePublishers.computeIfAbsent(topicName,
                 s -> getPubSubPublisherClient(projectId, topicName));
@@ -68,8 +90,10 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
         return Optional.ofNullable(activePublishers.get(topicTenantName));
     }
 
-    private PubSubPublisherClientImpl getPubSubPublisherClient(final String projectId, final String topic) {
-        return PubSubPublisherClientImpl.createShared(projectId, topic);
+    private PubSubPublisherClient getPubSubPublisherClient(final String projectId, final String topic) {
+        return Optional.ofNullable(clientSupplier)
+                .map(Supplier::get)
+                .orElseGet(() -> new PubSubPublisherClientImpl(projectId, topic, credentialsProvider));
     }
 
     private String getTopicTenantName(final String topic, final String tenantId) {
@@ -77,11 +101,14 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     private Future<Void> removePublisher(final String topicName) {
-        final PubSubPublisherClientImpl publisher = activePublishers.remove(topicName);
-        if (publisher == null) {
-            return Future.succeededFuture();
+        final var publisher = activePublishers.remove(topicName);
+        if (publisher != null) {
+            try {
+                publisher.close();
+            } catch (final Exception e) {
+                // ignore, since there is nothing we can do about it
+            }
         }
-        publisher.close();
         return Future.succeededFuture();
     }
 }

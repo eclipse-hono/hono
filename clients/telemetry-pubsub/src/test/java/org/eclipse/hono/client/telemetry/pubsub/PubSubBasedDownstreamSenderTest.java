@@ -12,7 +12,9 @@
  */
 package org.eclipse.hono.client.telemetry.pubsub;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,8 +23,9 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
-import org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.pubsub.PubSubPublisherClient;
+import org.eclipse.hono.client.pubsub.PubSubPublisherFactory;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -31,6 +34,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+
+import com.google.pubsub.v1.PubsubMessage;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -64,8 +69,8 @@ public class PubSubBasedDownstreamSenderTest {
 
     private Tracer tracer;
 
-    private CachingPubSubPublisherFactory factory;
-
+    private PubSubPublisherFactory factory;
+    private PubSubPublisherClient client;
     private PubSubBasedDownstreamSender sender;
 
     /**
@@ -78,8 +83,8 @@ public class PubSubBasedDownstreamSenderTest {
 
         span = TracingMockSupport.mockSpan();
         tracer = TracingMockSupport.mockTracer(span);
-
-        factory = mock(CachingPubSubPublisherFactory.class);
+        client = mock(PubSubPublisherClient.class);
+        factory = mock(PubSubPublisherFactory.class);
     }
 
     /**
@@ -88,20 +93,22 @@ public class PubSubBasedDownstreamSenderTest {
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
 
-        assertThrows(NullPointerException.class,
-                () -> new PubSubBasedDownstreamSender(null, factory, EVENT_TOPIC, PROJECT_ID, true, tracer));
-
-        assertThrows(NullPointerException.class,
-                () -> new PubSubBasedDownstreamSender(vertx, null, EVENT_TOPIC, PROJECT_ID, true, tracer));
-
-        assertThrows(NullPointerException.class,
-                () -> new PubSubBasedDownstreamSender(vertx, factory, null, PROJECT_ID, true, tracer));
-
-        assertThrows(NullPointerException.class,
-                () -> new PubSubBasedDownstreamSender(vertx, factory, EVENT_TOPIC, null, true, tracer));
-
-        assertThrows(NullPointerException.class,
-                () -> new PubSubBasedDownstreamSender(vertx, factory, EVENT_TOPIC, PROJECT_ID, true, null));
+        assertAll(
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new PubSubBasedDownstreamSender(null, factory, EVENT_TOPIC, PROJECT_ID, true, tracer)),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new PubSubBasedDownstreamSender(vertx, null, EVENT_TOPIC, PROJECT_ID, true, tracer)),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new PubSubBasedDownstreamSender(vertx, factory, null, PROJECT_ID, true, tracer)),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new PubSubBasedDownstreamSender(vertx, factory, EVENT_TOPIC, null, true, tracer)),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new PubSubBasedDownstreamSender(vertx, factory, EVENT_TOPIC, PROJECT_ID, true, null)));
     }
 
     /**
@@ -114,9 +121,15 @@ public class PubSubBasedDownstreamSenderTest {
                 "foo", "bar",
                 MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
 
-        final Future<Void> result = sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties,
+        final Future<Void> result = sender.sendEvent(
+                tenant,
+                device,
+                contentType,
+                Buffer.buffer(payload),
+                properties,
                 null);
         assertThat(result.failed()).isTrue();
+        assertThat(result.cause()).isInstanceOf(ServerErrorException.class);
     }
 
     /**
@@ -130,15 +143,20 @@ public class PubSubBasedDownstreamSenderTest {
                 "foo", "bar",
                 MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
 
-        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
-        when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(EVENT_TOPIC, PROJECT_ID, "test-tenant")).thenReturn(client);
+        when(client.publish(any(PubsubMessage.class))).thenReturn(Future.succeededFuture());
+        when(factory.getOrCreatePublisher(EVENT_TOPIC, "test-tenant")).thenReturn(client);
 
         sender.start();
-        final Future<Void> result = sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties,
+        final Future<Void> result = sender.sendEvent(
+                tenant,
+                device,
+                contentType,
+                Buffer.buffer(payload),
+                properties,
                 null);
-        verify(span).finish();
         assertThat(result.succeeded()).isTrue();
+        verify(span).finish();
+        verify(client).publish(any(PubsubMessage.class));
     }
 
     /**
@@ -154,13 +172,19 @@ public class PubSubBasedDownstreamSenderTest {
 
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(TELEMETRY_TOPIC, PROJECT_ID, "test-tenant")).thenReturn(client);
+        when(factory.getOrCreatePublisher(TELEMETRY_TOPIC, "test-tenant")).thenReturn(client);
 
         sender.start();
-        final Future<Void> result = sender.sendTelemetry(tenant, device, QoS.AT_LEAST_ONCE, contentType,
-                Buffer.buffer(payload), properties, null);
-        verify(span).finish();
+        final Future<Void> result = sender.sendTelemetry(
+                tenant,
+                device,
+                QoS.AT_LEAST_ONCE,
+                contentType,
+                Buffer.buffer(payload),
+                properties,
+                null);
         assertThat(result.succeeded()).isTrue();
+        verify(span).finish();
+        verify(client).publish(any(PubsubMessage.class));
     }
-
 }

@@ -48,11 +48,18 @@ import io.vertx.ext.healthchecks.Status;
  */
 public abstract class AbstractPubSubBasedMessageSender implements MessagingClient, ServiceClient, Lifecycle {
 
+    /**
+     * A logger to be shared by sub-classes.
+     */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    /**
+     * The identifier of the Google Cloud Project that this sender is scoped to.
+     */
+    protected final String projectId;
+
     private final PubSubPublisherFactory publisherFactory;
     private final String topic;
     private final Tracer tracer;
-    private final String projectId;
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     /**
@@ -64,7 +71,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public AbstractPubSubBasedMessageSender(
+    protected AbstractPubSubBasedMessageSender(
             final PubSubPublisherFactory publisherFactory,
             final String topic,
             final String projectId,
@@ -175,8 +182,11 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
 
         final Map<String, String> pubSubAttributes = encodePropertiesAsPubSubAttributes(properties, currentSpan);
         final ByteString data = ByteString.copyFrom(payload.getBytes());
-        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().putAllAttributes(pubSubAttributes)
-                .setOrderingKey(deviceId).setData(data).build();
+        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+                .putAllAttributes(pubSubAttributes)
+                .setOrderingKey(deviceId)
+                .setData(data)
+                .build();
 
         log.info("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);
@@ -214,7 +224,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     }
 
     private PubSubPublisherClient getOrCreatePublisher(final String topic, final String tenantId) {
-        return publisherFactory.getOrCreatePublisher(topic, projectId, tenantId);
+        return publisherFactory.getOrCreatePublisher(topic, tenantId);
     }
 
     private void logPubSubMessageId(final Span span, final String topic, final String messageId) {

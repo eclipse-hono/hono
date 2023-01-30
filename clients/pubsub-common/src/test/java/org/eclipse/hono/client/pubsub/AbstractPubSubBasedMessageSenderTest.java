@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.client.pubsub;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,7 +20,6 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
@@ -27,7 +27,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import com.google.protobuf.ByteString;
@@ -40,7 +40,7 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * Verifies the generic behavior of {@link AbstractPubSubBasedMessageSender}.
+ * Verifies the generic behavior of AbstractPubSubBasedMessageSender.
  */
 public class AbstractPubSubBasedMessageSenderTest {
 
@@ -74,25 +74,23 @@ public class AbstractPubSubBasedMessageSenderTest {
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
-        assertThrows(NullPointerException.class,
-                () -> new AbstractPubSubBasedMessageSender(null, TOPIC, PROJECT_ID, tracer) {
-
-                });
-
-        assertThrows(NullPointerException.class,
-                () -> new AbstractPubSubBasedMessageSender(factory, null, PROJECT_ID, tracer) {
-
-                });
-
-        assertThrows(NullPointerException.class,
-                () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, null, tracer) {
-
-                });
-
-        assertThrows(NullPointerException.class,
-                () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, null) {
-
-                });
+        assertAll(
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new AbstractPubSubBasedMessageSender(null, TOPIC, PROJECT_ID, tracer) {
+                        }),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new AbstractPubSubBasedMessageSender(factory, null, PROJECT_ID, tracer) {
+                        }),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, null, tracer) {
+                        }),
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, null) {
+                        }));
     }
 
     /**
@@ -114,29 +112,18 @@ public class AbstractPubSubBasedMessageSenderTest {
     @Test
     public void testSendFailed() {
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
-        when(client.publish(Mockito.any())).thenReturn(
+        when(client.publish(Mockito.any(PubsubMessage.class))).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
-        when(factory.getOrCreatePublisher(TOPIC, PROJECT_ID, TENANT_ID)).thenReturn(client);
+        when(factory.getOrCreatePublisher(TOPIC, TENANT_ID)).thenReturn(client);
 
-        try (MockedStatic<PubsubMessage> pubSubMessage = Mockito.mockStatic(PubsubMessage.class)) {
-            final PubsubMessage.Builder builder = mock(PubsubMessage.Builder.class);
-            when(builder.putAllAttributes(Mockito.any())).thenReturn(builder);
-            when(builder.setOrderingKey(DEVICE_ID)).thenReturn(builder);
-            when(builder.setData(Mockito.any())).thenReturn(builder);
-
-            final PubsubMessage message = mock(PubsubMessage.class);
-            when(builder.build()).thenReturn(message);
-
-            pubSubMessage.when(PubsubMessage::newBuilder).thenReturn(builder);
-
-            assertThrows(NullPointerException.class,
-                    () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE));
-
-            assertThrows(ServerErrorException.class,
-                    () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
-                            Map.of(), NoopSpan.INSTANCE));
-        }
-
+        assertAll(
+                () -> assertThrows(
+                        NullPointerException.class,
+                        () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE)),
+                () -> assertThrows(
+                        ServerErrorException.class,
+                        () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
+                                Map.of(), NoopSpan.INSTANCE)));
     }
 
     /**
@@ -146,51 +133,40 @@ public class AbstractPubSubBasedMessageSenderTest {
     public void testSendSucceeded() {
         final Map<String, Object> properties = getProperties();
         final Map<String, String> attributes = getAttributes();
+        final byte[] b = new byte[22];
+        new Random().nextBytes(b);
+        final ByteString bs = ByteString.copyFrom(b);
 
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(TOPIC, PROJECT_ID, TENANT_ID)).thenReturn(client);
+        when(factory.getOrCreatePublisher(TOPIC, TENANT_ID)).thenReturn(client);
 
-        try (MockedStatic<PubsubMessage> pubSubMessage = Mockito.mockStatic(PubsubMessage.class)) {
-            final PubsubMessage.Builder builder = mock(PubsubMessage.Builder.class);
-            when(builder.putAllAttributes(attributes)).thenReturn(builder);
-            when(builder.setOrderingKey(DEVICE_ID)).thenReturn(builder);
-            final byte[] b = new byte[22];
-            new Random().nextBytes(b);
-            final ByteString bs = ByteString.copyFrom(b);
-            when(builder.setData(bs)).thenReturn(builder);
-
-            final PubsubMessage message = mock(PubsubMessage.class);
-            when(builder.build()).thenReturn(message);
-
-            pubSubMessage.when(PubsubMessage::newBuilder).thenReturn(builder);
-
-            final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID,
-                    Buffer.buffer(b),
-                    properties,
-                    NoopSpan.INSTANCE);
-            assertThat(result.succeeded()).isTrue();
-            Mockito.verify(client, Mockito.times(1)).publish(message);
-            Mockito.verify(builder, Mockito.times(1)).putAllAttributes(attributes);
-            Mockito.verify(builder, Mockito.times(1)).setOrderingKey(DEVICE_ID);
-            Mockito.verify(builder, Mockito.times(1)).setData(bs);
-        }
+        final var result = sender.sendAndWaitForOutcome(
+                TOPIC,
+                TENANT_ID,
+                DEVICE_ID,
+                Buffer.buffer(b),
+                properties,
+                NoopSpan.INSTANCE);
+        assertThat(result.succeeded()).isTrue();
+        final var publishedMessage = ArgumentCaptor.forClass(PubsubMessage.class);
+        Mockito.verify(client).publish(publishedMessage.capture());
+        assertThat(publishedMessage.getValue().getAttributesMap()).containsExactlyEntriesIn(attributes);
+        assertThat(publishedMessage.getValue().getOrderingKey()).isEqualTo(DEVICE_ID);
+        assertThat(publishedMessage.getValue().getData()).isEqualTo(bs);
     }
 
     private Map<String, Object> getProperties() {
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("device-Id", DEVICE_ID);
-        properties.put("tenant-Id", TENANT_ID);
-        properties.put("no string", 123);
-        return properties;
+        return Map.of(
+                "device-Id", DEVICE_ID,
+                "tenant-Id", TENANT_ID,
+                "no string", 123);
     }
 
     private Map<String, String> getAttributes() {
-        final Map<String, String> attributes = new HashMap<>();
-        attributes.put("device-Id", DEVICE_ID);
-        attributes.put("tenant-Id", TENANT_ID);
-        attributes.put("no string", "123");
-        return attributes;
+        return Map.of(
+                "device-Id", DEVICE_ID,
+                "tenant-Id", TENANT_ID,
+                "no string", "123");
     }
-
 }

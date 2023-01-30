@@ -19,7 +19,7 @@ import io.vertx.core.Future;
 /**
  * A client for publishing messages to Pub/Sub.
  */
-public interface PubSubPublisherClient {
+public interface PubSubPublisherClient extends AutoCloseable {
 
     /**
      * Publishes a message to Pub/Sub and transfer the returned ApiFuture into a Future.

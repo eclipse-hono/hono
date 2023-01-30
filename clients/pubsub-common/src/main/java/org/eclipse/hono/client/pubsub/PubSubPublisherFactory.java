@@ -17,7 +17,7 @@ import java.util.Optional;
 import io.vertx.core.Future;
 
 /**
- * A factory for creating Pub/Sub publisher.
+ * A factory for creating Pub/Sub publishers scoped to a Google Cloud Project.
  */
 public interface PubSubPublisherFactory {
 
@@ -53,12 +53,10 @@ public interface PubSubPublisherFactory {
      * <p>
      *
      * @param topic The topic to create the publisher for.
-     * @param projectId The Google project id to use.
      * @param tenantId The tenantId to use.
      * @return an existing or new publisher.
      */
-    PubSubPublisherClient getOrCreatePublisher(String topic, String projectId,
-            String tenantId);
+    PubSubPublisherClient getOrCreatePublisher(String topic, String tenantId);
 
     /**
      * Gets an existing Publisher for sending data to Pub/Sub if one was already created with the given topicName and

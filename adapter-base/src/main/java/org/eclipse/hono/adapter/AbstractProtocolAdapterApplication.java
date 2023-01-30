@@ -92,6 +92,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.api.gax.core.CredentialsProvider;
 
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
@@ -131,6 +132,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     @Inject
     protected KafkaClientMetricsSupport kafkaClientMetricsSupport;
+
+    @Inject
+    CredentialsProvider credentialsProvider;
 
     private ClientConfigProperties commandConsumerConfig;
     private ClientConfigProperties downstreamSenderConfig;
@@ -184,8 +188,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     @Inject
-    void setPubSubClientOptions(
-            @ConfigMapping(prefix = "hono.pubsub") final PubSubPublisherOptions options) {
+    void setPubSubClientOptions(final PubSubPublisherOptions options) {
         this.pubSubConfigProperties = new PubSubConfigProperties(options);
     }
 
@@ -375,7 +378,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
             LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
 
-            final PubSubPublisherFactory pubSubFactory = CachingPubSubPublisherFactory.createFactory();
+            final var pubSubFactory = new CachingPubSubPublisherFactory(pubSubConfigProperties.getProjectId(), credentialsProvider);
 
             telemetrySenderProvider
                     .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));

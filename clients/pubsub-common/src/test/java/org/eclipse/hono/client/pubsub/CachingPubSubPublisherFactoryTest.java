@@ -20,8 +20,6 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 /**
  * Verifies behavior of {@link CachingPubSubPublisherFactory}.
@@ -35,81 +33,55 @@ public class CachingPubSubPublisherFactoryTest {
     private static final String PROJECT_ID = "test-project";
 
     private CachingPubSubPublisherFactory factory;
+    private PubSubPublisherClient client;
 
     @BeforeEach
     void setUp() {
-        factory = CachingPubSubPublisherFactory.createFactory();
+        client = mock(PubSubPublisherClient.class);
+        factory = new CachingPubSubPublisherFactory(PROJECT_ID, null);
+        factory.setClientSupplier(() -> client);
     }
 
     /**
-     * Verifies that {@link CachingPubSubPublisherFactory#getOrCreatePublisher(String, String, String)} creates a
-     * publisher and adds it to the cache.
+     * Verifies that the factory creates a publisher and adds it to the cache.
      */
     @Test
     public void testThatPublisherIsAddedToCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
-
-        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
-
-        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
-            final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
-
-            final PubSubPublisherClient createPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
-                    TENANT_ID);
-            final Optional<PubSubPublisherClient> actual = factory.getPublisher(TOPIC_NAME, TENANT_ID);
-            assertThat(actual.isPresent()).isTrue();
-            assertThat(actual.get()).isEqualTo(createPublisher);
-        }
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        final Optional<PubSubPublisherClient> actual = factory.getPublisher(TOPIC_NAME, TENANT_ID);
+        assertThat(actual.isPresent()).isTrue();
+        assertThat(actual.get()).isEqualTo(createdPublisher);
     }
 
     /**
-     * Verifies that {@link CachingPubSubPublisherFactory#closePublisher(String, String)} closes the publisher and
-     * removes it from the cache.
+     * Verifies that the factory removes a publisher from the cache when it gets closed.
      */
     @Test
     public void testClosePublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        assertThat(createdPublisher).isNotNull();
+        assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 
-        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
-            final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
-
-            final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
-                    TENANT_ID);
-            assertThat(createdPublisher).isNotNull();
-            assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
-
-            factory.closePublisher(TOPIC_NAME, TENANT_ID);
-            assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
-        }
+        factory.closePublisher(TOPIC_NAME, TENANT_ID);
+        assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
     }
 
     /**
-     * Verifies that {@link CachingPubSubPublisherFactory#closeAllPublisher} closes all active publisher and removes
-     * them from the cache.
+     * Verifies that the factory closes all active publishers and removes them from the cache.
      */
     @Test
     public void testCloseAllPublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClientImpl client = mock(PubSubPublisherClientImpl.class);
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        assertThat(createdPublisher).isNotNull();
+        assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 
-        try (MockedStatic<PubSubPublisherClientImpl> pubSubClient = Mockito.mockStatic(PubSubPublisherClientImpl.class)) {
-            final String topicTenantName = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
-            pubSubClient.when(() -> PubSubPublisherClientImpl.createShared(PROJECT_ID, topicTenantName)).thenReturn(client);
-
-            final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, PROJECT_ID,
-                    TENANT_ID);
-            assertThat(createdPublisher).isNotNull();
-            assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
-
-            factory.closeAllPublisher();
-            assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
-        }
-
+        factory.closeAllPublisher();
+        assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
     }
 
 }

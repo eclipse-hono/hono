@@ -14,6 +14,8 @@ package org.eclipse.hono.client.pubsub;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -23,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
+import com.google.api.gax.core.CredentialsProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.PubsubMessage;
@@ -39,21 +42,10 @@ import io.vertx.core.Vertx;
  * Wraps a Pub/Sub publisher.
  * </p>
  */
-public final class PubSubPublisherClientImpl implements AutoCloseable, PubSubPublisherClient {
+final class PubSubPublisherClientImpl implements PubSubPublisherClient {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
     private Publisher publisher;
-
-    private PubSubPublisherClientImpl(final String projectId, final String topic) throws ClientErrorException {
-        try {
-            final TopicName topicName = TopicName.of(projectId, topic);
-            this.publisher = Publisher.newBuilder(topicName).setEnableMessageOrdering(true).build();
-        } catch (IOException e) {
-            this.publisher = null;
-            log.debug("Error initializing publisher client: {}", e.getMessage());
-            throw new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "Publisher client is null", e);
-        }
-    }
 
     /**
      * Creates a new instance of PubSubPublisherClientImpl where a Pub/Sub Publisher is initialized. The Publisher is
@@ -61,12 +53,28 @@ public final class PubSubPublisherClientImpl implements AutoCloseable, PubSubPub
      *
      * @param projectId The Google project id to use.
      * @param topic The topic to create the publisher for.
-     * @return An instance of a PubSubPublisherClientImpl.
+     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
+     *                            or {@code null} if the default provider should be used.
      * @throws ClientErrorException if the initialization of the Publisher failed.
+     * @throws NullPointerException if any of project ID or topic are {@code null}.
      */
-    public static PubSubPublisherClientImpl createShared(final String projectId, final String topic)
-            throws ClientErrorException {
-        return new PubSubPublisherClientImpl(projectId, topic);
+    PubSubPublisherClientImpl(
+            final String projectId,
+            final String topic,
+            final CredentialsProvider credentialsProvider) throws ClientErrorException {
+        Objects.requireNonNull(projectId);
+        Objects.requireNonNull(topic);
+        final TopicName topicName = TopicName.of(projectId, topic);
+        final var builder = Publisher.newBuilder(topicName)
+                .setEnableMessageOrdering(true);
+        Optional.ofNullable(credentialsProvider).ifPresent(builder::setCredentialsProvider);
+        try {
+            this.publisher = builder.build();
+        } catch (final IOException e) {
+            this.publisher = null;
+            log.debug("Error initializing publisher client: {}", e.getMessage());
+            throw new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "Publisher client is null", e);
+        }
     }
 
     /**

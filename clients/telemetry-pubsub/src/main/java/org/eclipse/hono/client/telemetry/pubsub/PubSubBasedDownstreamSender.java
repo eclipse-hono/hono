@@ -64,7 +64,6 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
     private static final String PUBSUB_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
 
     private final boolean isDefaultsEnabled;
-    private final String projectId;
 
     /**
      * Creates a new Pub/Sub-based downstream sender.
@@ -87,7 +86,6 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         super(publisherFactory, topic, projectId, tracer);
         Objects.requireNonNull(vertx);
         this.isDefaultsEnabled = includeDefaults;
-        this.projectId = projectId;
 
         NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
                 notification -> {
