@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,7 +92,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.api.gax.core.CredentialsProvider;
 
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
@@ -132,9 +131,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     @Inject
     protected KafkaClientMetricsSupport kafkaClientMetricsSupport;
-
-    @Inject
-    CredentialsProvider credentialsProvider;
 
     private ClientConfigProperties commandConsumerConfig;
     private ClientConfigProperties downstreamSenderConfig;
@@ -378,7 +374,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
             LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
 
-            final var pubSubFactory = new CachingPubSubPublisherFactory(pubSubConfigProperties.getProjectId(), credentialsProvider);
+            final var pubSubFactory = new CachingPubSubPublisherFactory(pubSubConfigProperties.getProjectId(), null);
 
             telemetrySenderProvider
                     .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
