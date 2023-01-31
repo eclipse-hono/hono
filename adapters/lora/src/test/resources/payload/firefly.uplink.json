@@ -80,7 +80,7 @@
     "organization_id":7021,
     "name":"firefly-device",
     "id":7869,
-    "eui":"0102030405060708",
+    "eui":"01020304050607AB",
     "device_class_id":null,
     "address":"298BF69D"
   },

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,10 +64,11 @@ public class MultiTechProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_MULTITECH_DEVICE, String.class)
                 .map(s -> multiTechEuiToHex(s))
+                .map(LoraUtils::convertFromHexToBytes)
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain device ID property"));
     }
 

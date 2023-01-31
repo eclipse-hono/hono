@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,10 +70,11 @@ public class LiveObjectsProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return getLoraObject(loraMessage)
                 .flatMap(lora -> LoraUtils.getChildObject(lora, FIELD_LIVE_OBJECTS_DEV_EUI, String.class))
+                .map(LoraUtils::convertFromHexToBytes)
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain device ID property"));
     }
 

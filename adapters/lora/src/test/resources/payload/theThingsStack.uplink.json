@@ -4,7 +4,7 @@
     "application_ids": {
       "application_id": "app1"
     },
-    "dev_eui": "0102030405060708",
+    "dev_eui": "01020304050607AB",
     "join_eui": "800000000000000C",
     "dev_addr": "00BCB929"
   },

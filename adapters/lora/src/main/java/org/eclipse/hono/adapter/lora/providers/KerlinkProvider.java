@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -83,13 +83,14 @@ public class KerlinkProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_KERLINK_END_DEVICE, JsonObject.class)
             .map(endDevice -> endDevice.getValue(FIELD_KERLINK_DEVICE_EUI))
             .filter(String.class::isInstance)
             .map(String.class::cast)
+            .map(LoraUtils::convertFromHexToBytes)
             .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }
 

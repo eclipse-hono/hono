@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -42,5 +43,23 @@ public class LoraUtilsTest {
     public void convertToHexString() {
         final String hexResult = LoraUtils.convertToHexString(BUMLUX_AS_BYTE_ARRAY);
         assertEquals(BUMLUX_AS_HEX, hexResult);
+    }
+
+    /**
+     * Verifies hex is converted to byte[] correctly.
+     */
+    @Test
+    public void convertHexToByteArray() {
+        final byte[] bytesResult = LoraUtils.convertFromHexToBytes(BUMLUX_AS_HEX);
+        assertArrayEquals(BUMLUX_AS_BYTE_ARRAY, bytesResult);
+    }
+
+    /**
+     * Verifies Base64 is converted to byte[] correctly.
+     */
+    @Test
+    public void convertBase64ToByteArray() {
+        final byte[] bytesResult = LoraUtils.convertFromBase64ToBytes(BUMLUX_AS_BASE64);
+        assertArrayEquals(BUMLUX_AS_BYTE_ARRAY, bytesResult);
     }
 }

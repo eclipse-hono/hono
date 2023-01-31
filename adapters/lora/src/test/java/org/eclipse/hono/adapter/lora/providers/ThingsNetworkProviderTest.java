@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public class ThingsNetworkProviderTest extends LoraProviderTestBase<ThingsNetwor
         final RoutingContext requestContext = getRequestContext(LoraMessageType.UPLINK, "with-null-payload");
         final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(requestContext);
 
-        assertThat(loraMessage.getDevEUIAsString()).isEqualTo("0102030405060708");
+        assertThat(loraMessage.getDevEUIAsString()).isEqualTo("01020304050607AB");
         assertThat(loraMessage.getPayload()).isNotNull();
         assertThat(loraMessage.getPayload().length()).isEqualTo(0);
     }

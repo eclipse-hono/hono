@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -138,6 +138,25 @@ public class LoraUtils {
     }
 
     /**
+     * Converts the Base64 encoding of a byte array to its byte[] encoding.
+     *
+     * @param base64 The Base64 encoding of the data.
+     * @return The byte[] encoding.
+     * @throws NullPointerException if Base64 string is {@code null}.
+     * @throws LoraProviderMalformedPayloadException if the given string is not a valid Base64 encoding.
+     */
+    public static byte[] convertFromBase64ToBytes(final String base64) {
+
+        Objects.requireNonNull(base64);
+        try {
+            return Base64.getDecoder().decode(base64);
+        } catch (final IllegalArgumentException e) {
+            // malformed Base64
+            throw new LoraProviderMalformedPayloadException("cannot decode Base64 data", e);
+        }
+    }
+
+    /**
      * Gets the hex encoding of binary data.
      *
      * @param data The data to convert.
@@ -147,5 +166,24 @@ public class LoraUtils {
     public static String convertToHexString(final byte[] data) {
         Objects.requireNonNull(data);
         return BaseEncoding.base16().encode(data);
+    }
+
+    /**
+     * Converts the hex encoding of a byte array to its byte[] encoding.
+     *
+     * @param hex The hex encoding of the data.
+     * @return The byte[] encoding.
+     * @throws NullPointerException if hex string is {@code null}.
+     * @throws LoraProviderMalformedPayloadException if the given string is not a valid hex encoding.
+     */
+    public static byte[] convertFromHexToBytes(final String hex) {
+
+        Objects.requireNonNull(hex);
+        try {
+            return BaseEncoding.base16().decode(hex.toUpperCase());
+        } catch (final IllegalArgumentException e) {
+            // malformed hex
+            throw new LoraProviderMalformedPayloadException("cannot decode hex data", e);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -76,10 +76,11 @@ public class ChirpStackV4Provider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE_INFO, JsonObject.class)
             .flatMap(deviceInfo -> LoraUtils.getChildObject(deviceInfo, FIELD_CHIRPSTACK_DEVICE, String.class))
+            .map(LoraUtils::convertFromHexToBytes)
             .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain device ID property"));
     }
 
