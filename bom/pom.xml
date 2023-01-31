@@ -52,7 +52,19 @@
     <logback.version>1.2.9</logback.version>
     <mongodb-image.name>docker.io/library/mongo:4.4</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
-    <native.builder-image.name>mandrel</native.builder-image.name>
+    <!--
+      On macOS you should use the "graalvm" type because the "mandrel" images
+      do not support macOS.
+    -->
+<!--
+  Temporarily replacing generic image type with specific image name
+  because the quay.io/quarkus/ubi-quarkus-mandrel:22.3-java17 image tag has been
+  (accidentally?) deleted from the quay.io repository.
+  In general, it will be better to use the generic type name and let the Quarkus
+  platform decide which version (tag) to use.
+-->
+<!--    <native.builder-image.name>mandrel</native.builder-image.name>-->
+    <native.builder-image.name>quay.io/quarkus/ubi-quarkus-mandrel-builder-image:22.3-java17</native.builder-image.name>
     <netty.version>4.1.82.Final</netty.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.6.0</qpid-jms.version>
