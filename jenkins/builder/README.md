@@ -5,7 +5,7 @@ tools which form the basis of reproducible builds.
 The image can be built using
 
 ```sh
-# in folder $HONO_HOME/builder
+# in folder $HONO_HOME/jenkins/builder
 docker build -t eclipse/hono-builder:2.2.0 -f HonoBuilder.dockerfile .
 ```
 

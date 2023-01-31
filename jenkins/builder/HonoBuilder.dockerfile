@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Contributors to the Eclipse Foundation
+# Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -18,7 +18,7 @@
 
 FROM debian:stable-slim
 
-ARG MANDREL_VERSION=22.3.0.1-Final
+ARG MANDREL_VERSION=22.3.1.0-Final
 # either java11 or java17
 ARG JDK_VERSION=java17
 ARG MVN_VERSION=3.8.6
@@ -52,7 +52,7 @@ RUN set -xeu && \
     { test ! -d ${GRAALVM_HOME}/legal || rm -r ${GRAALVM_HOME}/legal; } && \
     rm -rf ${GRAALVM_HOME}/man `# does not exist in java11 package` && \
     mkdir ${MAVEN_HOME} && \
-    curl -fsSL "https://dlcdn.apache.org/maven/maven-3/${MVN_VERSION}/binaries/apache-maven-${MVN_VERSION}-bin.tar.gz" \
+    curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MVN_VERSION}/binaries/apache-maven-${MVN_VERSION}-bin.tar.gz" \
         | tar -zxC ${MAVEN_HOME} --strip-components 1 && \
     echo Cleaning up... && \
     apt-get remove -y \
