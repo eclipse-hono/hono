@@ -170,6 +170,7 @@
       -->
       <properties>
         <quarkus.package.type>native</quarkus.package.type>
+        <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
         <!--
           By default, use container based build which does not require local installation of the GraalVM SDK
           and native-image compiler.
@@ -177,18 +178,6 @@
         <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
-        <!--
-          allow incomplete class path in order to not require (optional) compression codec dependencies of Netty,
-          open up certain modules' packages as required by native-image builder
-          (see https://www.graalvm.org/release-notes/22_2/#native-image)
-        -->
-        <quarkus.native.additional-build-args>
-          --initialize-at-run-time=io.netty.internal.tcnative.SSL\,org.apache.kafka.common.security.authenticator.SaslClientAuthenticator,
-          -J--add-opens=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED,
-          -J--add-opens=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk.localization=ALL-UNNAMED,
-          -J--add-opens=org.graalvm.nativeimage.base/com.oracle.svm.util=ALL-UNNAMED,
-          -J--add-opens=org.graalvm.sdk/org.graalvm.nativeimage.impl=ALL-UNNAMED
-        </quarkus.native.additional-build-args>
         <quarkus.native.resources.includes>hono-cli-build.properties</quarkus.native.resources.includes>
       </properties>
     </profile>
