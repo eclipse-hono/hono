@@ -1574,9 +1574,7 @@ components:
                  "key":
                     type: string
                     description: |
-                       The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer.
-                       Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public
-                       keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory.
+                       The Base64 encoded bytes representing the public key / certificate.
 
       FilterJson:
         description: Filters to be applied to bulk queries.

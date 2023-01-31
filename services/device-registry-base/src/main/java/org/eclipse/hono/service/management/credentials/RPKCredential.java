@@ -34,7 +34,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class RPKCredential extends CommonCredential {
+public final class RPKCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_RAW_PUBLIC_KEY;
 
@@ -71,7 +71,7 @@ public class RPKCredential extends CommonCredential {
      */
     @Override
     @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
-    public final List<RPKSecret> getSecrets() {
+    public List<RPKSecret> getSecrets() {
         return Collections.unmodifiableList(secrets);
     }
 
@@ -83,7 +83,7 @@ public class RPKCredential extends CommonCredential {
      * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public final RPKCredential setSecrets(final List<RPKSecret> secrets) {
+    public RPKCredential setSecrets(final List<RPKSecret> secrets) {
         Objects.requireNonNull(secrets);
         if (secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets must not be empty");

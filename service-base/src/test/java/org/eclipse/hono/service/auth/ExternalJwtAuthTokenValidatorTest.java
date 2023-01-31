@@ -19,12 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.security.Key;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -62,9 +61,7 @@ import io.vertx.core.json.JsonObject;
  */
 class ExternalJwtAuthTokenValidatorTest {
 
-    private static String rsaPrivateKeyString;
     private static String validRsaX509CertString;
-    private static String ecPrivateKeyString;
     private static String validEcX509CertString;
     private final String deviceId = "device-id";
     private final String authId = "auth-id";
@@ -75,36 +72,7 @@ class ExternalJwtAuthTokenValidatorTest {
 
     @BeforeAll
     static void init() {
-        rsaPrivateKeyString = "-----BEGIN PRIVATE KEY-----" +
-                "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCd8ptUDTDARsqG" +
-                "+FhT+GxRWHuvx6OIXs8cjm00LNn8tYqC4WtFj4Y5HfESVs3GOndT5fyPu7NShOIu" +
-                "MHpP6yAPZdoQZWMAchaDYhqqEdmfgeZ93USIn0INwgjbMvdJ2vmmPGMv9FRZlKZ1" +
-                "RsCjc+PmCvgH04IGx/S7z8BAIGcaWx7VxH0ErJiR7/sOoNXJGZAYThv82+ibdvAb" +
-                "eHz2rFdG6KmTBErY4mDYxxK5+9LcdDC5kfZ5PEbjainw2GOT7YIf7CNhaNyK8e9Z" +
-                "duMcWXP1lLYaZF66/PZPVfofQ4wrcyPg60Xa1ZZF12Q255Ej7zAXBID4FkDLKmtx" +
-                "EUzoaJ5tAgMBAAECggEAAjeo7rzLPaIXpjmUeii+UtbkYsi6pvDS8tOcxd6IL33Y" +
-                "HXghaFXz2heSKX2I6eGYrSDJF9sz0O4d8Vp94IfH36icCueZe24MUd1yXfUC6TQm" +
-                "KXV72uZPw5ZlkG7QqzuOILEdV6c4sDho9iGIgz5eoFjwpX0yCJ+fmHTVRzEx1e6C" +
-                "T6x5qNx16xLVBZACsWCHZ6AsVMpiqpO/G/oPnWky37gV/W9eMZkn34+ubN5QZ/vG" +
-                "AwkNBR3fCthUVsgTfw5wdSufChnKElI90eN+ypR5ONzLYVDjoDO4pJTiwLCUbmOM" +
-                "6JAC+los1j7vChNvZJ3iQJ4FngBxOwJAckZJMCKDkQKBgQC1rHhPuTBAymtCbEFX" +
-                "yZnSGGsDYEM22xQyXAgw8bqOjTcc/slKwHjPy39EdzIXMA5fJQxYU5QAd+OgXjGu" +
-                "RklPKNFv9kXogddEVtmzCQxohrMsk5wdSa/LbVhazKAGnIyLHXWgxYD/fGIaQCNg" +
-                "q/Zlb+h9DhC6EujF+08po2KctQKBgQDekTMpce3EUqrz3nGgO53QHyConFFMV/2g" +
-                "/L432tK9o3co+8FQeeXJ2geOWfRToOZyLWq2aBt2LV/uIB6mwho6bWTF+pi9WcQd" +
-                "v2k56X3KpiWJ+QYe1gbgMM3Psg/Sj0iSzz9RO2gXtpTy31Jl6nhC+JjR4lVlUyQq" +
-                "WgdewWFF2QKBgQCFGTxzvAs8DJCUc1dUB6EoKTeNm6Lit5KOapqdsRuqgI8WMRws" +
-                "JeLc6gvtjx4lmtGMp0nqFCFkTnF39kqTkW74DcGTM2x4MVgS+0Y3QrPSiI0QZXyE" +
-                "gI3Ije2jaDL9ZQgai5S4GrqtcuU0sjS5CINWQaykof9jM6NSGRIgQVFn2QKBgCCG" +
-                "JWzUCkPbNMIoaoBY1en48oPRPAwk+5pP9NgisRMnVR13FLvW5F6H7vy9ZnfmFmbu" +
-                "/h4jvoeZf+BDb1c9HCoXnFdWFIXvHTqfoxfkaA56ExhDfMJ60kxmtVy5j5hceeWC" +
-                "RaVwQfjdJI0NV3QvPF3FCEf7hDEnYiySNWuCZN2ZAoGBAK3jTQuunm/yQqKFcqDw" +
-                "MwUWIugnvi6DYwweLRZLEdK29is58rbpe1c5dc9N2oVy3W1x59YQ9t3OdRZ4sTnT" +
-                "HOHL/Bvb7Cc7nn/a751eul6xNAio4SJmYzPrK50uwXO72LpyDiw/+MY0aEL8BQhy" +
-                "sdQ915R/NbECtu0DTZVHJ0my" +
-                "-----END PRIVATE KEY-----";
-        validRsaX509CertString = "-----BEGIN CERTIFICATE-----" +
-                "MIIDezCCAmOgAwIBAgIUWAQ3roUv7ojy7Mz6Cp4gl1Fg2i0wDQYJKoZIhvcNAQEL" +
+        validRsaX509CertString = "MIIDezCCAmOgAwIBAgIUWAQ3roUv7ojy7Mz6Cp4gl1Fg2i0wDQYJKoZIhvcNAQEL" +
                 "BQAwTDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxEzARBgNVBAoM" +
                 "ClRlc3RUZW5hbnQxEzARBgNVBAsMClRlc3REZXZpY2UwIBcNMjIxMjIyMTMyMDEw" +
                 "WhgPMjA1MDA1MDgxMzIwMTBaMEwxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21l" +
@@ -122,15 +90,8 @@ class ExternalJwtAuthTokenValidatorTest {
                 "f85HRZZmPAkc0JPj6UnAJOcRzSQ8jvPfIvQ4HCXTJcreST/8y96qeZGG3mT1BckL" +
                 "L9YHDUOSMfu68JZW/w8Ng2/WRHe3KFk1Mmu3vRGHpftbq5ntmgD8XgUmGp3wlwr0" +
                 "QlA+pUO+vQKuR5xBStnsgad+g4XlKgW6XL8DbaHlOhQrYYmfEewAuILEd5h4cIir" +
-                "U3JGN02ABUy2tcU4rdyoZ0VAnvhPOGCfMrYD6dnpbg==" +
-                "-----END CERTIFICATE-----";
-        ecPrivateKeyString = "-----BEGIN PRIVATE KEY-----" +
-                "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgevZzL1gdAFr88hb2" +
-                "OF/2NxApJCzGCEDdfSp6VQO30hyhRANCAAQRWz+jn65BtOMvdyHKcvjBeBSDZH2r" +
-                "1RTwjmYSi9R/zpBnuQ4EiMnCqfMPWiZqB4QdbAd0E7oH50VpuZ1P087G" +
-                "-----END PRIVATE KEY-----";
-        validEcX509CertString = "-----BEGIN CERTIFICATE-----" +
-                "MIIB7zCCAZWgAwIBAgIUZcrDSer0tQHRYK/jqQtZ3dSl47swCgYIKoZIzj0EAwIw" +
+                "U3JGN02ABUy2tcU4rdyoZ0VAnvhPOGCfMrYD6dnpbg==";
+        validEcX509CertString = "MIIB7zCCAZWgAwIBAgIUZcrDSer0tQHRYK/jqQtZ3dSl47swCgYIKoZIzj0EAwIw" +
                 "TDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxEzARBgNVBAoMClRl" +
                 "c3RUZW5hbnQxEzARBgNVBAsMClRlc3REZXZpY2UwIBcNMjIxMjIyMTM0MDEwWhgP" +
                 "MjA1MDA1MDgxMzQwMTBaMEwxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0" +
@@ -140,21 +101,20 @@ class ExternalJwtAuthTokenValidatorTest {
                 "VR0OBBYEFJqoWPOmzWob7HYM8hKNpdNaxM50MB8GA1UdIwQYMBaAFJqoWPOmzWob" +
                 "7HYM8hKNpdNaxM50MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIg" +
                 "Nb6jSmGvzPlpzRyboQKdBPiIR2hHgf1e3SBJngoubeQCIQCsZi+kFmtNCU6AELwz" +
-                "UYEP5eqNVbGBJqnmKx5vx1KtEg==" +
-                "-----END CERTIFICATE-----";
+                "UYEP5eqNVbGBJqnmKx5vx1KtEg==";
     }
 
     private static Stream<String> dataForParameterizedTest() {
         final List<String> data = new ArrayList<>();
-        data.add("RS256,2048");
-        data.add("RS256,4096");
-        data.add("RS384,2048");
-        data.add("RS512,2048");
-        data.add("PS256,2048");
-        data.add("PS384,2048");
-        data.add("PS512,2048");
-        data.add("ES256,256");
-        data.add("ES384,384");
+         data.add("RS256,2048");
+         data.add("RS256,4096");
+         data.add("RS384,2048");
+         data.add("RS512,2048");
+         data.add("PS256,2048");
+         data.add("PS384,2048");
+         data.add("PS512,2048");
+         data.add("ES256,256");
+         data.add("ES384,384");
         return data.stream();
     }
 
@@ -179,7 +139,7 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.forName(parameters[0]);
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair = generateKeyPair(alg, Integer.parseInt(parameters[1]));
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -193,49 +153,6 @@ class ExternalJwtAuthTokenValidatorTest {
     }
 
     /**
-     * Verifies that expand returns JWS Claims, when a valid JWT and valid x509 Certificate with RSA encrypted public
-     * key is provided.
-     */
-    @Test
-    void testExpandValidJwtWithValidRsaX509Certificate() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final Key privateKey = getPrivateKeyFromString(rsaPrivateKeyString, alg);
-
-        authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.RSA_ALG,
-                        validRsaX509CertString,
-                        Instant.ofEpochSecond(1516239022), Instant.ofEpochSecond(1796239022)));
-
-        final String jwt = generateJwt(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, privateKey);
-        final Jws<Claims> jws = authTokenValidator.expand(jwt);
-        assertThat(jws).isNotNull();
-        assertThat(jws.getHeader().getAlgorithm()).isEqualTo(alg.getValue());
-    }
-
-    /**
-     * Verifies that expand returns JWS Claims, when a valid JWT and valid X509 Certificate with EC encrypted public key
-     * is provided.
-     */
-    @Test
-    void testExpandValidJwtWithValidEcX509Certificate() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final Key privateKey = getPrivateKeyFromString(ecPrivateKeyString, alg);
-
-        authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, validEcX509CertString,
-                        Instant.ofEpochSecond(1516239022), Instant.ofEpochSecond(1796239022)));
-
-        final String jwt = generateJwt(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, privateKey);
-        final Jws<Claims> jws = authTokenValidator.expand(jwt);
-        assertThat(jws).isNotNull();
-        assertThat(jws.getHeader().getAlgorithm()).isEqualTo(alg.getValue());
-    }
-
-    /**
      * Verifies that expand returns JWS Claims, when a valid JWT and multiple different public keys with the same
      * algorithm and within their validity period are provided.
      */
@@ -244,12 +161,12 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair1 = generateKeyPair(alg, 256);
-        final String publicKey1 = generatePublicKeyString(keyPair1.getPublic());
+        final byte[] publicKey1 = keyPair1.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey1,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
         final KeyPair keyPair2 = generateKeyPair(alg, 256);
-        final String publicKey2 = generatePublicKeyString(keyPair2.getPublic());
+        final byte[] publicKey2 = keyPair2.getPublic().getEncoded();
         final JsonObject secret = CredentialsObject.emptySecret(instantNow.minusSeconds(1500),
                 instantNow.plusSeconds(5000));
         secret.put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, CredentialsConstants.EC_ALG);
@@ -276,14 +193,14 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.HS256;
         final Key key = generateHmacKey();
         authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), generatePublicKeyString(key),
+                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), key.getEncoded(),
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
 
         final String jwt = generateJwt(jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, key);
         final RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> authTokenValidator.expand(jwt));
-        assertEquals("io.jsonwebtoken.UnsupportedJwtException: Alg provided in the JWT header is not supported.",
+        assertEquals("Provided algorithm is not supported.",
                 exception.getMessage());
     }
 
@@ -296,7 +213,7 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair = generateKeyPair(alg, 256);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -344,7 +261,7 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair = generateKeyPair(alg, 256);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -416,7 +333,8 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair = generateKeyPair(alg, 256);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic()).replaceFirst("M", "a");
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
+        publicKey[0] = publicKey[1];
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -435,7 +353,7 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         KeyPair keyPair = generateKeyPair(alg, 256);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -455,7 +373,7 @@ class ExternalJwtAuthTokenValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         KeyPair keyPair = generateKeyPair(alg, 384);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -492,7 +410,7 @@ class ExternalJwtAuthTokenValidatorTest {
     void testExpandNoExistingSecretWithSameAlgAsInJwtHeader() {
         SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         KeyPair keyPair = generateKeyPair(alg, 2048);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -506,26 +424,6 @@ class ExternalJwtAuthTokenValidatorTest {
     }
 
     /**
-     * Verifies that expand throws a {@link IllegalArgumentException}, when the key in the secret has an invalid syntax.
-     */
-    @Test
-    void testExpandKeyInSecretHasInvalidSyntax() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic())
-                .replace(CredentialsConstants.BEGIN_KEY, "")
-                .replace(CredentialsConstants.END_KEY, "");
-        authTokenValidator.setCredentialsObject(
-                CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
-                        instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
-
-        final String jwt = generateJwt(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
-        assertThrows(IllegalArgumentException.class, () -> authTokenValidator.expand(jwt));
-    }
-
-    /**
      * Verifies that expand throws a {@link SignatureException}, when the JWT header has no {@value JwsHeader#TYPE}
      * field.
      */
@@ -533,7 +431,7 @@ class ExternalJwtAuthTokenValidatorTest {
     void testExpandTypFieldInJwtHeaderNull() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         final KeyPair keyPair = generateKeyPair(alg, 2048);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -551,7 +449,7 @@ class ExternalJwtAuthTokenValidatorTest {
     void testExpandTypFieldInJwtHeaderInvalid() {
         final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
         final KeyPair keyPair = generateKeyPair(alg, 2048);
-        final String publicKey = generatePublicKeyString(keyPair.getPublic());
+        final byte[] publicKey = keyPair.getPublic().getEncoded();
         authTokenValidator.setCredentialsObject(
                 CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600)));
@@ -588,6 +486,85 @@ class ExternalJwtAuthTokenValidatorTest {
         assertThrows(MalformedJwtException.class, () -> authTokenValidator.getJwtClaims(jwt));
     }
 
+    /**
+     * Verifies that convertPublicKeyStringToPublicKey returns a PublicKey object, when a valid raw public key with RSA
+     * encryption is provided.
+     */
+    @Test
+    void testConvertPublicKeyStringToPublicKeyValidRsaKey() {
+        final SignatureAlgorithm alg = SignatureAlgorithm.RS384;
+        final KeyPair keyPair = generateKeyPair(alg, 2048);
+        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
+        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes);
+
+        final PublicKey publicKey = authTokenValidator.convertPublicKeyStringToPublicKey(rpk);
+        assertThat(publicKey).isNotNull();
+        assertThat(publicKey.getEncoded()).isEqualTo(publicKeyBytes);
+    }
+
+    /**
+     * Verifies that convertPublicKeyStringToPublicKey returns a PublicKey object, when a valid raw public key with EC
+     * encryption is provided.
+     */
+    @Test
+    void testConvertPublicKeyStringToPublicKeyValidEcKey() {
+        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
+        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
+        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes);
+
+        final PublicKey publicKey = authTokenValidator.convertPublicKeyStringToPublicKey(rpk);
+        assertThat(publicKey).isNotNull();
+        assertThat(publicKey.getEncoded()).isEqualTo(publicKeyBytes);
+    }
+
+    /**
+     * Verifies that convertPublicKeyStringToPublicKey throws a {@link RuntimeException}, when an invalid raw public key
+     * is provided.
+     */
+    @Test
+    void testConvertPublicKeyStringToPublicKeyInvalidKey() {
+        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
+        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
+        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes).replace("A", "I");
+
+        assertThrows(RuntimeException.class, () -> authTokenValidator.convertPublicKeyStringToPublicKey(rpk));
+    }
+
+    /**
+     * Verifies that convertX509CertStringToPublicKey returns a PublicKey object, when a valid x509 Certificate with RSA
+     * encrypted public key is provided.
+     */
+    @Test
+    void testConvertX509CertStringToPublicKeyValidRsaX509Certificate() throws CertificateException {
+        final PublicKey publicKey = authTokenValidator.convertX509CertStringToPublicKey(validRsaX509CertString);
+        assertThat(publicKey).isNotNull();
+        assertThat(publicKey.getAlgorithm()).isEqualTo(CredentialsConstants.RSA_ALG);
+    }
+
+    /**
+     * Verifies that convertX509CertStringToPublicKey returns a PublicKey object, when a valid x509 Certificate with EC
+     * encrypted public key is provided.
+     */
+    @Test
+    void testConvertX509CertStringToPublicKeyValidEcX509Certificate() throws CertificateException {
+        final PublicKey publicKey = authTokenValidator.convertX509CertStringToPublicKey(validEcX509CertString);
+        assertThat(publicKey).isNotNull();
+        assertThat(publicKey.getAlgorithm()).isEqualTo(CredentialsConstants.EC_ALG);
+    }
+
+    /**
+     * Verifies that convertX509CertStringToPublicKey throws a {@link CertificateException}, when an invalid x509
+     * Certificate is provided.
+     */
+    @Test
+    void testConvertX509CertStringToPublicKeyInvalidX509Certificate() {
+        assertThrows(CertificateException.class,
+                () -> authTokenValidator.convertX509CertStringToPublicKey(validEcX509CertString.replace("M", "I")));
+
+    }
+
     private String generateJwt(final Map<String, Object> header, final Map<String, Object> claims,
             final SignatureAlgorithm alg, final Key key) {
         final JwtBuilder jwtBuilder = Jwts.builder().setHeaderParams(header).setClaims(claims).signWith(key, alg);
@@ -613,31 +590,6 @@ class ExternalJwtAuthTokenValidatorTest {
             final KeyGenerator keyGenerator = KeyGenerator.getInstance("HmacSHA256");
             return keyGenerator.generateKey();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String generatePublicKeyString(final Key publicKey) {
-        final String key = Base64.getEncoder().encodeToString(publicKey.getEncoded());
-        return CredentialsConstants.BEGIN_KEY + key + CredentialsConstants.END_KEY;
-    }
-
-    private Key getPrivateKeyFromString(final String key, final SignatureAlgorithm alg) {
-        try {
-            String privateKeyPEM = key;
-            privateKeyPEM = privateKeyPEM.replace("-----BEGIN PRIVATE KEY-----", "");
-            privateKeyPEM = privateKeyPEM.replace("-----END PRIVATE KEY-----", "");
-            final PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyPEM));
-            final KeyFactory keyFactory;
-            if (alg.isRsa()) {
-                keyFactory = KeyFactory.getInstance(CredentialsConstants.RSA_ALG);
-            } else if (alg.isEllipticCurve()) {
-                keyFactory = KeyFactory.getInstance(CredentialsConstants.EC_ALG);
-            } else {
-                throw new UnsupportedJwtException("Alg provided in the JWT header is not supported.");
-            }
-            return keyFactory.generatePrivate(keySpec);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException(e);
         }
     }

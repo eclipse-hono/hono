@@ -765,7 +765,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
             final String deviceId,
             final String authId,
             final String alg,
-            final String key,
+            final byte[] key,
             final Instant notBefore,
             final Instant notAfter) {
 

@@ -141,22 +141,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The regular expression to validate that the type field supplied in credentials is legal.
      */
     public static final Pattern PATTERN_TYPE_VALUE = Pattern.compile("^[a-z0-9-]+$");
-    /**
-     * The beginning of every public key String.
-     */
-    public static final String BEGIN_KEY                         = "-----BEGIN PUBLIC KEY-----";
-    /**
-     * The ending of every public key String.
-     */
-    public static final String END_KEY                           = "-----END PUBLIC KEY-----";
-    /**
-     * The beginning of every X.509 Certificate String.
-     */
-    public static final String BEGIN_CERT                        = "-----BEGIN CERTIFICATE-----";
-    /**
-     * The ending of every X.509 Certificate String.
-     */
-    public static final String END_CERT                          = "-----END CERTIFICATE-----";
 
     /**
      * Request actions that belong to the Credentials API.

@@ -99,38 +99,14 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
                         final List<JsonObject> secrets = getCredentialsObject().getCandidateSecrets();
                         final List<JsonObject> validSecretsList = secrets.stream()
                                 .filter(secret -> signatureAlgorithm.getFamilyName()
-                                        .startsWith(secret.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)))
+                                        .startsWith(
+                                                secret.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)))
                                 .toList();
 
-                        String rpk = Objects.requireNonNull(validSecretsList.get(index)
-                                .getString(RegistryManagementConstants.FIELD_SECRETS_KEY));
+                        final byte[] encodedPublicKey = Objects.requireNonNull(validSecretsList.get(index)
+                                .getBinary(RegistryManagementConstants.FIELD_SECRETS_KEY));
 
-                        final PublicKey publicKey;
-                        try {
-                            if (rpk.contains(CredentialsConstants.BEGIN_KEY)
-                                    && rpk.contains(CredentialsConstants.END_KEY)) {
-                                rpk = rpk.replace(CredentialsConstants.BEGIN_KEY, "")
-                                        .replace(CredentialsConstants.END_KEY, "");
-                                publicKey = convertPublicKeyStringToPublicKey(rpk, signatureAlgorithm);
-
-                            } else if (rpk.contains(CredentialsConstants.BEGIN_CERT)
-                                    && rpk.contains(CredentialsConstants.END_CERT)) {
-                                rpk = rpk.replace(CredentialsConstants.BEGIN_CERT, "")
-                                        .replace(CredentialsConstants.END_CERT, "");
-                                publicKey = convertX509CertStringToPublicKey(rpk);
-
-                            } else {
-                                throw new IllegalArgumentException(
-                                        String.format(
-                                                "key field for secret in database is invalid. Keys must be provided" +
-                                                        "with header and footer (e.g. \"%s\" and \"%s\"",
-                                                CredentialsConstants.BEGIN_KEY, CredentialsConstants.END_KEY));
-                            }
-                        } catch (InvalidKeySpecException | NoSuchAlgorithmException | UnsupportedJwtException
-                                | CertificateException e) {
-                            throw new RuntimeException(e);
-                        }
-                        return publicKey;
+                        return convertPublicKeyByteArrayToPublicKey(encodedPublicKey, signatureAlgorithm);
                     }
                 });
                 claims = builder.build().parseClaimsJws(token);
@@ -195,21 +171,51 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
         }
     }
 
-    private PublicKey convertPublicKeyStringToPublicKey(final String publicKey, final SignatureAlgorithm alg)
-            throws InvalidKeySpecException, NoSuchAlgorithmException, UnsupportedJwtException {
-        final X509EncodedKeySpec keySpecX509 = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKey));
-        final KeyFactory keyFactory;
-        if (alg.isRsa()) {
-            keyFactory = KeyFactory.getInstance(CredentialsConstants.RSA_ALG);
-        } else if (alg.isEllipticCurve()) {
-            keyFactory = KeyFactory.getInstance(CredentialsConstants.EC_ALG);
-        } else {
-            throw new UnsupportedJwtException("Alg provided in the JWT header is not supported.");
+    /**
+     * Converts an encoded public key String into a PublicKey object.
+     *
+     * @param rpk The raw public key as a String.
+     * @return The PublicKey object extracted from the provided raw public key.
+     * @throws RuntimeException if the key can not be converted.
+     */
+    public PublicKey convertPublicKeyStringToPublicKey(final String rpk) {
+        PublicKey publicKey;
+        try {
+            publicKey = convertPublicKeyByteArrayToPublicKey(Base64.getDecoder().decode(rpk), SignatureAlgorithm.ES512);
+        } catch (RuntimeException ex) {
+            publicKey = convertPublicKeyByteArrayToPublicKey(Base64.getDecoder().decode(rpk), SignatureAlgorithm.RS512);
         }
-        return keyFactory.generatePublic(keySpecX509);
+        return publicKey;
     }
 
-    private PublicKey convertX509CertStringToPublicKey(final String certificate)
+    private PublicKey convertPublicKeyByteArrayToPublicKey(final byte[] encodedPublicKey,
+            final SignatureAlgorithm alg) {
+        final X509EncodedKeySpec keySpecX509 = new X509EncodedKeySpec(encodedPublicKey);
+        final PublicKey publicKey;
+        try {
+            final KeyFactory keyFactory;
+            if (alg.isRsa()) {
+                keyFactory = KeyFactory.getInstance(CredentialsConstants.RSA_ALG);
+            } else if (alg.isEllipticCurve()) {
+                keyFactory = KeyFactory.getInstance(CredentialsConstants.EC_ALG);
+            } else {
+                throw new RuntimeException("Provided algorithm is not supported.");
+            }
+            publicKey = keyFactory.generatePublic(keySpecX509);
+        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        return publicKey;
+    }
+
+    /**
+     * Converts an encoded X509 certificate String into a PublicKey object.
+     *
+     * @param certificate The encoded certificate as a String.
+     * @return The PublicKey object extracted from the provided certificate.
+     * @throws CertificateException if there is an error parsing the String into a X509Certificate object.
+     */
+    public PublicKey convertX509CertStringToPublicKey(final String certificate)
             throws CertificateException {
         final byte[] certificateData = Base64.getDecoder().decode(certificate);
         final X509Certificate x509Certificate = (X509Certificate) CertificateFactory.getInstance("X509")

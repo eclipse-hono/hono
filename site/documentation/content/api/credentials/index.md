@@ -322,18 +322,18 @@ Example:
   "secrets": [
     {
       "algorithm": "RSA",
-      "key": "-----BEGIN PUBLIC KEY-----MIIBIj...IDAQAB-----END PUBLIC KEY-----"
+      "key": "MIIBIj...IDAQAB"
     }
   ]
 }
 ~~~
 
-| Name        | Mandatory | JSON Type | Description                                                                                                                                                                                                                                                                                                |
-|:------------|:---------:|:----------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *type*      |   *yes*   | *string*  | The credential type name, always `rpk`.                                                                                                                                                                                                                                                                    |
-| *auth-id*   |   *yes*   | *string*  | The identity that the device should be authenticated as.                                                                                                                                                                                                                                                   |
-| *algorithm* |   *yes*   | *string*  | The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).                                                                                                                                                                                                                       |
-| *key*       |   *yes*   | *string*  | The Base64 encoded bytes representing the public key / certificate wrapped in a header and footer. Header and footer (either `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` for public keys or `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` for certificates) are mandatory. |
+| Name        | Mandatory | JSON Type | Description                                                                          |
+|:------------|:---------:|:----------|:-------------------------------------------------------------------------------------|
+| *type*      |   *yes*   | *string*  | The credential type name, always `rpk`.                                              |
+| *auth-id*   |   *yes*   | *string*  | The identity that the device should be authenticated as.                             |
+| *algorithm* |   *yes*   | *string*  | The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`). |
+| *key*       |   *yes*   | *string*  | The Base64 encoded bytes representing the public key / certificate.                  |
 
 {{% notice note %}}
 The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).

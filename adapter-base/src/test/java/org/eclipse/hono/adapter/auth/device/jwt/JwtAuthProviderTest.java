@@ -84,7 +84,7 @@ class JwtAuthProviderTest {
         authTokenValidator = mock(ExternalJwtAuthTokenValidator.class);
         authProvider = new JwtAuthProvider(credentialsClient, NoopTracerFactory.create(), authTokenValidator);
         givenCredentialsOnRecord(
-                CredentialsObject.fromRawPublicKey("device-id", authId, CredentialsConstants.RSA_ALG, "key", null, null));
+                CredentialsObject.fromRawPublicKey("device-id", authId, CredentialsConstants.RSA_ALG, new byte[]{1}, null, null));
 
     }
 

@@ -13,8 +13,12 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
+import java.util.Base64;
 import java.util.Objects;
 
+import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
@@ -30,41 +34,40 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class RPKSecret extends CommonSecret {
+public final class RPKSecret extends CommonSecret {
 
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_KEY)
-    private String key;
+    private byte[] key;
 
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)
     private String alg;
 
-    public final String getKey() {
+    public byte[] getKey() {
         return key;
     }
 
     /**
      * Sets the raw public key value for this secret.
      *
-     * @param key the raw public key.
+     * @param key the raw public key or certificate.
      * @return a reference to this for fluent use.
-     * @throws IllegalArgumentException if the raw public key does not start and end with either
-     *             {@value CredentialsConstants#BEGIN_KEY} and {@value CredentialsConstants#END_KEY} or
-     *             {@value CredentialsConstants#BEGIN_CERT} and {@value CredentialsConstants#END_CERT}.
+     * @throws RuntimeException if the provided raw public key or certificate is not valid.
      */
-    public final RPKSecret setKey(final String key) {
+    public RPKSecret setKey(final String key) {
         Objects.requireNonNull(key);
-        if (!(key.contains(CredentialsConstants.BEGIN_KEY) && key.contains(CredentialsConstants.END_KEY))
-                && !(key.contains(CredentialsConstants.BEGIN_CERT) && key.contains(CredentialsConstants.END_CERT))) {
-            throw new IllegalArgumentException(
-                    String.format("key must start and end with either \"%s\" and \"%s\" or \"%s\" and \"%s\".",
-                            CredentialsConstants.BEGIN_KEY, CredentialsConstants.END_KEY,
-                            CredentialsConstants.BEGIN_CERT, CredentialsConstants.END_CERT));
+
+        final ExternalJwtAuthTokenValidator authTokenValidator = new ExternalJwtAuthTokenValidator();
+        PublicKey publicKey;
+        try {
+            publicKey = authTokenValidator.convertX509CertStringToPublicKey(key);
+        } catch (CertificateException e) {
+            publicKey = authTokenValidator.convertPublicKeyStringToPublicKey(key);
         }
-        this.key = key;
+        this.key = publicKey.getEncoded();
         return this;
     }
 
-    public final String getAlg() {
+    public String getAlg() {
         return alg;
     }
 
@@ -76,7 +79,7 @@ public class RPKSecret extends CommonSecret {
      * @throws IllegalArgumentException if {@code alg} is not either {@value CredentialsConstants#RSA_ALG} or
      *             {@value CredentialsConstants#EC_ALG}.
      */
-    public final RPKSecret setAlg(final String alg) {
+    public RPKSecret setAlg(final String alg) {
         Objects.requireNonNull(alg);
         if (!alg.equals(CredentialsConstants.RSA_ALG) && !alg.equals(CredentialsConstants.EC_ALG)) {
             throw new IllegalArgumentException(
@@ -108,7 +111,7 @@ public class RPKSecret extends CommonSecret {
         if (containsOnlySecretId()) {
             final RPKSecret otherRPKSecret = (RPKSecret) otherSecret;
             this.setAlg(otherRPKSecret.getAlg());
-            this.setKey(otherRPKSecret.getKey());
+            this.setKey(Base64.getEncoder().encodeToString(otherRPKSecret.getKey()));
         }
     }
 
