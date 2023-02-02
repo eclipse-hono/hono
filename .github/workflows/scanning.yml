@@ -59,7 +59,7 @@ jobs:
           mkdir -p scans/eclipse
           for IMAGE in $(docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/hono-*"); do
             echo "Scanning image ${IMAGE} ..."
-            ./trivy image "${IMAGE}" --ignore-unfixed --severity HIGH,CRITICAL --output "scans/$IMAGE.sarif" --format sarif
+            ./trivy image "${IMAGE}" --timeout 15m0s --ignore-unfixed --severity HIGH,CRITICAL --output "scans/$IMAGE.sarif" --format sarif
           done
 
       - name: Upload Docker image scan results to GitHub Security tab
