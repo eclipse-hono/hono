@@ -1564,17 +1564,25 @@ components:
             - $ref: '#/components/schemas/CommonSecret'
             - type: object
               additionalProperties: false
-              required:
-                 - algorithm
-                 - key
               properties:
                  "algorithm":
                     type: string
-                    description: The signing algorithm of the provided key (supported algorithms are `RSA` and `EC`).
+                    readOnly: true
+                    description: The signing algorithm of the public key.
                  "key":
                     type: string
+                    format: byte
                     description: |
-                       The Base64 encoded bytes representing the public key / certificate.
+                       The Base64 encoded binary DER encoding of the public key. **If this is used dont use the "cert" field**.
+                 "cert":
+                    type: string
+                    format: byte
+                    writeOnly: true
+                    description: |
+                       The Base64 encoded binary DER encoding of the X.509 certificate.
+                       The public key will be extracted from this certificate and saved, after that the certificate will be discarded.
+                       **If this is used dont use the "key" field**.
+      
 
       FilterJson:
         description: Filters to be applied to bulk queries.

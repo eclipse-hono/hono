@@ -13,15 +13,11 @@
 
 package org.eclipse.hono.service.auth;
 
-import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
@@ -171,23 +167,6 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
         }
     }
 
-    /**
-     * Converts an encoded public key String into a PublicKey object.
-     *
-     * @param rpk The raw public key as a String.
-     * @return The PublicKey object extracted from the provided raw public key.
-     * @throws RuntimeException if the key can not be converted.
-     */
-    public PublicKey convertPublicKeyStringToPublicKey(final String rpk) {
-        PublicKey publicKey;
-        try {
-            publicKey = convertPublicKeyByteArrayToPublicKey(Base64.getDecoder().decode(rpk), SignatureAlgorithm.ES512);
-        } catch (RuntimeException ex) {
-            publicKey = convertPublicKeyByteArrayToPublicKey(Base64.getDecoder().decode(rpk), SignatureAlgorithm.RS512);
-        }
-        return publicKey;
-    }
-
     private PublicKey convertPublicKeyByteArrayToPublicKey(final byte[] encodedPublicKey,
             final SignatureAlgorithm alg) {
         final X509EncodedKeySpec keySpecX509 = new X509EncodedKeySpec(encodedPublicKey);
@@ -208,18 +187,4 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
         return publicKey;
     }
 
-    /**
-     * Converts an encoded X509 certificate String into a PublicKey object.
-     *
-     * @param certificate The encoded certificate as a String.
-     * @return The PublicKey object extracted from the provided certificate.
-     * @throws CertificateException if there is an error parsing the String into a X509Certificate object.
-     */
-    public PublicKey convertX509CertStringToPublicKey(final String certificate)
-            throws CertificateException {
-        final byte[] certificateData = Base64.getDecoder().decode(certificate);
-        final X509Certificate x509Certificate = (X509Certificate) CertificateFactory.getInstance("X509")
-                .generateCertificate(new ByteArrayInputStream(certificateData));
-        return x509Certificate.getPublicKey();
-    }
 }

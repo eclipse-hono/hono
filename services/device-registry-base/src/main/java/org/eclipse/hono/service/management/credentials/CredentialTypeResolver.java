@@ -65,8 +65,8 @@ public final class CredentialTypeResolver extends TypeIdResolverBase {
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
         switch (id) {
-        case RPKCredential.TYPE:
-            return context.constructSpecializedType(this.baseType, RPKCredential.class);
+        case RpkCredential.TYPE:
+            return context.constructSpecializedType(this.baseType, RpkCredential.class);
         case PasswordCredential.TYPE:
             return context.constructSpecializedType(this.baseType, PasswordCredential.class);
         case PskCredential.TYPE:

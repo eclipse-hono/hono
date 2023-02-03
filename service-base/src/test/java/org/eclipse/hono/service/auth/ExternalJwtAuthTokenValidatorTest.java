@@ -22,11 +22,8 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +35,6 @@ import javax.crypto.KeyGenerator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -61,8 +57,6 @@ import io.vertx.core.json.JsonObject;
  */
 class ExternalJwtAuthTokenValidatorTest {
 
-    private static String validRsaX509CertString;
-    private static String validEcX509CertString;
     private final String deviceId = "device-id";
     private final String authId = "auth-id";
     private ExternalJwtAuthTokenValidator authTokenValidator;
@@ -70,51 +64,17 @@ class ExternalJwtAuthTokenValidatorTest {
     private Instant instantNow;
     private Instant instantPlus24Hours;
 
-    @BeforeAll
-    static void init() {
-        validRsaX509CertString = "MIIDezCCAmOgAwIBAgIUWAQ3roUv7ojy7Mz6Cp4gl1Fg2i0wDQYJKoZIhvcNAQEL" +
-                "BQAwTDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxEzARBgNVBAoM" +
-                "ClRlc3RUZW5hbnQxEzARBgNVBAsMClRlc3REZXZpY2UwIBcNMjIxMjIyMTMyMDEw" +
-                "WhgPMjA1MDA1MDgxMzIwMTBaMEwxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21l" +
-                "LVN0YXRlMRMwEQYDVQQKDApUZXN0VGVuYW50MRMwEQYDVQQLDApUZXN0RGV2aWNl" +
-                "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnfKbVA0wwEbKhvhYU/hs" +
-                "UVh7r8ejiF7PHI5tNCzZ/LWKguFrRY+GOR3xElbNxjp3U+X8j7uzUoTiLjB6T+sg" +
-                "D2XaEGVjAHIWg2IaqhHZn4Hmfd1EiJ9CDcII2zL3Sdr5pjxjL/RUWZSmdUbAo3Pj" +
-                "5gr4B9OCBsf0u8/AQCBnGlse1cR9BKyYke/7DqDVyRmQGE4b/Nvom3bwG3h89qxX" +
-                "RuipkwRK2OJg2McSufvS3HQwuZH2eTxG42op8Nhjk+2CH+wjYWjcivHvWXbjHFlz" +
-                "9ZS2GmReuvz2T1X6H0OMK3Mj4OtF2tWWRddkNueRI+8wFwSA+BZAyyprcRFM6Gie" +
-                "bQIDAQABo1MwUTAdBgNVHQ4EFgQUFP0CKVlsGb+NMn+w3ogkyDmXO/QwHwYDVR0j" +
-                "BBgwFoAUFP0CKVlsGb+NMn+w3ogkyDmXO/QwDwYDVR0TAQH/BAUwAwEB/zANBgkq" +
-                "hkiG9w0BAQsFAAOCAQEAJn1ffSpPQgZ8cXR11nrg58p82afDdaHDgvMDoGbYuPjU" +
-                "pQIHm2gVpEshLW5codAvV1IDO8YLgeRJL3FBhKm2sbH5/vPtvjIYPKffYFKvMI6R" +
-                "f85HRZZmPAkc0JPj6UnAJOcRzSQ8jvPfIvQ4HCXTJcreST/8y96qeZGG3mT1BckL" +
-                "L9YHDUOSMfu68JZW/w8Ng2/WRHe3KFk1Mmu3vRGHpftbq5ntmgD8XgUmGp3wlwr0" +
-                "QlA+pUO+vQKuR5xBStnsgad+g4XlKgW6XL8DbaHlOhQrYYmfEewAuILEd5h4cIir" +
-                "U3JGN02ABUy2tcU4rdyoZ0VAnvhPOGCfMrYD6dnpbg==";
-        validEcX509CertString = "MIIB7zCCAZWgAwIBAgIUZcrDSer0tQHRYK/jqQtZ3dSl47swCgYIKoZIzj0EAwIw" +
-                "TDELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxEzARBgNVBAoMClRl" +
-                "c3RUZW5hbnQxEzARBgNVBAsMClRlc3REZXZpY2UwIBcNMjIxMjIyMTM0MDEwWhgP" +
-                "MjA1MDA1MDgxMzQwMTBaMEwxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0" +
-                "YXRlMRMwEQYDVQQKDApUZXN0VGVuYW50MRMwEQYDVQQLDApUZXN0RGV2aWNlMFkw" +
-                "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEVs/o5+uQbTjL3chynL4wXgUg2R9q9UU" +
-                "8I5mEovUf86QZ7kOBIjJwqnzD1omageEHWwHdBO6B+dFabmdT9POxqNTMFEwHQYD" +
-                "VR0OBBYEFJqoWPOmzWob7HYM8hKNpdNaxM50MB8GA1UdIwQYMBaAFJqoWPOmzWob" +
-                "7HYM8hKNpdNaxM50MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIg" +
-                "Nb6jSmGvzPlpzRyboQKdBPiIR2hHgf1e3SBJngoubeQCIQCsZi+kFmtNCU6AELwz" +
-                "UYEP5eqNVbGBJqnmKx5vx1KtEg==";
-    }
-
     private static Stream<String> dataForParameterizedTest() {
         final List<String> data = new ArrayList<>();
-         data.add("RS256,2048");
-         data.add("RS256,4096");
-         data.add("RS384,2048");
-         data.add("RS512,2048");
-         data.add("PS256,2048");
-         data.add("PS384,2048");
-         data.add("PS512,2048");
-         data.add("ES256,256");
-         data.add("ES384,384");
+        data.add("RS256,2048");
+        data.add("RS256,4096");
+        data.add("RS384,2048");
+        data.add("RS512,2048");
+        data.add("PS256,2048");
+        data.add("PS384,2048");
+        data.add("PS512,2048");
+        data.add("ES256,256");
+        data.add("ES384,384");
         return data.stream();
     }
 
@@ -484,85 +444,6 @@ class ExternalJwtAuthTokenValidatorTest {
     void testGetJwtClaimsInvalidJwt() {
         final String jwt = "header.payload.signature";
         assertThrows(MalformedJwtException.class, () -> authTokenValidator.getJwtClaims(jwt));
-    }
-
-    /**
-     * Verifies that convertPublicKeyStringToPublicKey returns a PublicKey object, when a valid raw public key with RSA
-     * encryption is provided.
-     */
-    @Test
-    void testConvertPublicKeyStringToPublicKeyValidRsaKey() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS384;
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
-        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
-        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes);
-
-        final PublicKey publicKey = authTokenValidator.convertPublicKeyStringToPublicKey(rpk);
-        assertThat(publicKey).isNotNull();
-        assertThat(publicKey.getEncoded()).isEqualTo(publicKeyBytes);
-    }
-
-    /**
-     * Verifies that convertPublicKeyStringToPublicKey returns a PublicKey object, when a valid raw public key with EC
-     * encryption is provided.
-     */
-    @Test
-    void testConvertPublicKeyStringToPublicKeyValidEcKey() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        final KeyPair keyPair = generateKeyPair(alg, 256);
-        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
-        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes);
-
-        final PublicKey publicKey = authTokenValidator.convertPublicKeyStringToPublicKey(rpk);
-        assertThat(publicKey).isNotNull();
-        assertThat(publicKey.getEncoded()).isEqualTo(publicKeyBytes);
-    }
-
-    /**
-     * Verifies that convertPublicKeyStringToPublicKey throws a {@link RuntimeException}, when an invalid raw public key
-     * is provided.
-     */
-    @Test
-    void testConvertPublicKeyStringToPublicKeyInvalidKey() {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        final KeyPair keyPair = generateKeyPair(alg, 256);
-        final byte[] publicKeyBytes = keyPair.getPublic().getEncoded();
-        final String rpk = Base64.getEncoder().encodeToString(publicKeyBytes).replace("A", "I");
-
-        assertThrows(RuntimeException.class, () -> authTokenValidator.convertPublicKeyStringToPublicKey(rpk));
-    }
-
-    /**
-     * Verifies that convertX509CertStringToPublicKey returns a PublicKey object, when a valid x509 Certificate with RSA
-     * encrypted public key is provided.
-     */
-    @Test
-    void testConvertX509CertStringToPublicKeyValidRsaX509Certificate() throws CertificateException {
-        final PublicKey publicKey = authTokenValidator.convertX509CertStringToPublicKey(validRsaX509CertString);
-        assertThat(publicKey).isNotNull();
-        assertThat(publicKey.getAlgorithm()).isEqualTo(CredentialsConstants.RSA_ALG);
-    }
-
-    /**
-     * Verifies that convertX509CertStringToPublicKey returns a PublicKey object, when a valid x509 Certificate with EC
-     * encrypted public key is provided.
-     */
-    @Test
-    void testConvertX509CertStringToPublicKeyValidEcX509Certificate() throws CertificateException {
-        final PublicKey publicKey = authTokenValidator.convertX509CertStringToPublicKey(validEcX509CertString);
-        assertThat(publicKey).isNotNull();
-        assertThat(publicKey.getAlgorithm()).isEqualTo(CredentialsConstants.EC_ALG);
-    }
-
-    /**
-     * Verifies that convertX509CertStringToPublicKey throws a {@link CertificateException}, when an invalid x509
-     * Certificate is provided.
-     */
-    @Test
-    void testConvertX509CertStringToPublicKeyInvalidX509Certificate() {
-        assertThrows(CertificateException.class,
-                () -> authTokenValidator.convertX509CertStringToPublicKey(validEcX509CertString.replace("M", "I")));
-
     }
 
     private String generateJwt(final Map<String, Object> header, final Map<String, Object> claims,

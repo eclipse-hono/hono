@@ -34,11 +34,11 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public final class RPKCredential extends CommonCredential {
+public final class RpkCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_RAW_PUBLIC_KEY;
 
-    private final List<RPKSecret> secrets = new ArrayList<>();
+    private final List<RpkSecret> secrets = new ArrayList<>();
 
     /**
      * Creates a new credentials object for an authentication identifier.
@@ -48,9 +48,9 @@ public final class RPKCredential extends CommonCredential {
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if secrets is empty.
      */
-    public RPKCredential(
+    public RpkCredential(
             @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<RPKSecret> secrets) {
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<RpkSecret> secrets) {
         super(authId);
         setSecrets(secrets);
     }
@@ -71,7 +71,7 @@ public final class RPKCredential extends CommonCredential {
      */
     @Override
     @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
-    public List<RPKSecret> getSecrets() {
+    public List<RpkSecret> getSecrets() {
         return Collections.unmodifiableList(secrets);
     }
 
@@ -83,7 +83,7 @@ public final class RPKCredential extends CommonCredential {
      * @throws NullPointerException if secrets is {@code null}.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public RPKCredential setSecrets(final List<RPKSecret> secrets) {
+    public RpkCredential setSecrets(final List<RpkSecret> secrets) {
         Objects.requireNonNull(secrets);
         if (secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets must not be empty");
