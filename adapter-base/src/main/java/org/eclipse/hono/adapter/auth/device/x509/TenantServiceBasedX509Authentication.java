@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.auth.device;
+package org.eclipse.hono.adapter.auth.device.x509;
 
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;

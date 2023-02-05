@@ -243,7 +243,7 @@ public final class TenantObject extends JsonBackedValueObject {
                         keyProps,
                         TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
                         String.class,
-                        "RSA");
+                        CredentialsConstants.RSA_ALG);
                 final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
                 final KeyFactory factory = KeyFactory.getInstance(type);
                 final PublicKey publicKey = factory.generatePublic(keySpec);

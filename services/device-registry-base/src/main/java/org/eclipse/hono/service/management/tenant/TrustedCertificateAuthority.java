@@ -27,6 +27,7 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -92,7 +93,7 @@ public class TrustedCertificateAuthority {
             return false;
         } else {
             try {
-                final String alg = Optional.ofNullable(keyAlgorithm).orElse("RSA");
+                final String alg = Optional.ofNullable(keyAlgorithm).orElse(CredentialsConstants.RSA_ALG);
                 KeyFactory.getInstance(alg).generatePublic(new X509EncodedKeySpec(publicKey));
                 return true;
             } catch (final GeneralSecurityException | IllegalArgumentException e) {

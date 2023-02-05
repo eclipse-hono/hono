@@ -29,6 +29,7 @@ import java.util.Optional;
 import javax.crypto.SecretKey;
 
 import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -165,7 +166,7 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
     }
 
     private String getNistCurveName(final ECPublicKey ecPublicKey) throws GeneralSecurityException {
-        final AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
+        final AlgorithmParameters parameters = AlgorithmParameters.getInstance(CredentialsConstants.EC_ALG);
         parameters.init(ecPublicKey.getParams());
         final var spec = parameters.getParameterSpec(ECGenParameterSpec.class);
         final var oid = spec.getName();

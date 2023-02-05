@@ -33,7 +33,7 @@ import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;

@@ -101,6 +101,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
     /**
+     * The type name that indicates a raw public key secret.
+     */
+    public static final String SECRETS_TYPE_RAW_PUBLIC_KEY = "rpk";
+    /**
      * The name of the field that contains the pattern to use for matching authentication identifiers.
      */
     public static final String SPECIFIER_WILDCARD                = "*";
@@ -121,6 +125,14 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The name of the default hash function to use for hashed passwords if not set explicitly.
      */
     public static final String DEFAULT_HASH_FUNCTION             = HASH_FUNCTION_SHA256;
+    /**
+     * The name of the supported rsa algorithm.
+     */
+    public static final String RSA_ALG                            = "RSA";
+    /**
+     * The name of the supported elliptic curve algorithm.
+     */
+    public static final String EC_ALG                            = "EC";
     /**
      * The vert.x event bus address to which inbound credentials messages are published.
      */

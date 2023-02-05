@@ -302,6 +302,52 @@ Example:
 | *auth-id*        | *yes*     | *string*   | The subject DN of the client certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
 
 {{% notice note %}}
-The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties. It is still necessary to provide a (empty) JSON object in the *secrets* array, though.
+The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before`
+and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client
+certificate's corresponding properties. It is still necessary to provide a (empty) JSON object in the *secrets* array,
+though.
 {{% /notice %}}
 
+### Raw Public Key
+
+A credentials type for storing a public key as used in the [JSON Web Token based Authentication]({{< relref "concepts/device-identity.md#json-web-token-based-authentication" >}}) to authenticate a device.
+
+Example with public key:
+
+~~~json
+{
+  "device-id": "4711",
+  "type": "rpk",
+  "auth-id": "sensor1",
+  "secrets": [
+    {
+      "key": "MIIBIjANBgkqhki...yn7qGrzgQIDAQAB"
+    }
+  ]
+}
+~~~
+
+Example with X.509 certificate:
+
+~~~json
+{
+  "device-id": "4711",
+  "type": "rpk",
+  "auth-id": "sensor1",
+  "secrets": [
+    {
+      "cert": "MIIDezCCAmOgAwI...GCfMrYD6dnpbg=="
+    }
+  ]
+}
+~~~
+
+| Name            | Mandatory | JSON Type | Description                                                                                                                                                                                               |
+|:----------------|:---------:|:----------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *type*          |   *yes*   | *string*  | The credential type name, always `rpk`.                                                                                                                                                                   |
+| *auth-id*       |   *yes*   | *string*  | The identity that the device should be authenticated as.                                                                                                                                                  |
+| *key* or *cert* |   *yes*   | *string*  | The Base64 encoded binary DER encoding of the public key (*key*) or X.509 certificate (*cert*). In case a certificate is provided the public key will be extracted from it and the certificate discarded. |
+
+{{% notice note %}}
+The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+{{% /notice %}}

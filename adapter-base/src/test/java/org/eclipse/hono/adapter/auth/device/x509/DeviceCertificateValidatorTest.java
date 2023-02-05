@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.auth.device;
+package org.eclipse.hono.adapter.auth.device.x509;
 
 import java.security.cert.TrustAnchor;
 import java.util.List;

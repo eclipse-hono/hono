@@ -19,11 +19,11 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
+import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
+import org.eclipse.hono.adapter.auth.device.x509.SubjectDnCredentials;
+import org.eclipse.hono.adapter.auth.device.x509.TenantServiceBasedX509Authentication;
+import org.eclipse.hono.adapter.auth.device.x509.X509AuthProvider;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;

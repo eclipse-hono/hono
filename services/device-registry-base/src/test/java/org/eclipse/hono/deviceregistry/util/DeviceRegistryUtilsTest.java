@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
@@ -50,7 +51,7 @@ public class DeviceRegistryUtilsTest {
 
         final TrustedCertificateAuthority ca1 = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=test.org")
-                .setKeyAlgorithm("EC")
+                .setKeyAlgorithm(CredentialsConstants.EC_ALG)
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))
@@ -59,7 +60,7 @@ public class DeviceRegistryUtilsTest {
                 .setAutoProvisioningDeviceIdTemplate("device-{{subject-dn}}");
         final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=test.org")
-                .setKeyAlgorithm("RSA")
+                .setKeyAlgorithm(CredentialsConstants.RSA_ALG)
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS))
@@ -85,7 +86,7 @@ public class DeviceRegistryUtilsTest {
         final JsonArray expectedAuthorities = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test.org")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOT_A_PUBLIC_KEY".getBytes())
-                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC")
+                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, CredentialsConstants.EC_ALG)
                 .put(TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, "auth-{{subject-cn}}")
                 .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 

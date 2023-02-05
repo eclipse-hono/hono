@@ -46,6 +46,7 @@ import org.eclipse.hono.adapter.coap.DeviceInfoSupplier;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -385,7 +386,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         } else if (certChain == null) {
             LOG.warn("no server certificate configured");
         } else {
-            if (pk.getAlgorithm().equals("EC")) {
+            if (pk.getAlgorithm().equals(CredentialsConstants.EC_ALG)) {
                 // Californium's cipher suites support ECC based keys only
                 LOG.info("using private key [{}] and certificate [{}] as server identity",
                         config.getKeyPath(), config.getCertPath());

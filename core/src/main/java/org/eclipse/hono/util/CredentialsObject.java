@@ -746,4 +746,36 @@ public final class CredentialsObject extends JsonBackedValueObject {
         result.addSecret(secret);
         return result;
     }
+
+    /**
+     * Creates a credentials object for a device, auth ID and raw public key.
+     *
+     * @param deviceId The device identifier.
+     * @param authId The authentication identifier.
+     * @param alg The name of the algorithm used in the creation of the key.
+     * @param key The raw public key.
+     * @param notBefore The point in time from which on the credentials are valid.
+     * @param notAfter The point in time until the credentials are valid.
+     * @return The credentials.
+     * @throws NullPointerException if any of device ID, authentication ID or key is {@code null}.
+     * @throws IllegalArgumentException if the <em>not-before</em> instant does not lie before the <em>not after</em>
+     *             instant.
+     */
+    public static CredentialsObject fromRawPublicKey(
+            final String deviceId,
+            final String authId,
+            final String alg,
+            final byte[] key,
+            final Instant notBefore,
+            final Instant notAfter) {
+
+        Objects.requireNonNull(key);
+        final CredentialsObject result = new CredentialsObject(deviceId, authId,
+                CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY);
+        final JsonObject secret = emptySecret(notBefore, notAfter);
+        secret.put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, alg);
+        secret.put(CredentialsConstants.FIELD_SECRETS_KEY, key);
+        result.addSecret(secret);
+        return result;
+    }
 }

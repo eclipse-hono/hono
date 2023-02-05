@@ -35,6 +35,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
@@ -274,7 +275,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     public static PublicKey getRandomPublicKey() {
 
         try {
-            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance(CredentialsConstants.RSA_ALG);
             keyGen.initialize(1024);
             final KeyPair keypair = keyGen.genKeyPair();
             return keypair.getPublic();

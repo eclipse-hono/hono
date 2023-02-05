@@ -1323,12 +1323,14 @@ components:
             - $ref: '#/components/schemas/PasswordCredentials'
             - $ref: '#/components/schemas/PSKCredentials'
             - $ref: '#/components/schemas/X509CertificateCredentials'
+            - $ref: '#/components/schemas/RPKCredentials'
          discriminator:
             propertyName: type
             mapping:
                "hashed-password": '#/components/schemas/PasswordCredentials'
                "psk": '#/components/schemas/PSKCredentials'
                "x509-cert": '#/components/schemas/X509CertificateCredentials'
+               "rpk": '#/components/schemas/RPKCredentials'
 
       CommonCredentials:
          type: object
@@ -1438,6 +1440,32 @@ components:
                        by applying the template to the extracted *subject DN*. The certificate's validity
                        period MUST be stored in a single secret. The certificate itself must then be discarded.
 
+      RPKCredentials:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonCredentials'
+            - type: object
+              required:
+                 - type
+                 - auth-id
+                 - secrets
+              additionalProperties: false
+              properties:
+                 "type":
+                    type: string
+                    pattern: "rpk"
+                 "auth-id":
+                    type: string
+                    description: |
+                       The authentication identifier provided by the device inside the JWT claim `sub` or as part of the
+                       *client identifier*. Example: For client identifier `tenants/DEFAULT_TENANT/devices/sensor1` the
+                       authentication identifier to be registered is `sensor1`.
+                 "secrets":
+                    type: array
+                    items:
+                       $ref: '#/components/schemas/RPKSecret'
+                    minItems: 1
+
       CommonSecret:
          type: object
          additionalProperties: false
@@ -1529,6 +1557,32 @@ components:
                     type: string
                     format: byte
                     description: The secret key shared between device and Hono.
+
+      RPKSecret:
+         additionalProperties: false
+         allOf:
+            - $ref: '#/components/schemas/CommonSecret'
+            - type: object
+              additionalProperties: false
+              properties:
+                 "algorithm":
+                    type: string
+                    readOnly: true
+                    description: The signing algorithm of the public key.
+                 "key":
+                    type: string
+                    format: byte
+                    description: |
+                       The Base64 encoded binary DER encoding of the public key. **If this is used dont use the "cert" field**.
+                 "cert":
+                    type: string
+                    format: byte
+                    writeOnly: true
+                    description: |
+                       The Base64 encoded binary DER encoding of the X.509 certificate.
+                       The public key will be extracted from this certificate and saved, after that the certificate will be discarded.
+                       **If this is used dont use the "key" field**.
+      
 
       FilterJson:
         description: Filters to be applied to bulk queries.

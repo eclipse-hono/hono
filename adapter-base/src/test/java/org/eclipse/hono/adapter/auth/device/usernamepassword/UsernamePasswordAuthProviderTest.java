@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.auth.device;
+package org.eclipse.hono.adapter.auth.device.usernamepassword;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
