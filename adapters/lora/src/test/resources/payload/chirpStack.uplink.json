@@ -2,7 +2,7 @@
   "applicationID": "123",
   "applicationName": "temperature-sensor",
   "deviceName": "garden-sensor",
-  "devEUI": "AQIDBAUGBwg=",
+  "devEUI": "AQIDBAUGB6s=",
   "rxInfo": [
     {
       "gatewayID": "AwMDAwMDAwM=",

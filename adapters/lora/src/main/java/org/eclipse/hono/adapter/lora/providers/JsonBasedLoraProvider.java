@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -122,7 +122,7 @@ public abstract class JsonBasedLoraProvider implements LoraProvider {
      * @return The device EUI.
      * @throws RuntimeException if the EUI cannot be extracted.
      */
-    protected abstract String getDevEui(JsonObject uplinkMessage);
+    protected abstract byte[] getDevEui(JsonObject uplinkMessage);
 
     /**
      * Gets the payload from an uplink message.
@@ -177,7 +177,7 @@ public abstract class JsonBasedLoraProvider implements LoraProvider {
 
         Objects.requireNonNull(requestBody);
 
-        final String devEui = getDevEui(requestBody);
+        final String devEui = LoraUtils.convertToHexString(getDevEui(requestBody));
         final UplinkLoraMessage message = new UplinkLoraMessage(devEui);
         message.setPayload(getPayload(requestBody));
         message.setMetaData(getMetaData(requestBody));

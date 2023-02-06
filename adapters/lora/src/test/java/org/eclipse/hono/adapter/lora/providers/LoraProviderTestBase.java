@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -105,7 +105,7 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
      * @param uplinkMessage The message to assert.
      */
     protected void assertCommonUplinkProperties(final UplinkLoraMessage uplinkMessage) {
-        assertThat(uplinkMessage.getDevEUIAsString()).isEqualTo("0102030405060708");
+        assertThat(uplinkMessage.getDevEUIAsString()).isEqualTo("01020304050607AB");
         assertThat(uplinkMessage.getPayload().getBytes()).isEqualTo("bumlux".getBytes(StandardCharsets.UTF_8));
     }
 

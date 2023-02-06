@@ -7,7 +7,7 @@
     "deviceProfileId": "40d32660-4d04-4892-b053-09f0df3add5b",
     "deviceProfileName": "generic device",
     "deviceName": "garden-sensor",
-    "devEui": "0102030405060708",
+    "devEui": "01020304050607ab",
     "tags": {
       "key": "value"
     }

@@ -5,7 +5,7 @@
   "data_format":"hex",
   "decrypted":true,
   "devaddr":277690613,
-  "deveui":"0102030405060708",
+  "deveui":"01020304050607AB",
   "device_redundancy":1,
   "dr_used":"SF8BW500",
   "early":false,

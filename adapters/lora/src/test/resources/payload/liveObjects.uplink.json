@@ -19,7 +19,7 @@
         "esp": -111.76,
         "ack": false,
         "fcnt": 27517,
-        "devEUI": "0102030405060708",
+        "devEUI": "01020304050607AB",
         "frequency": 868.5,
         "signalLevel": 5,
         "gatewayCnt": 5,

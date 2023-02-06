@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -77,10 +77,10 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE, String.class)
-                .map(s -> LoraUtils.convertFromBase64ToHex(s))
+                .map(s -> LoraUtils.convertFromBase64ToBytes(s))
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded device ID property"));
     }
 
