@@ -1567,22 +1567,40 @@ components:
               properties:
                  "algorithm":
                     type: string
-                    readOnly: true
-                    description: The signing algorithm of the public key.
+                    description: |
+                       The signing algorithm used for the public key.
+                       If the `cert` property is used to provide an
+                       X.509 certificate then the algorithm is determined
+                       from the certificate and this property is ignored.
+                       Otherwise, if the `key` property is used, this
+                       property must be set to the algorithm used, if other
+                       than the default.
+                    default: RSA
+                    example: EC
                  "key":
                     type: string
                     format: byte
                     description: |
-                       The Base64 encoded binary DER encoding of the public key. **If this is used dont use the "cert" field**.
+                       The Base64 encoded binary DER encoding of the
+                       public key.
+                       If the `cert` property is used to provide an
+                       X.509 certificate then the public key is extracted
+                       from the certificate and this property is ignored.
+                       Either this property or `cert` must be set.
                  "cert":
                     type: string
                     format: byte
                     writeOnly: true
                     description: |
-                       The Base64 encoded binary DER encoding of the X.509 certificate.
-                       The public key will be extracted from this certificate and saved, after that the certificate will be discarded.
-                       **If this is used dont use the "key" field**.
-      
+                       The Base64 encoded binary DER encoding of the certificate containing
+                       the public key.
+                       This property can be used as a convenient alternative to
+                       specifying the `public-key`, `not-before`, `not-after` and
+                       `algorithm` properties explicitly. Implementors of this
+                       API may choose to support this property only for uploading
+                       a certificate but then extract all relevant data and store
+                       it in the properties described above.
+                       Either this property or `key` and `algorithm` must be set.
 
       FilterJson:
         description: Filters to be applied to bulk queries.
