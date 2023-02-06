@@ -269,12 +269,12 @@ public final class DeviceRegistryUtils {
         Objects.requireNonNull(hashAlgorithmsWhitelist);
 
         credential.checkValidity();
-        if (credential instanceof PasswordCredential) {
-            for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
+        for (final var secret : credential.getSecrets()) {
+            if (secret instanceof PasswordSecret passwordSecret ) {
                 passwordSecret.encode(passwordEncoder);
-                passwordSecret.checkValidity();
                 passwordSecret.verifyHashAlgorithm(hashAlgorithmsWhitelist, maxBcryptCostFactor);
             }
+            secret.checkValidity();
         }
     }
 

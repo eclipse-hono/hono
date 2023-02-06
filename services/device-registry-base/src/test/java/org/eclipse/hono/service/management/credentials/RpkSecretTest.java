@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,16 +13,21 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.Arrays;
 import java.util.Base64;
 
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link RpkSecret}.
@@ -40,15 +45,19 @@ class RpkSecretTest {
                     "mwIDAQAB");
     private final String alg = CredentialsConstants.RSA_ALG;
 
-    /**
-     * Verifies that the key and algorithm are correctly set, when a valid raw public key is provided.
-     */
     @Test
-    void testSetKeyValidRawPublicKey() {
-        final RpkSecret secret = new RpkSecret();
-        secret.setKey(key);
-        assertThat(secret.getKey()).isEqualTo(key);
-        assertThat(secret.getAlgorithm()).isEqualTo(CredentialsConstants.RSA_ALG);
+    void testEncodeRpkSecret() {
+      final var secret = new RpkSecret();
+      CommonSecretTest.addCommonProperties(secret);
+      secret.setKey(key);
+      secret.setAlgorithm(alg);
+      assertDoesNotThrow(() -> secret.checkValidity());
+
+      final JsonObject json = JsonObject.mapFrom(secret);
+      CommonSecretTest.assertCommonProperties(json);
+      assertThat(json.getBinary(RegistryManagementConstants.FIELD_SECRETS_KEY)).isEqualTo(key);
+      assertThat(json.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM)).isEqualTo(alg);
+      assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_CERT)).isNull();
     }
 
     /**
@@ -80,8 +89,11 @@ class RpkSecretTest {
                         "QlA+pUO+vQKuR5xBStnsgad+g4XlKgW6XL8DbaHlOhQrYYmfEewAuILEd5h4cIir" +
                         "U3JGN02ABUy2tcU4rdyoZ0VAnvhPOGCfMrYD6dnpbg==");
         secret.setCertificate(validRsaX509CertString);
+        assertDoesNotThrow(() -> secret.checkValidity());
         assertThat(secret.getKey()).isNotNull();
         assertThat(secret.getAlgorithm()).isEqualTo(CredentialsConstants.RSA_ALG);
+        assertThat(secret.getNotBefore()).isNotNull();
+        assertThat(secret.getNotAfter()).isNotNull();
     }
 
     /**
@@ -105,19 +117,24 @@ class RpkSecretTest {
                         "Nb6jSmGvzPlpzRyboQKdBPiIR2hHgf1e3SBJngoubeQCIQCsZi+kFmtNCU6AELwz" +
                         "UYEP5eqNVbGBJqnmKx5vx1KtEg==");
         secret.setCertificate(validEcX509CertString);
+        assertDoesNotThrow(() -> secret.checkValidity());
         assertThat(secret.getKey()).isNotNull();
         assertThat(secret.getAlgorithm()).isEqualTo(CredentialsConstants.EC_ALG);
+        assertThat(secret.getNotBefore()).isNotNull();
+        assertThat(secret.getNotAfter()).isNotNull();
     }
 
     /**
-     * Verifies that the setKey throws a {@link IllegalArgumentException}, when an invalid key is provided.
+     * Verifies that an invalid key is detected.
      */
     @Test
     void testSetKeyInvalidKey() {
 
         final RpkSecret secret = new RpkSecret();
-        final byte[] invalidKey = Base64.getDecoder().decode("invalid");
-        assertThrows(RuntimeException.class, () -> secret.setKey(invalidKey));
+        final byte[] invalidKey = new byte[] {0x01, 0x02, 0x03};
+        secret.setKey(invalidKey);
+        secret.setAlgorithm(CredentialsConstants.EC_ALG);
+        assertThrows(IllegalStateException.class, () -> secret.checkValidity());
     }
 
     /**
@@ -126,33 +143,39 @@ class RpkSecretTest {
     @Test
     void testSetCertificateInvalidCertificate() {
 
+        final byte[] invalidCert = new byte[] {0x01, 0x02, 0x03};
         final RpkSecret secret = new RpkSecret();
-        assertThrows(CertificateException.class, () -> secret.setCertificate(Base64.getDecoder().decode("invalid")));
+        assertThrows(CertificateException.class, () -> secret.setCertificate(invalidCert));
+        assertThrows(IllegalStateException.class, () -> secret.checkValidity());
     }
 
     /**
      * Verifies that the algorithm and key of an existing secret are not merged into an updated secret if it contains a
      * new key.
+     *
+     * @throws NoSuchAlgorithmException if the new public key cannot be created.
      */
     @Test
-    void testMergePropertiesUsesNewKey() {
-        final RpkSecret updatedSecret = new RpkSecret();
+    void testMergePropertiesDoesNotReplaceKey() throws NoSuchAlgorithmException {
 
-        final byte[] newKey = Base64.getDecoder().decode(
-                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+JOt8/aIx2QpV4/ThlRMUHeSZBDdSIrlwv7e" +
-                        "T0u4m/FZSuwrxddB7lnE17pwLxctD7zbnD90eD1jjuOGSg4Zw==");
+      final var gen = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
+      final var newKey = gen.generateKeyPair().getPublic();
+
+      final RpkSecret updatedSecret = new RpkSecret();
 
         updatedSecret.setId(id);
-        updatedSecret.setKey(newKey);
+        updatedSecret.setKey(newKey.getEncoded());
+        updatedSecret.setAlgorithm(newKey.getAlgorithm());
 
         final RpkSecret existingSecret = new RpkSecret();
         existingSecret.setId(id);
         existingSecret.setKey(key);
+        existingSecret.setAlgorithm(alg);
 
         updatedSecret.merge(existingSecret);
 
-        assertThat(updatedSecret.getKey()).isEqualTo(newKey);
-
+        assertThat(updatedSecret.getKey()).isEqualTo(newKey.getEncoded());
+        assertThat(updatedSecret.getAlgorithm()).isEqualTo(newKey.getAlgorithm());
     }
 
     /**
@@ -174,23 +197,5 @@ class RpkSecretTest {
 
         assertThat(updatedSecret.getAlgorithm()).isEqualTo(alg);
         assertThat(updatedSecret.getKey()).isEqualTo(key);
-    }
-
-    /**
-     * Verifies toStringHelper functionality.
-     */
-    @Test
-    void testToStringHelper() {
-
-        final RpkSecret secret = new RpkSecret();
-        secret.setId(id);
-        secret.setAlgorithm(alg);
-        secret.setKey(key);
-
-        final String outputString = secret.toStringHelper().toString();
-
-        assertThat(outputString).isEqualTo(String.format(
-                "RpkSecret{enabled=null, notBefore=null, notAfter=null, comment=null, key=%s, algorithm=%s}",
-                Arrays.toString(key), alg));
     }
 }

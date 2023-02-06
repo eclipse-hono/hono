@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,6 +41,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.CommonSecret;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -476,7 +477,8 @@ public interface CredentialsServiceTestBase {
                                 tenantId,
                                 deviceId,
                                 List.of(pwdCredentials, otherPwdCredentials, pskCredentials, x509Credentials,
-                                        X509CertificateCredential.fromCertificate(clientCert.result())),
+                                        X509CertificateCredential.fromCertificate(clientCert.result()),
+                                        Credentials.createRPKCredential("rpk-id", clientCert.result())),
                                 Optional.empty(),
                                 NoopSpan.INSTANCE);
                         })
@@ -494,7 +496,7 @@ public interface CredentialsServiceTestBase {
                                 // THEN the response has the expected etag
                                 assertResourceVersion(response);
                                 // and contains the expected number of credentials
-                                assertThat(response.getPayload()).hasSize(5);
+                                assertThat(response.getPayload()).hasSize(6);
                                 assertReadCredentialsResponseProperties(response.getPayload());
                             });
                             // WHEN looking up X.509 credentials via the Credentials API
@@ -557,7 +559,7 @@ public interface CredentialsServiceTestBase {
                             // WHEN looking up PSK credentials via the Credentials API
                             return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "psk-id");
                         })
-                        .onComplete(ctx.succeeding(response -> {
+                        .compose(response -> {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
@@ -569,6 +571,26 @@ public interface CredentialsServiceTestBase {
                                         deviceId,
                                         CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
                                         "psk-id");
+                                final JsonArray secrets = response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS);
+                                secrets.stream()
+                                    .map(JsonObject.class::cast)
+                                    .forEach(secret -> assertThat(secret.containsKey(CredentialsConstants.FIELD_SECRETS_KEY)).isTrue());
+                            });
+                            // WHEN looking up RPK credentials via the Credentials API
+                            return getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY, "rpk-id");
+                        })
+                        .onComplete(ctx.succeeding(response -> {
+                            ctx.verify(() -> {
+                                assertThat(response.isOk()).isTrue();
+                                // THEN the response contains a cache directive
+                                assertThat(response.getCacheDirective()).isNotNull();
+                                assertThat(response.getCacheDirective().isCachingAllowed()).isFalse();
+                                // and the expected properties
+                                assertGetCredentialsResponseProperties(
+                                        response.getPayload(),
+                                        deviceId,
+                                        CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY,
+                                        "rpk-id");
                                 final JsonArray secrets = response.getPayload().getJsonArray(CredentialsConstants.FIELD_SECRETS);
                                 secrets.stream()
                                     .map(JsonObject.class::cast)
@@ -749,6 +771,55 @@ public interface CredentialsServiceTestBase {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED);
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that {@link CredentialsManagementService#updateCredentials(String, String, List, Optional, io.opentracing.Span)}
+     * returns a 400 status code if the request RPK credentials with an invalid public key.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateCredentialsFailsForInvalidSecret(final VertxTestContext ctx) {
+        final var tenantId = "tenant";
+        final var deviceId = UUID.randomUUID().toString();
+        final var authId = UUID.randomUUID().toString();
+        final var invalidSecret = new CommonSecret() {
+            @Override
+            protected void mergeProperties(final CommonSecret otherSecret) {
+            }
+
+            @Override
+            protected void checkValidityOfSpecificProperties() {
+                // validation of this secret will fail
+                throw new IllegalStateException();
+            }
+        };
+        final var credentials = new CommonCredential(authId) {
+            @Override
+            public List<? extends CommonSecret> getSecrets() {
+                return List.of(invalidSecret);
+            }
+            @Override
+            public String getType() {
+                return "some-type";
+            }
+        };
+
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .onFailure(ctx::failNow)
+            .compose(result -> getCredentialsManagementService().updateCredentials(
+                    tenantId,
+                    deviceId,
+                    List.of(credentials),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 });
                 ctx.completeNow();
             }));

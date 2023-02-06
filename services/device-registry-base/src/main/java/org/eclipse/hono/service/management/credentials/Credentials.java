@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@
 package org.eclipse.hono.service.management.credentials;
 
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.List;
 import java.util.OptionalInt;
@@ -38,6 +40,31 @@ public final class Credentials {
      */
     public static int getMaxBcryptCostFactor() {
         return MAX_BCRYPT_COST_FACTOR;
+    }
+
+    /**
+     * Creates RawPublicKey type based credentials for a certificate.
+     *
+     * @param authId The authentication to use.
+     * @param cert The certificate to extract the public key from.
+     * @return The credentials.
+     */
+    public static RpkCredential createRPKCredential(final String authId, final X509Certificate cert) {
+        return createRPKCredential(authId, cert.getPublicKey());
+    }
+
+    /**
+     * Creates RawPublicKey type based credentials for a public key.
+     *
+     * @param authId The authentication to use.
+     * @param key The raw public key.
+     * @return The credentials.
+     */
+    public static RpkCredential createRPKCredential(final String authId, final PublicKey key) {
+        final var secret = new RpkSecret()
+                .setKey(key.getEncoded())
+                .setAlgorithm(key.getAlgorithm());
+        return new RpkCredential(authId, List.of(secret));
     }
 
     /**
