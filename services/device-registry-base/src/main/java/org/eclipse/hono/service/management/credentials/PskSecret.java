@@ -62,7 +62,7 @@ public class PskSecret extends CommonSecret {
     @Override
     protected ToStringHelper toStringHelper() {
         return super.toStringHelper()
-                .add("key", this.key);
+                .add(RegistryManagementConstants.FIELD_SECRETS_KEY, this.key);
     }
 
     @Override
