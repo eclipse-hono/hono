@@ -16,6 +16,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed. For a subscription with such a
 topic name, only commands for the gateway itself are forwarded, not commands for devices, that the gateway acts on
 behalf of.
+* The LoRaWAN adapter now transforms all devEUIs hex encoded and uppercase. All LoRaWAN devices should therefor be
+registered uppercase and hex encoded.
 
 ## 2.2.0
 

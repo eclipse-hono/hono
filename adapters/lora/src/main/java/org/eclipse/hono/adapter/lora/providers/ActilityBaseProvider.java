@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,13 +48,14 @@ abstract class ActilityBaseProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected String getDevEui(final JsonObject loraMessage) {
+    protected byte[] getDevEui(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
         return getRootObject(loraMessage)
                 .map(root -> root.getValue(FIELD_ACTILITY_DEVICE_EUI))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
+                .map(LoraUtils::convertFromHexToBytes)
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device EUI property"));
     }
 
