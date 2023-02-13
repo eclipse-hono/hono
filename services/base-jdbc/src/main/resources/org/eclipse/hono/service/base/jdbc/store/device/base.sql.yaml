@@ -172,7 +172,7 @@ countDevicesOfTenant: |
    WHERE
       tenant_id=:tenant_id
 
-getDevicesOfTenant: |
+findDevicesOfTenant: |
    SELECT * 
    FROM %s
    WHERE

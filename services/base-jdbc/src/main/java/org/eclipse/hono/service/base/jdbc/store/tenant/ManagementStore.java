@@ -66,7 +66,7 @@ public class ManagementStore extends AbstractTenantStore {
     private final Statement deleteStatement;
     private final Statement deleteVersionedStatement;
 
-    private final Statement getTenantsStatement;
+    private final Statement findTenantsStatement;
 
     /**
      * Create a new instance.
@@ -131,7 +131,7 @@ public class ManagementStore extends AbstractTenantStore {
                         "expected_version"
                 );
 
-        this.getTenantsStatement = cfg.getRequiredStatement("getTenants")
+        this.findTenantsStatement = cfg.getRequiredStatement("findTenants")
             .validateParameters(
                 "page_size",
                 "page_offset");    }
@@ -463,9 +463,10 @@ public class ManagementStore extends AbstractTenantStore {
      */
     public Future<SearchResult<TenantWithId>> find(final int pageSize, final int pageOffset, final SpanContext spanContext) {
 
-        final var expanded = this.getTenantsStatement.expand(map -> {
+        final var expanded = this.findTenantsStatement.expand(map -> {
             map.put("page_size", pageSize);
-            map.put("page_offset", pageOffset); });
+            map.put("page_offset", pageOffset);
+        });
 
         final Span span = tracer.buildSpan("find Tenants")
             .addReference(References.CHILD_OF, spanContext)

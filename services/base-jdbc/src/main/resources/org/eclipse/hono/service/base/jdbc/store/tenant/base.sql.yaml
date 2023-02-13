@@ -99,7 +99,7 @@ updateVersioned: |
    AND
       version=:expected_version
 
-getTenants: |
+findTenants: |
    SELECT
       *
    FROM

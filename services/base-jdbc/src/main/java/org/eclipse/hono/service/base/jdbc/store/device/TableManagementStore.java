@@ -39,7 +39,6 @@ import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -86,7 +85,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     private final Statement countDevicesOfTenantStatement;
 
-    private final Statement getDevicesStatement;
+    private final Statement findDevicesStatement;
 
     /**
      * Create a new instance.
@@ -190,8 +189,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .validateParameters(
                         "tenant_id");
 
-        this.getDevicesStatement = cfg
-                .getRequiredStatement("getDevicesOfTenant")
+        this.findDevicesStatement = cfg
+                .getRequiredStatement("findDevicesOfTenant")
                 .validateParameters(
                         "tenant_id",
                         "page_size",
@@ -897,7 +896,7 @@ public class TableManagementStore extends AbstractDeviceStore {
             final SpanContext spanContext) {
 
         final Promise<SearchResult<DeviceWithId>> result = Promise.promise();
-        final var expanded = this.getDevicesStatement.expand(map -> {
+        final var expanded = this.findDevicesStatement.expand(map -> {
             map.put("tenant_id", tenantId);
             map.put("page_size", pageSize);
             map.put("page_offset", pageOffset);
@@ -919,9 +918,9 @@ public class TableManagementStore extends AbstractDeviceStore {
                             "rows", entries.size()));
                     final List<DeviceWithId> list = new ArrayList<>();
                     for (var entry : entries) {
-                        final DeviceDto deviceDto = entry.mapTo(DeviceDto.class);
                         final var id = entry.getString("device_id");
-                        list.add(DeviceWithId.from(id, deviceDto.getData()));
+                        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
+                        list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
                     }
                     final SearchResult<DeviceWithId> searchResult = new SearchResult<>(list.size(), list);
                     return searchResult;
