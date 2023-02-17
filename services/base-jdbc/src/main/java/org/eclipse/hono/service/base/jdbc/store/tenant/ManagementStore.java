@@ -32,7 +32,6 @@ import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -468,8 +467,7 @@ public class ManagementStore extends AbstractTenantStore {
             map.put("page_offset", pageOffset);
         });
 
-        final Span span = tracer.buildSpan("find Tenants")
-            .addReference(References.CHILD_OF, spanContext)
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find tenants", getClass().getSimpleName())
             .start();
 
         return expanded
@@ -484,11 +482,10 @@ public class ManagementStore extends AbstractTenantStore {
                 for (var entry : entries) {
                     final var id = entry.getString("tenant_id");
                     final var tenant = Json.decodeValue(entry.getString("data"), Tenant.class);
-                    final var version = Optional.ofNullable(entry.getString("version"));
                     list.add(TenantWithId.from(id, tenant));
                 }
-                final SearchResult<TenantWithId> searchResult = new SearchResult<>(list.size(), list);
-                return searchResult;
-            });
+                return new SearchResult<>(list.size(), list);
+            })
+            .onComplete(x -> span.finish());
     }
 }

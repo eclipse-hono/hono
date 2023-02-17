@@ -45,7 +45,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -895,38 +894,40 @@ public class TableManagementStore extends AbstractDeviceStore {
     public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset,
             final SpanContext spanContext) {
 
-        final Promise<SearchResult<DeviceWithId>> result = Promise.promise();
+
         final var expanded = this.findDevicesStatement.expand(map -> {
             map.put("tenant_id", tenantId);
             map.put("page_size", pageSize);
             map.put("page_offset", pageOffset);
         });
 
-        final Span span = tracer.buildSpan("find devices")
-                .addReference(References.CHILD_OF, spanContext)
-                .start();
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find devices", getClass().getSimpleName())
+            .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+            .start();
 
-        return expanded
+        final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context());
 
-                .trace(this.tracer, span.context())
-                .query(this.client)
+        return deviceCountFuture.compose(
+                count -> expanded
+                        .trace(this.tracer, span.context())
+                        .query(this.client)
 
-                .map(r -> {
-                    final var entries = r.getRows(true);
-                    span.log(Map.of(
-                            "event", "read result",
-                            "rows", entries.size()));
-                    final List<DeviceWithId> list = new ArrayList<>();
-                    for (var entry : entries) {
-                        final var id = entry.getString("device_id");
-                        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
-                        list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
-                    }
-                    final SearchResult<DeviceWithId> searchResult = new SearchResult<>(list.size(), list);
-                    return searchResult;
+                        .map(r -> {
+                            final var entries = r.getRows(true);
+                            span.log(Map.of(
+                                    "event", "read result",
+                                    "rows", entries.size()));
+                            final List<DeviceWithId> list = new ArrayList<>();
+                            for (var entry : entries) {
+                                final var id = entry.getString("device_id");
+                                final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
+                                list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
+                            }
+                            return new SearchResult<>(count, list);
 
-                });
-
+                        }))
+            .onComplete(x -> span.finish());
     }
-
 }
+
+
