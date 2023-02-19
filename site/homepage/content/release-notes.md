@@ -4,11 +4,15 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.3.0
+## 2.3.0 (not released yet)
 
 ### New features
 
 * Hono services and adapters could be started locally (not in containers) for development/test purposes.
+* The MQTT adapter now has experimental support for authenticating devices using the JWT based authentication scheme
+  employed by Google IoT Core.
+* The protocol adapters now have experimental support for using Google Pub/Sub as the messaging infrastructure.
+  Support is currently limited to publishing downstream events and telemetry messages to Pub/Sub.
 
 ### Fixes & Enhancements
 
@@ -16,8 +20,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed. For a subscription with such a
 topic name, only commands for the gateway itself are forwarded, not commands for devices, that the gateway acts on
 behalf of.
-* The LoRaWAN adapter now transforms all devEUIs hex encoded and uppercase. All LoRaWAN devices should therefor be
-registered uppercase and hex encoded.
+* The LoRaWAN adapter now transforms all devEUIs hex encoded and upper case. All LoRaWAN devices should therefore be
+  registered upper case and hex encoded.
 
 ## 2.2.0
 
