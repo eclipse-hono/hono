@@ -526,7 +526,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     }
 
-    private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint,
+    private Future<DeviceUser> handleConnectionRequest(final MqttEndpoint endpoint,
             final AtomicBoolean connectionClosedPrematurely, final Span currentSpan) {
 
         // the ConnectionLimitManager is null in some unit tests
@@ -542,9 +542,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    private Future<Device> handleConnectionRequestResult(
+    private Future<DeviceUser> handleConnectionRequestResult(
             final MqttEndpoint endpoint,
-            final Device authenticatedDevice,
+            final DeviceUser authenticatedDevice,
             final AtomicBoolean connectionClosedPrematurely,
             final Span currentSpan) {
 
@@ -554,7 +554,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     authenticatedDevice.getDeviceId());
         }
 
-        final Promise<Device> result = Promise.promise();
+        final Promise<DeviceUser> result = Promise.promise();
 
         if (connectionClosedPrematurely.get()) {
             log.debug("abort handling connection request, connection already closed [clientId: {}]",
@@ -607,7 +607,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @param endpoint The MQTT endpoint representing the client.
      */
-    private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
+    private Future<DeviceUser> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
 
         registerEndpointHandlers(endpoint, null, OptionalInt.empty());
         metrics.incrementUnauthenticatedConnections();
@@ -615,7 +615,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return Future.succeededFuture(null);
     }
 
-    private Future<Device> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
+    private Future<DeviceUser> handleEndpointConnectionWithAuthentication(final MqttEndpoint endpoint,
             final AtomicBoolean connectionClosedPrematurely, final Span currentSpan) {
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, currentSpan);
@@ -635,7 +635,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     }
                     registerEndpointHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority());
                     metrics.incrementConnections(authenticatedDevice.getTenantId());
-                    return Future.succeededFuture((Device) authenticatedDevice);
+                    return Future.succeededFuture(authenticatedDevice);
                 })
                 .recover(t -> {
                     if (authAttempt.failed()) {
@@ -1077,7 +1077,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    private void registerEndpointHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    private void registerEndpointHandlers(
+            final MqttEndpoint endpoint,
+            final DeviceUser authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
 
         final MqttDeviceEndpoint deviceEndpoint = createMqttDeviceEndpoint(endpoint, authenticatedDevice,
@@ -1085,7 +1087,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         deviceEndpoint.registerHandlers();
     }
 
-    final MqttDeviceEndpoint createMqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    final MqttDeviceEndpoint createMqttDeviceEndpoint(
+            final MqttEndpoint endpoint,
+            final DeviceUser authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
         final MqttDeviceEndpoint mqttDeviceEndpoint = new MqttDeviceEndpoint(endpoint, authenticatedDevice,
                 traceSamplingPriority);
@@ -1129,7 +1133,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         /**
          * The authenticated identity of the device or {@code null} if the device has not been authenticated.
          */
-        private final Device authenticatedDevice;
+        private final DeviceUser authenticatedDevice;
         private final OptionalInt traceSamplingPriority;
         private final Map<Subscription.Key, Pair<CommandSubscription, ProtocolAdapterCommandConsumer>> commandSubscriptions = new ConcurrentHashMap<>();
         private final Map<Subscription.Key, ErrorSubscription> errorSubscriptions = new HashMap<>();
@@ -1146,7 +1150,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          *                              created in the context of this endpoint.
          * @throws NullPointerException if endpoint or traceSamplingPriority is {@code null}.
          */
-        public MqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice, final OptionalInt traceSamplingPriority) {
+        public MqttDeviceEndpoint(final MqttEndpoint endpoint, final DeviceUser authenticatedDevice, final OptionalInt traceSamplingPriority) {
             this.endpoint = Objects.requireNonNull(endpoint);
             this.authenticatedDevice = authenticatedDevice;
             this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
@@ -1157,7 +1161,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          *
          * @return The authenticated device or {@code null}.
          */
-        protected final Device getAuthenticatedDevice() {
+        protected final DeviceUser getAuthenticatedDevice() {
             return authenticatedDevice;
         }
 

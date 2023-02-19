@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -106,7 +105,6 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         getCredentialsForDevice(deviceCredentials, currentSpan.context())
         .recover(t -> Future.failedFuture(mapNotFoundToBadCredentialsException(t)))
         .compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord, currentSpan.context()))
-        .map(device -> new DeviceUser(device.getTenantId(), device.getDeviceId()))
         .onComplete(authAttempt -> {
             if (authAttempt.succeeded()) {
                 currentSpan.log("successfully authenticated device");
@@ -144,7 +142,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      *         credentials have been validated successfully. Otherwise, the
      *         future is failed with a {@link ServiceInvocationException}.
      */
-    private Future<Device> validateCredentials(
+    private Future<DeviceUser> validateCredentials(
             final T deviceCredentials,
             final CredentialsObject credentialsOnRecord,
             final SpanContext spanContext) {
@@ -155,7 +153,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
                 .withTag(TracingHelper.TAG_CREDENTIALS_TYPE.getKey(), deviceCredentials.getType())
                 .start();
 
-        final Promise<Device> result = Promise.promise();
+        final Promise<DeviceUser> result = Promise.promise();
         if (!deviceCredentials.getAuthId().equals(credentialsOnRecord.getAuthId())) {
             currentSpan.log(String.format(
                     "Credentials service returned wrong credentials-on-record [auth-id: %s]",
@@ -173,16 +171,14 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             doValidateCredentials(deviceCredentials, credentialsOnRecord).onComplete(result);
         }
         return result.future()
-                .map(device -> {
+                .onSuccess(authenticatedDevice -> {
                     currentSpan.log("validation of credentials succeeded");
                     currentSpan.finish();
-                    return device;
                 })
-                .recover(t -> {
+                .onFailure(t -> {
                     currentSpan.log("validation of credentials failed");
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
-                    return Future.failedFuture(t);
                 });
     }
 
@@ -196,7 +192,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      *         credentials have been validated successfully. Otherwise, the
      *         future is failed with a {@link ServiceInvocationException}.
      */
-    protected abstract Future<Device> doValidateCredentials(
+    protected abstract Future<DeviceUser> doValidateCredentials(
             T deviceCredentials,
             CredentialsObject credentialsOnRecord);
 

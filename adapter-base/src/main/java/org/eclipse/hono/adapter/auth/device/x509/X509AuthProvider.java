@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,8 @@ import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 
@@ -91,9 +91,9 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
     }
 
     @Override
-    protected Future<Device> doValidateCredentials(
+    protected Future<DeviceUser> doValidateCredentials(
             final SubjectDnCredentials deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
-        return Future.succeededFuture(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+        return Future.succeededFuture(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
     }
 }

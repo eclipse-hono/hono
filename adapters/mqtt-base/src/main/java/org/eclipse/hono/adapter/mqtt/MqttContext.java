@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.util.Constants;
@@ -45,7 +45,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     private final MqttPublishMessage message;
     private final MqttEndpoint deviceEndpoint;
-    private final Device authenticatedDevice;
+    private final DeviceUser authenticatedDevice;
 
     // --- fields that are effectively final, may be null if topic is invalid ---
     private String contentType;
@@ -109,7 +109,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
             final MqttPublishMessage message,
             final MqttEndpoint deviceEndpoint,
             final Span span,
-            final Device authenticatedDevice) {
+            final DeviceUser authenticatedDevice) {
         super(span, authenticatedDevice);
         this.message = Objects.requireNonNull(message);
         this.deviceEndpoint = Objects.requireNonNull(deviceEndpoint);
@@ -149,7 +149,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
             final MqttPublishMessage publishedMessage,
             final MqttEndpoint deviceEndpoint,
             final Span span,
-            final Device authenticatedDevice) {
+            final DeviceUser authenticatedDevice) {
 
         Objects.requireNonNull(publishedMessage);
         Objects.requireNonNull(deviceEndpoint);
@@ -247,7 +247,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      * @return The identity or {@code null} if the device has not
      *         been authenticated.
      */
-    public Device authenticatedDevice() {
+    public DeviceUser authenticatedDevice() {
         return authenticatedDevice;
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.stream.Stream;
 
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -42,8 +42,8 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  */
 public class ErrorSubscriptionTest {
 
-    private final Device device = new Device("tenant", "device");
-    private final Device gw = new Device("tenant", "gw");
+    private final DeviceUser device = new DeviceUser("tenant", "device");
+    private final DeviceUser gw = new DeviceUser("tenant", "gw");
 
     static Stream<String> endpointNames() {
         return Stream.of(getErrorEndpoint(), getErrorEndpointShort());

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.interceptors.MessageInterceptorAdapter;
 import org.eclipse.californium.core.network.stack.BlockwiseLayer;
 import org.eclipse.californium.elements.auth.AbstractExtensiblePrincipal;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Tracer;
@@ -57,7 +57,7 @@ public class InternalErrorTracer extends MessageInterceptorAdapter {
                     .map(AbstractExtensiblePrincipal::getExtendedInfo)
                     .ifPresent(info -> {
                         final String authId = info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
-                        final Device deviceInfo = info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class);
+                        final var deviceInfo = info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, DeviceUser.class);
                         spanBuilder
                             .withTag(TracingHelper.TAG_AUTH_ID, authId)
                             .withTag(TracingHelper.TAG_DEVICE_ID, deviceInfo.getDeviceId())

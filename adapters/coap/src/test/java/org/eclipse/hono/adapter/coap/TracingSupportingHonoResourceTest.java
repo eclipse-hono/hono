@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,8 +36,8 @@ import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
@@ -121,8 +121,8 @@ public class TracingSupportingHonoResourceTest {
             }
 
             private CoapContext createCoapContext(final CoapExchange coapExchange, final Span span) {
-                return CoapContext.fromRequest(coapExchange, new Device(TENANT_ID, DEVICE_ID),
-                        new Device(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID, span);
+                return CoapContext.fromRequest(coapExchange, new DeviceUser(TENANT_ID, DEVICE_ID),
+                        new DeviceUser(TENANT_ID, AUTHENTICATED_DEVICE_ID), AUTH_ID, span);
             }
         };
     }

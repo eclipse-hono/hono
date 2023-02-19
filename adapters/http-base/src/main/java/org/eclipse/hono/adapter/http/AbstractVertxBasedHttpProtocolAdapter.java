@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,6 @@ import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
@@ -595,7 +594,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
 
         final MetricsTags.QoS qos = getQoSLevel(endpoint, ctx.getRequestedQos());
-        final Device authenticatedDevice = ctx.getAuthenticatedDevice();
+        final var authenticatedDevice = ctx.getAuthenticatedDevice();
         final String gatewayId = authenticatedDevice != null && !deviceId.equals(authenticatedDevice.getDeviceId())
                 ? authenticatedDevice.getDeviceId()
                 : null;
@@ -1224,7 +1223,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, responseStatus);
 
-        final Device authenticatedDevice = ctx.getAuthenticatedDevice();
+        final var authenticatedDevice = ctx.getAuthenticatedDevice();
         final Span currentSpan = TracingHelper
                 .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)

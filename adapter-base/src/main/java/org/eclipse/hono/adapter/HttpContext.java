@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -244,15 +243,12 @@ public final class HttpContext implements TelemetryExecutionContext {
      * {@inheritDoc}
      */
     @Override
-    public Device getAuthenticatedDevice() {
+    public DeviceUser getAuthenticatedDevice() {
 
-        return Optional.ofNullable(routingContext.user()).map(user -> {
-            if (DeviceUser.class.isInstance(user)) {
-                return (Device) user;
-            } else {
-                return null;
-            }
-        }).orElse(null);
+        return Optional.ofNullable(routingContext.user())
+                .filter(DeviceUser.class::isInstance)
+                .map(DeviceUser.class::cast)
+                .orElse(null);
     }
 
     /**

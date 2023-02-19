@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,10 +36,10 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -97,7 +97,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
+        final DeviceUser authenticatedDevice = new DeviceUser("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context)
@@ -141,7 +141,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         // WHEN a device publishes a non-empty message that lacks a content-format option
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, (Integer) null);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
+        final DeviceUser authenticatedDevice = new DeviceUser("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context)
@@ -184,7 +184,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
 
         // WHEN a device publishes an empty message that is not marked as an empty notification
         final CoapExchange coapExchange = newCoapExchange(null, Type.NON, MediaTypeRegistry.APPLICATION_OCTET_STREAM);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
+        final DeviceUser authenticatedDevice = new DeviceUser("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context)
@@ -226,7 +226,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final OptionSet options = new OptionSet();
         options.addUriQuery(CoapContext.PARAM_EMPTY_CONTENT);
         final CoapExchange coapExchange = newCoapExchange(null, Type.NON, options);
-        final Device authenticatedDevice = new Device("my-tenant", "the-device");
+        final DeviceUser authenticatedDevice = new DeviceUser("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
         resource.handlePostRequest(context);
@@ -265,7 +265,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         // WHEN a device publishes an telemetry message
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.handlePostRequest(context);
@@ -306,7 +306,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         // WHEN a device publishes an telemetry message with QoS 1
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.handlePostRequest(context);
@@ -352,7 +352,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         when(adapter.checkMessageLimit(any(TenantObject.class), anyLong(), any())).thenReturn(Future.failedFuture(new ClientErrorException(429)));
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.handlePostRequest(context)
@@ -446,8 +446,8 @@ public class TelemetryResourceTest extends ResourceTestBase {
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device originDevice = new Device(tenantId, deviceId);
-        final Device authenticatedDevice = isAuthenticated ? originDevice : null;
+        final var originDevice = new DeviceUser(tenantId, deviceId);
+        final DeviceUser authenticatedDevice = isAuthenticated ? originDevice : null;
         final CoapContext context = CoapContext.fromRequest(coapExchange, originDevice, authenticatedDevice, deviceId, span);
 
         resource.handlePostRequest(context)
@@ -529,7 +529,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         final Future<Void> result = resource.handlePostRequest(context);

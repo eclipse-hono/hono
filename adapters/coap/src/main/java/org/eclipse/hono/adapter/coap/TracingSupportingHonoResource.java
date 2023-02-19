@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,9 +28,9 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -106,14 +106,14 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param exchange The CoAP exchange with the authenticated device's principal.
      * @return The authenticated device or {@code null} if the request has not been authenticated.
      */
-    protected static Device getAuthenticatedDevice(final CoapExchange exchange) {
+    protected static DeviceUser getAuthenticatedDevice(final CoapExchange exchange) {
 
         return Optional.ofNullable(exchange.advanced().getRequest().getSourceContext())
                 .map(EndpointContext::getPeerIdentity)
                 .filter(ExtensiblePrincipal.class::isInstance)
                 .map(ExtensiblePrincipal.class::cast)
                 .map(ExtensiblePrincipal::getExtendedInfo)
-                .map(info -> info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class))
+                .map(info -> info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, DeviceUser.class))
                 .orElse(null);
     }
 

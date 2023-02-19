@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
@@ -65,7 +65,7 @@ public class CoapContextTest {
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, -1L); // never send separate ACK
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, timeout);
         verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
@@ -81,7 +81,7 @@ public class CoapContextTest {
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 200);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(200L), VertxMockSupport.anyHandler());
@@ -101,7 +101,7 @@ public class CoapContextTest {
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
 
         // WHEN a device sends a request that contains a "piggy" query parameter
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapExchange exchange = mock(CoapExchange.class);
         when(exchange.getQueryParameter(eq(CoapContext.PARAM_PIGGYBACKED))).thenReturn("true");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
@@ -124,7 +124,7 @@ public class CoapContextTest {
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
 
         // WHEN a device sends a request that contains a "piggy" query parameter
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapExchange exchange = mock(CoapExchange.class);
         when(exchange.getQueryParameter(eq(CoapContext.PARAM_PIGGYBACKED))).thenReturn("true");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
@@ -142,7 +142,7 @@ public class CoapContextTest {
         final CoapExchange exchange = mock(CoapExchange.class);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
@@ -157,7 +157,7 @@ public class CoapContextTest {
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, "not-a-number");
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
-        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());

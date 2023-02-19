@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -140,7 +140,7 @@ public class DeviceRegistryBasedPskStore implements AdvancedPskStore {
                         span.log("successfully retrieved PSK for device");
                         // set AdditionalInfo as customArgument here
                         final AdditionalInfo info = DeviceInfoSupplier.createDeviceInfo(
-                                new Device(handshakeIdentity.getTenantId(), credentials.getDeviceId()),
+                                new DeviceUser(handshakeIdentity.getTenantId(), credentials.getDeviceId()),
                                 handshakeIdentity.getAuthId());
                         return new PskSecretResult(cid, identity, key, info);
                     }

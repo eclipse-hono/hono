@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,9 +20,9 @@ import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -125,7 +125,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
     }
 
     @Override
-    protected Future<Device> doValidateCredentials(
+    protected Future<DeviceUser> doValidateCredentials(
             final UsernamePasswordCredentials deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
 
@@ -133,13 +133,13 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
         if (currentContext == null) {
             return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
         } else {
-            final Promise<Device> result = Promise.promise();
+            final Promise<DeviceUser> result = Promise.promise();
             currentContext.executeBlocking(blockingCodeHandler -> {
                 log.debug("validating password hash on vert.x worker thread [{}]", Thread.currentThread().getName());
                 final boolean isValid = credentialsOnRecord.getCandidateSecrets().stream()
                         .anyMatch(candidateSecret -> pwdEncoder.matches(deviceCredentials.getPassword(), candidateSecret));
                 if (isValid) {
-                    blockingCodeHandler.complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+                    blockingCodeHandler.complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
                 } else {
                     blockingCodeHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
                 }

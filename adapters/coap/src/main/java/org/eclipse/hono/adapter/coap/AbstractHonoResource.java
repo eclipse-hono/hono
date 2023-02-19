@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,12 +29,12 @@ import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -146,7 +146,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                     "request URI must contain device ID"));
                         } else if (authenticatedDevice.getTenantId().equals(tenantId)) {
                             result.complete(new RequestDeviceAndAuth(
-                                    new Device(tenantId, requestedResource.getResourceId()),
+                                    new DeviceUser(tenantId, requestedResource.getResourceId()),
                                     TracingSupportingHonoResource.getAuthId(exchange),
                                     authenticatedDevice));
                         } else {
@@ -163,7 +163,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                     "request URI must contain tenant and device ID"));
                         } else {
                             result.complete(new RequestDeviceAndAuth(
-                                    new Device(requestedResource.getTenantId(), requestedResource.getResourceId()),
+                                    new DeviceUser(requestedResource.getTenantId(), requestedResource.getResourceId()),
                                     null,
                                     null));
                         }

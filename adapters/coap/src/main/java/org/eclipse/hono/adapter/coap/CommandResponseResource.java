@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import java.util.Optional;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.network.Exchange;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -125,8 +124,8 @@ public class CommandResponseResource extends AbstractHonoResource {
     public final Future<Void> uploadCommandResponseMessage(final CoapContext context) {
         Objects.requireNonNull(context);
 
-        final Device device = context.getOriginDevice();
-        final Device authenticatedDevice = context.getAuthenticatedDevice();
+        final var device = context.getOriginDevice();
+        final var authenticatedDevice = context.getAuthenticatedDevice();
 
         if (!context.isConfirmable()) {
             return Future.failedFuture(new ClientErrorException(

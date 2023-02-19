@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAut
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
@@ -149,7 +148,7 @@ public final class SigfoxProtocolAdapter
             return;
         }
 
-        final Device gatewayDevice = ctx.getAuthenticatedDevice();
+        final var gatewayDevice = ctx.getAuthenticatedDevice();
 
         final String deviceTenant = gatewayDevice.getTenantId();
         final String requestTenant = ctx.getRoutingContext().pathParam(SIGFOX_PARAM_TENANT);

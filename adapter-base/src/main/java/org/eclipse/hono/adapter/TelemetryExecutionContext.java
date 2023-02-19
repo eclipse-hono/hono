@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -35,7 +35,7 @@ public interface TelemetryExecutionContext extends ExecutionContext {
      *
      * @return The device or {@code null} if the device has not been authenticated.
      */
-    Device getAuthenticatedDevice();
+    DeviceUser getAuthenticatedDevice();
 
     /**
      * Determines if the message that is processed in this context has been received from

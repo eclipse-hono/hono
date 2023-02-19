@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -56,7 +56,6 @@ import org.eclipse.hono.adapter.limiting.ConnectionLimitManager;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.CommandContext;
@@ -71,6 +70,7 @@ import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNot
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -220,9 +220,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnAdapter(properties);
 
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
@@ -411,7 +411,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN a gateway uploads an event on behalf of a device of another tenant
-        final Device gateway = new Device(TEST_TENANT_ID, "gw");
+        final var gateway = new DeviceUser(TEST_TENANT_ID, "gw");
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(false); // AT LEAST ONCE
         final String to = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, "other-tenant", TEST_DEVICE).toString();
@@ -446,7 +446,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN a device uploads an event using a presettled message
-        final Device gateway = new Device(TEST_TENANT_ID, "device");
+        final var gateway = new DeviceUser(TEST_TENANT_ID, "device");
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(delivery.remotelySettled()).thenReturn(true); // AT MOST ONCE
         final String to = ResourceIdentifier.fromString(EventConstants.EVENT_ENDPOINT).toString();
@@ -507,7 +507,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // GIVEN an AMQP adapter and a device
         givenAnAdapter(properties);
         givenAnEventSenderForAnyTenant();
-        final Device device = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var device = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
 
         // for which the request to get a registration assertion as a gateway fails
         when(registrationClient.assertRegistration(eq(TEST_TENANT_ID), anyString(), eq(TEST_DEVICE), (SpanContext) any()))
@@ -550,10 +550,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 any())).thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         final Record attachments = mock(Record.class);
-        when(attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class)).thenReturn(authenticatedDevice);
+        when(attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class)).thenReturn(authenticatedDevice);
         when(deviceConnection.attachments()).thenReturn(attachments);
         adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
 
@@ -623,9 +623,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 
         // to which a device is connected
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
@@ -882,9 +882,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
@@ -1152,9 +1152,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         adapter.onConnectRequest(deviceConnection);
@@ -1184,9 +1184,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // AND given a tenant for which the AMQP Adapter is disabled
         givenAConfiguredTenant(TEST_TENANT_ID, false);
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         record.set(AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, "BUMLUX_CIPHER");
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
@@ -1219,9 +1219,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN the adapter's connection limit exceeds
         when(connectionLimitManager.isLimitExceeded()).thenReturn(true);
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         record.set(AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, "BUMLUX_CIPHER");
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
@@ -1292,7 +1292,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testDeviceConnectionIsClosedOnDeviceDeletedNotification() {
 
-        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new DeviceChangeNotification(
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(new DeviceChangeNotification(
                 LifecycleChange.DELETE, TEST_TENANT_ID, TEST_DEVICE, Instant.now(), true));
     }
 
@@ -1303,7 +1303,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testDeviceConnectionIsClosedOnDeviceDisabledNotification() {
 
-        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new DeviceChangeNotification(
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(new DeviceChangeNotification(
                 LifecycleChange.UPDATE, TEST_TENANT_ID, TEST_DEVICE, Instant.now(), false));
     }
 
@@ -1314,7 +1314,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testDeviceConnectionIsClosedOnTenantDeletedNotification() {
 
-        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(new TenantChangeNotification(
                 LifecycleChange.DELETE, TEST_TENANT_ID, Instant.now(), true, false));
     }
 
@@ -1325,7 +1325,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     @Test
     public void testDeviceConnectionIsClosedOnTenantDisabledNotification() {
 
-        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(new TenantChangeNotification(
                 LifecycleChange.UPDATE, TEST_TENANT_ID, Instant.now(), false, false));
     }
 
@@ -1358,9 +1358,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN a device connects
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
@@ -1412,9 +1412,9 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 
         // to which a device is connected
-        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final var authenticatedDevice = new DeviceUser(TEST_TENANT_ID, TEST_DEVICE);
         final Record record = new RecordImpl();
-        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
         final ArgumentCaptor<Handler<ProtonConnection>> connectHandler = VertxMockSupport.argumentCaptorHandler();
@@ -1491,10 +1491,10 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         return sender;
     }
 
-    private ProtonConnection getConnection(final Device device) {
+    private ProtonConnection getConnection(final DeviceUser device) {
         final ProtonConnection conn = mock(ProtonConnection.class);
         final Record record = mock(Record.class);
-        when(record.get(anyString(), eq(Device.class))).thenReturn(device);
+        when(record.get(anyString(), eq(DeviceUser.class))).thenReturn(device);
         when(conn.attachments()).thenReturn(record);
         return conn;
     }

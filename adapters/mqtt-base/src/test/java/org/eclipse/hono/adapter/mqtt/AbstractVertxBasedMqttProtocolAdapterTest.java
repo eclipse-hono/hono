@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,7 +42,6 @@ import javax.net.ssl.SSLSession;
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -933,7 +932,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testDeviceConnectionIsClosedOnDeviceDeletedNotification(final VertxTestContext ctx) {
 
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new DeviceChangeNotification(
                 LifecycleChange.DELETE, "tenant", "deviceId", Instant.now(), true));
     }
@@ -947,7 +946,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testDeviceConnectionIsClosedOnDeviceDisabledNotification(final VertxTestContext ctx) {
 
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new DeviceChangeNotification(
                 LifecycleChange.UPDATE, "tenant", "deviceId", Instant.now(), false));
     }
@@ -961,7 +960,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testDeviceConnectionIsClosedOnTenantDeletedNotification(final VertxTestContext ctx) {
 
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
                 LifecycleChange.DELETE, "tenant", Instant.now(), true, false));
     }
@@ -975,7 +974,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testDeviceConnectionIsClosedOnTenantDisabledNotification(final VertxTestContext ctx) {
 
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
                 LifecycleChange.UPDATE, "tenant", Instant.now(), false, false));
     }
@@ -989,13 +988,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     @Test
     public void testDeviceConnectionIsClosedOnAllDevicesOfTenantDeletedNotification(final VertxTestContext ctx) {
 
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device,
                 new AllDevicesOfTenantDeletedNotification("tenant", Instant.now()));
     }
 
     private void testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(final VertxTestContext ctx,
-            final Device device, final AbstractNotification notification) {
+            final DeviceUser device, final AbstractNotification notification) {
 
         // GIVEN a device connected to an adapter
         givenAnAdapter(properties);
@@ -1553,7 +1552,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      */
     @Test
     void testCommandConsumerIsNotClosedOnAdapterStop(final VertxTestContext ctx) {
-        final Device device = new Device("tenant", "deviceId");
+        final var device = new DeviceUser("tenant", "deviceId");
 
         // GIVEN a device connected to an adapter
         givenAnAdapter(properties);

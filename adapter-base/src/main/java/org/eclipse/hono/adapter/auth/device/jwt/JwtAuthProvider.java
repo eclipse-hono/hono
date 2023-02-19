@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,9 +18,9 @@ import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -103,18 +103,18 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
     }
 
     @Override
-    protected Future<Device> doValidateCredentials(final JwtCredentials deviceCredentials,
+    protected Future<DeviceUser> doValidateCredentials(final JwtCredentials deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
         final Context currentContext = Vertx.currentContext();
         if (currentContext == null) {
             return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
         }
-        final Promise<Device> result = Promise.promise();
+        final Promise<DeviceUser> result = Promise.promise();
         currentContext.executeBlocking(blockingCodeHandler -> {
             log.debug("validating JWT on vert.x worker thread [{}]", Thread.currentThread().getName());
             if (checkJwtValidity(deviceCredentials, credentialsOnRecord)) {
                 blockingCodeHandler
-                        .complete(new Device(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+                        .complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
             } else {
                 blockingCodeHandler
                         .fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));

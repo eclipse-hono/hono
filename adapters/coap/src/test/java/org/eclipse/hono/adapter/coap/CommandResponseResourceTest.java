@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,11 +33,11 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.util.CommandConstants;
@@ -98,7 +98,7 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.uploadCommandResponseMessage(context)
@@ -152,7 +152,7 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         final Future<Void> result = resource.uploadCommandResponseMessage(context);
@@ -207,7 +207,7 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         final Future<Void> result = resource.uploadCommandResponseMessage(context);

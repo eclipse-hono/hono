@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,7 +47,6 @@ import org.eclipse.hono.adapter.auth.device.x509.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.x509.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.adapter.auth.device.x509.X509AuthProvider;
 import org.eclipse.hono.adapter.auth.device.x509.X509Authentication;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -140,7 +139,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                                         if (result.failed()) {
                                             authResult.fail(result.cause());
                                         } else {
-                                            final Device device = result.result();
+                                            final var device = result.result();
                                             TracingHelper.TAG_TENANT_ID.set(span, device.getTenantId());
                                             TracingHelper.TAG_DEVICE_ID.set(span, device.getDeviceId());
                                             span.log("successfully validated device's client certificate");

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,9 +34,9 @@ import java.util.Map;
 import org.eclipse.hono.adapter.MapperEndpoint;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -105,7 +105,7 @@ public class HttpBasedMessageMappingTest {
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final String deviceId = "gateway";
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, deviceId));
+        final MqttContext context = newContext(message, span, new DeviceUser(TEST_TENANT_ID, deviceId));
 
         messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, new RegistrationAssertion(deviceId))
             .onComplete(ctx.succeeding(mappedMessage -> {
@@ -131,7 +131,7 @@ public class HttpBasedMessageMappingTest {
 
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         final String deviceId = "gateway";
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, deviceId));
+        final MqttContext context = newContext(message, span, new DeviceUser(TEST_TENANT_ID, deviceId));
 
         final RegistrationAssertion assertion = new RegistrationAssertion(deviceId).setDownstreamMessageMapper("mapper");
         messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
@@ -179,7 +179,7 @@ public class HttpBasedMessageMappingTest {
                 URLEncoder.encode("text/plain", StandardCharsets.UTF_8));
 
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, topic);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new DeviceUser(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
         messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
@@ -224,7 +224,7 @@ public class HttpBasedMessageMappingTest {
 
         when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, "mqtt-topic");
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final MqttContext context = newContext(message, span, new DeviceUser(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
         messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
@@ -241,7 +241,7 @@ public class HttpBasedMessageMappingTest {
         handlerCaptor.getValue().handle(Future.succeededFuture(httpResponse));
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final DeviceUser authenticatedDevice) {
         final MqttContext mqttContext = MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
         return mqttContext;
     }

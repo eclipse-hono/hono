@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter;
 
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.opentracing.Span;
@@ -23,7 +23,7 @@ import io.opentracing.Span;
  */
 public abstract class MapBasedTelemetryExecutionContext extends MapBasedExecutionContext implements TelemetryExecutionContext {
 
-    private final Device authenticatedDevice;
+    private final DeviceUser authenticatedDevice;
 
     /**
      * Creates a new context for a message received from a device.
@@ -33,7 +33,7 @@ public abstract class MapBasedTelemetryExecutionContext extends MapBasedExecutio
      *            has not been authenticated.
      * @throws NullPointerException If span is {@code null}.
      */
-    public MapBasedTelemetryExecutionContext(final Span span, final Device authenticatedDevice) {
+    public MapBasedTelemetryExecutionContext(final Span span, final DeviceUser authenticatedDevice) {
         super(span);
         this.authenticatedDevice = authenticatedDevice;
     }
@@ -42,7 +42,7 @@ public abstract class MapBasedTelemetryExecutionContext extends MapBasedExecutio
      * {@inheritDoc}
      */
     @Override
-    public final Device getAuthenticatedDevice() {
+    public final DeviceUser getAuthenticatedDevice() {
         return authenticatedDevice;
     }
 }

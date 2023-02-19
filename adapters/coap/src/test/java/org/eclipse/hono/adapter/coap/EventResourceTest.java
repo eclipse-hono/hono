@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,8 +32,8 @@ import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.util.TenantObject;
@@ -77,7 +77,7 @@ public class EventResourceTest extends ResourceTestBase {
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.handlePostRequest(context);
@@ -120,7 +120,7 @@ public class EventResourceTest extends ResourceTestBase {
         // WHEN a device publishes an event that is not accepted by the peer
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         final Future<Void> result = resource.handlePostRequest(context);
@@ -168,7 +168,7 @@ public class EventResourceTest extends ResourceTestBase {
         // WHEN a device publishes an event message
         final Buffer payload = Buffer.buffer("some payload");
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
-        final Device authenticatedDevice = new Device("tenant", "device");
+        final var authenticatedDevice = new DeviceUser("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
         resource.handlePostRequest(context)

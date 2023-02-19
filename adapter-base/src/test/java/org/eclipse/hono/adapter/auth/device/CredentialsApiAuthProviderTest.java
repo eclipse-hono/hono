@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,10 @@ import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -151,7 +151,7 @@ public class CredentialsApiAuthProviderTest {
             }
 
             @Override
-            protected Future<Device> doValidateCredentials(
+            protected Future<DeviceUser> doValidateCredentials(
                     final AbstractDeviceCredentials deviceCredentials,
                     final CredentialsObject credentialsOnRecord) {
                 return Future.succeededFuture();

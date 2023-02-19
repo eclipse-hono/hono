@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@ package org.eclipse.hono.adapter.coap;
 
 import java.util.Objects;
 
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 
 /**
  * Contains device and authentication related information pertaining to a CoAP request message.
@@ -24,7 +24,7 @@ public final class RequestDeviceAndAuth {
     /**
      * Request message's origin device.
      */
-    private final Device originDevice;
+    private final DeviceUser originDevice;
     /**
      * The authentication identifier of the request or {@code null}.
      */
@@ -32,7 +32,7 @@ public final class RequestDeviceAndAuth {
     /**
      * Authenticated device or {@code null}.
      */
-    private final Device authenticatedDevice;
+    private final DeviceUser authenticatedDevice;
 
     /**
      * Creates a new RequestDeviceAndAuth instance.
@@ -44,7 +44,7 @@ public final class RequestDeviceAndAuth {
      *                            represents a gateway, doing a request on behalf of the originDevice.
      * @throws NullPointerException if originDevice is {@code null}.
      */
-    public RequestDeviceAndAuth(final Device originDevice, final String authId, final Device authenticatedDevice) {
+    public RequestDeviceAndAuth(final DeviceUser originDevice, final String authId, final DeviceUser authenticatedDevice) {
         this.originDevice = Objects.requireNonNull(originDevice);
         this.authId = authId;
         this.authenticatedDevice = authenticatedDevice;
@@ -55,7 +55,7 @@ public final class RequestDeviceAndAuth {
      *
      * @return The device.
      */
-    public Device getOriginDevice() {
+    public DeviceUser getOriginDevice() {
         return originDevice;
     }
 
@@ -80,7 +80,7 @@ public final class RequestDeviceAndAuth {
      *
      * @return The authenticated device or {@code null}.
      */
-    public Device getAuthenticatedDevice() {
+    public DeviceUser getAuthenticatedDevice() {
         return authenticatedDevice;
     }
 

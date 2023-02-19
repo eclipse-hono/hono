@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,9 +30,9 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -62,7 +62,7 @@ class AbstractHonoResourceTest extends ResourceTestBase {
         };
     }
 
-    private Request newRequest(final String uri, final Device authenticatedDevice) {
+    private Request newRequest(final String uri, final DeviceUser authenticatedDevice) {
 
         final var sourceContext = mock(EndpointContext.class);
         Optional.ofNullable(authenticatedDevice).ifPresent(device -> {
@@ -102,7 +102,7 @@ class AbstractHonoResourceTest extends ResourceTestBase {
         // GIVEN an adapter
         givenAnAdapter(properties);
         final var resource = givenAResource(adapter);
-        final var request = newRequest(uri, isDeviceAuthenticated ? new Device("DEFAULT_TENANT", "device_1") : null);
+        final var request = newRequest(uri, isDeviceAuthenticated ? new DeviceUser("DEFAULT_TENANT", "device_1") : null);
         final var exchange = newCoapExchange(Buffer.buffer(), request);
         resource.getPutRequestDeviceAndAuth(exchange)
             .onComplete(ctx.succeeding(r -> {
@@ -136,7 +136,7 @@ class AbstractHonoResourceTest extends ResourceTestBase {
         // GIVEN an adapter
         givenAnAdapter(properties);
         final var resource = givenAResource(adapter);
-        final var request = newRequest(uri, isDeviceAuthenticated ? new Device("DEFAULT_TENANT", "device_1") : null);
+        final var request = newRequest(uri, isDeviceAuthenticated ? new DeviceUser("DEFAULT_TENANT", "device_1") : null);
         final var exchange = newCoapExchange(Buffer.buffer(), request);
         resource.getPutRequestDeviceAndAuth(exchange)
             .onComplete(ctx.failing(t -> {

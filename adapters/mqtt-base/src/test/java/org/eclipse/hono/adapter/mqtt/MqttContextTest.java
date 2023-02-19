@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CommandConstants;
@@ -59,7 +59,7 @@ public class MqttContextTest {
     public void testTenantIsRetrievedFromAuthenticatedDevice() {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t");
-        final Device device = new Device("tenant", "device");
+        final var device = new DeviceUser("tenant", "device");
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
         assertEquals("tenant", context.tenant());
     }
@@ -80,7 +80,7 @@ public class MqttContextTest {
      */
     @Test
     public void verifyPropertyBagRetrievedFromTopic() {
-        final Device device = new Device("tenant", "device");
+        final var device = new DeviceUser("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("event/tenant/device/?param1=value1&param2=value2");
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
@@ -98,7 +98,7 @@ public class MqttContextTest {
     public void verifyContentType() {
         final String contentType = "application/vnd.eclipse.ditto+json";
         final String encodedContentType = URLEncoder.encode(contentType, StandardCharsets.UTF_8);
-        final Device device = new Device("tenant", "device");
+        final var device = new DeviceUser("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn(
                 String.format("event/tenant/device/?Content-Type=%s&param2=value2&param3=value3", encodedContentType));

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -59,7 +59,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
                             CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT);
 
     private final CoapExchange exchange;
-    private final Device originDevice;
+    private final DeviceUser originDevice;
     private final String authId;
     private final AtomicBoolean acceptTimerFlag = new AtomicBoolean(false);
     private final AtomicBoolean acceptFlag = new AtomicBoolean(false);
@@ -67,8 +67,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
     private CoapContext(
             final CoapExchange exchange,
-            final Device originDevice,
-            final Device authenticatedDevice,
+            final DeviceUser originDevice,
+            final DeviceUser authenticatedDevice,
             final String authId,
             final Span span) {
         super(span, authenticatedDevice);
@@ -91,8 +91,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public static CoapContext fromRequest(
             final CoapExchange request,
-            final Device originDevice,
-            final Device authenticatedDevice,
+            final DeviceUser originDevice,
+            final DeviceUser authenticatedDevice,
             final String authId,
             final Span span) {
 
@@ -117,8 +117,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public static CoapContext fromRequest(
             final CoapExchange request,
-            final Device originDevice,
-            final Device authenticatedDevice,
+            final DeviceUser originDevice,
+            final DeviceUser authenticatedDevice,
             final String authId,
             final Span span,
             final Sample timer) {
@@ -138,7 +138,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      *
      * @return The device.
      */
-    public Device getOriginDevice() {
+    public DeviceUser getOriginDevice() {
         return originDevice;
     }
 

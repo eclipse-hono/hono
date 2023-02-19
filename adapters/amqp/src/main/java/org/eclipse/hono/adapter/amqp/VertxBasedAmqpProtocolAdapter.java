@@ -67,6 +67,7 @@ import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNot
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -132,7 +133,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     /**
      * The current connections from authenticated devices (possibly multiple connections from the same device).
      */
-    private final Map<ProtonConnection, Device> authenticatedDeviceConnections = new HashMap<>();
+    private final Map<ProtonConnection, DeviceUser> authenticatedDeviceConnections = new HashMap<>();
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -232,7 +233,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 });
     }
 
-    private void closeDeviceConnections(final Predicate<Device> deviceMatchPredicate, final String reason) {
+    private void closeDeviceConnections(final Predicate<DeviceUser> deviceMatchPredicate, final String reason) {
         final List<ProtonConnection> deviceConnections =  authenticatedDeviceConnections.entrySet().stream()
                 .filter(entry -> deviceMatchPredicate.test(entry.getValue()))
                 .map(Map.Entry::getKey)
@@ -423,7 +424,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             handleRemoteSenderOpenForCommands(con, sender);
         });
         con.openHandler(remoteOpen -> {
-            final Device authenticatedDevice = getAuthenticatedDevice(con);
+            final var authenticatedDevice = getAuthenticatedDevice(con);
             if (authenticatedDevice == null) {
                 metrics.incrementUnauthenticatedConnections();
             } else {
@@ -442,7 +443,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * Actively closes the connection to the device.
      */
     private void closeDeviceConnection(final ProtonConnection con, final String reason, final boolean sendDisconnectedEvent) {
-        final Device authenticatedDevice = getAuthenticatedDevice(con);
+        final var authenticatedDevice = getAuthenticatedDevice(con);
         final Span span = newSpan("close device connection", authenticatedDevice, getTraceSamplingPriority(con));
 
         final Map<String, String> logFields = new HashMap<>(2);
@@ -477,7 +478,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             spanOperationName = "handle closing of connection";
             closeCommandConsumers = true;
         }
-        final Device authenticatedDevice = getAuthenticatedDevice(con);
+        final var authenticatedDevice = getAuthenticatedDevice(con);
         final Span span = newSpan(spanOperationName, authenticatedDevice, getTraceSamplingPriority(con));
         handleConnectionLossInternal(con, span, true, closeCommandConsumers)
                 .onComplete(ar -> span.finish());
@@ -516,7 +517,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                     .start());
 
-        final Device authenticatedDevice = getAuthenticatedDevice(con);
+        final var authenticatedDevice = getAuthenticatedDevice(con);
         TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
         if (authenticatedDevice != null) {
             TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
@@ -558,7 +559,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<Void> checkAuthorizationAndResourceLimits(
-            final Device authenticatedDevice,
+            final DeviceUser authenticatedDevice,
             final ProtonConnection con,
             final Span span) {
 
@@ -661,7 +662,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private void decrementConnectionCount(final ProtonConnection con, final SpanContext context, final boolean sendDisconnectedEvent) {
 
-        final Device device = getAuthenticatedDevice(con);
+        final var device = getAuthenticatedDevice(con);
         if (device == null) {
             metrics.decrementUnauthenticatedConnections();
         } else {
@@ -689,7 +690,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     void handleRemoteReceiverOpen(final ProtonConnection conn, final ProtonReceiver receiver) {
 
-        final Device authenticatedDevice = getAuthenticatedDevice(conn);
+        final var authenticatedDevice = getAuthenticatedDevice(conn);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
 
         final Span span = newSpan("attach device sender link", authenticatedDevice, traceSamplingPriority);
@@ -844,7 +845,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ProtonConnection connection,
             final ProtonSender sender) {
 
-        final Device authenticatedDevice = getAuthenticatedDevice(connection);
+        final var authenticatedDevice = getAuthenticatedDevice(connection);
         final OptionalInt traceSamplingPriority = getTraceSamplingPriority(connection);
 
         final Span span = newSpan("attach device command receiver link", authenticatedDevice, traceSamplingPriority);
@@ -1540,8 +1541,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return map != null && map.remove(subscriptionAddress) != null;
     }
 
-    private static Device getAuthenticatedDevice(final ProtonConnection con) {
-        return con.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class);
+    private static DeviceUser getAuthenticatedDevice(final ProtonConnection con) {
+        return con.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class);
     }
 
     private static OptionalInt getTraceSamplingPriority(final ProtonConnection con) {

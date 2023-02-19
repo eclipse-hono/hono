@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,6 @@ import javax.security.auth.login.LoginException;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -49,7 +48,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 /**
  * A SASL authenticator factory for authenticating client devices connecting to the AMQP adapter.
  * <p>
- * On successful authentication of the device, a {@link Device} reflecting the device's credentials (as obtained from
+ * On successful authentication of the device, a {@link DeviceUser} reflecting the device's credentials (as obtained from
  * the Credentials service) is stored in the attachments record of the {@code ProtonConnection} under key
  * {@link AmqpAdapterConstants#KEY_CLIENT_DEVICE}. The credentials supplied by the client are verified against
  * the credentials that the Credentials service has on record for the device.
@@ -163,7 +162,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     // remaining connection establishment process
                     protonConnection.attachments().set(AmqpAdapterConstants.KEY_CURRENT_SPAN, Span.class,
                             currentSpan);
-                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class,
+                    protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, DeviceUser.class,
                             deviceUser);
                     Optional.ofNullable(cipherSuite).ifPresent(s -> protonConnection.attachments().set(
                             AmqpAdapterConstants.KEY_TLS_CIPHER_SUITE, String.class, s));

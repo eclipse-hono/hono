@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -75,13 +75,13 @@ public class VertxBasedMqttProtocolAdapterTest {
         return newContext(qosLevel, topic,  span, null);
     }
 
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Span span, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Span span, final DeviceUser authenticatedDevice) {
 
         final MqttPublishMessage message = newMessage(qosLevel, topic);
         return newContext(message, span, authenticatedDevice);
     }
 
-    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final Device authenticatedDevice) {
+    private static MqttContext newContext(final MqttPublishMessage message, final Span span, final DeviceUser authenticatedDevice) {
         return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), span, authenticatedDevice);
     }
 
@@ -215,7 +215,7 @@ public class VertxBasedMqttProtocolAdapterTest {
                 MqttQoS.AT_MOST_ONCE,
                 TelemetryConstants.TELEMETRY_ENDPOINT + "/my-tenant",
                 span,
-                new Device("my-tenant", "device"));
+                new DeviceUser("my-tenant", "device"));
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
@@ -239,7 +239,7 @@ public class VertxBasedMqttProtocolAdapterTest {
                 MqttQoS.AT_MOST_ONCE,
                 TelemetryConstants.TELEMETRY_ENDPOINT + "/other-tenant/4711",
                 span,
-                new Device("my-tenant", "gateway"));
+                new DeviceUser("my-tenant", "gateway"));
         adapter.onPublishedMessage(context).onComplete(ctx.failing(t -> {
             // THEN the message cannot be published
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_FORBIDDEN);

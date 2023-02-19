@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@ import java.util.Map;
 
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
-import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.service.auth.DeviceUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,7 @@ public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier {
         if (customArgument instanceof AdditionalInfo) {
             final AdditionalInfo info = (AdditionalInfo) customArgument;
             final String authId = info.get(EXT_INFO_KEY_HONO_AUTH_ID, String.class);
-            final Device device = info.get(EXT_INFO_KEY_HONO_DEVICE, Device.class);
+            final var device = info.get(EXT_INFO_KEY_HONO_DEVICE, DeviceUser.class);
             LOG.debug("get additional info auth-id: {}, device: {}@{}", authId, device.getDeviceId(),
                     device.getTenantId());
             return info;
@@ -67,7 +67,7 @@ public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier {
      * @see DeviceInfoSupplier#EXT_INFO_KEY_HONO_DEVICE
      * @see DeviceInfoSupplier#EXT_INFO_KEY_HONO_AUTH_ID
      */
-    public static AdditionalInfo createDeviceInfo(final Device device, final String authId) {
+    public static AdditionalInfo createDeviceInfo(final DeviceUser device, final String authId) {
         final Map<String, Object> result = new HashMap<>();
         result.put(EXT_INFO_KEY_HONO_DEVICE, device);
         result.put(EXT_INFO_KEY_HONO_AUTH_ID, authId);
