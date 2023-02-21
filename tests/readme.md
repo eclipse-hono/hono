@@ -94,6 +94,14 @@ the `hono.deviceregistry.type` Maven property needs to be set to value `file`:
 mvn verify -Prun-tests -Dhono.deviceregistry.type=file
 ```
 
+### Running the Tests with the Native Executable Container Images
+
+The tests can be run using the native executable based images using the `hono.components.type` Maven property:
+
+```sh
+mvn verify -Prun-tests -Dhono.components.type=quarkus-native
+```
+
 ### Running the Tests with the Jaeger tracing component
 
 The tests can be run in such a way, that the OpenTelemetry trace spans created in the Hono components
