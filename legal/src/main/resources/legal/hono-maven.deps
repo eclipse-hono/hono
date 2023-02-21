@@ -227,7 +227,6 @@ io.smallrye:smallrye-fault-tolerance-vertx:jar:5.6.0
 io.smallrye:smallrye-health-api:jar:3.3.1
 io.smallrye:smallrye-health:jar:3.3.1
 io.smallrye:smallrye-health-provided-checks:jar:3.3.1
-io.smallrye:smallrye-metrics:jar:3.0.5
 io.vertx:vertx-auth-common:jar:4.3.7
 io.vertx:vertx-auth-jdbc:jar:4.3.7
 io.vertx:vertx-auth-mongo:jar:4.3.7
