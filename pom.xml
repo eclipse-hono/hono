@@ -261,7 +261,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.40.2</version>
+          <version>0.41.0</version>
           <executions>
             <execution>
               <id>build_images</id>
