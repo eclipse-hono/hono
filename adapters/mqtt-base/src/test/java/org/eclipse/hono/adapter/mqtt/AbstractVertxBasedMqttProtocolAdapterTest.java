@@ -473,6 +473,41 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
     }
 
     /**
+     * Verifies that the adapter discards messages from devices whose connection token is expired.
+     */
+    @Test
+    public void testHandlePublishedMessageFailsForExpiredToken() {
+        givenAnAdapter(properties);
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        final Buffer payload = Buffer.buffer("hello");
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        when(msg.topicName()).thenReturn("t/my-tenant/the-device");
+        when(msg.payload()).thenReturn(payload);
+        final DeviceUser deviceUser = new DeviceUser("my-tenant", "the-device") {
+            @Override
+            public boolean expired() {
+                return true;
+            }
+        };
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, deviceUser, OptionalInt.empty());
+        mqttDeviceEndpoint.handlePublishedMessage(msg);
+
+        assertThat(endpoint.isConnected()).isFalse();
+
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+        verify(endpoint, never()).publishAcknowledge(anyInt());
+    }
+
+    /**
      * Verifies that the adapter does not forward a message published by a device if the topic is empty and closes the
      * connection to the device.
      */
@@ -870,6 +905,27 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the adapter disconnects the device, if it tries to subscribe to a new topic after its connection
+     * token is expired.
+     */
+    @Test
+    public void testOnSubscribeWithExpiredDeviceToken() {
+        final MqttSubscribeMessage message = mock(MqttSubscribeMessage.class);
+        givenAnAdapter(properties);
+        final MqttEndpoint endpoint = mockEndpoint();
+        final DeviceUser deviceUser = new DeviceUser("my-tenant", "the-device") {
+            @Override
+            public boolean expired() {
+                return true;
+            }
+        };
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, deviceUser, OptionalInt.empty());
+        mqttDeviceEndpoint.onSubscribe(message);
+
+        verify(endpoint).close();
     }
 
     /**

@@ -133,7 +133,8 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
             }
             if (!failed) {
                 final JsonObject credentialsJSON = new JsonObject()
-                        .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, map.get(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID))
+                        .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
+                                map.get(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID))
                         .put(CredentialsConstants.FIELD_AUTH_ID, map.get(CredentialsConstants.FIELD_AUTH_ID))
                         .put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword());
                 result.complete(credentialsJSON);

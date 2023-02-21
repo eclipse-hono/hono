@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.auth.device.jwt;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
@@ -25,6 +26,8 @@ import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -112,26 +115,30 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
         final Promise<DeviceUser> result = Promise.promise();
         currentContext.executeBlocking(blockingCodeHandler -> {
             log.debug("validating JWT on vert.x worker thread [{}]", Thread.currentThread().getName());
-            if (checkJwtValidity(deviceCredentials, credentialsOnRecord)) {
+            try {
+                final Jws<Claims> jws = getJws(deviceCredentials, credentialsOnRecord);
                 blockingCodeHandler
-                        .complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
-            } else {
+                        .complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()) {
+
+                            private final Instant expirationTime = ExternalJwtAuthTokenValidator
+                                    .getExpirationTime(jws.getBody().getExpiration().toInstant());
+
+                            @Override
+                            public boolean expired() {
+                                return expirationTime.isBefore(Instant.now());
+                            }
+                        });
+            } catch (RuntimeException e) {
                 blockingCodeHandler
-                        .fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+                        .fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, e));
             }
         }, false, result);
         return result.future();
     }
 
-    private boolean checkJwtValidity(final JwtCredentials deviceCredentials,
-            final CredentialsObject credentialsOnRecord) {
-        try {
-            externalJwtAuthTokenValidator.setCredentialsObject(credentialsOnRecord);
-            externalJwtAuthTokenValidator.expand(deviceCredentials.getJwt());
-            return true;
-        } catch (RuntimeException e) {
-            log.debug("JWT validity check failed", e);
-            return false;
-        }
+    private Jws<Claims> getJws(final JwtCredentials deviceCredentials,
+            final CredentialsObject credentialsOnRecord) throws RuntimeException {
+        externalJwtAuthTokenValidator.setCredentialsObject(credentialsOnRecord);
+        return externalJwtAuthTokenValidator.expand(deviceCredentials.getJwt());
     }
 }

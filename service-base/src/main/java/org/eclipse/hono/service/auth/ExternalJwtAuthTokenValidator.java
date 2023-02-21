@@ -52,6 +52,17 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
     private static final String EXPECTED_TOKEN_TYPE = "JWT";
     private CredentialsObject credentialsObject;
 
+    /**
+     * Adds the allowed clock skew to the provided expiration time.
+     *
+     * @param exp The expiration time without the allowed clock skew.
+     * @return The expiration time with the allowed clock skew.
+     * @throws NullPointerException If the input parameter is null.
+     */
+    public static Instant getExpirationTime(final Instant exp) {
+        return exp.plusSeconds(ALLOWED_CLOCK_SKEW);
+    }
+
     public CredentialsObject getCredentialsObject() {
         return credentialsObject;
     }

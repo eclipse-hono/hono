@@ -1223,6 +1223,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             spanPreparationFuture
                     .compose(v -> checkTopic(context))
+                    .compose(v -> checkExpiration(context))
                     .compose(ok -> onPublishedMessage(context))
                     .onSuccess(ok -> {
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
@@ -1303,6 +1304,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
         }
 
+        private boolean disconnectOnExpired() {
+            if (authenticatedDevice != null && authenticatedDevice.expired()) {
+                endpoint.close();
+                return true;
+            }
+            return false;
+        }
+
+        private Future<Void> checkExpiration(final MqttContext context) {
+            if (context.authenticatedDevice() != null && context.authenticatedDevice().expired()) {
+               return Future.failedFuture(new MqttConnectionException(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED));
+            } else {
+               return Future.succeededFuture();
+            }
+        }
+
         private ErrorSubscription getErrorSubscription(final MqttContext context) {
             ErrorSubscription result = null;
             if (context.tenant() != null && context.deviceId() != null) {
@@ -1326,6 +1343,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         public final void handlePubAck(final Integer msgId) {
             Objects.requireNonNull(msgId);
+            if (disconnectOnExpired()) {
+                return;
+            }
             pendingAcks.handlePubAck(msgId);
         }
 
@@ -1347,6 +1367,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         protected final void onSubscribe(final MqttSubscribeMessage subscribeMsg) {
             Objects.requireNonNull(subscribeMsg);
+            if (disconnectOnExpired()) {
+                return;
+            }
             final Map<Subscription.Key, Future<Subscription>> uniqueSubscriptions = new HashMap<>();
             final Deque<Future<Subscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
 
@@ -1753,6 +1776,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         protected final void onUnsubscribe(final MqttUnsubscribeMessage unsubscribeMsg) {
             Objects.requireNonNull(unsubscribeMsg);
+            if (disconnectOnExpired()) {
+                return;
+            }
             final Span span = newSpan("UNSUBSCRIBE");
 
             @SuppressWarnings("rawtypes")
