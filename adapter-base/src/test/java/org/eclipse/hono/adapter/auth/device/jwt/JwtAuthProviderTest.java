@@ -58,9 +58,9 @@ class JwtAuthProviderTest {
     private static Vertx vertx;
 
     private final String tenantId = "tenant-id";
+    private final String deviceId = "device-id";
     private final String authId = "auth-id";
     private final String password = "jwt";
-
     private final JwtCredentials deviceCredentials = JwtCredentials.create(tenantId, authId, password);
     private JwtAuthProvider authProvider;
     private CredentialsClient credentialsClient;
@@ -84,7 +84,7 @@ class JwtAuthProviderTest {
         authTokenValidator = mock(ExternalJwtAuthTokenValidator.class);
         authProvider = new JwtAuthProvider(credentialsClient, NoopTracerFactory.create(), authTokenValidator);
         givenCredentialsOnRecord(
-                CredentialsObject.fromRawPublicKey("device-id", authId, CredentialsConstants.RSA_ALG, new byte[]{1}, null, null));
+                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.RSA_ALG, new byte[]{1}, null, null));
 
     }
 
@@ -152,8 +152,8 @@ class JwtAuthProviderTest {
         final Claims claims = mock(Claims.class);
 
         when(claimsJws.getBody()).thenReturn(claims);
-        when(claims.getExpiration()).thenReturn(Date.from(now.plusSeconds(10000)));
-        when(claims.getIssuedAt()).thenReturn(Date.from(now.minusSeconds(10000)));
+        when(claims.getExpiration()).thenReturn(Date.from(now.plusSeconds(3600 * 24)));
+        when(claims.getIssuedAt()).thenReturn(Date.from(now));
 
         when(authTokenValidator.expand(anyString())).thenReturn(claimsJws);
 
@@ -161,8 +161,8 @@ class JwtAuthProviderTest {
         vertx.runOnContext(go -> authProvider.authenticate(deviceCredentials, null, result));
         result.future().onComplete(ctx.succeeding(device -> {
             ctx.verify(() -> {
-                assertThat(device.getDeviceId()).isEqualTo("device-id");
-                assertThat(device.getTenantId()).isEqualTo("tenant-id");
+                assertThat(device.getDeviceId()).isEqualTo(deviceId);
+                assertThat(device.getTenantId()).isEqualTo(tenantId);
             });
             ctx.completeNow();
         }));
