@@ -11,6 +11,10 @@ Supporting Google Pub/Sub, Hono must run on Google Kubernetes Engine to authenti
 To authenticate to the Google Pub/Sub API, Workload Identity is used and has to be configured as described in the
 [Google Cloud Documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity).
 
+{{% notice warning %}}
+Support for Google Pub/Sub based messaging infrastructure is considered **experimental** and may change without further notice.
+{{% /notice %}}
+
 ## Publisher Configuration
 
 The `org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory` factory can be used to create Pub/Sub publishers for Hono's

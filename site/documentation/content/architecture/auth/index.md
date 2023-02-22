@@ -26,8 +26,8 @@ authorization.
 
 Both the HTTP adapter as well as the MQTT adapter require devices to authenticate during connection establishment by
 default. Both rely on the [Credentials API]({{< relref "/api/credentials" >}}) to help in verifying credentials
-provided by a device. Please refer to [Device Authentication]({{< relref "/concepts/device-identity.md" >}}) for a
-general overview of Hono's approach to authenticating devices and to the
+provided by a device. Please refer to [Device Authentication]({{< relref "/concepts/device-identity#device-authentication" >}})
+for a general overview of Hono's approach to authenticating devices and to the
 [protocol adapter user guides]({{< relref "/user-guide" >}}) for specifics regarding how devices can authenticate to
 the corresponding protocol adapters.
 

@@ -101,3 +101,7 @@ this Messaging Infrastructure.
 
 Google Pub/Sub is an asynchronous messaging service designed to be highly scalable. There is no need to take care about scaling out
 messaging infrastructure.
+
+{{% notice warning %}}
+Support for Google Pub/Sub based messaging infrastructure is considered **experimental** and may change without further notice.
+{{% /notice %}}

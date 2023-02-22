@@ -19,8 +19,8 @@ The Telemetry API for Pub/Sub is an alternative to the [Telemetry API for Kafka]
 for applications that want to consume telemetry data from Pub/Sub instead of an Apache Kafka&trade;
 broker.
 
-{{% notice warn %}}
-Support for the Google Pub/Sub based Telemtetry API is considered experimental and may change without further notice.
+{{% notice warning %}}
+Support for the Google Pub/Sub based Telemetry API is considered **experimental** and may change without further notice.
 {{% /notice %}}
 
 ## Southbound Operations

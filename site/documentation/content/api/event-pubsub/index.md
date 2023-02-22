@@ -17,8 +17,8 @@ this page we will simply use *Pub/Sub* when referring to Google Pub/Sub.
 The Event API for Pub/Sub is an alternative to the [Event API for Kafka]({{< relref "/api/event-kafka" >}}) for
 applications that want to consume events from Pub/Sub instead of an Apache Kafka&trade; broker.
 
-{{% notice warn %}}
-Support for the Google Pub/Sub based Event API is considered experimental and may change without further notice.
+{{% notice warning %}}
+Support for the Google Pub/Sub based Event API is considered **experimental** and may change without further notice.
 {{% /notice %}}
 
 ## Southbound Operations
