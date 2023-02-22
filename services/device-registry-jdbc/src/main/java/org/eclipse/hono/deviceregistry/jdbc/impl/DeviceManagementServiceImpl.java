@@ -162,10 +162,11 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
         Objects.requireNonNull(span);
 
         return store.findDevices(tenantId, pageSize, pageOffset, span.context())
-        .map(result -> OperationResult.ok(
-                HttpURLConnection.HTTP_OK,
-                result,
-                Optional.empty(),
-                Optional.empty()));
+            .map(result -> OperationResult.ok(
+                    HttpURLConnection.HTTP_OK,
+                    result,
+                    Optional.empty(),
+                    Optional.empty()))
+            .recover(e -> Services.recover(e));
     }
 }

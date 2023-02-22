@@ -13,13 +13,15 @@ description = "Information about changes in recent Hono releases. Includes new f
   employed by Google IoT Core.
 * The protocol adapters now have experimental support for using Google Pub/Sub as the messaging infrastructure.
   Support is currently limited to publishing downstream events and telemetry messages to Pub/Sub.
+* The JDBC based registry now supports the Device Registry Management API's *search Tenants* and *search Devices*
+  operations. However, sorting and filtering is not yet implemented.
 
 ### Fixes & Enhancements
 
-* The MQTT adapter did forward command messages for devices behind a gateway when the gateway subscription was targeting
-the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed. For a subscription with such a
-topic name, only commands for the gateway itself are forwarded, not commands for devices, that the gateway acts on
-behalf of.
+* The MQTT adapter did forward command messages for devices behind a gateway when the gateway subscription was
+  targeting the gateway itself with topic name `command//[<gateway-id>]/req/#`. This has been fixed.
+  For a subscription with such a topic name, only commands for the gateway itself are forwarded, not commands for
+  devices, that the gateway acts on behalf of.
 * The LoRaWAN adapter now transforms all devEUIs hex encoded and upper case. All LoRaWAN devices should therefore be
   registered upper case and hex encoded.
 

@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -228,23 +229,21 @@ public class StatementConfiguration {
         if (SKIP_DUMPING_CONFIG) {
             return;
         }
-        if (!logger.isInfoEnabled()) {
-            return;
+        if (logger.isDebugEnabled()) {
+            final StringBuilder b = new StringBuilder("Dumping statement configuration")
+                    .append(System.lineSeparator());
+            b.append(String.format("Format arguments: %s", this.formatArguments))
+                .append(System.lineSeparator());
+
+            b.append("Statements:").append(System.lineSeparator());
+            final String[] keys = this.statements.keySet().toArray(String[]::new);
+            Arrays.sort(keys);
+            b.append(Arrays.stream(keys)
+                    .map(key -> String.format("name: %s%s%s%s",
+                            System.lineSeparator(), key, System.lineSeparator(), this.statements.get(key)))
+                    .collect(Collectors.joining(System.lineSeparator())));
+            logger.debug(b.toString());
         }
-
-        final StringBuilder b = new StringBuilder("Dumping statement configuration")
-            .append(System.lineSeparator());
-        b.append(String.format("Format arguments: %s", this.formatArguments))
-            .append(System.lineSeparator());
-
-        b.append("Statements:").append(System.lineSeparator());
-        final String[] keys = this.statements.keySet().toArray(String[]::new);
-        Arrays.sort(keys);
-        b.append(Arrays.stream(keys)
-                .map(key -> String.format("name: %s%s%s%s",
-                        System.lineSeparator(), key, System.lineSeparator(), this.statements.get(key)))
-                .collect(Collectors.joining(System.lineSeparator())));
-        logger.info(b.toString());
     }
 
     /**
@@ -253,7 +252,7 @@ public class StatementConfiguration {
      * @return A new YAML parser, never returns {@code null}.
      */
     static Yaml createYamlParser() {
-        return new Yaml(new Constructor() {
+        return new Yaml(new Constructor(new LoaderOptions()) {
             @Override
             protected Class<?> getClassForName(final String name) throws ClassNotFoundException {
                 throw new IllegalArgumentException("Class instantiation is not supported");

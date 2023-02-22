@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.base.jdbc.store.device;
 
+import java.net.HttpURLConnection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
@@ -907,26 +909,30 @@ public class TableManagementStore extends AbstractDeviceStore {
 
         final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context());
 
-        return deviceCountFuture.compose(
-                count -> expanded
-                        .trace(this.tracer, span.context())
-                        .query(this.client)
+        return deviceCountFuture
+                .compose(count -> expanded.trace(this.tracer, span.context()).query(this.client))
+                .map(r -> {
+                    if (r.getNumRows() == 0) {
+                         throw new ClientErrorException(
+                                 tenantId,
+                                 HttpURLConnection.HTTP_NOT_FOUND,
+                                 "no devices matching searching criteria");
+                    } else {
+                        final var entries = r.getRows(true);
+                        span.log(Map.of(
+                                "event", "read result",
+                                "rows", entries.size()));
+                        final List<DeviceWithId> list = new ArrayList<>();
+                        for (var entry : entries) {
+                            final var id = entry.getString("device_id");
+                            final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
+                            list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
+                        }
+                        return new SearchResult<>(deviceCountFuture.result(), list);
+                    }
 
-                        .map(r -> {
-                            final var entries = r.getRows(true);
-                            span.log(Map.of(
-                                    "event", "read result",
-                                    "rows", entries.size()));
-                            final List<DeviceWithId> list = new ArrayList<>();
-                            for (var entry : entries) {
-                                final var id = entry.getString("device_id");
-                                final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
-                                list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
-                            }
-                            return new SearchResult<>(count, list);
-
-                        }))
-            .onComplete(x -> span.finish());
+                })
+                .onComplete(x -> span.finish());
     }
 }
 

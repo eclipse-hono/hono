@@ -130,6 +130,7 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
                 .recover(e -> Services.recover(e));
 
     }
+
     @Override
     protected Future<OperationResult<SearchResult<TenantWithId>>> processSearchTenants(
         final int pageSize,
@@ -144,10 +145,10 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
 
         return store.find(pageSize, pageOffset, span.context())
             .map(result -> OperationResult.ok(
-            HttpURLConnection.HTTP_OK,
-            result,
-            Optional.empty(),
-            Optional.empty()));
+                    HttpURLConnection.HTTP_OK,
+                    result,
+                    Optional.empty(),
+                    Optional.empty()))
+            .recover(e -> Services.recover(e));
     }
-
 }

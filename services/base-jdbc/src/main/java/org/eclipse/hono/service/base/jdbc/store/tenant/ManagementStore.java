@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.base.jdbc.store.tenant;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.base.jdbc.store.EntityNotFoundException;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
@@ -472,12 +474,15 @@ public class ManagementStore extends AbstractTenantStore {
 
         final Future<Integer> tenantCountFuture = getTenantCount();
 
-        return tenantCountFuture.compose(
-                count -> expanded
-                    .trace(this.tracer, span.context())
-                    .query(this.client)
+        return tenantCountFuture
+                .compose(count -> expanded.trace(this.tracer, span.context()).query(this.client))
 
-                    .map(r -> {
+                .map(r -> {
+                    if (r.getNumRows() == 0) {
+                        throw new ClientErrorException(
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no tenants found");
+                    } else {
                         final var entries = r.getRows(true);
                         span.log(Map.of(
                             "event", "read result",
@@ -488,9 +493,10 @@ public class ManagementStore extends AbstractTenantStore {
                             final var tenant = Json.decodeValue(entry.getString("data"), Tenant.class);
                             list.add(TenantWithId.from(id, tenant));
                         }
-                        return new SearchResult<>(count, list);
+                        return new SearchResult<>(tenantCountFuture.result(), list);
+                    }
 
-                    }))
-            .onComplete(x -> span.finish());
+                })
+                .onComplete(x -> span.finish());
     }
 }

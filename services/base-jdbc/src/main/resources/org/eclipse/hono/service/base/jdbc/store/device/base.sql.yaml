@@ -177,5 +177,6 @@ findDevicesOfTenant: |
    FROM %s
    WHERE
       tenant_id=:tenant_id
+   ORDER BY device_id
    LIMIT :page_size
    OFFSET :page_offset
