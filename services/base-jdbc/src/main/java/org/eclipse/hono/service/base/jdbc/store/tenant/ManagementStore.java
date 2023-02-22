@@ -10,10 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.service.base.jdbc.store.tenant;
-
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,7 +24,9 @@ import org.eclipse.hono.service.base.jdbc.store.EntityNotFoundException;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
@@ -35,6 +38,7 @@ import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.SQLConnection;
@@ -60,6 +64,8 @@ public class ManagementStore extends AbstractTenantStore {
 
     private final Statement deleteStatement;
     private final Statement deleteVersionedStatement;
+
+    private final Statement findTenantsStatement;
 
     /**
      * Create a new instance.
@@ -124,7 +130,10 @@ public class ManagementStore extends AbstractTenantStore {
                         "expected_version"
                 );
 
-    }
+        this.findTenantsStatement = cfg.getRequiredStatement("findTenants")
+            .validateParameters(
+                "page_size",
+                "page_offset");    }
 
     /**
      * Create a device statement configuration for the tenant store.
@@ -443,4 +452,45 @@ public class ManagementStore extends AbstractTenantStore {
                 checkSpan -> readTenantEntryById(this.client, tenantId, checkSpan.context()));
     }
 
+    /**
+     * Gets a list of tenants.
+     * @param pageSize the page size
+     * @param pageOffset the page offset
+     * @param spanContext The span to contribute to.
+     *
+     * @return A future containing tenants
+     */
+    public Future<SearchResult<TenantWithId>> find(final int pageSize, final int pageOffset, final SpanContext spanContext) {
+
+        final var expanded = this.findTenantsStatement.expand(map -> {
+            map.put("page_size", pageSize);
+            map.put("page_offset", pageOffset);
+        });
+
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find tenants", getClass().getSimpleName())
+            .start();
+
+        final Future<Integer> tenantCountFuture = getTenantCount();
+
+        return tenantCountFuture.compose(
+                count -> expanded
+                    .trace(this.tracer, span.context())
+                    .query(this.client)
+
+                    .map(r -> {
+                        final var entries = r.getRows(true);
+                        span.log(Map.of(
+                            "event", "read result",
+                            "rows", entries.size()));
+                        final List<TenantWithId> list = new ArrayList<>();
+                        for (var entry : entries) {
+                            final var id = entry.getString("tenant_id");
+                            final var tenant = Json.decodeValue(entry.getString("data"), Tenant.class);
+                            list.add(TenantWithId.from(id, tenant));
+                        }
+                        return new SearchResult<>(count, list);
+
+                    }))
+            .onComplete(x -> span.finish());
+    }
 }

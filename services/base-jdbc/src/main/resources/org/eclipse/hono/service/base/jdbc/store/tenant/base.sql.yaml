@@ -99,3 +99,11 @@ updateVersioned: |
    AND
       version=:expected_version
 
+findTenants: |
+   SELECT
+      *
+   FROM
+      %s
+   ORDER BY tenant_id
+   LIMIT :page_size
+   OFFSET :page_offset

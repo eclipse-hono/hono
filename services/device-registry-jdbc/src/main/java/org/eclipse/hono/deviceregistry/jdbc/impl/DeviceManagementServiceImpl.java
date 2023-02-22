@@ -14,6 +14,8 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.net.HttpURLConnection;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,10 +24,14 @@ import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.util.CacheDirective;
 
 import io.opentracing.Span;
@@ -141,5 +147,25 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     @Override
     protected String generateDeviceId(final String tenantId) {
         return UUID.randomUUID().toString();
+    }
+
+    @Override
+    protected Future<OperationResult<SearchResult<DeviceWithId>>> processSearchDevices(
+        final String tenantId,
+        final int pageSize,
+        final int pageOffset,
+        final List<Filter> filters,
+        final List<Sort> sortOptions,
+        final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(span);
+
+        return store.findDevices(tenantId, pageSize, pageOffset, span.context())
+        .map(result -> OperationResult.ok(
+                HttpURLConnection.HTTP_OK,
+                result,
+                Optional.empty(),
+                Optional.empty()));
     }
 }

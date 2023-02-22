@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.base.jdbc.store.device;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -34,9 +35,11 @@ import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 import org.eclipse.hono.service.base.jdbc.store.model.JdbcBasedDeviceDto;
+import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -80,6 +83,8 @@ public class TableManagementStore extends AbstractDeviceStore {
     private final Statement updateDeviceVersionStatement;
 
     private final Statement countDevicesOfTenantStatement;
+
+    private final Statement findDevicesStatement;
 
     /**
      * Create a new instance.
@@ -182,6 +187,13 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .getRequiredStatement("countDevicesOfTenant")
                 .validateParameters(
                         "tenant_id");
+
+        this.findDevicesStatement = cfg
+                .getRequiredStatement("findDevicesOfTenant")
+                .validateParameters(
+                        "tenant_id",
+                        "page_size",
+                        "page_offset");
 
     }
 
@@ -870,4 +882,52 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     }
 
+    /**
+     * Gets a list of devices of a specific tenant.
+     *
+     * @param tenantId the tenantId to search devices
+     * @param pageSize the page size
+     * @param pageOffset the page offset
+     * @param spanContext The span to contribute to.
+     * @return A future containing devices
+     */
+    public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset,
+            final SpanContext spanContext) {
+
+
+        final var expanded = this.findDevicesStatement.expand(map -> {
+            map.put("tenant_id", tenantId);
+            map.put("page_size", pageSize);
+            map.put("page_offset", pageOffset);
+        });
+
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find devices", getClass().getSimpleName())
+            .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+            .start();
+
+        final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context());
+
+        return deviceCountFuture.compose(
+                count -> expanded
+                        .trace(this.tracer, span.context())
+                        .query(this.client)
+
+                        .map(r -> {
+                            final var entries = r.getRows(true);
+                            span.log(Map.of(
+                                    "event", "read result",
+                                    "rows", entries.size()));
+                            final List<DeviceWithId> list = new ArrayList<>();
+                            for (var entry : entries) {
+                                final var id = entry.getString("device_id");
+                                final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
+                                list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
+                            }
+                            return new SearchResult<>(count, list);
+
+                        }))
+            .onComplete(x -> span.finish());
+    }
 }
+
+
