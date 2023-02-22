@@ -470,22 +470,27 @@ public class ManagementStore extends AbstractTenantStore {
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find tenants", getClass().getSimpleName())
             .start();
 
-        return expanded
-            .trace(this.tracer, span.context())
-            .query(this.client)
-            .map(r -> {
-                final var entries = r.getRows(true);
-                span.log(Map.of(
-                    "event", "read result",
-                    "rows", entries.size()));
-                final List<TenantWithId> list = new ArrayList<>();
-                for (var entry : entries) {
-                    final var id = entry.getString("tenant_id");
-                    final var tenant = Json.decodeValue(entry.getString("data"), Tenant.class);
-                    list.add(TenantWithId.from(id, tenant));
-                }
-                return new SearchResult<>(list.size(), list);
-            })
+        final Future<Integer> tenantCountFuture = getTenantCount();
+
+        return tenantCountFuture.compose(
+                count -> expanded
+                    .trace(this.tracer, span.context())
+                    .query(this.client)
+
+                    .map(r -> {
+                        final var entries = r.getRows(true);
+                        span.log(Map.of(
+                            "event", "read result",
+                            "rows", entries.size()));
+                        final List<TenantWithId> list = new ArrayList<>();
+                        for (var entry : entries) {
+                            final var id = entry.getString("tenant_id");
+                            final var tenant = Json.decodeValue(entry.getString("data"), Tenant.class);
+                            list.add(TenantWithId.from(id, tenant));
+                        }
+                        return new SearchResult<>(count, list);
+
+                    }))
             .onComplete(x -> span.finish());
     }
 }
