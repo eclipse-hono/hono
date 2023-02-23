@@ -1,5 +1,5 @@
 ![License](https://img.shields.io/github/license/eclipse/hono)
-![Continuous Integration Build](https://img.shields.io/github/workflow/status/eclipse/hono/Build%20and%20run%20integration%20tests)
+![Continuous Integration Build](https://img.shields.io/github/actions/workflow/status/eclipse-hono/hono/ci.yml?branch=master)
 ![Docker Pulls](https://img.shields.io/docker/pulls/eclipse/hono-service-auth)
 ![Latest Release](https://img.shields.io/docker/v/eclipse/hono-service-auth?sort=semver)
 
