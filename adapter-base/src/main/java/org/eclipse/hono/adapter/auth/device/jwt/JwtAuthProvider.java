@@ -13,26 +13,19 @@
 
 package org.eclipse.hono.adapter.auth.device.jwt;
 
-import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
 import io.opentracing.Tracer;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -40,32 +33,25 @@ import io.vertx.core.json.JsonObject;
  */
 public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> {
 
-    final ExternalJwtAuthTokenValidator externalJwtAuthTokenValidator;
+    private static final Duration ALLOWED_CLOCK_SKEW = Duration.ofMinutes(10);
+
+    private final JwsValidator tokenValidator;
+
 
     /**
      * Creates a new authentication provider for a credentials client.
      *
      * @param credentialsClient The client for accessing the Credentials service.
+     * @param tokenValidator The service to use for validating tokens.
      * @param tracer The tracer instance.
      * @throws NullPointerException if the client or the tracer are {@code null}.
      */
-    public JwtAuthProvider(final CredentialsClient credentialsClient,
+    public JwtAuthProvider(
+            final CredentialsClient credentialsClient,
+            final JwsValidator tokenValidator,
             final Tracer tracer) {
-        this(credentialsClient, tracer, new ExternalJwtAuthTokenValidator());
-    }
-
-    /**
-     * Creates a new authentication provider for a credentials client.
-     *
-     * @param credentialsClient The client for accessing the Credentials service.
-     * @param tracer The tracer instance.
-     * @param externalJwtAuthTokenValidator The AuthTokenValidator instance.
-     * @throws NullPointerException if the client or the tracer are {@code null}.
-     */
-    public JwtAuthProvider(final CredentialsClient credentialsClient,
-            final Tracer tracer, final ExternalJwtAuthTokenValidator externalJwtAuthTokenValidator) {
         super(credentialsClient, tracer);
-        this.externalJwtAuthTokenValidator = externalJwtAuthTokenValidator;
+        this.tokenValidator = Objects.requireNonNull(tokenValidator);
     }
 
     /**
@@ -87,8 +73,8 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
         try {
             final String tenantId = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
             final String authId = authInfo.getString(CredentialsConstants.FIELD_AUTH_ID);
-            final String jwt = authInfo.getString(CredentialsConstants.FIELD_PASSWORD);
-            if (tenantId == null || authId == null || jwt == null) {
+            final String jws = authInfo.getString(CredentialsConstants.FIELD_PASSWORD);
+            if (tenantId == null || authId == null || jws == null) {
                 return null;
             } else {
                 final JsonObject clientContext = authInfo.copy();
@@ -97,48 +83,29 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
                 clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
                 clientContext.remove(CredentialsConstants.FIELD_AUTH_ID);
                 clientContext.remove(CredentialsConstants.FIELD_PASSWORD);
-                return JwtCredentials.create(tenantId, authId, jwt, clientContext);
+                return JwtCredentials.create(tenantId, authId, jws, clientContext);
             }
         } catch (final ClassCastException | IllegalArgumentException e) {
-            log.warn("Reading authInfo failed", e);
+            log.debug("Reading authInfo failed", e);
             return null;
         }
     }
 
     @Override
-    protected Future<DeviceUser> doValidateCredentials(final JwtCredentials deviceCredentials,
+    protected Future<DeviceUser> doValidateCredentials(
+            final JwtCredentials deviceCredentials,
             final CredentialsObject credentialsOnRecord) {
-        final Context currentContext = Vertx.currentContext();
-        if (currentContext == null) {
-            return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
-        }
-        final Promise<DeviceUser> result = Promise.promise();
-        currentContext.executeBlocking(blockingCodeHandler -> {
-            log.debug("validating JWT on vert.x worker thread [{}]", Thread.currentThread().getName());
-            try {
-                final Jws<Claims> jws = getJws(deviceCredentials, credentialsOnRecord);
-                blockingCodeHandler
-                        .complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()) {
 
-                            private final Instant expirationTime = ExternalJwtAuthTokenValidator
-                                    .getExpirationTime(jws.getBody().getExpiration().toInstant());
+        return tokenValidator.expand(deviceCredentials.getJws(), credentialsOnRecord.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
+                .map(claims -> {
+                    final var expirationTime = claims.getBody().getExpiration().toInstant().plus(ALLOWED_CLOCK_SKEW);
+                    return new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()) {
 
-                            @Override
-                            public boolean expired() {
-                                return expirationTime.isBefore(Instant.now());
-                            }
-                        });
-            } catch (RuntimeException e) {
-                blockingCodeHandler
-                        .fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, e));
-            }
-        }, false, result);
-        return result.future();
-    }
-
-    private Jws<Claims> getJws(final JwtCredentials deviceCredentials,
-            final CredentialsObject credentialsOnRecord) throws RuntimeException {
-        externalJwtAuthTokenValidator.setCredentialsObject(credentialsOnRecord);
-        return externalJwtAuthTokenValidator.expand(deviceCredentials.getJwt());
+                        @Override
+                        public boolean expired() {
+                            return expirationTime.isBefore(Instant.now());
+                        }
+                    };
+                });
     }
 }

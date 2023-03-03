@@ -45,6 +45,7 @@ import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
+import org.eclipse.hono.adapter.auth.device.jwt.DefaultJwsValidator;
 import org.eclipse.hono.adapter.auth.device.jwt.JwtAuthProvider;
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.x509.TenantServiceBasedX509Authentication;
@@ -223,7 +224,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
                         new X509AuthProvider(getCredentialsClient(), tracer)))
                 .append(new JwtAuthHandler(
-                        new JwtAuthProvider(getCredentialsClient(), tracer)))
+                        new JwtAuthProvider(
+                                getCredentialsClient(),
+                                new DefaultJwsValidator(),
+                                tracer)))
                 .append(new ConnectPacketAuthHandler(
                         new UsernamePasswordAuthProvider(
                                 getCredentialsClient(),

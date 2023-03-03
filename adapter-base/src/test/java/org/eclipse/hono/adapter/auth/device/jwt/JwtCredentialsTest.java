@@ -40,7 +40,7 @@ class JwtCredentialsTest {
         assertNotNull(jwtCredentials);
         assertEquals(tenantId, jwtCredentials.getTenantId());
         assertEquals(authId, jwtCredentials.getAuthId());
-        assertEquals(jwt, jwtCredentials.getJwt());
+        assertEquals(jwt, jwtCredentials.getJws());
         assertEquals(CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY, jwtCredentials.getType());
     }
 
