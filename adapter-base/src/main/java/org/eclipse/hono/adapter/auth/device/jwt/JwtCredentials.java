@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,10 +26,15 @@ import io.vertx.core.json.JsonObject;
  */
 public class JwtCredentials extends AbstractDeviceCredentials {
 
-    private String jwt;
+    private final String jws;
 
-    private JwtCredentials(final String tenantId, final String authId, final JsonObject clientContext) {
+    private JwtCredentials(
+            final String tenantId,
+            final String authId,
+            final String jws,
+            final JsonObject clientContext) {
         super(tenantId, authId, clientContext);
+        this.jws = Objects.requireNonNull(jws);
     }
 
     /**
@@ -50,7 +55,8 @@ public class JwtCredentials extends AbstractDeviceCredentials {
      *
      * @param tenantId The {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} of the tenant the device belongs to.
      * @param authId The {@value CredentialsConstants#FIELD_AUTH_ID} provided by the device.
-     * @param jwt The JWT provided by the device in the password field.
+     * @param jws The compact encoding of a JSON Web Signature (JWS) structure that contains a JSON Web Token (JWT)
+     *            provided by the client.
      * @param clientContext The client context that can be used to get credentials from the Credentials API.
      * @return The credentials.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -58,17 +64,15 @@ public class JwtCredentials extends AbstractDeviceCredentials {
     public static JwtCredentials create(
             final String tenantId,
             final String authId,
-            final String jwt,
+            final String jws,
             final JsonObject clientContext) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(authId);
-        Objects.requireNonNull(jwt);
+        Objects.requireNonNull(jws);
         Objects.requireNonNull(clientContext);
 
-        final JwtCredentials credentials = new JwtCredentials(tenantId, authId, clientContext);
-        credentials.jwt = jwt;
-        return credentials;
+        return new JwtCredentials(tenantId, authId, jws, clientContext);
     }
 
     /**
@@ -82,11 +86,11 @@ public class JwtCredentials extends AbstractDeviceCredentials {
     }
 
     /**
-     * Gets the JWT to use for verifying the identity.
+     * Gets the JSON Web Signature (JWS) structure that contains the client's JSON Web Token (JWT).
      *
-     * @return The JWT.
+     * @return The JWS.
      */
-    public final String getJwt() {
-        return jwt;
+    public final String getJws() {
+        return jws;
     }
 }

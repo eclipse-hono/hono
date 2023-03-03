@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -162,22 +162,11 @@ public abstract class MqttTestBase {
             final String username,
             final String password) {
 
-        final Promise<MqttConnAckMessage> result = Promise.promise();
-        vertx.runOnContext(connect -> {
-            final MqttClientOptions options = new MqttClientOptions(defaultOptions)
-                    .setUsername(username)
-                    .setPassword(password);
-            options.setEnabledSecureTransportProtocols(Set.of(tlsVersion));
-            mqttClient = MqttClient.create(vertx, options);
-            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
-        });
-        return result.future().map(conAck -> {
-            LOGGER.info(
-                    "MQTTS connection to adapter [host: {}, port: {}] established",
-                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
-            this.context = Vertx.currentContext();
-            return conAck;
-        });
+        final MqttClientOptions options = new MqttClientOptions(defaultOptions)
+                .setUsername(username)
+                .setPassword(password);
+        options.setEnabledSecureTransportProtocols(Set.of(tlsVersion));
+        return connectToAdapter(options, IntegrationTestSupport.MQTT_HOST);
     }
 
     /**
@@ -210,16 +199,32 @@ public abstract class MqttTestBase {
         Objects.requireNonNull(cert);
         Objects.requireNonNull(hostname);
 
+        final MqttClientOptions options = new MqttClientOptions(defaultOptions);
+        options.setKeyCertOptions(cert.keyCertOptions());
+        return connectToAdapter(options, hostname);
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using given options.
+     *
+     * @param options The options to use for connecting to the adapter.
+     * @param hostname The name of the host to connect to.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
+     *         if the connection could not be established.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(
+            final MqttClientOptions options,
+            final String hostname) {
+
+        Objects.requireNonNull(options);
+        Objects.requireNonNull(hostname);
+
         final Promise<MqttConnAckMessage> result = Promise.promise();
         vertx.runOnContext(connect -> {
-            final MqttClientOptions options = new MqttClientOptions(defaultOptions);
-            options.setKeyCertOptions(cert.keyCertOptions());
-
             mqttClient = MqttClient.create(vertx, options);
-            mqttClient.connect(
-                    IntegrationTestSupport.MQTTS_PORT,
-                    hostname,
-                    result);
+            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, hostname, result);
         });
         return result.future().map(conAck -> {
             LOGGER.info(

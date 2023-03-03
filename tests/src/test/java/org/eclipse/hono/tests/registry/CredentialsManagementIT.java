@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,8 @@ package org.eclipse.hono.tests.registry;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -118,9 +120,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
      * service successfully adds arbitrary types of credentials.
      *
      * @param context The vert.x test context.
+     * @throws NoSuchAlgorithmException if the JVM does not support ECC cryptography.
      */
     @Test
-    public void testAddCredentialsSucceeds(final VertxTestContext context) {
+    public void testAddCredentialsSucceeds(final VertxTestContext context) throws NoSuchAlgorithmException {
 
         final PasswordCredential pwdCredential = Credentials.createPasswordCredential(authId, "thePassword");
         pwdCredential.getExtensions().put("client-id", "MQTT-client-2384236854");
@@ -132,7 +135,15 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 List.of(new X509CertificateSecret()));
         x509Credential.setComment("non-standard attribute type");
 
-        final List<CommonCredential> credentials = List.of(pwdCredential, pskCredential, x509Credential);
+        final var generator = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
+        final var keyPair = generator.generateKeyPair();
+        final var rpkCredential = Credentials.createRPKCredential(authId, keyPair.getPublic());
+
+        final List<CommonCredential> credentials = List.of(
+                pwdCredential,
+                pskCredential,
+                x509Credential,
+                rpkCredential);
 
         registry.getCredentials(tenantId, deviceId)
             .compose(httpResponse -> {
@@ -149,7 +160,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
             .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
                     final CommonCredential[] credsOnRecord = httpResponse.bodyAsJson(CommonCredential[].class);
-                    assertThat(credsOnRecord).hasLength(3);
+                    assertThat(credsOnRecord).hasLength(4);
                     Arrays.stream(credsOnRecord)
                         .forEach(creds -> {
                             assertThat(creds.getExtensions().get("device-id")).isNull();

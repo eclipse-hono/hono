@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,17 @@ import io.vertx.core.json.JsonObject;
  * Constants &amp; utility methods used throughout the Credentials API.
  */
 public final class CredentialsConstants extends RequestResponseApiConstants {
+
+    /**
+     * The <em>aud</em> claim value indicating that a JWT is intended to be processed
+     * by a Hono protocol adapter.
+     */
+    public static final String AUDIENCE_HONO_ADAPTER = "hono-adapter";
+
+    /**
+     * The name of the claim that contains the tenant that a device belongs to.
+     */
+    public static final String CLAIM_TENANT_ID = "tid";
 
     /**
      * The name of the field that contains the user name.
@@ -49,6 +60,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     public static final String FIELD_CREDENTIALS_TOTAL           = "total";
 
     /* secrets fields */
+    /**
+     * The name of the field that contains the password hash.
+     */
+    public static final String FIELD_SECRETS_ALGORITHM           = "algorithm";
     /**
      * The name of the field that contains the password hash.
      */
@@ -190,7 +205,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
             return CredentialsAction.from(subject) != CredentialsAction.unknown;
         }
     }
-
 
     private CredentialsConstants() {
         // prevent instantiation

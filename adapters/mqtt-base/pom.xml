@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -34,10 +34,24 @@
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
     </dependency>
+
+    <!-- tests -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-impl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.jsonwebtoken</groupId>
+      <artifactId>jjwt-jackson</artifactId>
     </dependency>
   </dependencies>
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,27 +23,26 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.auth.ExternalJwtAuthTokenValidator;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.security.SignatureException;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -55,50 +54,31 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 class JwtAuthProviderTest {
 
-    private static Vertx vertx;
-
     private final String tenantId = "tenant-id";
     private final String deviceId = "device-id";
     private final String authId = "auth-id";
-    private final String password = "jwt";
+    private final String password = "jws";
     private final JwtCredentials deviceCredentials = JwtCredentials.create(tenantId, authId, password);
     private JwtAuthProvider authProvider;
     private CredentialsClient credentialsClient;
-    private ExternalJwtAuthTokenValidator authTokenValidator;
-
-    /**
-     * Initializes vert.x.
-     */
-    @BeforeAll
-    public static void init() {
-        vertx = Vertx.vertx();
-    }
+    private JwsValidator tokenValidator;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     void setUp() {
-
+        tokenValidator = mock(JwsValidator.class);
         credentialsClient = mock(CredentialsClient.class);
-        authTokenValidator = mock(ExternalJwtAuthTokenValidator.class);
-        authProvider = new JwtAuthProvider(credentialsClient, NoopTracerFactory.create(), authTokenValidator);
-        givenCredentialsOnRecord(
-                CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.RSA_ALG, new byte[]{1}, null, null));
+        authProvider = new JwtAuthProvider(credentialsClient, tokenValidator, NoopTracerFactory.create());
+        givenCredentialsOnRecord(CredentialsObject.fromRawPublicKey(
+                deviceId,
+                authId,
+                CredentialsConstants.RSA_ALG,
+                new byte[]{0x01},
+                null,
+                null));
 
-    }
-
-    /**
-     * Verifies that the provider fails to authenticate a device when not running on a vert.x Context.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    void testAuthenticationRequiresVertxContext(final VertxTestContext ctx) {
-        authProvider.authenticate(deviceCredentials, null, ctx.failing(t -> {
-            ctx.verify(() -> assertThat(t).isInstanceOf(IllegalStateException.class));
-            ctx.completeNow();
-        }));
     }
 
     /**
@@ -115,7 +95,7 @@ class JwtAuthProviderTest {
         assertThat(jwtCredentials).isNotNull();
         assertEquals(authId, jwtCredentials.getAuthId());
         assertEquals(tenantId, jwtCredentials.getTenantId());
-        assertEquals(password, jwtCredentials.getJwt());
+        assertEquals(password, jwtCredentials.getJws());
     }
 
     /**
@@ -151,14 +131,15 @@ class JwtAuthProviderTest {
         final Jws<Claims> claimsJws = mock(Jws.class);
         final Claims claims = mock(Claims.class);
 
-        when(claimsJws.getBody()).thenReturn(claims);
         when(claims.getExpiration()).thenReturn(Date.from(now.plusSeconds(3600 * 24)));
         when(claims.getIssuedAt()).thenReturn(Date.from(now));
+        when(claimsJws.getBody()).thenReturn(claims);
 
-        when(authTokenValidator.expand(anyString())).thenReturn(claimsJws);
+        when(tokenValidator.expand(anyString(), any(List.class), any(Duration.class)))
+            .thenReturn(Future.succeededFuture(claimsJws));
 
         final Promise<DeviceUser> result = Promise.promise();
-        vertx.runOnContext(go -> authProvider.authenticate(deviceCredentials, null, result));
+        authProvider.authenticate(deviceCredentials, null, result);
         result.future().onComplete(ctx.succeeding(device -> {
             ctx.verify(() -> {
                 assertThat(device.getDeviceId()).isEqualTo(deviceId);
@@ -172,13 +153,17 @@ class JwtAuthProviderTest {
      * Verifies that doValidateCredentials returns a failing future, when AuthTokenValidator.expand() throws an
      * Exception.
      */
+    @SuppressWarnings("unchecked")
     @Test
     void testDoValidateCredentialsAuthTokenValidatorExpandThrowsException(final VertxTestContext ctx) {
 
-        when(authTokenValidator.expand(anyString())).thenThrow(SignatureException.class);
+        when(tokenValidator.expand(anyString(), any(List.class), any(Duration.class)))
+            .thenReturn(Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "failed to validate token")));
 
         final Promise<DeviceUser> result = Promise.promise();
-        vertx.runOnContext(go -> authProvider.authenticate(deviceCredentials, null, result));
+        authProvider.authenticate(deviceCredentials, null, result);
         result.future().onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             ctx.completeNow();
