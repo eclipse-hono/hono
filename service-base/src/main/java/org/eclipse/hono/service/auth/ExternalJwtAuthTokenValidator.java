@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022-2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.auth;
 
-import java.nio.charset.Charset;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -41,6 +40,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.SigningKeyResolverAdapter;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -85,7 +85,9 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
                 builder.setSigningKeyResolver(new SigningKeyResolverAdapter() {
 
                     @Override
-                    public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
+                    public Key resolveSigningKey(
+                            @SuppressWarnings("rawtypes") final JwsHeader header,
+                            final Claims claims) {
 
                         final var tokenType = Optional.ofNullable(header.getType())
                                 .orElseThrow(
@@ -133,21 +135,27 @@ public class ExternalJwtAuthTokenValidator implements AuthTokenValidator {
     }
 
     /**
-     * Extracts the claims from a provided JWT as an {@link JsonObject}.
+     * Extracts the claims from a JSON Web Token (JWT) embedded in a JSON Web
+     * Signature (JWS) structure.
      *
-     * @param jwt The JWT.
-     * @return The claims of the JWT.
-     * @throws MalformedJwtException if the JWT payload can not be properly decoded into a {@link JsonObject}.
+     * @param jws The JWS structure.
+     * @return The claims contained in the token.
+     * @throws NullPointerException if the JWS is {@code null}.
+     * @throws MalformedJwtException if the JWT's payload can not be parsed into a JSON object.
      */
-    public JsonObject getJwtClaims(final String jwt) {
+    public JsonObject getJwtClaims(final String jws) {
+
+        Objects.requireNonNull(jws);
+        final String[] jwtSplit = jws.split("\\.", 3);
+        if (jwtSplit.length != 3) {
+            throw new MalformedJwtException("String is not a valid JWS structure");
+        }
+
         try {
-            final String[] jwtSplit = jwt.split("\\.");
-            final String payload = new String(
-                    Base64.getUrlDecoder().decode(jwtSplit[1].getBytes(Charset.defaultCharset())),
-                    Charset.defaultCharset());
-            return new JsonObject(payload);
-        } catch (RuntimeException e) {
-            throw new MalformedJwtException("Invalid JWT.", e);
+            final Buffer p = Buffer.buffer(Base64.getUrlDecoder().decode(jwtSplit[1]));
+            return new JsonObject(p);
+        } catch (final RuntimeException e) {
+            throw new MalformedJwtException("Cannot parse JWS payload into JSON object", e);
         }
     }
 
