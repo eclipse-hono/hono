@@ -150,37 +150,42 @@ the client certificate's *subject DN* and invokes the Credentials API's
 
 ### JSON Web Token based Authentication
 
-The MQTT protocol adapter supports authentication of devices with a JSON Web Token (JWT) based mechanism. In this case,
-the protocol adapter verifies the JWT by using the public key that is on record for the device in the
-device registry. Further more does the protocol adapter check if the JWT is valid. To be valid the JWT has to provide
-the following information in its header and payload.
+The MQTT protocol adapter supports authentication of devices with a
+[JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) based mechanism.
+In this case, the protocol adapter tries to validate the token presented by the device using a public key on record.
 
-The JWT header has to provide two fields that indicate the type of token (`typ`) and the signing algorithm (`alg`).
-Both fields are mandatory and the type has to be `JWT`. For the signing algorithm `RS256`, `PS256`, `ES256` and their
-respective stronger variants are supported. The algorithm specified in the header must match at least one of the
-[*raw public key* type credentials]({{< relref "/api/credentials#raw-public-key" >}}) registered for the device.
+During connection establishment the device presents a client identifier, a username and a password in its
+MQTT CONNECT packet to the protocol adapter. The value of the username field is ignored. The password field is
+expected to contain a valid [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) structure that
+contains a JWT in its payload.
 
-The JWT payload must at least contain the claims `iat` ("issued at") and `exp` ("expiration time") with values provided
-in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The `iat` claim marks the timestamp the token was created at
-and will also represent the start of its validity period. It must not be too far in the past or the future (allowing 10
-minutes for skew). The `nbf` ("not before") claim is therefore not required and will be ignored. The `exp` claim
-signifies the point in time after which the token becomes invalid. The lifetime of the token must be at most 24 hours
-plus skew.
+The JWS's header MUST contain the *typ* parameter with value `JWT` and MUST contain the *alg* parameter indicating the
+algorithm that has been used to create the JWS signature. `RS256`, `PS256`, `ES256` and their respective stronger
+variants are supported. The algorithm specified in the header must be compatible with at least one of the
+[*Raw Public Key* type credentials]({{< relref "/api/credentials#raw-public-key" >}}) registered for the device.
 
-During connection establishment the device presents a client identifier, a username and a password to the protocol
-adapter. The JWT has to be provided in the password field. The username will be ignored; however, some MQTT client
-libraries will not send the password unless the username is specified. There are two ways the device can
-provide the information about its tenant and authentication identifier:
+The JWT in the payload MUST contain the claims *iat* (issued at) and *exp* (expiration time) with values provided
+in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The *iat* claim marks the instant at which the token has
+been created and also marks the start of its validity period. It must not be too far in the past or the future
+(allowing 10 minutes for skew). The *nbf* (not before) claim is therefore not required and will be ignored.
+The *exp* claim marks the instant after which the token MUST be considered invalid. The lifetime of the token must
+be at most 24 hours plus skew.
 
-1. Either as claims inside the JWT payload, in which case the *tenant-id* and *auth-id* must be provided in the `iss`
-   ("issuer") and `sub` ("subject") claims, respectively, and the `aud` ("audience") claim must contain "hono-adapter"
-2. or inside the client identifier, in which case the client identifier must have the following format:
-   */*tenant-id*/[^/]\*/*auth-id*. For example, a device that belongs to tenant `example-tenant` and for which
-   *rpk* (raw public key) credentials with an *auth-id* of `device-1` have been registered, would present a client identifier
-   of `tenants/example-tenant/devices/device-1` when authenticating to the protocol adapter.
+The adapter tries to determine the device's tenant and authentication identifier as follows:
 
-The protocol adapter then extracts the tenant identifier and invokes the Credentials
-API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
-*rpk* (raw public key) type credentials that are on record for the device. The key contained in the credentials is then used
-by the protocol adapter to verify the JWT provided by the client. If both, the JWT and the key originate from
-the same private key and the JWT's header and claims are valid, than the device will be authenticated successfully.
+1. If the JWT contains the *aud* (intended audience) claim with value `hono-adapter`, then the JWT must contain
+   claims *tid* and *sub* (subject) from which the adapter extracts the tenant and authentication ID respectively.
+2. Otherwise, the adapter expects to find the tenant and authentication ID in the MQTT client identifier which
+   in this case MUST have the following format:
+   
+   ```
+   \*/{tenant-id}/[^/]\*/{auth-id}
+   ```
+
+   For example, a device that belongs to tenant `example-tenant` and for which *rpk* (raw public key) credentials
+   with an *auth-id* of `device-1` have been registered, would present a client identifier of
+   `tenants/example-tenant/devices/device-1` when connecting to the protocol adapter.
+
+The protocol adapter then invokes the Credentials API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}})
+operation in order to retrieve the *rpk* (raw public key) type credentials that are on record for the device.
+The key contained in the credentials is then used by the protocol adapter to verify the JWS signature.

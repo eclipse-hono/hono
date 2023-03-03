@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.MalformedJwtException;
 import io.opentracing.Span;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -75,16 +77,18 @@ public class JwtAuthHandlerTest {
 
         final String authId = "authId";
         final String tenantId = "tenantId";
-        final String jwt = "header.claims.signature";
+        final String jwt = "header.body.signature";
 
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
                 .onComplete(ctx.succeeding(info -> {
                     ctx.verify(() -> {
+                        assertThat(info.containsKey(Claims.ISSUER)).isFalse();
                         assertThat(info.getString(CredentialsConstants.FIELD_AUTH_ID)).isEqualTo(authId);
                         assertThat(info.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
                         assertThat(info.getString(CredentialsConstants.FIELD_PASSWORD)).isEqualTo(jwt);
@@ -110,14 +114,16 @@ public class JwtAuthHandlerTest {
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn("client identifier");
         when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
-        when(claims.getString(Claims.ISSUER)).thenReturn(tenantId);
+        when(claims.getString(JwtAuthHandler.CLAIM_TENANT_ID)).thenReturn(tenantId);
         when(claims.getString(Claims.SUBJECT)).thenReturn(authId);
-        when(claims.getString(Claims.AUDIENCE)).thenReturn(JwtAuthHandler.REQUIRED_AUD);
+        when(claims.getString(Claims.AUDIENCE)).thenReturn(JwtAuthHandler.AUDIENCE_HONO_ADAPTER);
+        when(claims.getString(Claims.ISSUER)).thenReturn(authId);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
                 .onComplete(ctx.succeeding(info -> {
                     ctx.verify(() -> {
+                        assertThat(info.getString(Claims.ISSUER)).isEqualTo(authId);
                         assertThat(info.getString(CredentialsConstants.FIELD_AUTH_ID)).isEqualTo(authId);
                         assertThat(info.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
                         assertThat(info.getString(CredentialsConstants.FIELD_PASSWORD)).isEqualTo(jwt);
@@ -144,7 +150,7 @@ public class JwtAuthHandlerTest {
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn("client identifier");
         when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
-        when(claims.getString(Claims.ISSUER)).thenReturn(tenantId);
+        when(claims.getString(JwtAuthHandler.CLAIM_TENANT_ID)).thenReturn(tenantId);
         when(claims.getString(Claims.SUBJECT)).thenReturn(authId);
         when(claims.getString(Claims.AUDIENCE)).thenReturn("invalid aud claim");
 
@@ -173,7 +179,8 @@ public class JwtAuthHandlerTest {
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn(String.format("tenants.%s.devices.%s", tenantId, authId));
-        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(null);
+        // no aud claim
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
@@ -199,6 +206,7 @@ public class JwtAuthHandlerTest {
         when(auth.getUsername()).thenReturn("");
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
+        when(authTokenValidator.getJwtClaims(anyString())).thenThrow(new MalformedJwtException("invalid JWS"));
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
@@ -225,6 +233,7 @@ public class JwtAuthHandlerTest {
         when(auth.getPassword()).thenReturn(jwt);
         when(endpoint.clientIdentifier()).thenReturn(String.format("tenants/%s/devices/%s", tenantId, authId));
         when(endpoint.auth()).thenReturn(null);
+        when(authTokenValidator.getJwtClaims(jwt)).thenReturn(claims);
 
         final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
         authHandler.parseCredentials(context)
