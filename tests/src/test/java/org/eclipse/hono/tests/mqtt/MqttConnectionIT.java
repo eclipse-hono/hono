@@ -16,8 +16,14 @@ package org.eclipse.hono.tests.mqtt;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -37,6 +43,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +52,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.jsonwebtoken.Jwts;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -53,6 +61,7 @@ import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mqtt.MqttConnectionException;
 
 /**
@@ -101,6 +110,77 @@ public class MqttConnectionIT extends MqttTestBase {
                     ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the adapter opens a connection to a registered device that authenticates
+     * using a JSON Web Token.
+     *
+     * @param ctx The test context
+     * @throws NoSuchAlgorithmException if the JVM does not support ECC cryptography.
+     */
+    @Test
+    public void testConnectJwtSucceedsForRegisteredDevice(final VertxTestContext ctx) throws NoSuchAlgorithmException {
+
+        final var generator = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
+        final var keyPair = generator.generateKeyPair();
+        final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
+
+        final var jws = Jwts.builder()
+                .setAudience(CredentialsConstants.AUDIENCE_HONO_ADAPTER)
+                .setIssuer(deviceId)
+                .setSubject(deviceId)
+                .claim(CredentialsConstants.CLAIM_TENANT_ID, tenantId)
+                .setIssuedAt(Date.from(Instant.now()))
+                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
+                .setHeaderParam("typ", "JWT")
+                .signWith(keyPair.getPrivate())
+                .compact();
+
+        helper.registry.addTenant(tenantId)
+            .compose(res -> helper.registry.registerDevice(tenantId, deviceId))
+            .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
+            .compose(ok -> connectToAdapter("ignored", jws))
+            .onComplete(ctx.succeeding(conAckMsg -> {
+                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the adapter opens a connection to a registered device that authenticates
+     * using a Google IoT Core style JSON Web Token in conjunction with an MQTT connection
+     * identifier that contains the tenant and authentication ID.
+     *
+     * @param ctx The test context
+     * @throws NoSuchAlgorithmException if the JVM does not support ECC cryptography.
+     */
+    @Test
+    public void testConnectGoogleIoTCoreJwtSucceedsForRegisteredDevice(final VertxTestContext ctx) throws NoSuchAlgorithmException {
+
+        final var generator = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
+        final var keyPair = generator.generateKeyPair();
+        final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
+
+        final var jws = Jwts.builder()
+                .setIssuedAt(Date.from(Instant.now()))
+                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
+                .setHeaderParam("typ", "JWT")
+                .signWith(keyPair.getPrivate())
+                .compact();
+        final var options = new MqttClientOptions(defaultOptions)
+                .setUsername("ignored")
+                .setPassword(jws)
+                .setClientId("tenants/%s/devices/%s".formatted(tenantId, deviceId));
+
+        helper.registry.addTenant(tenantId)
+            .compose(res -> helper.registry.registerDevice(tenantId, deviceId))
+            .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
+            .compose(ok -> connectToAdapter(options, IntegrationTestSupport.MQTT_HOST))
+            .onComplete(ctx.succeeding(conAckMsg -> {
+                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -461,21 +541,21 @@ public class MqttConnectionIT extends MqttTestBase {
     @Test
     public void testConnectX509FailsForDisabledAdapter(final VertxTestContext ctx) {
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                    tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT).setEnabled(false));
-                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        })
-        // WHEN a device that belongs to the tenant tries to connect to the adapter
-        .compose(ok -> connectToAdapter(deviceCert))
-        .onComplete(ctx.failing(t -> {
-            // THEN the connection is refused with a NOT_AUTHORIZED code
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(MqttConnectionException.class);
-                assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-            });
-            ctx.completeNow();
-        }));
+            .compose(cert -> {
+                        final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT).setEnabled(false));
+                        return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+            })
+            // WHEN a device that belongs to the tenant tries to connect to the adapter
+            .compose(ok -> connectToAdapter(deviceCert))
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection is refused with a NOT_AUTHORIZED code
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(MqttConnectionException.class);
+                    assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

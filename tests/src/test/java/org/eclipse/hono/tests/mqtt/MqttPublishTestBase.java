@@ -16,11 +16,6 @@ package org.eclipse.hono.tests.mqtt;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,19 +36,16 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
-import io.jsonwebtoken.Jwts;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
@@ -66,7 +58,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -403,105 +394,6 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             tenantId,
             deviceId,
             connectToAdapter(deviceCert),
-            false);
-    }
-
-    /**
-     * Verifies that a number of messages published by a device authenticating with a JSON Web Token
-     * can be successfully consumed via the AMQP Messaging Network.
-     *
-     * @param ctx The test context.
-     * @throws InterruptedException if the test fails.
-     * @throws NoSuchAlgorithmException if the JVM does not support ECC cryptography.
-     */
-    @Test
-    public void testUploadMessagesUsingJwt(final VertxTestContext ctx) throws InterruptedException, NoSuchAlgorithmException {
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final VertxTestContext setup = new VertxTestContext();
-
-        final var generator = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
-        final var keyPair = generator.generateKeyPair();
-        final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
-
-        helper.registry.addTenant(tenantId)
-            .compose(res -> helper.registry.registerDevice(tenantId, deviceId))
-            .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
-            .onSuccess(res -> setup.completeNow());
-
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-            return;
-        }
-
-        final var jws = Jwts.builder()
-                .setAudience(CredentialsConstants.AUDIENCE_HONO_ADAPTER)
-                .setIssuer(deviceId)
-                .setSubject(deviceId)
-                .claim(CredentialsConstants.CLAIM_TENANT_ID, tenantId)
-                .setIssuedAt(Date.from(Instant.now()))
-                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
-                .setHeaderParam("typ", "JWT")
-                .signWith(keyPair.getPrivate())
-                .compact();
-
-        doTestUploadMessages(
-            ctx,
-            tenantId,
-            deviceId,
-            connectToAdapter("ignored", jws),
-            false);
-    }
-
-    /**
-     * Verifies that a number of messages published by a device authenticating with a JSON Web Token
-     * (Google IoT Core style) can be successfully consumed via the AMQP Messaging Network.
-     *
-     * @param ctx The test context.
-     * @throws InterruptedException if the test fails.
-     * @throws NoSuchAlgorithmException if the JVM does not support ECC cryptography.
-     */
-    @Test
-    public void testUploadMessagesUsingGoogleIoTCoreJwt(final VertxTestContext ctx)
-            throws InterruptedException, NoSuchAlgorithmException {
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final VertxTestContext setup = new VertxTestContext();
-
-        final var generator = KeyPairGenerator.getInstance(CredentialsConstants.EC_ALG);
-        final var keyPair = generator.generateKeyPair();
-        final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
-
-        helper.registry.addTenant(tenantId)
-            .compose(res -> helper.registry.registerDevice(tenantId, deviceId))
-            .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
-            .onSuccess(res -> setup.completeNow());
-
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-            return;
-        }
-
-        final var jws = Jwts.builder()
-                .setIssuedAt(Date.from(Instant.now()))
-                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
-                .setHeaderParam("typ", "JWT")
-                .signWith(keyPair.getPrivate())
-                .compact();
-        final var options = new MqttClientOptions(defaultOptions)
-                .setUsername("ignored")
-                .setPassword(jws)
-                .setClientId("tenants/%s/devices/%s".formatted(tenantId, deviceId));
-
-        doTestUploadMessages(
-            ctx,
-            tenantId,
-            deviceId,
-            connectToAdapter(options, IntegrationTestSupport.MQTT_HOST),
             false);
     }
 

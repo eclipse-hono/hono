@@ -17,6 +17,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.net.HttpURLConnection;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateEncodingException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -55,10 +56,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -213,6 +216,42 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the service accepts a request to update an empty set of credentials with
+     * raw public key credentials containing an encoded X.509 certificate.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddRpkCredentialsSucceedsForCertificate(final VertxTestContext context) {
+
+        // GIVEN a device with an empty set of credentials
+        // WHEN trying to add RPK credentials with a secret that contains an encoded
+        // X.509 certificate
+        final var selfSignedCert = SelfSignedCertificate.create();
+        getHelper().getCertificate(selfSignedCert.certificatePath())
+            .compose(cert -> {
+                try {
+                    final var secret = new JsonObject().put(
+                            RegistryManagementConstants.FIELD_PAYLOAD_CERT,
+                            cert.getEncoded());
+                    final var payload = new JsonArray().add(new JsonObject()
+                            .put(RegistryManagementConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY)
+                            .put(RegistryManagementConstants.FIELD_AUTH_ID, "bumlux")
+                            .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(secret)));
+                    return registry.updateCredentialsRaw(
+                            tenantId,
+                            deviceId,
+                            Optional.ofNullable(payload).map(JsonArray::toBuffer).orElse(null),
+                            CrudHttpClient.CONTENT_TYPE_JSON,
+                            HttpURLConnection.HTTP_NO_CONTENT);
+                } catch (final CertificateEncodingException e) {
+                    return Future.failedFuture(e);
+                }
+            })
+            .onComplete(context.succeedingThenComplete());
+    }
+
+    /**
      * Verifies that the service returns a 400 status code for an add credentials request with a Content-Type other than
      * application/json.
      *
@@ -364,6 +403,58 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 context,
                 new JsonArray().add(credentials),
                 HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that the service rejects a request to update an empty set of credentials with
+     * raw public key credentials containing a malformed public key.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddRpkCredentialsFailsForSecretWithMalformedPublicKey(final VertxTestContext context) {
+
+        // GIVEN a device with an empty set of credentials
+        // WHEN trying to add RPK credentials with a secret that contains a byte array that
+        // is not a proper DER encoding of a public key
+        final var secret = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
+                        CredentialsConstants.EC_ALG)
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                        new byte[] {0x01, 0x02, 0x03});
+
+        final var payload = new JsonArray().add(new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "bumlux")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(secret)));
+
+        testAddCredentialsWithErroneousPayload(context, payload, HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that the service rejects a request to update an empty set of credentials with
+     * raw public key credentials containing a malformed X.509 certificate.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddRpkCredentialsFailsForSecretWithMalformedCertificate(final VertxTestContext context) {
+
+        // GIVEN a device with an empty set of credentials
+        // WHEN trying to add RPK credentials with a secret that contains a byte array that
+        // is not a proper DER encoding of an X.509 certificate
+        final var secret = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
+                        CredentialsConstants.EC_ALG)
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT,
+                        new byte[] {0x01, 0x02, 0x03});
+
+        final var payload = new JsonArray().add(new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "bumlux")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(secret)));
+
+        testAddCredentialsWithErroneousPayload(context, payload, HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
     /**
