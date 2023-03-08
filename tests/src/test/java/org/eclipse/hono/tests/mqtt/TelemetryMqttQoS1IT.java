@@ -40,6 +40,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -115,61 +116,60 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
     }
 
     /**
-     * Verifies that sending a number of telemetry messages to Hono's MQTT adapter while there is no consumer causes
-     * corresponding error messages to be published to the client if it is subscribed on the error topic.
+     * Verifies that sending a telemetry message to Hono's MQTT adapter with no downstream consumer causes
+     * a corresponding error message to be published to the client if it is subscribed on the error topic.
      *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
     @Test
     @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
-    public void testUploadMessagesWithNoConsumerSendsErrors(final VertxTestContext ctx) throws InterruptedException {
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessageWithNoConsumerSendsError(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
 
-        final VertxTestContext setup = new VertxTestContext();
-
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-            return;
-        }
-
         // timeout value should be higher than the "hono.messaging.flowLatency" MQTT adapter configuration value
-        // so that no timeout doesn't while the MQTT adapter waits for credit after having created the first downstream
+        // so that no timeout occurs while the MQTT adapter waits for credit after having created the first downstream
         // sender link
         final long publishCompletionTimeout = 1500;
-        doTestUploadMessages(
-                ctx,
-                tenantId,
-                connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
-                (payload) -> send(tenantId, deviceId, payload, true, true, null, publishCompletionTimeout)
-                        .map(String::valueOf),
-                (messageHandler) -> Future.succeededFuture(), // no consumer created here (future succeeded with null value)
-                (msg) -> {
-                    final JsonObject payload = new JsonObject(msg.payload());
-                    final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
-                    ctx.verify(() -> {
-                        assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                        // error message should be the localized NoConsumerException message
-                        assertThat(payload.getString("message")).isEqualTo(ServiceInvocationException
-                                .getLocalizedMessage(NoConsumerException.CLIENT_FACING_MESSAGE_KEY));
-                        // validate topic segments; example: error//myDeviceId/telemetry/4/503
-                        final String[] topicSegments = msg.topicName().split("/");
-                        assertThat(topicSegments.length).isEqualTo(6);
-                        assertThat(topicSegments[0]).isEqualTo("e");
-                        assertThat(topicSegments[1]).isEqualTo(tenantId);
-                        assertThat(topicSegments[2]).isEmpty(); // device
-                        assertThat(topicSegments[3]).isEqualTo(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
-                        assertThat(topicSegments[4]).isEqualTo(correlationId);
-                        assertThat(topicSegments[5]).isEqualTo(Integer.toString(HttpURLConnection.HTTP_UNAVAILABLE));
-                    });
-                    return Future.succeededFuture(correlationId);
-                },
-                String.format("e/%s//#", tenantId));
+
+        final var errorMsgReceived = ctx.checkpoint();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .compose(res -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+            .onSuccess(conAck -> mqttClient.publishHandler(msg -> {
+                final JsonObject payload = new JsonObject(msg.payload());
+                LOGGER.debug("received error message [topic: {}]:{}{}",
+                        msg.topicName(), System.lineSeparator(), payload.encodePrettily());
+                final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+                ctx.verify(() -> {
+                    assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    // error message should be the localized NoConsumerException message
+                    assertThat(payload.getString("message")).isEqualTo(ServiceInvocationException
+                            .getLocalizedMessage(NoConsumerException.CLIENT_FACING_MESSAGE_KEY));
+                    // validate topic segments; example: error//myDeviceId/telemetry/4/503
+                    final String[] topicSegments = msg.topicName().split("/");
+                    assertThat(topicSegments.length).isEqualTo(6);
+                    assertThat(topicSegments[0]).isEqualTo("e");
+                    assertThat(topicSegments[1]).isEqualTo(tenantId);
+                    assertThat(topicSegments[2]).isEmpty(); // device
+                    assertThat(topicSegments[3]).isEqualTo(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
+                    assertThat(topicSegments[4]).isEqualTo(correlationId);
+                    assertThat(topicSegments[5]).isEqualTo(Integer.toString(HttpURLConnection.HTTP_UNAVAILABLE));
+                });
+                errorMsgReceived.flag();
+            }))
+            .compose(conAck -> subscribeToErrorTopic("e/%s//#".formatted(tenantId)))
+            .onComplete(ctx.succeeding(ok -> send(
+                    tenantId,
+                    deviceId,
+                    Buffer.buffer("payload"),
+                    true, // use short topic name
+                    true, // include tenant in topic
+                    null, // no topic property bag
+                    publishCompletionTimeout)));
     }
 }
