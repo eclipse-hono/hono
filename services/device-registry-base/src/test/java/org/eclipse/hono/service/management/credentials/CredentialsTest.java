@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -605,7 +605,7 @@ public class CredentialsTest {
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "not-a-subject-DN")
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
-        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(X509CertificateCredential.class));
+        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(X509CertificateCredentialWithSubjectDn.class));
     }
 
     /**

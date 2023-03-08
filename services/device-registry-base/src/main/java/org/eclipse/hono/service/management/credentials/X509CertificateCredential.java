@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,12 +20,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Predicate;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.Strings;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonCreator.Mode;
@@ -36,45 +34,47 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
- * A credential type for storing the <a href="https://www.ietf.org/rfc/rfc2253.txt">RFC 2253</a> formatted subject DN of
- * a client certificate.
+ * A credential type for storing the X.509 based secret information of a client certificate.
+ * <p>
+ * The authId is derived from <a href="https://www.ietf.org/rfc/rfc2253.txt">RFC 2253</a> formatted Subject DN of a
+ * client certificate by one of following patterns:
+ * <ol>
+ * <li>Using the exact Subject DN value in string representation.</li>
+ * <li>Using generated id produced by applying template to Subject DN./li>
+ * </ol>
  * <p>
  * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#x-509-certificate">X.509 Certificate</a> for an
  * example of the configuration properties for this credential type.
  */
 @RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-public class X509CertificateCredential extends CommonCredential {
+public abstract class X509CertificateCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
 
     private final List<X509CertificateSecret> secrets = new ArrayList<>();
 
     /**
-     * Creates a new credentials object for an X.500 Distinguished Name.
-     * <p>
-     * The given distinguished name will be normalized to RFC 2253 format.
+     * Creates a new credentials object for an authentication identifier.
      *
-     * @param distinguishedName The DN to use as the authentication identifier.
-     * @param secrets The credential's secret(s).
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if
-     *                                  secrets is empty.
+     * @param authId The authentication identifier.
+     * @throws NullPointerException if the auth ID is {@code null}.
+     * @throws IllegalArgumentException if the {@linkplain #getAuthIdValidator() auth-id validator} evaluates to
+     *                                  {@code false} for the given identifier.
      */
-    private X509CertificateCredential(final String distinguishedName, final List<X509CertificateSecret> secrets) {
-        super(new X500Principal(distinguishedName).getName(X500Principal.RFC2253));
-        setSecrets(secrets);
+    protected X509CertificateCredential(final String authId) {
+        super(authId);
     }
 
     /**
      * Creates a new credentials object.
      * <p>
      * This method tries to decode a non-null byte array into an X.509 certificate and delegate to
-     * {@link #fromCertificate(X509Certificate)}. Otherwise, the {@link #fromSubjectDn(String, List)}
-     * method is invoked with the given distinguished name and secrets parameter values.
+     * {@link #fromCertificate(X509Certificate)}. Otherwise, {@link #fromSubjectDn(String, List)} or
+     * {@link #fromGeneratedId(String, List)} method is invoked with the given authId and secrets parameter values.
      *
      * @param derEncodedX509Certificate The DER encoding of the client certificate.
-     * @param distinguishedName The DN to use as the authentication identifier.
+     * @param authId The authentication identifier.
      * @param secrets The credential's secret(s).
      * @throws NullPointerException if certificate bytes and any of distinguished name and secrets are {@code null}.
      * @throws IllegalArgumentException if the given byte array cannot be decoded into an X.509 certificate or if
@@ -85,23 +85,46 @@ public class X509CertificateCredential extends CommonCredential {
     @JsonCreator(mode = Mode.PROPERTIES)
     public static X509CertificateCredential fromProperties(
             @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_CERT) final byte[] derEncodedX509Certificate,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID) final String distinguishedName,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID) final String authId,
             @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS) final List<X509CertificateSecret> secrets) {
 
         if (derEncodedX509Certificate == null) {
-            Objects.requireNonNull(distinguishedName);
+            Objects.requireNonNull(authId);
             Objects.requireNonNull(secrets);
             if (secrets.size() != 1) {
                 throw new IllegalArgumentException("list must contain exactly one secret");
             }
-            return fromSubjectDn(distinguishedName, secrets);
+
+            if (isDistinguishedName(authId)) {
+                return fromSubjectDn(authId, secrets);
+            } else {
+                return fromGeneratedId(authId, secrets);
+            }
+
         } else {
             return fromCertificate(deserialize(derEncodedX509Certificate));
         }
     }
 
     /**
-     * Creates a new credentials object for an X.500 Distinguished Name.
+     * Creates a new credentials object using generated authentication identifier.
+     *
+     * @param generatedId The generated authentication identifier.
+     * @param secrets The credential's secret(s).
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if
+     *                                  secrets is empty.
+     * @return The credentials.
+     */
+    public static X509CertificateCredential fromGeneratedId(
+            final String generatedId,
+            final List<X509CertificateSecret> secrets) {
+
+        return new X509CertificateCredentialWithGeneratedId(generatedId, secrets);
+    }
+
+    /**
+     * Creates a new credentials object using an X.500 Distinguished Name.
      * <p>
      * The given distinguished name will be normalized to RFC 2253 format.
      *
@@ -116,7 +139,7 @@ public class X509CertificateCredential extends CommonCredential {
             final String distinguishedName,
             final List<X509CertificateSecret> secrets) {
 
-        return new X509CertificateCredential(distinguishedName, secrets);
+        return new X509CertificateCredentialWithSubjectDn(distinguishedName, secrets);
     }
 
     /**
@@ -132,7 +155,7 @@ public class X509CertificateCredential extends CommonCredential {
         final var secret = new X509CertificateSecret();
         secret.setNotBefore(certificate.getNotBefore().toInstant());
         secret.setNotAfter(certificate.getNotAfter().toInstant());
-        return new X509CertificateCredential(
+        return new X509CertificateCredentialWithSubjectDn(
                 certificate.getSubjectX500Principal().getName(X500Principal.RFC2253),
                 List.of(secret));
     }
@@ -146,20 +169,6 @@ public class X509CertificateCredential extends CommonCredential {
         } catch (final CertificateException e) {
             throw new IllegalArgumentException("cannot deserialize X.509 certificate", e);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Predicate<String> getAuthIdValidator() {
-        return authId -> {
-            if (Strings.isNullOrEmpty(authId)) {
-                return false;
-            }
-            final X500Principal distinguishedName = new X500Principal(authId);
-            return distinguishedName.getName(X500Principal.RFC2253).equals(authId);
-        };
     }
 
     /**
@@ -200,5 +209,20 @@ public class X509CertificateCredential extends CommonCredential {
         this.secrets.clear();
         this.secrets.addAll(secrets);
         return this;
+    }
+
+    /**
+     * Checks if a name is a string representation of an X.500 distinguished name.
+     *
+     * @param name The name to validate.
+     * @return boolean {@link Boolean#TRUE} if the name is valid X.500 distinguished name, {@link Boolean#FALSE} otherwise.
+     */
+    public static boolean isDistinguishedName(final String name) {
+        try {
+            new X500Principal(name);
+            return true;
+        } catch (final IllegalArgumentException e) {
+            return false;
+        }
     }
 }
