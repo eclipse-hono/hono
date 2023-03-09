@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.client.pubsub;
+package org.eclipse.hono.client.pubsub.publisher;
 
 import static org.mockito.Mockito.mock;
 
@@ -22,6 +22,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
+
+import com.google.api.gax.core.FixedCredentialsProvider;
 
 /**
  * Verifies behavior of {@link CachingPubSubPublisherFactory}.
@@ -42,7 +44,8 @@ public class CachingPubSubPublisherFactoryTest {
     void setUp() {
         vertx = mock(Vertx.class);
         client = mock(PubSubPublisherClient.class);
-        factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, null);
+        final FixedCredentialsProvider credentialsProvider = mock(FixedCredentialsProvider.class);
+        factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }
 

@@ -25,6 +25,8 @@ import java.util.Random;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherClient;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

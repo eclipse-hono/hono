@@ -20,6 +20,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherClient;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;

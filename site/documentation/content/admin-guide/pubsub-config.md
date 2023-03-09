@@ -15,13 +15,14 @@ To authenticate to the Google Pub/Sub API, Workload Identity is used and has to 
 Support for Google Pub/Sub based messaging infrastructure is considered **experimental** and may change without further notice.
 {{% /notice %}}
 
-## Publisher Configuration
+## Publisher and Subscriber Configuration
 
-The `org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory` factory can be used to create Pub/Sub publishers for Hono's
-Pub/Sub based APIs.
+The `org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory` factory can be used to create Pub/Sub
+publishers for Hono's Pub/Sub based APIs. The `org.eclipse.hono.client.pubsub.subscriber.CachingPubSubSubscriberFactory`
+factory can be used to create Pub/Sub subscribers for Hono's Pub/Sub based APIs.
 
 Please refer to the [Quarkus Google Cloud Services extension](https://quarkiverse.github.io/quarkiverse-docs/quarkus-google-cloud-services/main/index.html)
-documentation for details regarding configuration of the PubSub client.
+documentation for details regarding configuration of the Pub/Sub client.
 
 ## Configuring Tenants to use Pub/Sub based Messaging
 

@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.pubsub.AbstractPubSubBasedMessageSender;
-import org.eclipse.hono.client.pubsub.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.DownstreamMessageProperties;
