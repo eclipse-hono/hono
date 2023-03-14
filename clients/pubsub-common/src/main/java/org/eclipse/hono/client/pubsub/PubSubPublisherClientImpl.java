@@ -19,6 +19,8 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +33,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -44,13 +45,15 @@ import io.vertx.core.Vertx;
  */
 final class PubSubPublisherClientImpl implements PubSubPublisherClient {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(PubSubPublisherClientImpl.class);
+    private final Vertx vertx;
     private Publisher publisher;
 
     /**
      * Creates a new instance of PubSubPublisherClientImpl where a Pub/Sub Publisher is initialized. The Publisher is
      * based on a created TopicName, which follows the format: projects/projectId/topics/topic.
      *
+     * @param vertx The Vert.x instance that this publisher runs on.
      * @param projectId The Google project id to use.
      * @param topic The topic to create the publisher for.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
@@ -59,21 +62,28 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
      * @throws NullPointerException if any of project ID or topic are {@code null}.
      */
     PubSubPublisherClientImpl(
+            final Vertx vertx,
             final String projectId,
             final String topic,
             final CredentialsProvider credentialsProvider) throws ClientErrorException {
+
+        this.vertx = Objects.requireNonNull(vertx);
         Objects.requireNonNull(projectId);
         Objects.requireNonNull(topic);
-        final TopicName topicName = TopicName.of(projectId, topic);
-        final var builder = Publisher.newBuilder(topicName)
-                .setEnableMessageOrdering(true);
-        Optional.ofNullable(credentialsProvider).ifPresent(builder::setCredentialsProvider);
+
         try {
+            final TopicName topicName = TopicName.of(projectId, topic);
+            final var builder = Publisher.newBuilder(topicName)
+                    .setEnableMessageOrdering(true);
+            Optional.ofNullable(credentialsProvider).ifPresent(builder::setCredentialsProvider);
             this.publisher = builder.build();
         } catch (final IOException e) {
             this.publisher = null;
-            log.debug("Error initializing publisher client: {}", e.getMessage());
-            throw new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "Publisher client is null", e);
+            LOG.warn("error initializing publisher client", e);
+            throw new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE,
+                    "failed to create publisher for Pub/Sub",
+                    e);
         }
     }
 
@@ -82,31 +92,31 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
      */
     @Override
     public void close() {
-        final Context currentContext = Vertx.currentContext();
-        if (currentContext == null) {
-            throw new IllegalStateException("Client is not running on a Vert.x Context");
-        } else {
-            currentContext.executeBlocking(blockingHandler -> {
-                if (publisher != null) {
+        vertx.executeBlocking(result -> {
+            if (publisher == null) {
+                result.complete();
+            } else {
+                try {
                     publisher.shutdown();
-                    try {
-                        publisher.awaitTermination(1, TimeUnit.MINUTES);
-                        blockingHandler.complete();
-                    } catch (InterruptedException e) {
-                        log.debug("Resources are not freed properly, error", e);
-                        Thread.currentThread().interrupt();
-                        blockingHandler.fail(e);
-                    }
+                    publisher.awaitTermination(5, TimeUnit.SECONDS);
+                    result.complete();
+                } catch (final InterruptedException e) {
+                    LOG.debug("timed out waiting for shut down of publisher", e);
+                    Thread.currentThread().interrupt();
+                    result.fail(e);
                 }
-            });
-        }
+            }
+        }, false);
     }
 
     /**
-     * Publishes a message to Pub/Sub and transfer the returned ApiFuture into a Future.
+     * Publishes a message to Pub/Sub.
      *
      * @param pubsubMessage The message to publish.
-     * @return The messageId wrapped in a Future.
+     * @return A future completed with the unique Pub/Sub assigned message ID
+     *         if the message has been sent successfully to the Pub/Sub service.
+     *         Otherwise, the future will be failed with a {@link ServiceInvocationException}
+     *         indicating the reason for the failure.
      */
     public Future<String> publish(final PubsubMessage pubsubMessage) {
         final Promise<String> result = Promise.promise();
@@ -114,12 +124,15 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
         ApiFutures.addCallback(messageIdFuture, new ApiFutureCallback<>() {
 
             public void onSuccess(final String messageId) {
-                result.complete(messageId);
+                // handle result on vert.x event loop instead of Publisher's Thread pool
+                vertx.runOnContext(ok -> result.complete(messageId));
             }
 
             public void onFailure(final Throwable t) {
-                log.debug("Error publishing messages to Pub/Sub", t);
-                result.fail(t);
+                vertx.runOnContext(ok -> {
+                    LOG.debug("error publishing messages to Pub/Sub", t);
+                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
+                });
             }
         }, MoreExecutors.directExecutor());
 

@@ -374,7 +374,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
             LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
 
-            final var pubSubFactory = new CachingPubSubPublisherFactory(pubSubConfigProperties.getProjectId(), null);
+            final var pubSubFactory = new CachingPubSubPublisherFactory(
+                    vertx,
+                    pubSubConfigProperties.getProjectId(),
+                    null);
 
             telemetrySenderProvider
                     .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));

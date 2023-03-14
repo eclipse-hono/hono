@@ -24,12 +24,14 @@ import org.eclipse.hono.client.ServerErrorException;
 import com.google.api.gax.core.CredentialsProvider;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * A factory for creating PubSubPublisherClients. Created publishers are being cached.
  */
 public final class CachingPubSubPublisherFactory implements PubSubPublisherFactory {
 
+    private final Vertx vertx;
     private final Map<String, PubSubPublisherClient> activePublishers = new ConcurrentHashMap<>();
     private final String projectId;
     private final CredentialsProvider credentialsProvider;
@@ -38,14 +40,17 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     /**
      * Creates a new factory for {@link PubSubPublisherClient} instances.
      *
+     * @param vertx The Vert.x instance that this factory runs on.
      * @param projectId The identifier of the Google Cloud Project to connect to.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
      *                            or {@code null} if the default provider should be used.
      * @throws NullPointerException if project ID is {@code null}.
      */
     public CachingPubSubPublisherFactory(
+            final Vertx vertx,
             final String projectId,
             final CredentialsProvider credentialsProvider) {
+        this.vertx = Objects.requireNonNull(vertx);
         this.projectId = Objects.requireNonNull(projectId);
         this.credentialsProvider = credentialsProvider;
     }
@@ -93,7 +98,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     private PubSubPublisherClient getPubSubPublisherClient(final String projectId, final String topic) {
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
-                .orElseGet(() -> new PubSubPublisherClientImpl(projectId, topic, credentialsProvider));
+                .orElseGet(() -> new PubSubPublisherClientImpl(vertx, projectId, topic, credentialsProvider));
     }
 
     private String getTopicTenantName(final String topic, final String tenantId) {

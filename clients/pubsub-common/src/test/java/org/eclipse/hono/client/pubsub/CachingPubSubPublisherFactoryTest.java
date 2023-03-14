@@ -21,6 +21,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.Vertx;
+
 /**
  * Verifies behavior of {@link CachingPubSubPublisherFactory}.
  */
@@ -34,11 +36,13 @@ public class CachingPubSubPublisherFactoryTest {
 
     private CachingPubSubPublisherFactory factory;
     private PubSubPublisherClient client;
+    private Vertx vertx;
 
     @BeforeEach
     void setUp() {
+        vertx = mock(Vertx.class);
         client = mock(PubSubPublisherClient.class);
-        factory = new CachingPubSubPublisherFactory(PROJECT_ID, null);
+        factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, null);
         factory.setClientSupplier(() -> client);
     }
 
