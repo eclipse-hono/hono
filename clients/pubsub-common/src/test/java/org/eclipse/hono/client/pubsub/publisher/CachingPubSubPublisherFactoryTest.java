@@ -21,9 +21,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.Vertx;
-
 import com.google.api.gax.core.FixedCredentialsProvider;
+
+import io.vertx.core.Vertx;
 
 /**
  * Verifies behavior of {@link CachingPubSubPublisherFactory}.

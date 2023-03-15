@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 
+import io.vertx.core.Vertx;
+
 /**
  * Verifies behavior of {@link CachingPubSubSubscriberFactory}.
  */
@@ -42,11 +44,12 @@ public class CachingPubSubSubscriberFactoryTest {
 
     @BeforeEach
     void setUp() {
+        final Vertx vertx = mock(Vertx.class);
         final FixedCredentialsProvider credentialsProvider = mock(FixedCredentialsProvider.class);
         topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         receiver = mock(MessageReceiver.class);
         client = mock(PubSubSubscriber.class);
-        factory = new CachingPubSubSubscriberFactory(PROJECT_ID, credentialsProvider);
+        factory = new CachingPubSubSubscriberFactory(vertx, PROJECT_ID, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }
 

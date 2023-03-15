@@ -26,12 +26,14 @@ import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * A factory for creating PubSubSubscribers. Created subscribers are being cached.
  */
 public class CachingPubSubSubscriberFactory implements PubSubSubscriberFactory {
 
+    private final Vertx vertx;
     private final Map<String, PubSubSubscriber> activeSubscribers = new ConcurrentHashMap<>();
     private final String projectId;
     private final FixedCredentialsProvider credentialsProvider;
@@ -40,11 +42,16 @@ public class CachingPubSubSubscriberFactory implements PubSubSubscriberFactory {
     /**
      * Creates a new factory for {@link PubSubSubscriber} instances.
      *
+     * @param vertx The Vert.x instance that this factory runs on.
      * @param projectId The identifier of the Google Cloud Project to connect to.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
      * @throws NullPointerException If any of the parameters is {@code null}.
      */
-    public CachingPubSubSubscriberFactory(final String projectId, final FixedCredentialsProvider credentialsProvider) {
+    public CachingPubSubSubscriberFactory(
+            final Vertx vertx,
+            final String projectId,
+            final FixedCredentialsProvider credentialsProvider) {
+        this.vertx = Objects.requireNonNull(vertx);
         this.projectId = Objects.requireNonNull(projectId);
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
     }
@@ -92,7 +99,7 @@ public class CachingPubSubSubscriberFactory implements PubSubSubscriberFactory {
             final MessageReceiver receiver) {
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
-                .orElseGet(() -> new PubSubSubscriber(projectId, subscriptionId, receiver, credentialsProvider));
+                .orElseGet(() -> new PubSubSubscriber(vertx, projectId, subscriptionId, receiver, credentialsProvider));
     }
 
     private Future<Void> removeSubscriber(final String subscriptionId) {

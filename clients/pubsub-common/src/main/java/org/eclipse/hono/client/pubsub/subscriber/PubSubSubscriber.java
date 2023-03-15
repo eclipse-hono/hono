@@ -19,13 +19,13 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.api.core.ApiService;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
@@ -40,10 +40,13 @@ public class PubSubSubscriber implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(PubSubSubscriber.class);
     private final Subscriber subscriber;
 
+    private final Vertx vertx;
+
     /**
      * Creates a new instance of PubSubSubscriberClient where a Pub/Sub Subscriber is initialized. The Subscriber is
      * based on a created subscription, which follows the format: projects/{project}/subscriptions/{subscription}
      *
+     * @param vertx The Vert.x instance that this subscriber runs on.
      * @param projectId The identifier of the Google Cloud Project to connect to.
      * @param subscriptionId The name of the subscription to create the subscriber for.
      * @param receiver The message receiver used to process the received message.
@@ -51,10 +54,12 @@ public class PubSubSubscriber implements AutoCloseable {
      * @throws NullPointerException If any of these parameters is {@code null}.
      */
     public PubSubSubscriber(
+            final Vertx vertx,
             final String projectId,
             final String subscriptionId,
             final MessageReceiver receiver,
             final FixedCredentialsProvider credentialsProvider) {
+        this.vertx = Objects.requireNonNull(vertx);
         Objects.requireNonNull(projectId);
         Objects.requireNonNull(subscriptionId);
         Objects.requireNonNull(receiver);
@@ -76,10 +81,10 @@ public class PubSubSubscriber implements AutoCloseable {
     public Future<Void> subscribe() {
         try {
             subscriber.addListener(
-                    new Subscriber.Listener() {
+                    new ApiService.Listener() {
 
                         @Override
-                        public void failed(final Subscriber.State from, final Throwable failure) {
+                        public void failed(final ApiService.State from, final Throwable failure) {
                             log.error("Error subscribing message from Pub/Sub", failure);
                             throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                     "Error subscribing message from Pub/Sub", failure);
@@ -99,17 +104,14 @@ public class PubSubSubscriber implements AutoCloseable {
      */
     @Override
     public void close() {
-        final Context currentContext = Vertx.currentContext();
-        if (currentContext == null) {
-            throw new IllegalStateException("Client is not running on a Vert.x Context");
-        } else {
-            currentContext.executeBlocking(blockingHandler -> {
-                if (subscriber != null) {
-                    subscriber.stopAsync();
-                    blockingHandler.complete();
-                }
-            });
-        }
+        vertx.executeBlocking(result -> {
+            if (subscriber == null) {
+                result.complete();
+            } else {
+                subscriber.stopAsync();
+                result.complete();
+            }
+        }, false);
     }
 
 }
