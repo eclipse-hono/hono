@@ -257,7 +257,7 @@ public class CredentialsTest {
         JsonObject secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
         assertCommonSecretProperties(secret);
 
-        credential = X509CertificateCredential.fromSubjectDn("emailAddress=hono@eclipse.org,O=Eclipse", List.of(x509Secret));
+        credential = X509CertificateCredential.fromSubjectDn("emailAddress=hono@eclipse.org, o=Eclipse", List.of(x509Secret));
         json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
         assertEquals(
@@ -276,7 +276,7 @@ public class CredentialsTest {
 
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "CN=Acme")
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "cn=thing, C=Germany, o=ACME Inc")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true)
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
@@ -287,7 +287,7 @@ public class CredentialsTest {
 
         final X509CertificateCredential credential = jsonCredential.mapTo(X509CertificateCredential.class);
 
-        assertEquals("CN=Acme", credential.getAuthId());
+        assertEquals("CN=thing,C=Germany,O=ACME Inc", credential.getAuthId());
         assertTrue(credential.isEnabled());
         assertEquals(1, credential.getSecrets().size());
 
