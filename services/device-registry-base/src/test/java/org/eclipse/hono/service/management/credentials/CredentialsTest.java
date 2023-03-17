@@ -249,7 +249,7 @@ public class CredentialsTest {
 
         final X509CertificateSecret x509Secret = new X509CertificateSecret();
         addCommonProperties(x509Secret);
-        var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", List.of(x509Secret));
+        var credential = X509CertificateCredential.fromAuthId("CN=foo, O=bar", List.of(x509Secret));
 
         JsonObject json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
@@ -257,7 +257,7 @@ public class CredentialsTest {
         JsonObject secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
         assertCommonSecretProperties(secret);
 
-        credential = X509CertificateCredential.fromSubjectDn("emailAddress=hono@eclipse.org, o=Eclipse", List.of(x509Secret));
+        credential = X509CertificateCredential.fromAuthId("emailAddress=hono@eclipse.org,O=Eclipse", List.of(x509Secret));
         json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
         assertEquals(
@@ -580,9 +580,6 @@ public class CredentialsTest {
             assertThrows(IllegalArgumentException.class,
                     () -> new PasswordCredential(authId, List.of(new PasswordSecret())));
         });
-
-        assertThrows(IllegalArgumentException.class,
-                () -> X509CertificateCredential.fromSubjectDn("not-a-subject-DN", List.of(new X509CertificateSecret())));
     }
 
     /**
@@ -601,11 +598,6 @@ public class CredentialsTest {
                     .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(pwdSecret));
             assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(PasswordCredential.class));
         });
-        final JsonObject jsonCredential = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
-                .put(RegistryManagementConstants.FIELD_AUTH_ID, "not-a-subject-DN")
-                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
-        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(X509CertificateCredentialWithSubjectDn.class));
     }
 
     /**

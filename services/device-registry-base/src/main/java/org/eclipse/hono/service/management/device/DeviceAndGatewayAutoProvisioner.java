@@ -233,11 +233,8 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                     }
 
                     // 2. set the certificate credential
-                    final var certCredential = X509CertificateCredential.isDistinguishedName(authId)
-                            ? X509CertificateCredential.fromSubjectDn(authId,
-                                    List.of(new X509CertificateSecret()))
-                            : X509CertificateCredential.fromGeneratedId(authId,
-                                    List.of(new X509CertificateSecret()));
+                    final var certCredential = X509CertificateCredential.fromAuthId(authId,
+                            List.of(new X509CertificateSecret()));
                     certCredential.setEnabled(true).setComment(comment);
 
                     final String deviceId = r.getPayload().getId();

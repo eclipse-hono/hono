@@ -133,7 +133,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
 
         final var pskCredential = Credentials.createPSKCredential("psk-id", "psk-key");
 
-        final var x509Credential = X509CertificateCredential.fromSubjectDn(
+        final var x509Credential = X509CertificateCredential.fromAuthId(
                 "emailAddress=foo@bar.com, CN=foo, O=bar",
                 List.of(new X509CertificateSecret()));
         x509Credential.setComment("non-standard attribute type");
@@ -694,7 +694,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(pskCredentials);
         credentialsListToAdd.add(hashedPasswordCredential);
-        credentialsListToAdd.add(X509CertificateCredential.fromSubjectDn("CN=Acme", List.of(new X509CertificateSecret())));
+        credentialsListToAdd.add(X509CertificateCredential.fromAuthId("CN=Acme", List.of(new X509CertificateSecret())));
         for (int i = 0; i < 3; i++) {
 
             final GenericSecret secret = new GenericSecret();
