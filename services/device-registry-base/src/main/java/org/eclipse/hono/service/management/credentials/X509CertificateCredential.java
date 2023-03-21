@@ -20,10 +20,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonCreator.Mode;
@@ -55,7 +57,7 @@ public class X509CertificateCredential extends CommonCredential {
      * @param authId The authentication identifier.
      * @param secrets The credential's secret(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if secrets is empty.
+     * @throws IllegalArgumentException if any of the parameters are empty.
      */
     private X509CertificateCredential(final String authId,
             final List<X509CertificateSecret> secrets) {
@@ -191,5 +193,13 @@ public class X509CertificateCredential extends CommonCredential {
         this.secrets.clear();
         this.secrets.addAll(secrets);
         return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Predicate<String> getAuthIdValidator() {
+        return authId -> (!Strings.isNullOrEmpty(authId));
     }
 }

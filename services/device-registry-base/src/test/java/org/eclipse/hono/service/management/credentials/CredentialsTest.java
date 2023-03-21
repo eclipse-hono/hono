@@ -580,6 +580,9 @@ public class CredentialsTest {
             assertThrows(IllegalArgumentException.class,
                     () -> new PasswordCredential(authId, List.of(new PasswordSecret())));
         });
+
+        assertThrows(IllegalArgumentException.class,
+                () -> X509CertificateCredential.fromAuthId("", List.of(new X509CertificateSecret())));
     }
 
     /**
@@ -598,6 +601,11 @@ public class CredentialsTest {
                     .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(pwdSecret));
             assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(PasswordCredential.class));
         });
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
+        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(X509CertificateCredential.class));
     }
 
     /**
