@@ -21,7 +21,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.CredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 
 import io.vertx.core.Vertx;
@@ -38,17 +38,17 @@ public class CachingPubSubSubscriberFactoryTest {
     private static final String TOPIC_NAME = "command";
 
     private CachingPubSubSubscriberFactory factory;
-    private PubSubSubscriber client;
+    private PubSubSubscriberClient client;
     private String topic;
     private MessageReceiver receiver;
 
     @BeforeEach
     void setUp() {
         final Vertx vertx = mock(Vertx.class);
-        final FixedCredentialsProvider credentialsProvider = mock(FixedCredentialsProvider.class);
+        final CredentialsProvider credentialsProvider = mock(CredentialsProvider.class);
         topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         receiver = mock(MessageReceiver.class);
-        client = mock(PubSubSubscriber.class);
+        client = mock(PubSubSubscriberClient.class);
         factory = new CachingPubSubSubscriberFactory(vertx, PROJECT_ID, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }
@@ -59,8 +59,8 @@ public class CachingPubSubSubscriberFactoryTest {
     @Test
     public void testThatSubscriberIsAddedToCache() {
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
-        final PubSubSubscriber createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
-        final Optional<PubSubSubscriber> actual = factory.getSubscriber(TOPIC_NAME, TENANT_ID);
+        final PubSubSubscriberClient createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
+        final Optional<PubSubSubscriberClient> actual = factory.getSubscriber(TOPIC_NAME, TENANT_ID);
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(createdSubscriber);
     }
@@ -72,7 +72,7 @@ public class CachingPubSubSubscriberFactoryTest {
     public void testCloseSubscriberClosesAndRemovesFromCache() {
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubSubscriber createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
+        final PubSubSubscriberClient createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
         assertThat(createdSubscriber).isNotNull();
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 
@@ -87,11 +87,11 @@ public class CachingPubSubSubscriberFactoryTest {
     public void testCloseAllSubscriberClosesAndRemovesFromCache() {
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubSubscriber createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
+        final PubSubSubscriberClient createdSubscriber = factory.getOrCreateSubscriber(topic, receiver);
         assertThat(createdSubscriber).isNotNull();
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 
-        factory.closeAllSubscriber();
+        factory.closeAllSubscribers();
         assertThat(factory.getSubscriber(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
     }
 }

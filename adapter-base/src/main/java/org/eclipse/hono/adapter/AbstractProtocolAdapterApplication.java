@@ -386,6 +386,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 telemetrySenderProvider
                         .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
                 eventSenderProvider.setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
+            } else {
+                LOG.error("Could not initialize Pub/Sub messaging clients, no Credentials Provider present.");
             }
         }
 

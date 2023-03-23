@@ -12,21 +12,18 @@
  */
 package org.eclipse.hono.client.pubsub.subscriber;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.eclipse.hono.client.ServerErrorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.api.core.ApiService;
-import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.CredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -35,15 +32,18 @@ import io.vertx.core.Vertx;
  * Wraps a Pub/Sub Subscriber.
  * </p>
  */
-public class PubSubSubscriber implements AutoCloseable {
+public class PubSubSubscriberClientImpl implements PubSubSubscriberClient {
 
-    private final Logger log = LoggerFactory.getLogger(PubSubSubscriber.class);
+    /**
+     * The number of milliseconds to wait before retrying to subscribe to a subscription.
+     */
+    private static final int SUBSCRIBE_RETRY_DELAY_MILLIS = 60000;
+    private final Logger log = LoggerFactory.getLogger(PubSubSubscriberClientImpl.class);
     private final Subscriber subscriber;
-
     private final Vertx vertx;
 
     /**
-     * Creates a new instance of PubSubSubscriberClient where a Pub/Sub Subscriber is initialized. The Subscriber is
+     * Creates a new instance of PubSubSubscriberClientImpl where a Pub/Sub Subscriber is initialized. The Subscriber is
      * based on a created subscription, which follows the format: projects/{project}/subscriptions/{subscription}
      *
      * @param vertx The Vert.x instance that this subscriber runs on.
@@ -53,12 +53,12 @@ public class PubSubSubscriber implements AutoCloseable {
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
      * @throws NullPointerException If any of these parameters is {@code null}.
      */
-    public PubSubSubscriber(
+    public PubSubSubscriberClientImpl(
             final Vertx vertx,
             final String projectId,
             final String subscriptionId,
             final MessageReceiver receiver,
-            final FixedCredentialsProvider credentialsProvider) {
+            final CredentialsProvider credentialsProvider) {
         this.vertx = Objects.requireNonNull(vertx);
         Objects.requireNonNull(projectId);
         Objects.requireNonNull(subscriptionId);
@@ -75,27 +75,30 @@ public class PubSubSubscriber implements AutoCloseable {
     /**
      * Subscribes messages from Pub/Sub.
      *
+     * @param keepTrying Condition that controls whether another attempt to subscribe to a subscription should be
+     *            started. Client code can set this to {@code false} in order to prevent further attempts.
      * @return A future indicating the outcome of the operation.
-     * @throws ServerErrorException If subscribing was not successful.
      */
-    public Future<Void> subscribe() {
-        try {
-            subscriber.addListener(
-                    new ApiService.Listener() {
+    public Future<Void> subscribe(final boolean keepTrying) {
+        final Promise<Void> resultPromise = Promise.promise();
+        subscribeWithRetries(resultPromise, keepTrying);
+        return resultPromise.future();
+    }
 
-                        @Override
-                        public void failed(final ApiService.State from, final Throwable failure) {
-                            log.error("Error subscribing message from Pub/Sub", failure);
-                            throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                    "Error subscribing message from Pub/Sub", failure);
-                        }
-                    },
-                    MoreExecutors.directExecutor());
+    private void subscribeWithRetries(final Promise<Void> resultPromise, final boolean keepTrying) {
+        try {
             subscriber.startAsync().awaitRunning();
-            return Future.succeededFuture();
-        } catch (IllegalStateException e) {
-            log.error("Service reached illegal state", e);
-            return Future.failedFuture(e);
+            log.info("Successfully subscribing on: {}", subscriber.getSubscriptionNameString());
+            resultPromise.complete();
+        } catch (Exception e) {
+            if (keepTrying) {
+                log.error("Error subscribing message from Pub/Sub, will retry in {}ms: ", SUBSCRIBE_RETRY_DELAY_MILLIS,
+                        e);
+                vertx.setTimer(SUBSCRIBE_RETRY_DELAY_MILLIS, tid -> subscribeWithRetries(resultPromise, keepTrying));
+            } else {
+                log.error("Error subscribing message from Pub/Sub", e);
+                resultPromise.fail(e);
+            }
         }
     }
 
@@ -104,14 +107,8 @@ public class PubSubSubscriber implements AutoCloseable {
      */
     @Override
     public void close() {
-        vertx.executeBlocking(result -> {
-            if (subscriber == null) {
-                result.complete();
-            } else {
-                subscriber.stopAsync();
-                result.complete();
-            }
-        }, false);
+        if (subscriber != null) {
+            subscriber.stopAsync();
+        }
     }
-
 }

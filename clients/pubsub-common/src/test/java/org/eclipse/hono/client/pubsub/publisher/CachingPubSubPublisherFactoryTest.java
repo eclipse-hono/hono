@@ -21,7 +21,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.CredentialsProvider;
 
 import io.vertx.core.Vertx;
 
@@ -44,7 +44,7 @@ public class CachingPubSubPublisherFactoryTest {
     void setUp() {
         vertx = mock(Vertx.class);
         client = mock(PubSubPublisherClient.class);
-        final FixedCredentialsProvider credentialsProvider = mock(FixedCredentialsProvider.class);
+        final CredentialsProvider credentialsProvider = mock(CredentialsProvider.class);
         factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }

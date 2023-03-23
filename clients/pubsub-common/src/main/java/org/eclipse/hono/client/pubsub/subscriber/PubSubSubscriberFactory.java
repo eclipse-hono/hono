@@ -41,7 +41,7 @@ public interface PubSubSubscriberFactory {
      * @return A future that is succeeded when all subscriber are closed or a failed future if any subscriber can not be
      *         closed.
      */
-    Future<Void> closeAllSubscriber();
+    Future<Void> closeAllSubscribers();
 
     /**
      * Gets a subscriber for receiving data from Pub/Sub.
@@ -53,7 +53,7 @@ public interface PubSubSubscriberFactory {
      * @param receiver The message receiver used to process the received message.
      * @return an existing or new subscriber.
      */
-    PubSubSubscriber getOrCreateSubscriber(String subscriptionId, MessageReceiver receiver);
+    PubSubSubscriberClient getOrCreateSubscriber(String subscriptionId, MessageReceiver receiver);
 
     /**
      * Gets an existing Subscriber for receiving data from Pub/Sub if one was already created with the given
@@ -63,6 +63,6 @@ public interface PubSubSubscriberFactory {
      * @param prefix The prefix of the subscription to identify the subscriber, e.g. the tenantId.
      * @return An existing subscriber or an empty Optional if no such subscriber exists.
      */
-    Optional<PubSubSubscriber> getSubscriber(String subscription, String prefix);
+    Optional<PubSubSubscriberClient> getSubscriber(String subscription, String prefix);
 
 }
