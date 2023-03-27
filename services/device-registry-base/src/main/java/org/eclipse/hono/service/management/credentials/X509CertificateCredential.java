@@ -108,8 +108,7 @@ public class X509CertificateCredential extends CommonCredential {
      * @param authId The raw authentication identifier.
      * @param secrets The credential's secret(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name or if secrets is
-     *             empty.
+     * @throws IllegalArgumentException if any of the parameters are empty.
      * @return The credentials.
      */
     public static X509CertificateCredential fromAuthId(
