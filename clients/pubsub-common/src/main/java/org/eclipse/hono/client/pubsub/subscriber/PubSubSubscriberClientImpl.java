@@ -92,7 +92,7 @@ public class PubSubSubscriberClientImpl implements PubSubSubscriberClient {
             resultPromise.complete();
         } catch (Exception e) {
             if (keepTrying) {
-                log.error("Error subscribing message from Pub/Sub, will retry in {}ms: ", SUBSCRIBE_RETRY_DELAY_MILLIS,
+                log.info("Error subscribing message from Pub/Sub, will retry in {}ms: ", SUBSCRIBE_RETRY_DELAY_MILLIS,
                         e);
                 vertx.setTimer(SUBSCRIBE_RETRY_DELAY_MILLIS, tid -> subscribeWithRetries(resultPromise, keepTrying));
             } else {
