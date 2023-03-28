@@ -19,6 +19,7 @@ messagingNetworkTypes:
 
 amqpMessagingNetworkExample:
   enabled: true
+  insecurePortEnabled: false
   dispatchRouter:
     uidFormat: "n"
     adapterUids: "hono.eclipseprojects.io"
@@ -46,11 +47,10 @@ adapters:
     imageName: "eclipse/hono-adapter-http-native"
     hono:
       http:
+        insecurePortEnabled: false
         bindAddress: "0.0.0.0"
         keyPath: "/opt/hono/tls/tls.key"
         certPath: "/opt/hono/tls/tls.crt"
-        insecurePortEnabled: true
-        insecurePortBindAddress: "0.0.0.0"
         idleTimeout: 20
         jmsVendorPropsEnabled: true
         maxPayloadSize: 8096
@@ -70,11 +70,10 @@ adapters:
     imageName: "eclipse/hono-adapter-mqtt-native"
     hono:
       mqtt:
+        insecurePortEnabled: false
         bindAddress: "0.0.0.0"
         keyPath: "/opt/hono/tls/tls.key"
         certPath: "/opt/hono/tls/tls.crt"
-        insecurePortEnabled: true
-        insecurePortBindAddress: "0.0.0.0"
         jmsVendorPropsEnabled: true
         maxPayloadSize: 8096
         tenantIdleTimeout: "1h"
@@ -94,11 +93,10 @@ adapters:
     imageName: "eclipse/hono-adapter-amqp-native"
     hono:
       amqp:
+        insecurePortEnabled: false
         bindAddress: "0.0.0.0"
         keyPath: "/opt/hono/tls/tls.key"
         certPath: "/opt/hono/tls/tls.crt"
-        insecurePortEnabled: true
-        insecurePortBindAddress: "0.0.0.0"
         tenantIdleTimeout: "1h"
         maxConnections: 200
     tlsKeysSecret: "sandbox-tls"
@@ -116,6 +114,7 @@ adapters:
     imageName: "eclipse/hono-adapter-coap-native"
     hono:
       coap:
+        insecurePortEnabled: false
         bindAddress: "0.0.0.0"
         port: 5684
         keyPath: "/opt/hono/tls/tls.key"
@@ -168,11 +167,10 @@ deviceRegistryExample:
         certPath: "/opt/hono/tls/tls.crt"
       http:
         authenticationRequired: false
+        insecurePortEnabled: false
         bindAddress: "0.0.0.0"
         keyPath: "/opt/hono/tls/tls.key"
         certPath: "/opt/hono/tls/tls.crt"
-        insecurePortEnabled: true
-        insecurePortBindAddress: "0.0.0.0"
       svc:
         maxDevicesPerTenant: 10
   tlsKeysSecret: "sandbox-tls"
@@ -226,11 +224,6 @@ kafka:
   ## @param logSegmentBytes The maximum size of a log segment file. When this size is reached a new log segment will be created
   ## 10MB
   logSegmentBytes: _10485760
-  auth:
-    # no TLS. That would be "sasl_tls"
-    clientProtocol: "sasl"
-    tls:
-      existingSecrets: []
   externalAccess:
     autoDiscovery:
       enabled: false
