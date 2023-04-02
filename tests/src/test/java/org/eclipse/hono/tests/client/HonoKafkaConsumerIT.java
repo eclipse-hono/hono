@@ -41,7 +41,9 @@ import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -111,34 +113,9 @@ public class HonoKafkaConsumerIT {
         kafkaProducer = KafkaProducer.create(vertx, producerConfig);
     }
 
-    /**
-     * Cleans up fixture.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void shutDown(final VertxTestContext ctx) {
-        final Promise<Void> producerClosePromise = Promise.promise();
-        kafkaProducer.close(producerClosePromise);
-
-        final Promise<Void> topicsDeletedPromise = Promise.promise();
-        adminClient.deleteTopics(topicsToDeleteAfterTests, topicsDeletedPromise);
-        topicsDeletedPromise.future()
-                .recover(thr -> {
-                    LOG.info("error deleting topics", thr);
-                    return Future.succeededFuture();
-                })
-                .compose(ar -> producerClosePromise.future())
-                .onComplete(ar -> {
-                    topicsToDeleteAfterTests.clear();
-                    topicsToDeleteAfterTests = null;
-                    adminClient.close();
-                    adminClient = null;
-                    kafkaProducer = null;
-                    vertx.close();
-                    vertx = null;
-                })
-                .onComplete(ctx.succeedingThenComplete());
+    @BeforeEach
+    void printTestInfo(final TestInfo testInfo) {
+        LOG.info("running test {}", testInfo.getDisplayName());
     }
 
     /**
@@ -151,6 +128,34 @@ public class HonoKafkaConsumerIT {
         if (kafkaConsumer != null) {
             kafkaConsumer.stop().onComplete(ctx.succeedingThenComplete());
         }
+    }
+
+    /**
+     * Cleans up fixture.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterAll
+    public static void shutDown(final VertxTestContext ctx) {
+        kafkaProducer.close()
+            .recover(t -> {
+                LOG.info("failed to close producer", t);
+                return Future.succeededFuture();
+            })
+            .compose(ok -> adminClient.deleteTopics(topicsToDeleteAfterTests))
+            .onFailure(thr -> {
+                LOG.info("error deleting topics", thr);
+            })
+            .onComplete(ar -> {
+                topicsToDeleteAfterTests.clear();
+                topicsToDeleteAfterTests = null;
+                adminClient.close();
+                adminClient = null;
+                kafkaProducer = null;
+                vertx.close();
+                vertx = null;
+                ctx.completeNow();
+            });
     }
 
     /**
@@ -167,11 +172,12 @@ public class HonoKafkaConsumerIT {
     public void testConsumerReadsLatestRecordsPublishedAfterStart(
             final String partitionAssignmentStrategy,
             final VertxTestContext ctx) throws InterruptedException {
+
         final int numTopics = 2;
         final int numPartitions = 5;
         final int numTestRecordsPerTopic = 20;
 
-        final Set<String> topics = IntStream.range(0, numTopics)
+        final var topics = IntStream.range(0, numTopics)
                 .mapToObj(i -> "test_" + i + "_" + UUID.randomUUID())
                 .collect(Collectors.toSet());
         final String publishTestTopic = topics.iterator().next();
@@ -189,7 +195,7 @@ public class HonoKafkaConsumerIT {
         LOG.debug("topics created and (to be ignored) test records published");
 
         // prepare consumer
-        final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        final var consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
         applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
@@ -609,10 +615,11 @@ public class HonoKafkaConsumerIT {
     @MethodSource("partitionAssignmentStrategies")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
     public void testConsumerAutoCreatesTopicAndReadsLatestRecordsPublishedAfterStart(
-            final String partitionAssignmentStrategy, final VertxTestContext ctx) {
+            final String partitionAssignmentStrategy,
+            final VertxTestContext ctx) {
 
         // prepare consumer
-        final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        final var consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
         applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
