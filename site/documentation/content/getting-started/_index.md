@@ -65,7 +65,7 @@ You can verify if you can access one of the non-standard ports of the Sandbox by
 comparing the output:
 
 ~~~sh
-curl -sIX GET http://hono.eclipseprojects.io:28080/v1/tenants/DEFAULT_TENANT
+curl -sIX GET https://hono.eclipseprojects.io:28443/v1/tenants/DEFAULT_TENANT
 ~~~
 
 If you get output like this
@@ -120,7 +120,9 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="--sandbox"
+export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export CURL_OPTIONS=
+export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 EOS
 ~~~
 
@@ -134,7 +136,9 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="--sandbox"
+export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export CURL_OPTIONS=
+export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 ~~~
 
 {{% /tab %}}
@@ -184,9 +188,11 @@ echo "export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-regis
 echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
-KAFKA_TRUSTSTORE_PATH=/tmp/truststore.pem
-kubectl get secrets eclipse-hono-kafka-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${KAFKA_TRUSTSTORE_PATH}
-echo "export APP_OPTIONS='-H ${KAFKA_IP} -P 9094 -u hono -p hono-secret --ca-file ${KAFKA_TRUSTSTORE_PATH} --disable-hostname-verification'" >> hono.env
+TRUSTSTORE_PATH=/tmp/truststore.pem
+kubectl get secrets eclipse-hono-kafka-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${TRUSTSTORE_PATH}
+echo "export APP_OPTIONS='-H ${KAFKA_IP} -P 9094 -u hono -p hono-secret --ca-file ${TRUSTSTORE_PATH} --disable-hostname-verification'" >> hono.env
+echo "export CURL_OPTIONS='--cacert ${TRUSTSTORE_PATH}'" >> hono.env
+echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH}'" >> hono.env
 ~~~
 
 Verify that the `hono.env` file has been created in your current working directory:
@@ -199,6 +205,8 @@ export REGISTRY_IP=(host name/IP address)
 export HTTP_ADAPTER_IP=(host name/IP address)
 export MQTT_ADAPTER_IP=(host name/IP address)
 export APP_OPTIONS='-H (host name/IP address) -P 9094 -u hono -p hono-secret --ca-file /tmp/truststore.pem --disable-hostname-verification'
+export CURL_OPTIONS='--cacert /tmp/truststore.pem'
+export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem'
 ~~~
 
 {{% /tab %}}
@@ -248,8 +256,13 @@ be used during the remainder of this guide to set and refresh some environment v
 echo "export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" > hono.env
 echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
+KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
+TRUSTSTORE_PATH=/tmp/truststore.pem
+kubectl get secrets eclipse-hono-dispatch-router-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${TRUSTSTORE_PATH}
 AMQP_NETWORK_IP=$(kubectl get service eclipse-hono-dispatch-router-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
-echo "export APP_OPTIONS='--amqp -H ${AMQP_NETWORK_IP} -P 15672 -u consumer@HONO -p verysecret'" >> hono.env
+echo "export APP_OPTIONS='--amqp -H ${AMQP_NETWORK_IP} -P 15671 -u consumer@HONO -p verysecret --ca-file ${TRUSTSTORE_PATH}' --disable-hostname-verification" >> hono.env
+echo "export CURL_OPTIONS='--cacert ${TRUSTSTORE_PATH}'" >> hono.env
+echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH}'" >> hono.env
 ~~~
 
 Verify that the `hono.env` file has been created in your current working directory:
@@ -261,7 +274,9 @@ cat hono.env
 export REGISTRY_IP=(host name/IP address)
 export HTTP_ADAPTER_IP=(host name/IP address)
 export MQTT_ADAPTER_IP=(host name/IP address)
-export APP_OPTIONS='-H (host name/IP address) -P 15672 -u consumer@HONO -p verysecret'
+export APP_OPTIONS='--amqp -H (host name/IP address) -P 15671 -u consumer@HONO -p verysecret --ca-file /tmp/truststore.pem --disable-hostname-verification'
+export CURL_OPTIONS='--cacert /tmp/truststore.pem'
+export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem'
 ~~~
 
 {{% /tab %}}
@@ -290,11 +305,11 @@ Register a tenant that is configured for Kafka based messaging using Hono's Devi
 ~~~sh
 # in the folder that contains the hono.env file
 source hono.env
-curl -i -X POST -H "content-type: application/json" --data-binary '{
+curl -i -X POST ${CURL_OPTIONS} -H "content-type: application/json" --data-binary '{
   "ext": {
     "messaging-type": "kafka"
   }
-}' http://${REGISTRY_IP}:28080/v1/tenants
+}' https://${REGISTRY_IP}:28443/v1/tenants
 ~~~
 ~~~
 HTTP/1.1 201 Created
@@ -323,7 +338,7 @@ Register a device using Hono's Device Registry's management HTTP API:
 ~~~sh
 # in the folder that contains the hono.env file
 source hono.env
-curl -i -X POST http://${REGISTRY_IP}:28080/v1/devices/${MY_TENANT}
+curl -i -X POST ${CURL_OPTIONS} https://${REGISTRY_IP}:28443/v1/devices/${MY_TENANT}
 ~~~
 ~~~
 HTTP/1.1 201 Created
@@ -357,16 +372,16 @@ echo "export MY_PWD=this-is-my-password" >> hono.env
 
 ~~~sh
 source hono.env
-curl -i -X PUT -H "content-type: application/json" --data-binary '[{
+curl -i -X PUT ${CURL_OPTIONS} -H "content-type: application/json" --data-binary '[{
   "type": "hashed-password",
   "auth-id": "'${MY_DEVICE}'",
   "secrets": [{
       "pwd-plain": "'${MY_PWD}'"
   }]
-}]' http://${REGISTRY_IP}:28080/v1/credentials/${MY_TENANT}/${MY_DEVICE}
+}]' https://${REGISTRY_IP}:28443/v1/credentials/${MY_TENANT}/${MY_DEVICE}
 ~~~
 ~~~
-HTTP/1.1 204 Updated
+HTTP/1.1 204 No Content
 etag: cf91fd4d-7111-4e8a-af68-c703993a8be1
 Content-Length: 0
 ~~~
@@ -401,7 +416,7 @@ protocol adapters. First, you will simulate a device publishing data to Hono usi
 Go back to the original terminal and run:
 
 ~~~sh
-curl -i -u ${MY_DEVICE}@${MY_TENANT}:${MY_PWD} -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://${HTTP_ADAPTER_IP}:8080/telemetry
+curl -i -u ${MY_DEVICE}@${MY_TENANT}:${MY_PWD} ${CURL_OPTIONS} -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://${HTTP_ADAPTER_IP}:8443/telemetry
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -426,7 +441,7 @@ on how that works and additional examples for interacting with Hono via HTTP, pl
 In a similar way you can upload events:
 
 ~~~sh
-curl -i -u ${MY_DEVICE}@${MY_TENANT}:${MY_PWD} -H 'Content-Type: application/json' --data-binary '{"alarm": "fire"}' http://${HTTP_ADAPTER_IP}:8080/event
+curl -i -u ${MY_DEVICE}@${MY_TENANT}:${MY_PWD} ${CURL_OPTIONS} -H 'Content-Type: application/json' --data-binary '{"alarm": "fire"}' https://${HTTP_ADAPTER_IP}:8443/event
 ~~~
 ~~~
 HTTP/1.1 202 Accepted
@@ -441,7 +456,7 @@ Devices can also publish data to Hono using the MQTT protocol. If you have insta
 client, you can run the following command to publish arbitrary telemetry data to Hono's MQTT adapter using QoS 0:
 
 ~~~sh
-mosquitto_pub -h ${MQTT_ADAPTER_IP} -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} -t telemetry -m '{"temp": 5}'
+mosquitto_pub -h ${MQTT_ADAPTER_IP} -p 8883 -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} ${MOSQUITTO_OPTIONS} -t telemetry -m '{"temp": 5}'
 ~~~
 
 Again, you should now see the telemetry message being logged to console of the downstream application.
@@ -455,7 +470,7 @@ and additional examples for interacting with Hono via MQTT, please refer to the
 In a similar way you can upload events:
 
 ~~~sh
-mosquitto_pub -h ${MQTT_ADAPTER_IP} -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} -t event -q 1 -m '{"alarm": "fire"}'
+mosquitto_pub -h ${MQTT_ADAPTER_IP} -p 8883 -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} ${MOSQUITTO_OPTIONS} -t event -q 1 -m '{"alarm": "fire"}'
 ~~~
 
 Again, you should now see the event being logged to console of the downstream application.
@@ -495,7 +510,7 @@ Create a subscription to the command topic in the terminal for the simulated dev
  ~~~sh
 # in directory that contains the hono.env file
 source hono.env
-mosquitto_sub -v -h ${MQTT_ADAPTER_IP} -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} -t command///req/#
+mosquitto_sub -v -h ${MQTT_ADAPTER_IP} -p 8883 -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} ${MOSQUITTO_OPTIONS} -t command///req/#
  ~~~
 
 Now that the device is waiting to receive commands, the application can start sending them.
@@ -556,7 +571,7 @@ command must be used.
 
 ~~~sh
 export REQ_ID=10117f669c12-09ef-416d-88c1-1787f894856d
-mosquitto_pub -h ${MQTT_ADAPTER_IP} -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} -t command///res/${REQ_ID}/200 -m '{"current-level": 87}'
+mosquitto_pub -h ${MQTT_ADAPTER_IP} -p 8883 -u ${MY_DEVICE}@${MY_TENANT} -P ${MY_PWD} ${MOSQUITTO_OPTIONS} -t command///res/${REQ_ID}/200 -m '{"current-level": 87}'
 ~~~
 
 The `200` at the end of the topic is an HTTP status code that reports the result of processing the command to the

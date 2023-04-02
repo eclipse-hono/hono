@@ -17,13 +17,13 @@ The components can be accessed as described in the [Getting started Guide]({{% d
 
 | Component | Service Port(s) |
 | :-------- | :-------------- |
-| Device Registry | `28080` (HTTP 1.1/TCP)<br>`28443` (HTTP 1.1/TLS) |
-| AMQP Protocol Adapter | `5672` (AMQP 1.0/TCP)<br>`5671` (AMQP 1.0/TLS) |
+| Device Registry | `28443` (HTTP 1.1/TLS) |
+| AMQP Protocol Adapter | `5671` (AMQP 1.0/TLS) |
 | CoAP Protocol Adapter | `5684` (CoAP/DTLS) |
-| HTTP Protocol Adapter | `8080` (HTTP 1.1/TCP)<br>`8443` (HTTP 1.1/TLS) |
-| MQTT Protocol Adapter | `1883` (MQTT 3.1.1/TCP)<br>`8883` (MQTT 3.1.1/TLS) |
-| Messaging Infrastructure (AMQP 1.0) | `15672` (AMQP 1.0/TCP)<br>`15671` (AMQP 1.0/TLS) |
-| Messaging Infrastructure (Kafka) | `9094` (Kafka/TCP) |
+| HTTP Protocol Adapter | `8443` (HTTP 1.1/TLS) |
+| MQTT Protocol Adapter | `8883` (MQTT 3.1.1/TLS) |
+| Messaging Infrastructure (AMQP 1.0) | `15671` (AMQP 1.0/TLS) |
+| Messaging Infrastructure (Kafka) | `9094` (Kafka/TLS) |
 
 ## Take note
 
@@ -49,12 +49,8 @@ The components can be accessed as described in the [Getting started Guide]({{% d
   events. Once that limit is reached, no more events will be accepted by the protocol adapters for the corresponding
   tenant. In addition to that, events that are not consumed will automatically be removed from the queue(s) after
   five minutes.
-* The sandbox exposes its API endpoints on both a TLS (>= 1.2) secured as well as an unsecured port. The secure ports use a
-  Let's Encrypt certificate so you should not need to configure a specific trust store on your client in order to
-  interact with them. Please note that when using the unsecured ports, the information you exchange with the sandbox
-  might be exposed to eavesdroppers. We therefore **strongly suggest** that you use the secure ports only, if possible!
-  When using the [Hono Java client module]({{% doclink "/admin-guide/hono-client-configuration/" %}}) to access the sandbox'
-  APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property to `true`.
+* The sandbox exposes Hono's API endpoints on TLS (>= 1.2) secured ports which are configured with a Let's Encrypt
+  certificate so you should not need to configure a specific trust store on your client in order to interact with them.
 * The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}})
   and can be used to consume telemetry/event messages from the sandbox and send commands to devices as described in
   the [Getting Started Guide]({{% doclink "/getting-started/" %}})
