@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.client.pubsub;
+package org.eclipse.hono.client.pubsub.publisher;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;

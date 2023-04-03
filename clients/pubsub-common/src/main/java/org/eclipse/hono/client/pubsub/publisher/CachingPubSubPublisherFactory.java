@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.client.pubsub;
+package org.eclipse.hono.client.pubsub.publisher;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 
 import com.google.api.gax.core.CredentialsProvider;
 
@@ -42,9 +43,8 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
      *
      * @param vertx The Vert.x instance that this factory runs on.
      * @param projectId The identifier of the Google Cloud Project to connect to.
-     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
-     *                            or {@code null} if the default provider should be used.
-     * @throws NullPointerException if project ID is {@code null}.
+     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
+     * @throws NullPointerException if any of the parameter is {@code null}.
      */
     public CachingPubSubPublisherFactory(
             final Vertx vertx,
@@ -52,7 +52,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
             final CredentialsProvider credentialsProvider) {
         this.vertx = Objects.requireNonNull(vertx);
         this.projectId = Objects.requireNonNull(projectId);
-        this.credentialsProvider = credentialsProvider;
+        this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
     }
 
     /**
@@ -67,8 +67,8 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     @Override
-    public Future<Void> closePublisher(final String topic, final String tenantId) {
-        final String topicName = getTopicTenantName(topic, tenantId);
+    public Future<Void> closePublisher(final String topic, final String prefix) {
+        final String topicName = PubSubMessageHelper.getTopicName(topic, prefix);
         return removePublisher(topicName);
     }
 
@@ -83,15 +83,15 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     @Override
-    public PubSubPublisherClient getOrCreatePublisher(final String topic, final String tenantId) {
-        final String topicName = getTopicTenantName(topic, tenantId);
+    public PubSubPublisherClient getOrCreatePublisher(final String topic, final String prefix) {
+        final String topicName = PubSubMessageHelper.getTopicName(topic, prefix);
         return activePublishers.computeIfAbsent(topicName,
                 s -> getPubSubPublisherClient(projectId, topicName));
     }
 
     @Override
-    public Optional<PubSubPublisherClient> getPublisher(final String topic, final String tenantId) {
-        final String topicTenantName = getTopicTenantName(topic, tenantId);
+    public Optional<PubSubPublisherClient> getPublisher(final String topic, final String prefix) {
+        final String topicTenantName = PubSubMessageHelper.getTopicName(topic, prefix);
         return Optional.ofNullable(activePublishers.get(topicTenantName));
     }
 
@@ -99,10 +99,6 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
                 .orElseGet(() -> new PubSubPublisherClientImpl(vertx, projectId, topic, credentialsProvider));
-    }
-
-    private String getTopicTenantName(final String topic, final String tenantId) {
-        return String.format("%s.%s", tenantId, topic);
     }
 
     private Future<Void> removePublisher(final String topicName) {

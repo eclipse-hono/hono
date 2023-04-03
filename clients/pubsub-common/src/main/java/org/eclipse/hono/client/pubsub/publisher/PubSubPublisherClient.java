@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.client.pubsub;
+package org.eclipse.hono.client.pubsub.publisher;
 
 import com.google.pubsub.v1.PubsubMessage;
 

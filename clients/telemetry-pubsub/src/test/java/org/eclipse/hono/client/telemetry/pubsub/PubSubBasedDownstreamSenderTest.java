@@ -24,8 +24,8 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.Map;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.pubsub.PubSubPublisherClient;
-import org.eclipse.hono.client.pubsub.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherClient;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;

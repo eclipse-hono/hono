@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.client.pubsub;
+package org.eclipse.hono.client.pubsub.publisher;
 
 import java.util.Optional;
 
@@ -27,11 +27,11 @@ public interface PubSubPublisherFactory {
      * This method is expected to be invoked as soon as the publisher is no longer needed.
      *
      * @param topic The topic of the publisher to remove.
-     * @param tenantId The tenantId of the publisher to remove.
+     * @param prefix The prefix of the topic of the publisher to remove, e.g. the tenantId.
      * @return A future that is completed when the close operation completed or a succeeded future if no publisher
      *         existed with the given topic.
      */
-    Future<Void> closePublisher(String topic, String tenantId);
+    Future<Void> closePublisher(String topic, String prefix);
 
     /**
      * Closes all cached publisher.
@@ -53,18 +53,18 @@ public interface PubSubPublisherFactory {
      * <p>
      *
      * @param topic The topic to create the publisher for.
-     * @param tenantId The tenantId to use.
+     * @param prefix The prefix of the topic of the publisher to remove, e.g. the tenantId.
      * @return an existing or new publisher.
      */
-    PubSubPublisherClient getOrCreatePublisher(String topic, String tenantId);
+    PubSubPublisherClient getOrCreatePublisher(String topic, String prefix);
 
     /**
      * Gets an existing Publisher for sending data to Pub/Sub if one was already created with the given topicName and
-     * TenantId.
+     * prefix.
      *
      * @param topic The topic to identify the publisher.
-     * @param tenantId The tenantId to identify the publisher.
+     * @param prefix The prefix of the topic to identify the publisher, e.g. the tenantId.
      * @return An existing publisher or an empty Optional if no such publisher exists.
      */
-    Optional<PubSubPublisherClient> getPublisher(String topic, String tenantId);
+    Optional<PubSubPublisherClient> getPublisher(String topic, String prefix);
 }

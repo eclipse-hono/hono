@@ -59,10 +59,11 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
-import org.eclipse.hono.client.pubsub.CachingPubSubPublisherFactory;
 import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
-import org.eclipse.hono.client.pubsub.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
+import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -92,6 +93,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.api.gax.core.FixedCredentialsProvider;
 
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
@@ -372,16 +374,21 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
+            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            if (credentialsProvider.isPresent()) {
+                LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
 
-            final var pubSubFactory = new CachingPubSubPublisherFactory(
-                    vertx,
-                    pubSubConfigProperties.getProjectId(),
-                    null);
+                final var pubSubFactory = new CachingPubSubPublisherFactory(
+                        vertx,
+                        pubSubConfigProperties.getProjectId(),
+                        credentialsProvider.get());
 
-            telemetrySenderProvider
-                    .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
-            eventSenderProvider.setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
+                telemetrySenderProvider
+                        .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
+                eventSenderProvider.setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
+            } else {
+                LOG.error("Could not initialize Pub/Sub messaging clients, no Credentials Provider present.");
+            }
         }
 
         final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(
