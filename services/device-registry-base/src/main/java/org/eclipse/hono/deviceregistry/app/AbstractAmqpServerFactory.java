@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.deviceregistry.app;
 
+import java.util.Optional;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -23,9 +25,13 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
+import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.client.telemetry.pubsub.PubSubBasedDownstreamSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
@@ -46,6 +52,9 @@ import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.service.util.ServiceClientAdapter;
+import org.eclipse.hono.util.EventConstants;
+
+import com.google.api.gax.core.FixedCredentialsProvider;
 
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
@@ -92,6 +101,9 @@ public abstract class AbstractAmqpServerFactory {
 
     @Inject
     KafkaClientMetricsSupport kafkaClientMetricsSupport;
+
+    @Inject
+    PubSubConfigProperties pubSubConfigProperties;
 
     @Inject
     ApplicationConfigProperties appConfig;
@@ -254,6 +266,22 @@ public abstract class AbstractAmqpServerFactory {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
             result.setClient(new KafkaBasedEventSender(vertx, factory, eventKafkaProducerConfig, true, tracer));
+        }
+        if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
+            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            if (credentialsProvider.isPresent()) {
+                final CachingPubSubPublisherFactory factory = new CachingPubSubPublisherFactory(
+                        vertx,
+                        pubSubConfigProperties.getProjectId(),
+                        credentialsProvider.get());
+                result.setClient(new PubSubBasedDownstreamSender(
+                        vertx,
+                        factory,
+                        EventConstants.EVENT_ENDPOINT,
+                        pubSubConfigProperties.getProjectId(),
+                        true,
+                        tracer));
+            }
         }
 
         healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(result));

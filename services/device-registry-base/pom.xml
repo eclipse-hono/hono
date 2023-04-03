@@ -45,11 +45,23 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification-pubsub</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-pubsub-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry-amqp</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry-kafka</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry-pubsub</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>

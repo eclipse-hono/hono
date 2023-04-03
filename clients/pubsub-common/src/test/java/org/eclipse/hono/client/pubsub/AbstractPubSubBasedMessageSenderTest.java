@@ -46,7 +46,7 @@ import io.vertx.core.buffer.Buffer;
  */
 public class AbstractPubSubBasedMessageSenderTest {
 
-    private final String TOPIC = "event";
+    private final String TOPIC_NAME = "event";
 
     private final String PROJECT_ID = "test-project";
 
@@ -60,13 +60,16 @@ public class AbstractPubSubBasedMessageSenderTest {
 
     private AbstractPubSubBasedMessageSender sender;
 
+    private String topic;
+
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     public void setUp() {
+        topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         factory = mock(PubSubPublisherFactory.class);
-        sender = new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, tracer) {
+        sender = new AbstractPubSubBasedMessageSender(factory, TOPIC_NAME, PROJECT_ID, tracer) {
         };
         sender.start();
     }
@@ -79,7 +82,7 @@ public class AbstractPubSubBasedMessageSenderTest {
         assertAll(
                 () -> assertThrows(
                         NullPointerException.class,
-                        () -> new AbstractPubSubBasedMessageSender(null, TOPIC, PROJECT_ID, tracer) {
+                        () -> new AbstractPubSubBasedMessageSender(null, TOPIC_NAME, PROJECT_ID, tracer) {
                         }),
                 () -> assertThrows(
                         NullPointerException.class,
@@ -87,11 +90,11 @@ public class AbstractPubSubBasedMessageSenderTest {
                         }),
                 () -> assertThrows(
                         NullPointerException.class,
-                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, null, tracer) {
+                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC_NAME, null, tracer) {
                         }),
                 () -> assertThrows(
                         NullPointerException.class,
-                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC, PROJECT_ID, null) {
+                        () -> new AbstractPubSubBasedMessageSender(factory, TOPIC_NAME, PROJECT_ID, null) {
                         }));
     }
 
@@ -102,7 +105,8 @@ public class AbstractPubSubBasedMessageSenderTest {
     public void testSendFailedWhenLifecycleStatusIsNotStarted() {
         sender.stop();
 
-        final var result = sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE);
+        final var result = sender.sendAndWaitForOutcome(TOPIC_NAME, TENANT_ID, DEVICE_ID, null, Map.of(),
+                NoopSpan.INSTANCE);
 
         assertThat(result.failed()).isTrue();
         result.onFailure(t -> assertThat(t.getClass()).isEqualTo(ServerErrorException.class));
@@ -116,16 +120,12 @@ public class AbstractPubSubBasedMessageSenderTest {
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any(PubsubMessage.class))).thenReturn(
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
-        when(factory.getOrCreatePublisher(TOPIC, TENANT_ID)).thenReturn(client);
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
-        assertAll(
-                () -> assertThrows(
-                        NullPointerException.class,
-                        () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, null, Map.of(), NoopSpan.INSTANCE)),
-                () -> assertThrows(
-                        ServerErrorException.class,
-                        () -> sender.sendAndWaitForOutcome(TOPIC, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
-                                Map.of(), NoopSpan.INSTANCE)));
+        assertThrows(
+                ServerErrorException.class,
+                () -> sender.sendAndWaitForOutcome(topic, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
+                        Map.of(), NoopSpan.INSTANCE));
     }
 
     /**
@@ -141,10 +141,10 @@ public class AbstractPubSubBasedMessageSenderTest {
 
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(TOPIC, TENANT_ID)).thenReturn(client);
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
         final var result = sender.sendAndWaitForOutcome(
-                TOPIC,
+                topic,
                 TENANT_ID,
                 DEVICE_ID,
                 Buffer.buffer(b),

@@ -307,7 +307,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             })
             .onFailure(t -> LOG.error("failed to deploy adapter verticle(s)", t));
 
-        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, downstreamSenderConfig);
+        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, downstreamSenderConfig, pubSubConfigProperties);
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationReceiver))
             .onSuccess(ok -> {

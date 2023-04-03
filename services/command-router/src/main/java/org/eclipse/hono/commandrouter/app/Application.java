@@ -35,6 +35,8 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -128,6 +130,13 @@ public class Application extends NotificationSupportingServiceApplication {
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
+
+    private PubSubConfigProperties pubSubConfigProperties;
+
+    @Inject
+    void setPubSubClientOptions(final PubSubPublisherOptions options) {
+        this.pubSubConfigProperties = new PubSubConfigProperties(options);
+    }
 
     @Inject
     void setAmqpServerOptions(
@@ -274,7 +283,7 @@ public class Application extends NotificationSupportingServiceApplication {
             });
 
         // deploy notification receiver
-        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, commandConsumerConnectionConfig);
+        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, commandConsumerConnectionConfig, pubSubConfigProperties);
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationReceiver))
             .onSuccess(ok -> {

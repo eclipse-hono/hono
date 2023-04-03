@@ -39,10 +39,12 @@ public class CachingPubSubPublisherFactoryTest {
     private CachingPubSubPublisherFactory factory;
     private PubSubPublisherClient client;
     private Vertx vertx;
+    private String topic;
 
     @BeforeEach
     void setUp() {
         vertx = mock(Vertx.class);
+        topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         client = mock(PubSubPublisherClient.class);
         final CredentialsProvider credentialsProvider = mock(CredentialsProvider.class);
         factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, credentialsProvider);
@@ -55,7 +57,7 @@ public class CachingPubSubPublisherFactoryTest {
     @Test
     public void testThatPublisherIsAddedToCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
-        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(topic);
         final Optional<PubSubPublisherClient> actual = factory.getPublisher(TOPIC_NAME, TENANT_ID);
         assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(createdPublisher);
@@ -68,7 +70,7 @@ public class CachingPubSubPublisherFactoryTest {
     public void testClosePublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(topic);
         assertThat(createdPublisher).isNotNull();
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 
@@ -83,7 +85,7 @@ public class CachingPubSubPublisherFactoryTest {
     public void testCloseAllPublisherClosesAndRemovesFromCache() {
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isEmpty()).isTrue();
 
-        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(TOPIC_NAME, TENANT_ID);
+        final PubSubPublisherClient createdPublisher = factory.getOrCreatePublisher(topic);
         assertThat(createdPublisher).isNotNull();
         assertThat(factory.getPublisher(TOPIC_NAME, TENANT_ID).isPresent()).isTrue();
 

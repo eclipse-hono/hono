@@ -42,6 +42,7 @@
     <module>notification</module>
     <module>notification-amqp</module>
     <module>notification-kafka</module>
+    <module>notification-pubsub</module>
     <module>pubsub-common</module>
     <module>registry</module>
     <module>registry-amqp</module>

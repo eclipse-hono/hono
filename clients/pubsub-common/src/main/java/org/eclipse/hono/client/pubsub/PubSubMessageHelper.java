@@ -13,11 +13,13 @@
 package org.eclipse.hono.client.pubsub;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
+import com.google.pubsub.v1.PubsubMessage;
 
 /**
  * Utility methods for working with Pub/Sub.
@@ -58,4 +60,17 @@ public final class PubSubMessageHelper {
         return String.format("%s.%s", prefix, topic);
     }
 
+    /**
+     * Gets the payload data contained in a Pub/Sub message's data body.
+     *
+     * @param message The Pub/Sub message data to parse.
+     * @return The bytes representing the payload or {@code null} if the message neither has data.
+     *
+     * @throws NullPointerException if the data is {@code null}.
+     */
+    public static byte[] getPayload(final PubsubMessage message) {
+        Objects.requireNonNull(message);
+        Objects.requireNonNull(message.getData());
+        return message.getData().toByteArray();
+    }
 }

@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.pubsub.AbstractPubSubBasedMessageSender;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
@@ -113,12 +114,11 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
                     tenant.getTenantId(), device.getDeviceId(), contentType, properties);
         }
 
-        final String topicEndpoint = EventConstants.EVENT_ENDPOINT;
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
         final Map<String, Object> propsWithDefaults = addDefaults(
-                topicEndpoint,
+                EventConstants.EVENT_ENDPOINT,
                 tenant,
                 device,
                 QoS.AT_LEAST_ONCE,
@@ -127,7 +127,8 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
 
         final Span currentSpan = startSpan("forward event", tenantId, deviceId, References.CHILD_OF,
                 context);
-        return sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, payload, propsWithDefaults,
+        final String topic = PubSubMessageHelper.getTopicName(EventConstants.EVENT_ENDPOINT, tenantId);
+        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
     }
@@ -151,12 +152,11 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
                     tenant.getTenantId(), device.getDeviceId(), qos, contentType, properties);
         }
 
-        final String topicEndpoint = TelemetryConstants.TELEMETRY_ENDPOINT;
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
         final Map<String, Object> propsWithDefaults = addDefaults(
-                topicEndpoint,
+                TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenant,
                 device,
                 qos,
@@ -170,7 +170,8 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
                 qos == QoS.AT_MOST_ONCE ? References.FOLLOWS_FROM : References.CHILD_OF,
                 context);
 
-        final var outcome = sendAndWaitForOutcome(topicEndpoint, tenantId, deviceId, payload, propsWithDefaults,
+        final String topic = PubSubMessageHelper.getTopicName(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
+        final var outcome = sendAndWaitForOutcome(topic, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
 

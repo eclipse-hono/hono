@@ -467,6 +467,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
         <artifactId>hono-client-notification-kafka</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-notification-pubsub</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- Californium -->
       <dependency>

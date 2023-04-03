@@ -144,7 +144,8 @@ public class PubSubBasedDownstreamSenderTest {
                 MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
 
         when(client.publish(any(PubsubMessage.class))).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(EVENT_TOPIC, "test-tenant")).thenReturn(client);
+        final String topic = String.format("%s.%s", "test-tenant", EVENT_TOPIC);
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
         sender.start();
         final Future<Void> result = sender.sendEvent(
@@ -172,7 +173,8 @@ public class PubSubBasedDownstreamSenderTest {
 
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
-        when(factory.getOrCreatePublisher(TELEMETRY_TOPIC, "test-tenant")).thenReturn(client);
+        final String topic = String.format("%s.%s", "test-tenant", TELEMETRY_TOPIC);
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
         sender.start();
         final Future<Void> result = sender.sendTelemetry(

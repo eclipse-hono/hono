@@ -205,17 +205,17 @@ the reporting of metrics.
 
 ## Messaging Configuration
 
-The Device Registry uses a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+The Device Registry uses a connection to an *AMQP 1.0 Messaging Network*, an *Apache Kafka cluster* and/or *Google Pub/Sub* to
 * send [Device Provisioning Notification]({{< relref "/api/event#device-provisioning-notification" >}}) event messages
   to convey provisioning related changes regarding a device, to be received by downstream applications,
 * send notification messages about changes to tenant/device/credentials data, to be processed by other Hono components.
 
 For the event messages a connection to a *Apache Kafka cluster* is used by default, if configured.
-If both kinds of messaging are configured, the decision which one to use is done according to the
+If more than one kind of messaging is configured, the decision which one to use is done according to the
 [Tenant Configuration]({{< relref "admin-guide/hono-kafka-client-configuration#configuring-tenants-to-use-kafka-based-messaging" >}}).
 
 For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
-is used.
+or *Google Pub/Sub* is used.
 
 ### AMQP 1.0 Messaging Network Connection Configuration
 
@@ -237,3 +237,8 @@ respectively.
 |:--------------------------------------------------------------------------|:----------------------------------------|
 | `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`             | Configures the Kafka producer that publishes event messages. |
 | `HONO_KAFKA_NOTIFICATION_PRODUCERCONFIG_`<br>`hono.kafka.notification.producerConfig.` | Configures the Kafka producer that publishes notification messages about changes to tenant/device/credentials data. |
+
+### Google Pub/Sub Messaging Configuration
+
+The connection to *Google Pub/Sub* is configured according to the
+[Google Pub/Sub Messaging Configuration]({{< relref "pubsub-config.md" >}}).

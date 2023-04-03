@@ -83,10 +83,9 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     @Override
-    public PubSubPublisherClient getOrCreatePublisher(final String topic, final String prefix) {
-        final String topicName = PubSubMessageHelper.getTopicName(topic, prefix);
-        return activePublishers.computeIfAbsent(topicName,
-                s -> getPubSubPublisherClient(projectId, topicName));
+    public PubSubPublisherClient getOrCreatePublisher(final String topic) {
+        return activePublishers.computeIfAbsent(topic,
+                s -> getPubSubPublisherClient(topic));
     }
 
     @Override
@@ -95,7 +94,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
         return Optional.ofNullable(activePublishers.get(topicTenantName));
     }
 
-    private PubSubPublisherClient getPubSubPublisherClient(final String projectId, final String topic) {
+    private PubSubPublisherClient getPubSubPublisherClient(final String topic) {
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
                 .orElseGet(() -> new PubSubPublisherClientImpl(vertx, projectId, topic, credentialsProvider));
