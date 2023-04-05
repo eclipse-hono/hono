@@ -31,7 +31,7 @@ import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.util.ServiceClientAdapter;
 
-import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.CredentialsProvider;
 
 /**
  * A service application that supports receiving notifications.
@@ -61,7 +61,7 @@ public abstract class NotificationSupportingServiceApplication extends AbstractS
             notificationReceiver = new ProtonBasedNotificationReceiver(
                     HonoConnection.newConnection(vertx, notificationConfig, tracer));
         } else {
-            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
             if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()
                     && credentialsProvider.isPresent()) {
                 final var factory = new CachingPubSubSubscriberFactory(

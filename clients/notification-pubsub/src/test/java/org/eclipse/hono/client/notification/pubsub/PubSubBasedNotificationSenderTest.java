@@ -31,16 +31,20 @@ import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.google.pubsub.v1.PubsubMessage;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies the behavior of {@link PubSubBasedNotificationSender}.
  */
+@ExtendWith(VertxExtension.class)
 public class PubSubBasedNotificationSenderTest {
 
     private static final String PROJECT_ID = "my-project";
@@ -111,10 +115,13 @@ public class PubSubBasedNotificationSenderTest {
     }
 
     /**
-     * Verifies that the publish method throws a ServerErrorException, if publishing is failing.
+     * Verifies that the publish method returns the underlying error wrapped in a {@link ServerErrorException}, if
+     * publishing is failing.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatExceptionIsThrownOnPublishFailure() {
+    public void testThatPublishFailsWithExpectedError(final VertxTestContext ctx) {
         when(client.publish(any(PubsubMessage.class))).thenReturn(Future.failedFuture("error"));
         final String topic = String.format("%s.%s", TenantChangeNotification.ADDRESS, "notification");
         when(factory.getOrCreatePublisher(topic)).thenReturn(client);
@@ -123,7 +130,14 @@ public class PubSubBasedNotificationSenderTest {
         final var notification = new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME, false, false);
 
         notificationSender.start();
-        assertThrows(ServerErrorException.class, () -> notificationSender.publish(notification));
+        notificationSender.publish(notification)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(503);
+                    });
+                    ctx.completeNow();
+                }));
         verify(client).publish(any(PubsubMessage.class));
     }
 

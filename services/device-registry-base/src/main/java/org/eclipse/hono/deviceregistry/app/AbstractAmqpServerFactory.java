@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.app;
 
-import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -53,8 +52,6 @@ import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.service.util.ServiceClientAdapter;
 import org.eclipse.hono.util.EventConstants;
-
-import com.google.api.gax.core.FixedCredentialsProvider;
 
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
@@ -268,20 +265,20 @@ public abstract class AbstractAmqpServerFactory {
             result.setClient(new KafkaBasedEventSender(vertx, factory, eventKafkaProducerConfig, true, tracer));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
-            if (credentialsProvider.isPresent()) {
-                final CachingPubSubPublisherFactory factory = new CachingPubSubPublisherFactory(
-                        vertx,
-                        pubSubConfigProperties.getProjectId(),
-                        credentialsProvider.get());
-                result.setClient(new PubSubBasedDownstreamSender(
-                        vertx,
-                        factory,
-                        EventConstants.EVENT_ENDPOINT,
-                        pubSubConfigProperties.getProjectId(),
-                        true,
-                        tracer));
-            }
+            PubSubMessageHelper.getCredentialsProvider()
+                    .ifPresent(provider -> {
+                        final var factory = new CachingPubSubPublisherFactory(
+                                        vertx,
+                                        pubSubConfigProperties.getProjectId(),
+                                        provider);
+                        result.setClient(new PubSubBasedDownstreamSender(
+                                vertx,
+                                factory,
+                                EventConstants.EVENT_ENDPOINT,
+                                pubSubConfigProperties.getProjectId(),
+                                true,
+                                tracer));
+                            });
         }
 
         healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(result));

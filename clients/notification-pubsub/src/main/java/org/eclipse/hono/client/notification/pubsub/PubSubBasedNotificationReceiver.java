@@ -112,13 +112,13 @@ public class PubSubBasedNotificationReceiver implements NotificationReceiver {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void handleMessage(final PubsubMessage message) {
         final Buffer buffer = Buffer.buffer(PubSubMessageHelper.getPayload(message));
-        final JsonObject jsonObject = buffer.toJsonObject();
+        final JsonObject json = buffer.toJsonObject();
 
         if (log.isTraceEnabled()) {
-            log.trace("received notification: {}{}", System.lineSeparator(), jsonObject.encodePrettily());
+            log.trace("received notification: {}{}", System.lineSeparator(), json.encodePrettily());
         }
 
-        final AbstractNotification notification = jsonObject.mapTo(AbstractNotification.class);
+        final AbstractNotification notification = json.mapTo(AbstractNotification.class);
         final Handler handler = handlerPerType.get(notification.getClass());
         if (handler != null) {
             handler.handle(notification);

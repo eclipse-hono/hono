@@ -42,7 +42,7 @@ import org.eclipse.hono.service.ApplicationConfigProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.util.ServiceClientAdapter;
 
-import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.CredentialsProvider;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
@@ -85,7 +85,7 @@ public class NotificationSenderProducer {
                     downstreamSenderConfig,
                     tracer));
         } else {
-            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
             if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()
                     && credentialsProvider.isPresent()) {
                 final PubSubPublisherFactory factory = new CachingPubSubPublisherFactory(

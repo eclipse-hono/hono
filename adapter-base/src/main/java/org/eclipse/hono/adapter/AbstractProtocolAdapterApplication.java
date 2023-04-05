@@ -93,7 +93,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.api.gax.core.FixedCredentialsProvider;
 
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
@@ -374,21 +373,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            final Optional<FixedCredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
-            if (credentialsProvider.isPresent()) {
-                LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
+            LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
+            PubSubMessageHelper.getCredentialsProvider()
+                    .ifPresentOrElse(provider -> {
+                        final var pubSubFactory = new CachingPubSubPublisherFactory(
+                                vertx,
+                                pubSubConfigProperties.getProjectId(),
+                                provider);
 
-                final var pubSubFactory = new CachingPubSubPublisherFactory(
-                        vertx,
-                        pubSubConfigProperties.getProjectId(),
-                        credentialsProvider.get());
+                        telemetrySenderProvider
+                                .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
+                        eventSenderProvider
+                                .setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
 
-                telemetrySenderProvider
-                        .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
-                eventSenderProvider.setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
-            } else {
-                LOG.error("Could not initialize Pub/Sub messaging clients, no Credentials Provider present.");
-            }
+                    }, () -> LOG.error("Could not initialize Pub/Sub messaging clients, no Credentials Provider present."));
         }
 
         final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(

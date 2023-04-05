@@ -60,19 +60,31 @@ public class PubSubBasedNotificationSender extends AbstractPubSubBasedMessageSen
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender not started"));
         }
         final String topic = PubSubMessageHelper.getTopicName(TOPIC_ENDPOINT, notification.getType().getAddress());
-        final JsonObject value = JsonObject.mapFrom(notification);
-        final ByteString data = ByteString.copyFrom(value.toBuffer().getBytes());
-
-        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
-                .setOrderingKey(notification.getType().getAddress())
-                .setData(data)
-                .build();
-        log.debug("sending notification to Pub/Sub [topic: {}, key: {}]", topic, notification.getKey());
-        return getOrCreatePublisher(topic).publish(pubsubMessage)
-                .onFailure(t -> {
-                    log.error("error publishing notification to Pub/Sub for notification [{}]", notification, t);
-                    throw new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t);
+        return createPubSubMessage(notification)
+                .compose(message -> {
+                    log.debug("sending notification to Pub/Sub [topic: {}, key: {}]", topic, notification.getKey());
+                    return getOrCreatePublisher(topic)
+                        .publish(message)
+                        .recover(t -> {
+                            log.error("error publishing notification to Pub/Sub for notification [{}]", notification, t);
+                            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
+                        });
                 })
                 .mapEmpty();
+    }
+
+    private Future<PubsubMessage> createPubSubMessage(final AbstractNotification notification) {
+        try {
+            final JsonObject value = JsonObject.mapFrom(notification);
+            final ByteString data = ByteString.copyFrom(value.toBuffer().getBytes());
+
+            return Future.succeededFuture(PubsubMessage.newBuilder()
+                    .setOrderingKey(notification.getType().getAddress())
+                    .setData(data)
+                    .build());
+        } catch (final RuntimeException e) {
+            log.error("error creating Pub/Sub message for notification {}", notification, e);
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e));
+        }
     }
 }

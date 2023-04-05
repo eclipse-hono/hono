@@ -12,6 +12,8 @@
  */
 package org.eclipse.hono.client.pubsub;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Random;
@@ -52,5 +54,25 @@ public class PubSubMessageHelperTest {
         final byte[] result = PubSubMessageHelper.getPayload(pubsubMessage);
         assertThat(result).isEqualTo(b);
         assertThat(result.length).isEqualTo(22);
+    }
+
+    /**
+     * Verifies that the getPayload method returns an empty byte array when the payload is empty.
+     */
+    @Test
+    public void testThatGetPayloadReturnsEmptyByteArray() {
+        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(ByteString.EMPTY).build();
+
+        final byte[] result = PubSubMessageHelper.getPayload(pubsubMessage);
+        assertThat(result).isEqualTo(new byte[0]);
+        assertThat(result.length).isEqualTo(0);
+    }
+
+    /**
+     * Verifies that the getPayload method throws a NullPointerException when the message is {@code null}..
+     */
+    @Test
+    public void testThatGetPayloadThrowsNullPointer() {
+        assertThrows(NullPointerException.class, () -> PubSubMessageHelper.getPayload(null));
     }
 }

@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
@@ -32,10 +33,10 @@ public final class PubSubMessageHelper {
     /**
      * Gets the provider for credentials to use for authenticating to the Pub/Sub service.
      *
-     * @return An optional containing a FixedCredentialsProvider to use for authenticating to the Pub/Sub service or an
+     * @return An optional containing a CredentialsProvider to use for authenticating to the Pub/Sub service or an
      *         empty optional if the given GoogleCredentials is {@code null}.
      */
-    public static Optional<FixedCredentialsProvider> getCredentialsProvider() {
+    public static Optional<CredentialsProvider> getCredentialsProvider() {
         return Optional.ofNullable(getCredentials())
                 .map(FixedCredentialsProvider::create);
     }
@@ -64,9 +65,9 @@ public final class PubSubMessageHelper {
      * Gets the payload data contained in a Pub/Sub message's data body.
      *
      * @param message The Pub/Sub message data to parse.
-     * @return The bytes representing the payload or {@code null} if the message neither has data.
+     * @return The bytes representing the payload or an empty byte array if the message neither has data.
      *
-     * @throws NullPointerException if the data is {@code null}.
+     * @throws NullPointerException if the message or data is {@code null}.
      */
     public static byte[] getPayload(final PubsubMessage message) {
         Objects.requireNonNull(message);
