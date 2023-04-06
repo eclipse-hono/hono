@@ -50,6 +50,10 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification-pubsub</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry</artifactId>
     </dependency>
     <dependency>
@@ -59,6 +63,10 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry-pubsub</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

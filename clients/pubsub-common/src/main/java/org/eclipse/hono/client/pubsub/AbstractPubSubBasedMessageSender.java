@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -58,11 +59,10 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
      * The identifier of the Google Cloud Project that this sender is scoped to.
      */
     protected final String projectId;
-
+    protected final LifecycleStatus lifecycleStatus = new LifecycleStatus();
     private final PubSubPublisherFactory publisherFactory;
     private final String topic;
     private final Tracer tracer;
-    private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     /**
      * Creates a new PubSub-based message sender.
@@ -183,17 +183,21 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         }
 
         final Map<String, String> pubSubAttributes = encodePropertiesAsPubSubAttributes(properties, currentSpan);
-        final ByteString data = ByteString.copyFrom(payload.getBytes());
-        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder()
+        final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
                 .putAllAttributes(pubSubAttributes)
-                .setOrderingKey(deviceId)
-                .setData(data)
-                .build();
+                .setOrderingKey(deviceId);
+
+        Optional.ofNullable(payload)
+                .map(Buffer::getBytes)
+                .map(ByteString::copyFrom)
+                .ifPresent(builder::setData);
+
+        final PubsubMessage pubsubMessage = builder.build();
 
         log.info("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);
 
-        return getOrCreatePublisher(topic, tenantId).publish(pubsubMessage)
+        return getOrCreatePublisher(topic).publish(pubsubMessage)
                 .onSuccess(recordMessage -> {
                     logPubSubMessageId(currentSpan, topic, recordMessage);
                 })
@@ -225,8 +229,14 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
                 .setTag(TracingHelper.TAG_DEVICE_ID.getKey(), deviceId);
     }
 
-    private PubSubPublisherClient getOrCreatePublisher(final String topic, final String tenantId) {
-        return publisherFactory.getOrCreatePublisher(topic, tenantId);
+    /**
+     * Gets or creates a PubSubPublisherClient, which is used to publish a message to Google Pub/Sub.
+     *
+     * @param topic The topic to create the publisher for.
+     * @return An instance of a PubSubPublisherClient.
+     */
+    protected PubSubPublisherClient getOrCreatePublisher(final String topic) {
+        return publisherFactory.getOrCreatePublisher(topic);
     }
 
     private void logPubSubMessageId(final Span span, final String topic, final String messageId) {

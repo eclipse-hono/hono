@@ -45,18 +45,16 @@ public interface PubSubPublisherFactory {
     /**
      * Gets a publisher for sending data to Pub/Sub.
      * <p>
-     * The publisher returned may be either newly created or it may be an existing publisher for the given topic and
-     * tenant.
+     * The publisher returned may be either newly created or it may be an existing publisher for the given topic.
      * <p>
      * Do not hold references to the returned publisher between send operations, because the publisher might be closed
      * by the factory. Instead, always get an instance by invoking this method.
      * <p>
      *
      * @param topic The topic to create the publisher for.
-     * @param prefix The prefix of the topic of the publisher to remove, e.g. the tenantId.
      * @return an existing or new publisher.
      */
-    PubSubPublisherClient getOrCreatePublisher(String topic, String prefix);
+    PubSubPublisherClient getOrCreatePublisher(String topic);
 
     /**
      * Gets an existing Publisher for sending data to Pub/Sub if one was already created with the given topicName and
