@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -1184,7 +1184,7 @@ public final class DeviceRegistryHttpClient {
                 .compose(ok -> {
 
                     final String authId = deviceCert.getSubjectX500Principal().getName();
-                    final var credential = X509CertificateCredential.fromSubjectDn(authId, List.of(new X509CertificateSecret()));
+                    final var credential = X509CertificateCredential.fromAuthId(authId, List.of(new X509CertificateSecret()));
 
                     return addCredentials(tenantId, deviceId, Collections.singleton(credential));
 

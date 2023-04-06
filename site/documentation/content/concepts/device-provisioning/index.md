@@ -63,6 +63,12 @@ the configured template. If not configured, then a random unique device identifi
 [Device Registry Management API]({{< ref "/api/management#tenants/createTenant" >}}) for more details on how to 
 configure a tenant's trusted CA authority for that.
 
+The Device Registry creates device credentials during auto-provisioning. If *auth-id-template* is configured in the
+corresponding tenant’s CA entry, then the device registry generates the credentials authentication identity based on the
+configured template. If not configured, then subject DN of the device certificate is used as authentication identity.
+Refer to the [Device Registry Management API]({{< ref "/api/management#tenants/createTenant" >}}) for more details on 
+how to configure a tenant's trusted CA authority for that.
+
 ##### Step 2: Connect an unregistered Device to Hono
 
 {{< figure src="auto-provisioning.svg" alt="A unregistered device connects to a protocol adapter which uses the Credentials API to provision it" title="Automatic Provisioning of a Device" >}}

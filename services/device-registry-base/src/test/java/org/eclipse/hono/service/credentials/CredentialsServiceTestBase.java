@@ -463,7 +463,7 @@ public interface CredentialsServiceTestBase {
         final var otherPwdCredentials = Credentials.createPasswordCredential(otherAuthId, "bar");
         final var pskCredentials = Credentials.createPSKCredential("psk-id", "the-shared-key");
         final String subjectDn = new X500Principal("emailAddress=foo@bar.com, CN=foo, O=bar").getName(X500Principal.RFC2253);
-        final var x509Credentials = X509CertificateCredential.fromSubjectDn(subjectDn, List.of(new X509CertificateSecret()));
+        final var x509Credentials = X509CertificateCredential.fromAuthId(subjectDn, List.of(new X509CertificateSecret()));
         final var clientCert = VertxTools.getCertificate(vertx, SelfSignedCertificate.create("the-device").certificatePath());
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,

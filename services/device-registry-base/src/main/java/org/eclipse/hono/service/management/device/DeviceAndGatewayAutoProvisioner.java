@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -233,7 +233,7 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                     }
 
                     // 2. set the certificate credential
-                    final var certCredential = X509CertificateCredential.fromSubjectDn(authId,
+                    final var certCredential = X509CertificateCredential.fromAuthId(authId,
                             List.of(new X509CertificateSecret()));
                     certCredential.setEnabled(true).setComment(comment);
 
