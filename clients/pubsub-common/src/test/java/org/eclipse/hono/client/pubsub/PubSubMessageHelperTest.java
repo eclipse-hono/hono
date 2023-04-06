@@ -12,10 +12,11 @@
  */
 package org.eclipse.hono.client.pubsub;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.Optional;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
@@ -41,38 +42,39 @@ public class PubSubMessageHelperTest {
     }
 
     /**
-     * Verifies that the getPayload method returns the bytes representing the payload.
+     * Verifies that the getPayload method returns the optional of bytes representing the payload.
      */
     @Test
-    public void testThatGetPayloadReturnsCorrectByteArray() {
+    public void testThatGetPayloadReturnsOptionalOfCorrectByteArray() {
         final byte[] b = new byte[22];
         new Random().nextBytes(b);
 
         final ByteString data = ByteString.copyFrom(b);
         final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
 
-        final byte[] result = PubSubMessageHelper.getPayload(pubsubMessage);
-        assertThat(result).isEqualTo(b);
-        assertThat(result.length).isEqualTo(22);
+        final Optional<byte[]> result = PubSubMessageHelper.getPayload(pubsubMessage);
+        assertTrue(result.isPresent());
+        assertThat(result.get()).isEqualTo(b);
+        assertThat(result.get().length).isEqualTo(22);
     }
 
     /**
-     * Verifies that the getPayload method returns an empty byte array when the payload is empty.
+     * Verifies that the getPayload method returns the optional of an empty byte array when the payload has no data.
      */
     @Test
-    public void testThatGetPayloadReturnsEmptyByteArray() {
-        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(ByteString.EMPTY).build();
-
-        final byte[] result = PubSubMessageHelper.getPayload(pubsubMessage);
-        assertThat(result).isEqualTo(new byte[0]);
-        assertThat(result.length).isEqualTo(0);
+    public void testThatGetPayloadReturnsOptionalOfEmptyByteArray() {
+        final PubsubMessage pubsubMessage = PubsubMessage.newBuilder().build();
+        final Optional<byte[]> result = PubSubMessageHelper.getPayload(pubsubMessage);
+        assertTrue(result.isPresent());
+        assertThat(result.get()).isEqualTo(new byte[0]);
+        assertThat(result.get().length).isEqualTo(0);
     }
 
     /**
-     * Verifies that the getPayload method throws a NullPointerException when the message is {@code null}..
+     * Verifies that the getPayload method returns an empty optional when the PubsubMessage is {@code null}.
      */
     @Test
-    public void testThatGetPayloadThrowsNullPointer() {
-        assertThrows(NullPointerException.class, () -> PubSubMessageHelper.getPayload(null));
+    public void testThatGetPayloadReturnsEmptyOptional() {
+        assertTrue(PubSubMessageHelper.getPayload(null).isEmpty());
     }
 }

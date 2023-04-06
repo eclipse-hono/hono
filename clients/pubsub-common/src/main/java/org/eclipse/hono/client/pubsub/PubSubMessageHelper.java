@@ -13,7 +13,6 @@
 package org.eclipse.hono.client.pubsub;
 
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Optional;
 
 import com.google.api.gax.core.CredentialsProvider;
@@ -65,13 +64,9 @@ public final class PubSubMessageHelper {
      * Gets the payload data contained in a Pub/Sub message's data body.
      *
      * @param message The Pub/Sub message data to parse.
-     * @return The bytes representing the payload or an empty byte array if the message neither has data.
-     *
-     * @throws NullPointerException if the message or data is {@code null}.
+     * @return An optional of the bytes representing the payload or an empty optional if the message is {@code null}.
      */
-    public static byte[] getPayload(final PubsubMessage message) {
-        Objects.requireNonNull(message);
-        Objects.requireNonNull(message.getData());
-        return message.getData().toByteArray();
+    public static Optional<byte[]> getPayload(final PubsubMessage message) {
+        return Optional.ofNullable(message).map(m -> m.getData().toByteArray());
     }
 }
