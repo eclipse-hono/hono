@@ -112,16 +112,20 @@ public class PubSubBasedNotificationReceiver implements NotificationReceiver {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void handleMessage(final PubsubMessage message) {
         final Buffer buffer = Buffer.buffer(PubSubMessageHelper.getPayload(message));
-        final JsonObject json = buffer.toJsonObject();
+        try {
+            final JsonObject json = buffer.toJsonObject();
 
-        if (log.isTraceEnabled()) {
-            log.trace("received notification: {}{}", System.lineSeparator(), json.encodePrettily());
-        }
+            if (log.isTraceEnabled()) {
+                log.trace("received notification: {}{}", System.lineSeparator(), json.encodePrettily());
+            }
 
-        final AbstractNotification notification = json.mapTo(AbstractNotification.class);
-        final Handler handler = handlerPerType.get(notification.getClass());
-        if (handler != null) {
-            handler.handle(notification);
+            final AbstractNotification notification = json.mapTo(AbstractNotification.class);
+            final Handler handler = handlerPerType.get(notification.getClass());
+            if (handler != null) {
+                handler.handle(notification);
+            }
+        } catch (RuntimeException e) {
+            log.debug("Could not handle Pub/Sub message notification, buffer is empty");
         }
     }
 }
