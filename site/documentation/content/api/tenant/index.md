@@ -1,7 +1,7 @@
 ---
 title: "Tenant API Specification"
 linkTitle: "Tenant API"
-weight: 422
+weight: 423
 resources:
   - src: preconditions.svg
   - src: get_tenant_success.svg

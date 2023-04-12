@@ -3,8 +3,8 @@ title = "Google Pub/Sub Messaging Configuration"
 weight = 348
 +++
 
-Hono can be configured to support Google Pub/Sub as the messaging infrastructure. Google Pub/Sub can only be used to forward
-Telemetry and Event messages, but not Command messages. The Pub/Sub client used for this purpose
+Hono can be configured to support Google Pub/Sub as the messaging infrastructure. The Pub/Sub client used for this
+purpose
 can be configured by means of operating system environment variables.
 
 Supporting Google Pub/Sub, Hono must run on Google Kubernetes Engine to authenticate to the Google Pub/Sub API.
@@ -56,14 +56,54 @@ If an adapter is configured to connect to only one type of messaging infrastruct
 type configuration is ignored.
 {{% /notice %}}
 
-## Used Topics
+## Used Topics and Subscriptions
 
-### For Telemetry & Event Messages
+### For Telemetry, Event and Command & Control Messages
 
 The Hono components publish messages to the following, tenant-specific Pub/Sub topics,
-from which downstream applications will consume the messages:
+from which downstream applications can create subscriptions and consume the messages:
 
-| Topic name                    | Description                           |
-|:------------------------------|:--------------------------------------|
-| `projects/${google_project_id}/topics/${tenant_id}.telemetry`       | Topic for telemetry messages.         |
-| `projects/${google_project_id}/topics/${tenant_id}.event`          | Topic for event messages.             |
+| Topic name                                                           | Description                          |
+|:---------------------------------------------------------------------|:-------------------------------------|
+| `projects/${google_project_id}/topics/${tenant_id}.telemetry`        | Topic for telemetry messages.        |
+| `projects/${google_project_id}/topics/${tenant_id}.event`            | Topic for event messages.            |
+| `projects/${google_project_id}/topics/${tenant_id}.command_response` | Topic for command response messages. |
+
+For command & control messages published by downstream applications, the following topic is used:
+
+| Topic name                                                  | Description                           |
+|:------------------------------------------------------------|:--------------------------------------|
+| `projects/${google_project_id}/topics/${tenant_id}.command` | Topic for command & control messages. |
+
+For command & control messages consumed by the Hono command router, the following subscription is used:
+
+| Subscription name                                                  | Description                                  |
+|:-------------------------------------------------------------------|:---------------------------------------------|
+| `projects/${google_project_id}/subscriptions/${tenant_id}.command` | Subscription for command & control messages. |
+
+The above topics and subscriptions must be created in advance.
+
+### For Hono internal messages
+
+For messages published only by Hono components, the following topics are used:
+
+| Topic name                                                                     | Description                                                                                             |
+|:-------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
+| `projects/${google_project_id}/topics/${adapter_instance_id}.command_internal` | Topic used for routing of command & control messages between Hono components.                           |
+| `projects/${google_project_id}/topics/registry-tenant.notification`            | Topic used for notification messages between Hono components about changes to tenant registration data. |
+| `projects/${google_project_id}/topics/registry-device.notification`            | Topic used for notification messages between Hono components about changes to device registration data. |
+
+For messages consumed only by Hono components, the following subscriptions are used:
+
+| Subscription name                                                                     | Description                                                                                                    |
+|:--------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------|
+| `projects/${google_project_id}/subscriptions/${adapter_instance_id}.command_internal` | Subscription used for routing of command & control messages between Hono components.                           |
+| `projects/${google_project_id}/subscriptions/registry-tenant.notification`            | Subscription used for notification messages between Hono components about changes to tenant registration data. |
+| `projects/${google_project_id}/subscriptions/registry-device.notification`            | Subscription used for notification messages between Hono components about changes to device registration data. |
+
+The `projects/${google_project_id}/topics/${adapter_instance_id}.command_internal` topic
+and the `projects/${google_project_id}/subscriptions/${adapter_instance_id}.command_internal` subscription name contains
+a unique identifier as prefix, created dynamically on protocol adapter start. Therefore, this topic cannot be created in
+advance. It is created by a Pub/Sub based admin client in the protocol adapters.
+
+The `projects/${google_project_id}/topics/${PREFIX}.notification` topics and subscriptions need to be created in advance.

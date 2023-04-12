@@ -108,10 +108,10 @@ Both the secure as well as the insecure port numbers may be explicitly set to `0
 
 ## Messaging Configuration
 
-The Command Router component uses a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+The Command Router component uses a connection to an *AMQP 1.0 Messaging Network*, an *Apache Kafka cluster* and/or *Google Pub/Sub* to
 * receive command & control messages sent by downstream applications and to forward these commands on a specific
   address/topic so that they can be received by protocol adapters,
-* send delivery failure command response messages in case no consumer exists for a received command (only with Kafka messaging),
+* send delivery failure command response messages in case no consumer exists for a received command (only with Kafka and Google Pub/Sub messaging),
 * receive notification messages about changes to tenant/device/credentials data sent from the device registry.
 * send an event message for [Time until Disconnect Notification]({{< relref "/concepts/device-notifications#time-until-disconnect-notification" >}})
   indicating the device readiness to receive commands.
@@ -119,7 +119,7 @@ The Command Router component uses a connection to an *AMQP 1.0 Messaging Network
 Command messages are received on each configured messaging system.
 
 For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
-is used.
+or *Google Pub/Sub* is used.
 
 ### AMQP 1.0 Messaging Network Connection Configuration
 
@@ -144,6 +144,11 @@ respectively.
 | `HONO_KAFKA_COMMANDINTERNAL_PRODUCERCONFIG_`<br>`hono.kafka.commandInternal.producerConfig.` | Configures the Kafka producer that publishes command messages to Hono internal topics.                             |
 | `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages.                                            |
 | `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`       | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
+
+### Google Pub/Sub Messaging Configuration
+
+The connection to *Google Pub/Sub* is configured according to the
+[Google Pub/Sub Messaging Configuration]({{< relref "pubsub-config.md" >}}).
 
 ## Tenant Service Connection Configuration
 
