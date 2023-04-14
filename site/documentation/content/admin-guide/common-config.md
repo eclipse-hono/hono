@@ -44,21 +44,21 @@ Hono's components support native transport out of the box.
 
 ### Messaging Configuration
 
-Protocol adapters use a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+Protocol adapters use a connection to an *AMQP 1.0 Messaging Network*, an *Apache Kafka cluster* and/or *Google Pub/Sub* to
 * forward telemetry data and events received from devices so that they can be received by downstream consumers,
 * receive command & control messages sent from downstream applications (and forwarded by the command router component),
 * forward command response messages to be received by downstream applications,
 * receive notification messages about changes to tenant/device/credentials data sent from the device registry.
 
 For telemetry and event messages a connection to a *Apache Kafka cluster* is used by default, if configured. 
-If both kinds of messaging are configured, the decision which one to use is done according to the 
+If more than one kind of messaging is configured, the decision which one to use is done according to the 
 [Tenant Configuration]({{< relref "admin-guide/hono-kafka-client-configuration#configuring-tenants-to-use-kafka-based-messaging" >}}).
 
 Command messages are received on each configured messaging system. Command response messages are sent on the kind of
 messaging system that was used for the corresponding command message.
 
 For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
-is used.
+or *Google Pub/Sub* is used.
 
 #### AMQP 1.0 Messaging Network Connection Configuration
 
@@ -85,6 +85,11 @@ respectively.
 | `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`                       | Configures the Kafka producer that publishes event messages.                                                       |
 | `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`           | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
 | `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.`                | Configures the Kafka producer that publishes telemetry messages.                                                   |
+
+### Google Pub/Sub Connection Configuration
+
+The connection to *Google Pub/Sub* is configured according to the
+[Google Pub/Sub Messaging Configuration]({{< relref "pubsub-config.md" >}}).
 
 ### Tenant Service Connection Configuration
 
