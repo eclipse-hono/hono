@@ -222,10 +222,14 @@ public final class Commands {
     }
 
     private static int getMessagingTypeIndex(final MessagingType messagingType) {
-        return messagingType.equals(MessagingType.kafka) ? 1 : 0;
+        return MessagingType.valueOf(messagingType.name()).ordinal();
     }
 
     private static MessagingType getMessagingTypeFromIndex(final int messagingTypeIndex) {
-        return messagingTypeIndex == 1 ? MessagingType.kafka : MessagingType.amqp;
+        return switch (messagingTypeIndex) {
+            case 0 -> MessagingType.amqp;
+            case 2 -> MessagingType.pubsub;
+            default -> MessagingType.kafka;
+        };
     }
 }

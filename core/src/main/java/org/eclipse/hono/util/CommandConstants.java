@@ -98,6 +98,11 @@ public class CommandConstants {
     public static final String MSG_PROPERTY_DEVICE_TTD = "ttd";
 
     /**
+     * The operation name of the span used by the internal command sender.
+     */
+    public static final String INTERNAL_COMMAND_SPAN_OPERATION_NAME = "delegate Command request";
+
+    /**
      * Position of the status code in the MQTT command response topic.
      * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */

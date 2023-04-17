@@ -41,6 +41,26 @@ public interface CommandContext extends ExecutionContext {
     String KEY_TENANT_CONFIG = "tenant-config";
 
     /**
+     * The outcome of an accepted command context.
+     */
+    String ACCEPTED_COMMAND_CONTEXT = "accepted";
+
+    /**
+     * The outcome of a released command context.
+     */
+    String RELEASED_COMMAND_CONTEXT = "released";
+
+    /**
+     * The outcome of a modified command context.
+     */
+    String MODIFIED_COMMAND_CONTEXT = "modified";
+
+    /**
+     * The outcome of a rejected command context.
+     */
+    String REJECTED_COMMAND_CONTEXT = "rejected";
+
+    /**
      * Checks if the context has already been completed.
      *
      * @return {@code true} if the context has already been completed.

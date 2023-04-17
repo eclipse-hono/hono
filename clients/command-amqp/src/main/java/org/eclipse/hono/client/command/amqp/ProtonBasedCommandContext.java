@@ -85,7 +85,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void accept() {
-        if (!setCompleted("accepted")) {
+        if (!setCompleted(ACCEPTED_COMMAND_CONTEXT)) {
             return;
         }
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_ACCEPTED);
@@ -94,7 +94,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void release() {
-        if (!setCompleted("released")) {
+        if (!setCompleted(RELEASED_COMMAND_CONTEXT)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed");
@@ -105,7 +105,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     @Override
     public void release(final Throwable error) {
         Objects.requireNonNull(error);
-        if (!setCompleted("released")) {
+        if (!setCompleted(RELEASED_COMMAND_CONTEXT)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed", error);
@@ -116,7 +116,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-        if (!setCompleted("modified")) {
+        if (!setCompleted(MODIFIED_COMMAND_CONTEXT)) {
             return;
         }
         final Span span = getTracingSpan();
@@ -134,7 +134,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final String error) {
-        if (!setCompleted("rejected")) {
+        if (!setCompleted(REJECTED_COMMAND_CONTEXT)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command: " + error);
@@ -147,7 +147,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final Throwable error) {
-        if (!setCompleted("rejected")) {
+        if (!setCompleted(REJECTED_COMMAND_CONTEXT)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command", error);

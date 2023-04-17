@@ -369,6 +369,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-command-pubsub</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-device-amqp</artifactId>
         <version>${project.version}</version>
       </dependency>

@@ -72,7 +72,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
         return getOrCreateSenderLink(getTargetAddress(adapterInstanceId))
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
-                    final Span span = newChildSpan(commandContext.getTracingContext(), "delegate Command request");
+                    final Span span = newChildSpan(commandContext.getTracingContext(), CommandConstants.INTERNAL_COMMAND_SPAN_OPERATION_NAME);
                     final Command command = commandContext.getCommand();
                     final Message message = adoptOrCreateMessage(command);
                     TracingHelper.setDeviceTags(span, command.getTenant(), command.getDeviceId());
