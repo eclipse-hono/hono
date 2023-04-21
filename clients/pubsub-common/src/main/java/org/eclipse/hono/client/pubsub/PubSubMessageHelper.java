@@ -35,18 +35,6 @@ public final class PubSubMessageHelper {
      * The name of the Pub/Sub message property containing the identifier of the Google Cloud Project to connect to.
      */
     public static final String PUBSUB_PROPERTY_PROJECT_ID = "projectId";
-    /**
-     * The name of Pub/Sub message property containing the ID of the tenant the device belongs to.
-     */
-    public static final String PUBSUB_PROPERTY_TENANT_ID = "tenant_id";
-    /**
-     * The name of the Pub/Sub message property containing the ID of the device.
-     */
-    public static final String PUBSUB_PROPERTY_DEVICE_ID = "device_id";
-    /**
-     * The name of the Pub/Sub message property containing the ID of the device registry the device belongs to.
-     */
-    public static final String PUBSUB_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
 
     public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
 
@@ -103,25 +91,23 @@ public final class PubSubMessageHelper {
         return message.getData().toByteArray();
     }
     /**
-     * Gets the value of the {@value PUBSUB_PROPERTY_DEVICE_ID} attribute.
+     * Gets the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_ID} attribute.
      *
      * @param attributesMap The attributes map to get the value from.
      * @return The attributes value.
      */
     public static Optional<String> getDeviceId(final Map<String, String> attributesMap) {
-        return getAttributesValue(attributesMap, PUBSUB_PROPERTY_DEVICE_ID);
+        return getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_DEVICE_ID);
     }
 
     /**
-     * Gets the value of the {@value PUBSUB_PROPERTY_DEVICE_REGISTRY_ID} attribute, or if its not present, get the value
-     * of the {@value PUBSUB_PROPERTY_TENANT_ID} attribute.
+     * Gets the value of the {@link MessageHelper#APP_PROPERTY_TENANT_ID} attribute.
      *
      * @param attributesMap The attributes map to get the value from.
      * @return The attributes value.
      */
     public static Optional<String> getTenantId(final Map<String, String> attributesMap) {
-        return getAttributesValue(attributesMap, PUBSUB_PROPERTY_DEVICE_REGISTRY_ID)
-                .or(() -> getAttributesValue(attributesMap, PUBSUB_PROPERTY_TENANT_ID));
+        return getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_TENANT_ID);
     }
 
     /**

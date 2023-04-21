@@ -168,9 +168,9 @@ public class PubSubBasedCommandTest {
             final String correlationId, final String responseRequired, final String via) {
         final Map<String, String> attributes = new HashMap<>();
         Optional.ofNullable(deviceId)
-                .ifPresent(ok -> attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, deviceId));
+                .ifPresent(ok -> attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
         Optional.ofNullable(tenantId)
-                .ifPresent(ok -> attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, tenantId));
+                .ifPresent(ok -> attributes.put( MessageHelper.APP_PROPERTY_TENANT_ID, tenantId));
         Optional.ofNullable(subject)
                 .ifPresent(ok -> attributes.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject));
         Optional.ofNullable(responseRequired)

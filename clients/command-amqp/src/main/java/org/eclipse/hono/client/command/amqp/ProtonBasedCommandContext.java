@@ -85,7 +85,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void accept() {
-        if (!setCompleted(ACCEPTED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_ACCEPTED)) {
             return;
         }
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_ACCEPTED);
@@ -94,7 +94,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void release() {
-        if (!setCompleted(RELEASED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_RELEASED)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed");
@@ -105,7 +105,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     @Override
     public void release(final Throwable error) {
         Objects.requireNonNull(error);
-        if (!setCompleted(RELEASED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_RELEASED)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "command could not be delivered or processed", error);
@@ -116,7 +116,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-        if (!setCompleted(MODIFIED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_MODIFIED)) {
             return;
         }
         final Span span = getTracingSpan();
@@ -134,7 +134,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final String error) {
-        if (!setCompleted(REJECTED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_REJECTED)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command: " + error);
@@ -147,7 +147,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
 
     @Override
     public void reject(final Throwable error) {
-        if (!setCompleted(REJECTED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_REJECTED)) {
             return;
         }
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command", error);

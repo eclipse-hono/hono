@@ -43,22 +43,22 @@ public interface CommandContext extends ExecutionContext {
     /**
      * The outcome of an accepted command context.
      */
-    String ACCEPTED_COMMAND_CONTEXT = "accepted";
+    String OUTCOME_ACCEPTED = "accepted";
 
     /**
      * The outcome of a released command context.
      */
-    String RELEASED_COMMAND_CONTEXT = "released";
+    String OUTCOME_RELEASED = "released";
 
     /**
      * The outcome of a modified command context.
      */
-    String MODIFIED_COMMAND_CONTEXT = "modified";
+    String OUTCOME_MODIFIED = "modified";
 
     /**
      * The outcome of a rejected command context.
      */
-    String REJECTED_COMMAND_CONTEXT = "rejected";
+    String OUTCOME_REJECTED = "rejected";
 
     /**
      * Checks if the context has already been completed.

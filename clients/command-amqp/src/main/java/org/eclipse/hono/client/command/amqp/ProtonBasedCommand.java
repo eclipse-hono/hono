@@ -328,6 +328,11 @@ public final class ProtonBasedCommand implements Command {
         }
     }
 
+    @Override
+    public Map<String, String> getDeliveryFailureNotificationProperties() {
+        return null;
+    }
+
     /**
      * Validates the type of the message body containing the payload data and returns an error string if it is
      * unsupported.

@@ -115,10 +115,8 @@ public class PubSubBasedCommandResponseSender extends AbstractPubSubBasedMessage
                 tenant.getResourceLimits()).asMap();
         messageProperties.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId());
         messageProperties.put(MessageHelper.APP_PROPERTY_STATUS, response.getStatus());
-        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, response.getTenantId());
-        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_REGISTRY_ID, response.getTenantId());
-        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, response.getDeviceId());
-        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
+        messageProperties.put(MessageHelper.APP_PROPERTY_TENANT_ID, response.getTenantId());
+        messageProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId());
 
         if (response.getContentType() != null) {
             messageProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, response.getContentType());

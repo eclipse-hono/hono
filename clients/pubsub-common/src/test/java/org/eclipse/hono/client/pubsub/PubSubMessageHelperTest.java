@@ -85,8 +85,8 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetDeviceIdReturnsDeviceId() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
-                PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, "test-tenant");
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant");
 
         final Optional<String> result = PubSubMessageHelper.getDeviceId(attributesMap);
         assertThat(result.isPresent()).isTrue();
@@ -99,7 +99,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetTenantIdReturnsEmptyOptional() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
                 MessageHelper.APP_PROPERTY_GATEWAY_ID, "test-gateway");
 
         final Optional<String> result = PubSubMessageHelper.getTenantId(attributesMap);
@@ -112,7 +112,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetCorrelationIdReturnsCorrelationId() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, "test-tenant",
+                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant",
                 MessageHelper.SYS_PROPERTY_CORRELATION_ID, "correlation-id-test");
 
         final Optional<String> result = PubSubMessageHelper.getCorrelationId(attributesMap);
@@ -126,7 +126,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatIsResponseRequiredReturnsTrue() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
                 PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, "true");
 
         final boolean result = PubSubMessageHelper.isResponseRequired(attributesMap);
@@ -139,8 +139,8 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatIsResponseRequiredReturnsFalse() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
-                PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, "test-tenant");
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant");
 
         final boolean result = PubSubMessageHelper.isResponseRequired(attributesMap);
         assertThat(result).isFalse();
@@ -163,7 +163,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetSubjectReturnsSubject() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
                 MessageHelper.SYS_PROPERTY_SUBJECT, "test-command");
 
         final Optional<String> result = PubSubMessageHelper.getSubject(attributesMap);
@@ -198,7 +198,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetViaReturnsViaProperty() {
         final Map<String, String> attributesMap = getAttributes(
-                PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
                 MessageHelper.APP_PROPERTY_CMD_VIA, "test-gateway");
 
         final Optional<String> result = PubSubMessageHelper.getVia(attributesMap);

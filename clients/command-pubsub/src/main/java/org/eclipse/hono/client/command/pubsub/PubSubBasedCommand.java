@@ -33,7 +33,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A command used in a Pub/Sub based client.
  */
-public class PubSubBasedCommand implements Command {
+public final class PubSubBasedCommand implements Command {
 
     /**
      * If present, the command is invalid.
@@ -292,11 +292,7 @@ public class PubSubBasedCommand implements Command {
         }
     }
 
-    /**
-     * Gets the set of properties to be set on the command response message if delivery of this command fails.
-     *
-     * @return The properties.
-     */
+    @Override
     public Map<String, String> getDeliveryFailureNotificationProperties() {
         return PubSubMessageHelper.getDeliveryFailureNotificationMetadata(pubsubMessage.getAttributesMap());
     }

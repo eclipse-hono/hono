@@ -234,8 +234,8 @@ public class PubSubBasedInternalCommandConsumerTest {
 
     private PubsubMessage getPubSubMessage(final String subject, final String responseRequired) {
         final Map<String, String> attributes = new HashMap<>();
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, deviceId);
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, tenantId);
+        attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         attributes.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, "my-correlation-id");
 
         Optional.ofNullable(subject)

@@ -48,14 +48,19 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         implements TelemetrySender, EventSender {
 
     /**
-     * The name of Pub/Sub message property containing the ID of the tenant the device belongs to.
+     * The name of Pub/Sub downstream message property containing the ID of the tenant the device belongs to.
      */
     private static final String PUBSUB_DOWNSTREAM_PROPERTY_TENANT_ID = "tenantId";
 
     /**
-     * The name of the Pub/Sub message property containing the ID of the device.
+     * The name of the Pub/Sub downstream message property containing the ID of the device.
      */
     private static final String PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_ID = "deviceId";
+
+    /**
+     * The name of the Pub/Sub downstream message property containing the ID of the device registry the device belongs to.
+     */
+    private static final String PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
 
     private final boolean isDefaultsEnabled;
 
@@ -195,7 +200,7 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_ID, device.getDeviceId());
         messageProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
         messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_TENANT_ID, tenant.getTenantId());
-        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
+        messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
         messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
 
         Optional.ofNullable(contentType)

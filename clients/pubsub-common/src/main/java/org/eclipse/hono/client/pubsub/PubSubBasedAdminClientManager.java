@@ -274,7 +274,7 @@ public class PubSubBasedAdminClientManager {
         if (subscriptionAdminClient != null) {
             subscriptionAdminClient.shutdown();
             try {
-                subscriptionAdminClient.awaitTermination(1, TimeUnit.MINUTES);
+                subscriptionAdminClient.awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 LOG.debug("Resources are not freed properly, error", e);
                 Thread.currentThread().interrupt();
@@ -286,7 +286,7 @@ public class PubSubBasedAdminClientManager {
         if (topicAdminClient != null) {
             topicAdminClient.shutdown();
             try {
-                topicAdminClient.awaitTermination(1, TimeUnit.MINUTES);
+                topicAdminClient.awaitTermination(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 LOG.debug("Resources are not freed properly, error", e);
                 Thread.currentThread().interrupt();

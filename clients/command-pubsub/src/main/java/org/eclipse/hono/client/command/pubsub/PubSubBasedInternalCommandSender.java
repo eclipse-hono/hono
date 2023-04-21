@@ -97,9 +97,8 @@ public class PubSubBasedInternalCommandSender extends AbstractPubSubBasedMessage
 
     private Map<String, Object> getAttributes(final PubSubBasedCommand command) {
         final Map<String, Object> attributes = new HashMap<>(command.getPubsubMessage().getAttributesMap());
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, command.getTenant());
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_REGISTRY_ID, command.getTenant());
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, command.getDeviceId());
+        attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant());
+        attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId());
         attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
         attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, !command.isOneWay());
         Optional.ofNullable(command.getGatewayId()).ifPresent(

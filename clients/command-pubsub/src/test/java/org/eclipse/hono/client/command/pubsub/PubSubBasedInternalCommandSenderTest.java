@@ -25,11 +25,11 @@ import java.util.Map;
 
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
-import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherClient;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +37,6 @@ import com.google.pubsub.v1.PubsubMessage;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 
 /**
  * Verifies behavior of {@link PubSubBasedInternalCommandSender}.
@@ -73,20 +72,15 @@ public class PubSubBasedInternalCommandSenderTest {
     }
 
     @Test
-    void testThatCommandIsSendSuccessfully() {
+    void testThatCommandIsSentSuccessfully() {
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(any(PubsubMessage.class))).thenReturn(Future.succeededFuture());
 
         final String topic = String.format("%s.%s", adapterInstanceId, CommandConstants.INTERNAL_COMMAND_ENDPOINT);
         when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
-        final PubSubBasedCommand command = mock(PubSubBasedCommand.class);
         final PubsubMessage message = getPubSubMessage();
-        when(command.getTenant()).thenReturn(tenantId);
-        when(command.getDeviceId()).thenReturn(deviceId);
-        when(command.getPayload()).thenReturn(Buffer.buffer("test payload"));
-        when(command.getPubsubMessage()).thenReturn(message);
-
+        final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
         final CommandContext commandContext = mock(CommandContext.class);
         when(commandContext.getCommand()).thenReturn(command);
 
@@ -100,8 +94,8 @@ public class PubSubBasedInternalCommandSenderTest {
 
     private PubsubMessage getPubSubMessage() {
         final Map<String, String> attributes = new HashMap<>();
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, deviceId);
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, tenantId);
+        attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
 
         return PubsubMessage.newBuilder().putAllAttributes(attributes).build();
     }

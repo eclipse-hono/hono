@@ -62,7 +62,7 @@ public class PubSubBasedCommandContextTest {
     }
 
     @Test
-    void testErrorIsSendOnCommandResponseTopicWhenContextGetsRejected() {
+    void testErrorIsSentOnCommandResponseTopicWhenContextGetsRejected() {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.reject(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
@@ -70,7 +70,7 @@ public class PubSubBasedCommandContextTest {
     }
 
     @Test
-    void testErrorIsSendOnCommandResponseTopicWhenContextGetsReleased() {
+    void testErrorIsSentOnCommandResponseTopicWhenContextGetsReleased() {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.release(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
@@ -78,7 +78,7 @@ public class PubSubBasedCommandContextTest {
     }
 
     @Test
-    void testErrorIsSendOnCommandResponseTopicWhenContextGetsModified() {
+    void testErrorIsSentOnCommandResponseTopicWhenContextGetsModified() {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.modify(true, true),
                 commandResponse -> assertThat(commandResponse.getStatus())
@@ -86,7 +86,7 @@ public class PubSubBasedCommandContextTest {
     }
 
     @Test
-    void testNoErrorIsSendOnCommandResponseTopicWhenContextGetsAccepted() {
+    void testNoErrorIsSentOnCommandResponseTopicWhenContextGetsAccepted() {
         final var command = getRequestResponseCommand();
         final Span span = TracingMockSupport.mockSpan();
         final var context = new PubSubBasedCommandContext(command, responseSender, span);
@@ -121,8 +121,8 @@ public class PubSubBasedCommandContextTest {
         final String responseRequired = "true";
 
         final Map<String, String> attributes = new HashMap<>();
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_DEVICE_ID, deviceId);
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_TENANT_ID, tenantId);
+        attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         attributes.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
         attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, responseRequired);
         attributes.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);

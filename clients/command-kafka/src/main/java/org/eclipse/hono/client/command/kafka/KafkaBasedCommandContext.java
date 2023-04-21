@@ -14,40 +14,29 @@
 package org.eclipse.hono.client.command.kafka;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
-import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessagingType;
-import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TenantObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 
 /**
  * A context for passing around parameters relevant for processing a {@code Command} used in a Kafka based
  * client.
  */
-public class KafkaBasedCommandContext extends MapBasedExecutionContext implements CommandContext {
-
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandContext.class);
+public class KafkaBasedCommandContext extends AbstractCommandContext implements CommandContext {
 
     private static final String PROPERTY_NAME_DELIVERY_FAILURE_RESPONSES_DISABLED = "HONO_DISABLE_KAFKA_COMMAND_DELIVERY_FAILURE_RESPONSES";
     private static final boolean DELIVERY_FAILURE_RESPONSES_DISABLED = Boolean
@@ -57,10 +46,6 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             LOG.info("sending of command delivery failure response messages is disabled");
         }
     }
-
-    private final KafkaBasedCommand command;
-    private final CommandResponseSender commandResponseSender;
-    private String completedOutcome;
 
     /**
      * Creates a new command context.
@@ -74,42 +59,13 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             final KafkaBasedCommand command,
             final CommandResponseSender commandResponseSender,
             final Span span) {
-        super(span);
-        this.command = Objects.requireNonNull(command);
-        this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
-    }
-
-    @Override
-    public final boolean isCompleted() {
-        return completedOutcome != null;
-    }
-
-    @Override
-    public final void logCommandToSpan(final Span span) {
-        command.logToSpan(span);
-    }
-
-    @Override
-    public final KafkaBasedCommand getCommand() {
-        return command;
-    }
-
-    @Override
-    public final void accept() {
-        if (!setCompleted(ACCEPTED_COMMAND_CONTEXT)) {
-            return;
-        }
-        final Span span = getTracingSpan();
-        LOG.trace("accepted command message [{}]", getCommand());
-        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
-        span.log("command for device handled with outcome 'accepted'");
-        span.finish();
+        super(span, command, commandResponseSender);
     }
 
     @Override
     public final void release(final Throwable error) {
         Objects.requireNonNull(error);
-        if (!setCompleted(RELEASED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_RELEASED)) {
             return;
         }
         final Span span = getTracingSpan();
@@ -122,7 +78,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                 && !(error instanceof CommandToBeReprocessedException)) {
             final String errorMessage = Optional.ofNullable(ServiceInvocationException.getErrorMessageForExternalClient(mappedError))
                     .orElse("Temporarily unavailable");
-            sendDeliveryFailureCommandResponseMessage(status, errorMessage, span, error)
+            final String correlationId = getCorrelationId();
+            sendDeliveryFailureCommandResponseMessage(status, errorMessage, span, error, correlationId, MessagingType.kafka)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
@@ -131,7 +88,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     @Override
     public final void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
-        if (!setCompleted(MODIFIED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_MODIFIED)) {
             return;
         }
         final Span span = getTracingSpan();
@@ -145,7 +102,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             final String error = "command not processed"
                     + (deliveryFailed ? "; delivery failed" : "")
                     + (undeliverableHere ? "; undeliverable here" : "");
-            sendDeliveryFailureCommandResponseMessage(status, error, span, null)
+            final String correlationId = getCorrelationId();
+            sendDeliveryFailureCommandResponseMessage(status, error, span, null, correlationId, MessagingType.kafka)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
@@ -168,83 +126,29 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     }
 
     private void reject(final int status, final String cause) {
-        if (!setCompleted(REJECTED_COMMAND_CONTEXT)) {
+        if (!setCompleted(OUTCOME_REJECTED)) {
             return;
         }
         final Span span = getTracingSpan();
         Tags.HTTP_STATUS.set(span, status);
         if (!DELIVERY_FAILURE_RESPONSES_DISABLED && isRequestResponseCommand()) {
             final String nonNullCause = Optional.ofNullable(cause).orElse("Command message rejected");
-            sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span, null)
+            final String correlationId = getCorrelationId();
+            sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span, null, correlationId, MessagingType.kafka)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
         }
     }
 
-    private boolean isRequestResponseCommand() {
-        return !command.isOneWay();
-    }
-
-    private Future<Void> sendDeliveryFailureCommandResponseMessage(
-            final int status,
-            final String error,
-            final Span span,
-            final Throwable cause) {
-
-        final JsonObject payloadJson = new JsonObject();
-        payloadJson.put("error", error != null ? error : "");
-        final String correlationId = getCorrelationId();
-        if (correlationId == null) {
-            TracingHelper.logError(span, "can't send command response message - no correlation id set");
-            return Future.failedFuture("missing correlation id");
-        }
-        final CommandResponse commandResponse = new CommandResponse(
-                command.getTenant(),
-                command.getDeviceId(),
-                payloadJson.toBuffer(),
-                CommandConstants.CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION,
-                status,
-                correlationId,
-                "",
-                MessagingType.kafka);
-        commandResponse.setAdditionalProperties(Collections.unmodifiableMap(command.getDeliveryFailureNotificationProperties()));
-
-        return commandResponseSender.sendCommandResponse(
-                // try to retrieve tenant configuration from context
-                Optional.ofNullable(get(KEY_TENANT_CONFIG))
-                    .filter(TenantObject.class::isInstance)
-                    .map(TenantObject.class::cast)
-                    // and fall back to default configuration
-                    .orElseGet(() -> TenantObject.from(command.getTenant())),
-                new RegistrationAssertion(command.getDeviceId()),
-                commandResponse,
-                span.context())
-            .onFailure(thr -> {
-                LOG.debug("failed to publish command response [{}]", commandResponse, thr);
-                TracingHelper.logError(span, "failed to publish command response message", thr);
-            })
-            .onSuccess(v -> {
-                LOG.debug("published error command response [{}, cause: {}]", commandResponse,
-                        cause != null ? cause.getMessage() : error);
-                span.log("published error command response");
-            });
-    }
-
     private String getCorrelationId() {
-        // extract correlation id from headers; command could be invalid in which case
-        // command.getCorrelationId() throws an exception
-        return KafkaRecordHelper.getCorrelationId(command.getRecord().headers()).orElse(null);
-    }
-
-    private boolean setCompleted(final String outcome) {
-        if (completedOutcome != null) {
-            LOG.warn("can't apply '{}' outcome, context already completed with '{}' outcome [{}]",
-                    outcome, completedOutcome, getCommand());
-            return false;
+        if (getCommand() instanceof KafkaBasedCommand kafkaBasedCommand) {
+            // extract correlation id from headers; command could be invalid in which case
+            // command.getCorrelationId() throws an exception
+            return KafkaRecordHelper.getCorrelationId(kafkaBasedCommand.getRecord().headers()).orElse(null);
+        } else {
+            return null;
         }
-        completedOutcome = outcome;
-        return true;
     }
 
     private static String getProperty(final String name) {

@@ -218,18 +218,18 @@ public final class Commands {
         // currently only encoding 2 messaging types here (BITFLAG_WIDTH_MESSAGING_TYPE is 1)
 //        return IntStream.range(BITFLAG_INDEX_MESSAGING_TYPE, BITFLAG_INDEX_MESSAGING_TYPE + BITFLAG_WIDTH_MESSAGING_TYPE)
 //                .reduce(0, (mask, index) -> mask | (1 << index));
-        return 1 << BITFLAG_INDEX_MESSAGING_TYPE;
+        return 3 << BITFLAG_INDEX_MESSAGING_TYPE;
     }
 
     private static int getMessagingTypeIndex(final MessagingType messagingType) {
-        return MessagingType.valueOf(messagingType.name()).ordinal();
+        return messagingType.ordinal();
     }
 
     private static MessagingType getMessagingTypeFromIndex(final int messagingTypeIndex) {
-        return switch (messagingTypeIndex) {
-            case 0 -> MessagingType.amqp;
-            case 2 -> MessagingType.pubsub;
-            default -> MessagingType.kafka;
-        };
+        try {
+            return MessagingType.values()[messagingTypeIndex];
+        } catch (final IndexOutOfBoundsException e) {
+            return MessagingType.amqp;
+        }
     }
 }
