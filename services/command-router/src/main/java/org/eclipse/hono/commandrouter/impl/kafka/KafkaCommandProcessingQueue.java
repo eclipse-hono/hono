@@ -17,7 +17,6 @@ import java.util.Collection;
 import java.util.Objects;
 
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.commandrouter.impl.AbstractCommandProcessingQueue;
 
@@ -53,12 +52,8 @@ public class KafkaCommandProcessingQueue extends AbstractCommandProcessingQueue<
 
     @Override
     protected TopicPartition getQueueKey(final KafkaBasedCommandContext commandContext) {
-        if (commandContext.getCommand() instanceof KafkaBasedCommand command) {
-            final KafkaConsumerRecord<String, Buffer> record = command.getRecord();
-            return new TopicPartition(record.topic(), record.partition());
-        } else {
-            return null;
-        }
+        final KafkaConsumerRecord<String, Buffer> record = commandContext.getCommand().getRecord();
+        return new TopicPartition(record.topic(), record.partition());
     }
 
     @Override

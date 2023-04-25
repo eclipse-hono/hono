@@ -33,7 +33,7 @@ public final class Commands {
     private static final byte BITFLAG_INDEX_REPLY_TO_CONTAINED_DEVICE_ID = 0;
     /**
      * Bit flag index for the index of the messaging type used for sending a command message.
-     * <p>The messaging type is encoded in one bit for now.
+     * <p>The messaging type is encoded in three bits for now.
      */
     private static final byte BITFLAG_INDEX_MESSAGING_TYPE = 1;
 
@@ -215,9 +215,6 @@ public final class Commands {
     }
 
     private static int getMessagingTypeBitmask() {
-        // currently only encoding 2 messaging types here (BITFLAG_WIDTH_MESSAGING_TYPE is 1)
-//        return IntStream.range(BITFLAG_INDEX_MESSAGING_TYPE, BITFLAG_INDEX_MESSAGING_TYPE + BITFLAG_WIDTH_MESSAGING_TYPE)
-//                .reduce(0, (mask, index) -> mask | (1 << index));
         return 3 << BITFLAG_INDEX_MESSAGING_TYPE;
     }
 

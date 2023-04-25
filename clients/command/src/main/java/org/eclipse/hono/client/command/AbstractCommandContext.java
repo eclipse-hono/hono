@@ -34,12 +34,13 @@ import io.vertx.core.json.JsonObject;
 /**
  * A base class providing utility methods for passing around parameters relevant for processing a {@code Command} used
  * in a Pub/Sub and Kafka based command context.
+ * @param <T> The type of Command.
  */
-public abstract class AbstractCommandContext extends MapBasedExecutionContext implements CommandContext {
+public abstract class AbstractCommandContext<T extends Command> extends MapBasedExecutionContext implements CommandContext {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractCommandContext.class);
 
-    protected final Command command;
+    protected final T command;
 
     private final CommandResponseSender commandResponseSender;
 
@@ -55,7 +56,7 @@ public abstract class AbstractCommandContext extends MapBasedExecutionContext im
      */
     public AbstractCommandContext(
             final Span span,
-            final Command command,
+            final T command,
             final CommandResponseSender commandResponseSender) {
         super(span);
         this.command = Objects.requireNonNull(command);
@@ -73,7 +74,7 @@ public abstract class AbstractCommandContext extends MapBasedExecutionContext im
     }
 
     @Override
-    public Command getCommand() {
+    public T getCommand() {
         return command;
     }
 

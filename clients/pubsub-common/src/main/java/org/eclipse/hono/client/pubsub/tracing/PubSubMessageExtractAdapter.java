@@ -12,7 +12,6 @@
  */
 package org.eclipse.hono.client.pubsub.tracing;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -40,9 +39,6 @@ public class PubSubMessageExtractAdapter implements TextMap {
 
     @Override
     public Iterator<Entry<String, String>> iterator() {
-        if (message.getAttributesMap().isEmpty()) {
-            return Collections.emptyIterator();
-        }
         return message.getAttributesMap().entrySet().iterator();
     }
 

@@ -34,7 +34,7 @@ import io.opentracing.tag.Tags;
 /**
  * A context for passing around parameters relevant for processing a {@code Command} used in a Pub/Sub based client.
  */
-public class PubSubBasedCommandContext extends AbstractCommandContext implements CommandContext {
+public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBasedCommand> implements CommandContext {
 
     /**
      * Creates a new command context.
@@ -124,12 +124,8 @@ public class PubSubBasedCommandContext extends AbstractCommandContext implements
     }
 
     private String getCorrelationId() {
-        if (getCommand() instanceof PubSubBasedCommand pubSubBasedCommand) {
-            return PubSubMessageHelper
-                    .getCorrelationId(pubSubBasedCommand.getPubsubMessage().getAttributesMap())
-                    .orElse(null);
-        } else {
-            return null;
-        }
+        return PubSubMessageHelper
+                .getCorrelationId(getCommand().getPubsubMessage().getAttributesMap())
+                .orElse(null);
     }
 }

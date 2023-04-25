@@ -36,7 +36,7 @@ import io.opentracing.tag.Tags;
  * A context for passing around parameters relevant for processing a {@code Command} used in a Kafka based
  * client.
  */
-public class KafkaBasedCommandContext extends AbstractCommandContext implements CommandContext {
+public class KafkaBasedCommandContext extends AbstractCommandContext<KafkaBasedCommand> implements CommandContext {
 
     private static final String PROPERTY_NAME_DELIVERY_FAILURE_RESPONSES_DISABLED = "HONO_DISABLE_KAFKA_COMMAND_DELIVERY_FAILURE_RESPONSES";
     private static final boolean DELIVERY_FAILURE_RESPONSES_DISABLED = Boolean
@@ -142,13 +142,9 @@ public class KafkaBasedCommandContext extends AbstractCommandContext implements 
     }
 
     private String getCorrelationId() {
-        if (getCommand() instanceof KafkaBasedCommand kafkaBasedCommand) {
-            // extract correlation id from headers; command could be invalid in which case
-            // command.getCorrelationId() throws an exception
-            return KafkaRecordHelper.getCorrelationId(kafkaBasedCommand.getRecord().headers()).orElse(null);
-        } else {
-            return null;
-        }
+        // extract correlation id from headers; command could be invalid in which case
+        // command.getCorrelationId() throws an exception
+        return KafkaRecordHelper.getCorrelationId(getCommand().getRecord().headers()).orElse(null);
     }
 
     private static String getProperty(final String name) {
