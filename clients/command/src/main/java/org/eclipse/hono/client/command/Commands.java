@@ -33,7 +33,7 @@ public final class Commands {
     private static final byte BITFLAG_INDEX_REPLY_TO_CONTAINED_DEVICE_ID = 0;
     /**
      * Bit flag index for the index of the messaging type used for sending a command message.
-     * <p>The messaging type is encoded in three bits for now.
+     * <p>The messaging type is encoded in two bits for now.
      */
     private static final byte BITFLAG_INDEX_MESSAGING_TYPE = 1;
 
