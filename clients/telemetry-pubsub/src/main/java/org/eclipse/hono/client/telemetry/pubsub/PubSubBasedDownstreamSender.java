@@ -48,21 +48,19 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         implements TelemetrySender, EventSender {
 
     /**
-     * The name of the Pub/Sub message property containing the ID of the GCP project Pub/Sub belongs to.
+     * The name of Pub/Sub downstream message property containing the ID of the tenant the device belongs to.
      */
-    private static final String PUBSUB_PROPERTY_PROJECT_ID = "projectId";
+    private static final String PUBSUB_DOWNSTREAM_PROPERTY_TENANT_ID = "tenantId";
+
     /**
-     * The name of Pub/Sub message property containing the ID of the tenant the device belongs to.
+     * The name of the Pub/Sub downstream message property containing the ID of the device.
      */
-    private static final String PUBSUB_PROPERTY_TENANT_ID = "tenantId";
+    private static final String PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_ID = "deviceId";
+
     /**
-     * The name of the Pub/Sub message property containing the ID of the device.
+     * The name of the Pub/Sub downstream message property containing the ID of the device registry the device belongs to.
      */
-    private static final String PUBSUB_PROPERTY_DEVICE_ID = "deviceId";
-    /**
-     * The name of the Pub/Sub message property containing the ID of the device registry the device belongs to.
-     */
-    private static final String PUBSUB_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
+    private static final String PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
 
     private final boolean isDefaultsEnabled;
 
@@ -199,11 +197,11 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
                 .map(HashMap::new)
                 .orElseGet(HashMap::new);
 
-        messageProperties.put(PUBSUB_PROPERTY_DEVICE_ID, device.getDeviceId());
+        messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_ID, device.getDeviceId());
         messageProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
-        messageProperties.put(PUBSUB_PROPERTY_TENANT_ID, tenant.getTenantId());
-        messageProperties.put(PUBSUB_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
-        messageProperties.put(PUBSUB_PROPERTY_PROJECT_ID, projectId);
+        messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_TENANT_ID, tenant.getTenantId());
+        messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
+        messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
 
         Optional.ofNullable(contentType)
                 .ifPresent(ct -> messageProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));

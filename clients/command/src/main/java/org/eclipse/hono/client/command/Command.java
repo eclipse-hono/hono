@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.command;
 
+import java.util.Map;
+
 import org.eclipse.hono.util.MessagingType;
 
 import io.opentracing.Span;
@@ -185,4 +187,11 @@ public interface Command {
      * @throws NullPointerException if span is {@code null}.
      */
     void logToSpan(Span span);
+
+    /**
+     * Gets the set of properties to be set on the command response message if delivery of this command fails.
+     *
+     * @return The properties.
+     */
+    Map<String, String> getDeliveryFailureNotificationProperties();
 }

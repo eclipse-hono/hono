@@ -13,8 +13,12 @@
 package org.eclipse.hono.client.pubsub;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.eclipse.hono.util.MessageHelper;
 
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
@@ -26,6 +30,19 @@ import com.google.pubsub.v1.PubsubMessage;
  * Utility methods for working with Pub/Sub.
  */
 public final class PubSubMessageHelper {
+
+    /**
+     * The name of the Pub/Sub message property containing the identifier of the Google Cloud Project to connect to.
+     */
+    public static final String PUBSUB_PROPERTY_PROJECT_ID = "projectId";
+
+    public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
+
+    /**
+     * Prefix to use in the Pub/Sub message properties for marking properties of command messages that should be included
+     * in response messages indicating failure to deliver the command.
+     */
+    public static final String DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX = "delivery-failure-notification-metadata";
 
     private PubSubMessageHelper() {
     }
@@ -73,4 +90,96 @@ public final class PubSubMessageHelper {
         Objects.requireNonNull(message);
         return message.getData().toByteArray();
     }
+    /**
+     * Gets the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_ID} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getDeviceId(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_DEVICE_ID);
+    }
+
+    /**
+     * Gets the value of the {@link MessageHelper#APP_PROPERTY_TENANT_ID} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getTenantId(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_TENANT_ID);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#SYS_PROPERTY_CORRELATION_ID} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getCorrelationId(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.SYS_PROPERTY_CORRELATION_ID);
+    }
+
+    /**
+     * Gets the value of the {@value PUBSUB_PROPERTY_RESPONSE_REQUIRED} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static boolean isResponseRequired(final Map<String, String> attributesMap) {
+        return Boolean
+                .parseBoolean(getAttributesValue(attributesMap, PUBSUB_PROPERTY_RESPONSE_REQUIRED).orElse("false"));
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#SYS_PROPERTY_CONTENT_TYPE} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getContentType(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#SYS_PROPERTY_SUBJECT} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getSubject(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.SYS_PROPERTY_SUBJECT);
+    }
+
+    /**
+     * Gets the properties of the attributes which starts with the prefix {@value DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX}.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The properties.
+     */
+    public static Map<String, String> getDeliveryFailureNotificationMetadata(final Map<String, String> attributesMap) {
+        Objects.requireNonNull(attributesMap);
+        return attributesMap
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().startsWith(DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#APP_PROPERTY_CMD_VIA} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static Optional<String> getVia(final Map<String, String> attributesMap) {
+        return getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_CMD_VIA);
+    }
+
+    private static Optional<String> getAttributesValue(final Map<String, String> attributesMap, final String key) {
+        Objects.requireNonNull(attributesMap);
+        Objects.requireNonNull(key);
+        return Optional.ofNullable(attributesMap.get(key));
+    }
+
 }

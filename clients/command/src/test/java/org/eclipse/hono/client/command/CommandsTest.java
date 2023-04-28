@@ -66,6 +66,26 @@ public class CommandsTest {
     }
 
     /**
+     * Verifies that getting the request id with non-empty parameters and messaging type Pub/Sub returns the expected value.
+     */
+    @Test
+    public void testEncodeRequestIdParametersWithMessagingTypePubSub() {
+        final String correlationId = "myCorrelationId";
+        final String replyToId = "myReplyToId";
+        final String deviceId = "myDeviceId";
+        final String requestId = Commands.encodeRequestIdParameters(correlationId, replyToId, deviceId, MessagingType.pubsub);
+        assertThat(requestId).isNotNull();
+        assertThat(requestId.contains(correlationId)).isTrue();
+        assertThat(requestId.contains(replyToId)).isTrue();
+
+        // do the reverse operation
+        final CommandRequestIdParameters requestIdParams = Commands.decodeRequestIdParameters(requestId, deviceId);
+        assertThat(requestIdParams.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(requestIdParams.getReplyToId()).isEqualTo(replyToId);
+        assertThat(requestIdParams.getMessagingType()).isEqualTo(MessagingType.pubsub);
+    }
+
+    /**
      * Verifies that getting the request id with a replyToId starting with the deviceId returns the expected value.
      */
     @Test
@@ -136,6 +156,23 @@ public class CommandsTest {
                 .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
         assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo(replyToId);
         assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.amqp);
+    }
+
+    /**
+     * Verifies that getting the device-facing-reply-id with messaging type set to Pub/Sub returns the expected result.
+     */
+    @Test
+    public void testGetDeviceFacingReplyToIdWithMessagingTypePubSub() {
+        final String replyToId = "replyToId";
+        final String deviceId = "deviceId";
+        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId, MessagingType.pubsub);
+        assertThat(deviceFacingReplyToId).contains(deviceId);
+
+        // do the reverse operation
+        final Pair<String, MessagingType> originalReplyToIdMessagingTypePair = Commands
+                .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
+        assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo(replyToId);
+        assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.pubsub);
     }
 
     /**

@@ -37,6 +37,7 @@
     <module>command</module>
     <module>command-amqp</module>
     <module>command-kafka</module>
+    <module>command-pubsub</module>
     <module>device-amqp</module>
     <module>kafka-common</module>
     <module>notification</module>

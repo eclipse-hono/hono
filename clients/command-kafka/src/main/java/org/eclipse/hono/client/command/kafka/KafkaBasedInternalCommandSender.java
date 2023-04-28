@@ -27,6 +27,7 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.util.CommandConstants;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -73,7 +74,7 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
 
         final String topicName = getInternalCommandTopic(adapterInstanceId);
         final Span currentSpan = startChildSpan(
-                "delegate Command request",
+                CommandConstants.INTERNAL_COMMAND_SPAN_OPERATION_NAME,
                 topicName,
                 command.getTenant(),
                 command.getDeviceId(),
