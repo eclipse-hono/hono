@@ -48,6 +48,8 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
+import org.eclipse.hono.client.command.pubsub.PubSubBasedCommandResponseSender;
+import org.eclipse.hono.client.command.pubsub.PubSubBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;
@@ -64,6 +66,7 @@ import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
 import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.subscriber.CachingPubSubSubscriberFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -385,7 +388,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                                 .setClient(pubSubDownstreamSender(pubSubFactory, TelemetryConstants.TELEMETRY_ENDPOINT));
                         eventSenderProvider
                                 .setClient(pubSubDownstreamSender(pubSubFactory, EventConstants.EVENT_ENDPOINT));
-
+                        commandResponseSenderProvider
+                                .setClient(new PubSubBasedCommandResponseSender(
+                                        vertx,
+                                        pubSubFactory,
+                                        pubSubConfigProperties.getProjectId(),
+                                        tracer));
                     }, () -> LOG.error("Could not initialize Pub/Sub messaging clients, no Credentials Provider present."));
         }
 
@@ -422,6 +430,33 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                                     tracer)
                                 .setMetricsSupport(kafkaClientMetricsSupport));
                 }
+            }
+
+            if (!appConfig.isPubSubMessagingDisabled()) {
+                PubSubMessageHelper.getCredentialsProvider()
+                        .ifPresentOrElse(provider -> {
+                            final var pubsubCommandResponseSender = messagingClientProviders
+                                    .getCommandResponseSenderProvider()
+                                    .getClient(MessagingType.pubsub);
+                            if (pubsubCommandResponseSender != null  && pubSubConfigProperties.isProjectIdConfigured()) {
+                                final var subscriberFactory = new CachingPubSubSubscriberFactory(
+                                        vertx,
+                                        pubSubConfigProperties.getProjectId(),
+                                        provider);
+
+                                commandConsumerFactory.registerInternalCommandConsumer(
+                                        (id, handlers) -> new PubSubBasedInternalCommandConsumer(
+                                                pubsubCommandResponseSender,
+                                                vertx,
+                                                id,
+                                                handlers,
+                                                tenantClient,
+                                                tracer,
+                                                subscriberFactory,
+                                                pubSubConfigProperties.getProjectId(),
+                                                provider));
+                            }
+                        }, () -> LOG.error("Could not initialize Pub/Sub based internal command consumer, no Credentials Provider present."));
             }
 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
