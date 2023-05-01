@@ -32,7 +32,7 @@ DEPENDENCIES="legal/src/main/resources/legal/DEPENDENCIES"
 # a "works-with" dependency. It therefore seems ok to simply exclude them from the license check
 # even though they are LGPL 2.1.
 mvn dependency:list \
-  -DexcludeGroupIds=org.eclipse,org.junit,com.github.spotbugs \
+  -DexcludeGroupIds=org.eclipse.hono,org.junit,com.github.spotbugs \
   -Pmetrics-prometheus,build-docker-image,build-native-image,build-cli-native-executable | \
   grep -Poh "\S+:(runtime|compile|provided)" | \
   sed -e 's/^\(.*\)\:.*$/\1/' | \
