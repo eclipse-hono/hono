@@ -121,9 +121,6 @@ public class PubSubBasedCommandConsumerFactoryImpl implements CommandConsumerFac
         } else if (!lifecycleStatus.setStarting()) {
             return Future.failedFuture(new IllegalStateException("factory is already started/stopping"));
         }
-        if (Vertx.currentContext() == null) {
-            return Future.failedFuture(new IllegalStateException("factory must be started in a Vert.x context"));
-        }
 
         final var commandQueue = new PubSubBasedCommandProcessingQueue(vertx);
         commandHandler = new PubSubBasedMappingAndDelegatingCommandHandler(
@@ -194,7 +191,7 @@ public class PubSubBasedCommandConsumerFactoryImpl implements CommandConsumerFac
     private void registerTenantCreationListener() {
         NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
                 notification -> {
-                    if (lifecycleStatus.isStarted() && LifecycleChange.CREATE == notification.getChange()
+                    if (lifecycleStatus.isStarted() && notification.getChange() == LifecycleChange.CREATE
                             && notification.isTenantEnabled()) {
                         // Optional optimization:
                         // Prepare Pub/Sub consumer to receive commands for devices of a newly created tenant by creating
