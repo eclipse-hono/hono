@@ -36,7 +36,10 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
+import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.subscriber.CachingPubSubSubscriberFactory;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -44,6 +47,7 @@ import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
+import org.eclipse.hono.client.telemetry.pubsub.PubSubBasedDownstreamSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
@@ -57,6 +61,7 @@ import org.eclipse.hono.commandrouter.impl.UnknownStatusProvidingService;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.InternalKafkaTopicCleanupService;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
+import org.eclipse.hono.commandrouter.impl.pubsub.PubSubBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -65,6 +70,7 @@ import org.eclipse.hono.service.NotificationSupportingServiceApplication;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -404,6 +410,30 @@ public class Application extends NotificationSupportingServiceApplication {
                     metrics,
                     SendMessageSampler.Factory.noop()));
         }
+        if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
+            PubSubMessageHelper.getCredentialsProvider()
+                    .ifPresentOrElse(provider -> {
+                        LOG.debug("Configuring Pub/Sub based command consumer factory");
+
+                        final var publisherFactory = new CachingPubSubPublisherFactory(
+                                vertx,
+                                pubSubConfigProperties.getProjectId(),
+                                provider);
+                        final var subscriberFactory = new CachingPubSubSubscriberFactory(
+                                vertx,
+                                pubSubConfigProperties.getProjectId(),
+                                provider);
+                        commandConsumerFactoryProvider.setClient(new PubSubBasedCommandConsumerFactoryImpl(
+                                vertx,
+                                tenantClient,
+                                tracer,
+                                publisherFactory,
+                                pubSubConfigProperties.getProjectId(),
+                                commandTargetMapper,
+                                metrics,
+                                subscriberFactory));
+                    }, () -> LOG.error("Could not initialize Pub/Sub based command consumer factory, no Credentials Provider present."));
+        }
         return commandConsumerFactoryProvider;
     }
 
@@ -428,6 +458,23 @@ public class Application extends NotificationSupportingServiceApplication {
                     SendMessageSampler.Factory.noop(),
                     true,
                     false));
+        }
+        if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
+            PubSubMessageHelper.getCredentialsProvider()
+                    .ifPresentOrElse(provider -> {
+                        final var pubSubFactory = new CachingPubSubPublisherFactory(
+                                vertx,
+                                pubSubConfigProperties.getProjectId(),
+                                provider);
+
+                        eventSenderProvider.setClient(new PubSubBasedDownstreamSender(
+                                vertx,
+                                pubSubFactory,
+                                EventConstants.EVENT_ENDPOINT,
+                                pubSubConfigProperties.getProjectId(),
+                                true,
+                                tracer));
+                    }, () -> LOG.error("Could not initialize Pub/Sub based downstream sender, no Credentials Provider present."));
         }
         return eventSenderProvider;
     }
