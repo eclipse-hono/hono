@@ -27,6 +27,17 @@ public interface PubSubPublisherFactory {
      * This method is expected to be invoked as soon as the publisher is no longer needed.
      *
      * @param topic The topic of the publisher to remove.
+     * @return A future that is completed when the close operation completed or a succeeded future if no publisher
+     *         existed with the given topic.
+     */
+    Future<Void> closePublisher(String topic);
+
+    /**
+     * Closes the publisher with the given topic if it exists.
+     * <p>
+     * This method is expected to be invoked as soon as the publisher is no longer needed.
+     *
+     * @param topic The topic of the publisher to remove.
      * @param prefix The prefix of the topic of the publisher to remove, e.g. the tenantId.
      * @return A future that is completed when the close operation completed or a succeeded future if no publisher
      *         existed with the given topic.

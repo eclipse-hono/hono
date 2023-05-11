@@ -16,7 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -32,16 +35,104 @@ import com.google.pubsub.v1.PubsubMessage;
  */
 public class PubSubMessageHelperTest {
 
+    private final String tenant = "test-tenant";
+    private final String device = "test-device";
+    private final String topic = "event";
+    private final String subtopic1 = "subtopic1";
+    private final String subtopic2 = "subtopic2";
+
     /**
-     * Verifies that the getTopicName method returns the formatted topic.
+     * Verifies that the getTopicName method returns the Pub/Sub topic.
      */
     @Test
-    public void testThatGetTopicNameReturnsFormattedString() {
-        final String topic = "event";
-        final String prefix = "testTenant";
+    public void testGetTopicNameWithoutSubtopics() {
+        final String result = PubSubMessageHelper.getTopicName(topic, tenant);
+        assertThat(result).isEqualTo(String.format("%s.%s", tenant, topic));
+    }
 
-        final String result = PubSubMessageHelper.getTopicName(topic, prefix);
-        assertThat(result).isEqualTo("testTenant.event");
+    /**
+     * Verifies that the getTopicName method returns the Pub/Sub topic with subtopics.
+     */
+    @Test
+    public void testGetTopicNameWithSubtopics() {
+        final List<String> subtopics = List.of(subtopic1, subtopic2);
+        final String result = PubSubMessageHelper.getTopicName(topic, tenant, subtopics);
+        assertThat(result).isEqualTo(String.format("%s.%s.%s.%s", tenant, topic, subtopic1, subtopic2));
+    }
+
+    /**
+     * Verifies that the getSubtopics method returns a list with the subtopics.
+     */
+    @Test
+    public void testGetSubtopicsWithSubtopics() {
+        final String metadata = "?metadata=true";
+        final Map<String, String> attributesMap = getAttributes(
+                MessageHelper.APP_PROPERTY_ORIG_ADDRESS,
+                String.format("%s/%s/%s/%s/%s/%s", topic, tenant, device, subtopic1, subtopic2, metadata),
+                "", "");
+
+        final List<String> result = PubSubMessageHelper.getSubtopics(attributesMap);
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0)).isEqualTo(subtopic1);
+        assertThat(result.get(1)).isEqualTo(subtopic2);
+    }
+
+    /**
+     * Verifies that the getSubtopics method returns an empty list if the orig_address attribute has no subtopics.
+     */
+    @Test
+    public void testGetSubtopicsWithoutSubtopics() {
+        final Map<String, String> attributesMap = getAttributes(
+                MessageHelper.APP_PROPERTY_ORIG_ADDRESS, String.format("%s/%s/%s", topic, tenant, device),
+                "", "");
+
+        final List<String> result = PubSubMessageHelper.getSubtopics(attributesMap);
+        assertThat(result).isEmpty();
+    }
+
+    /**
+     * Verifies that the getSubFolder method returns a string including two subtopics.
+     */
+    @Test
+    public void testGetSubFolderShouldReturnStringOfSubFolder() {
+        final String expectedResult = subtopic1 + "/" + subtopic2;
+        final List<String> subtopics = Arrays.asList(subtopic1, subtopic2);
+
+        final String result = PubSubMessageHelper.getSubFolder(subtopics);
+        assertThat(result).isEqualTo(expectedResult);
+    }
+
+    /**
+     * Verifies that the getSubFolder method returns an empty string if the passed list is empty.
+     */
+    @Test
+    public void testGetSubFolderWithoutSubtopics() {
+        final List<String> subtopics = new ArrayList<>();
+
+        final String result = PubSubMessageHelper.getSubFolder(subtopics);
+        assertThat(result).isEqualTo("");
+    }
+
+    /**
+     * Verifies that the getTopicEndpointFromTopic method returns the topic endpoint.
+     */
+    @Test
+    public void testGetTopicEndpointFromTopicReturnsTopicEndpoint() {
+        final String topic = "test.tenant.telemetry.subtopic1.subtopic2";
+
+        final String result = PubSubMessageHelper.getTopicEndpointFromTopic(topic, "test.tenant");
+        assertThat(result).isEqualTo("telemetry");
+    }
+
+    /**
+     * Verifies that the getTopicEndpointFromTopic method returns null when no subtopic is defined.
+     */
+    @Test
+    public void testGetTopicEndpointFromTopicReturnNullWhenNoSubtopicIsDefined() {
+        final String topic = tenant + ".telemetry";
+
+        final String result = PubSubMessageHelper.getTopicEndpointFromTopic(topic, tenant);
+        assertThat(result).isEqualTo(null);
     }
 
     /**
@@ -79,18 +170,19 @@ public class PubSubMessageHelperTest {
     public void testThatGetPayloadThrowsNullPointer() {
         assertThrows(NullPointerException.class, () -> PubSubMessageHelper.getPayload(null));
     }
+
     /**
      * Verifies that the getDeviceId method returns an Optional describing the device ID.
      */
     @Test
     public void testThatGetDeviceIdReturnsDeviceId() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
-                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant");
+                MessageHelper.APP_PROPERTY_DEVICE_ID, device,
+                MessageHelper.APP_PROPERTY_TENANT_ID, tenant);
 
         final Optional<String> result = PubSubMessageHelper.getDeviceId(attributesMap);
         assertThat(result.isPresent()).isTrue();
-        assertThat(result.get()).isEqualTo("test-device");
+        assertThat(result.get()).isEqualTo(device);
     }
 
     /**
@@ -99,7 +191,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetTenantIdReturnsEmptyOptional() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, device,
                 MessageHelper.APP_PROPERTY_GATEWAY_ID, "test-gateway");
 
         final Optional<String> result = PubSubMessageHelper.getTenantId(attributesMap);
@@ -112,7 +204,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetCorrelationIdReturnsCorrelationId() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant",
+                MessageHelper.APP_PROPERTY_TENANT_ID, tenant,
                 MessageHelper.SYS_PROPERTY_CORRELATION_ID, "correlation-id-test");
 
         final Optional<String> result = PubSubMessageHelper.getCorrelationId(attributesMap);
@@ -126,7 +218,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatIsResponseRequiredReturnsTrue() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, device,
                 PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, "true");
 
         final boolean result = PubSubMessageHelper.isResponseRequired(attributesMap);
@@ -139,8 +231,8 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatIsResponseRequiredReturnsFalse() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
-                MessageHelper.APP_PROPERTY_TENANT_ID, "test-tenant");
+                MessageHelper.APP_PROPERTY_DEVICE_ID, device,
+                MessageHelper.APP_PROPERTY_TENANT_ID, tenant);
 
         final boolean result = PubSubMessageHelper.isResponseRequired(attributesMap);
         assertThat(result).isFalse();
@@ -163,7 +255,7 @@ public class PubSubMessageHelperTest {
     @Test
     public void testThatGetSubjectReturnsSubject() {
         final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_DEVICE_ID, "test-device",
+                MessageHelper.APP_PROPERTY_DEVICE_ID, device,
                 MessageHelper.SYS_PROPERTY_SUBJECT, "test-command");
 
         final Optional<String> result = PubSubMessageHelper.getSubject(attributesMap);
@@ -181,14 +273,17 @@ public class PubSubMessageHelperTest {
                 PubSubMessageHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-test", "isPresent");
         attributesMap.put("another-key", "another-value");
 
-        final Map<String, String> deliveryFailureNotificationProperties = PubSubMessageHelper.getDeliveryFailureNotificationMetadata(attributesMap);
+        final Map<String, String> deliveryFailureNotificationProperties = PubSubMessageHelper
+                .getDeliveryFailureNotificationMetadata(attributesMap);
 
         assertThat(deliveryFailureNotificationProperties.size()).isEqualTo(2);
 
-        assertThat(deliveryFailureNotificationProperties.get(PubSubMessageHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
+        assertThat(deliveryFailureNotificationProperties
+                .get(PubSubMessageHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
                 .isEqualTo("test");
 
-        assertThat(deliveryFailureNotificationProperties.get(PubSubMessageHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-test"))
+        assertThat(deliveryFailureNotificationProperties
+                .get(PubSubMessageHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-test"))
                 .isEqualTo("isPresent");
     }
 

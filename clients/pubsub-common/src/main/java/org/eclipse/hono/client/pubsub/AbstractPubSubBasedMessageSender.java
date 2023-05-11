@@ -194,19 +194,41 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
 
         final PubsubMessage pubsubMessage = builder.build();
 
-        log.info("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
+        log.debug("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);
 
         return getOrCreatePublisher(topic).publish(pubsubMessage)
-                .onSuccess(recordMessage -> {
-                    logPubSubMessageId(currentSpan, topic, recordMessage);
-                })
-                .onFailure(t -> {
-                    logError(currentSpan, topic, tenantId, deviceId, t);
-                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_UNAVAILABLE, t);
-                })
+                .onSuccess(recordMessage -> logPubSubMessageId(currentSpan, topic, recordMessage))
+                .recover(t -> retrySendToFallbackTopic(topic, currentSpan, tenantId, deviceId, t, pubsubMessage))
                 .mapEmpty();
 
+    }
+
+    private Future<String> retrySendToFallbackTopic(final String topic,
+            final Span currentSpan,
+            final String tenantId,
+            final String deviceId,
+            final Throwable t,
+            final PubsubMessage pubsubMessage) {
+        log.debug("Failed to publish to topic {}", topic);
+        final String fallback = PubSubMessageHelper.getTopicEndpointFromTopic(topic, tenantId);
+        if (fallback == null) {
+            logError(currentSpan, topic, tenantId, deviceId, t);
+            throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_UNAVAILABLE, t);
+        }
+        // delete previous publisher
+        publisherFactory.closePublisher(topic);
+
+        final String fallbackTopic = PubSubMessageHelper.getTopicName(fallback, tenantId);
+        log.debug("Retry sending message to Pub/Sub using the fallback topic [{}]", fallbackTopic);
+        // retry publish on fallback topic
+        return getOrCreatePublisher(fallbackTopic).publish(pubsubMessage)
+                .onSuccess(recordMessage -> logPubSubMessageId(currentSpan, fallbackTopic, recordMessage))
+                .onFailure(thr -> {
+                    logError(currentSpan, fallbackTopic, tenantId, deviceId, thr);
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_UNAVAILABLE, thr);
+                })
+                .mapEmpty();
     }
 
     /**
@@ -240,8 +262,8 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     }
 
     private void logPubSubMessageId(final Span span, final String topic, final String messageId) {
-        log.info("message published to PubSub [topic: {}, id: {}]", topic, messageId);
-        span.log("message published to PubSub");
+        log.debug("message published to Pub/Sub [topic: {}, id: {}]", topic, messageId);
+        span.log("message published to Pub/Sub");
 
         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
     }
@@ -288,8 +310,8 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
     }
 
     private String getStringEncodedValue(final Object value) {
-        if (value instanceof String) {
-            return (String) value;
+        if (value instanceof String val) {
+            return val;
         }
         return Json.encode(value);
     }

@@ -62,12 +62,15 @@ public class AbstractPubSubBasedMessageSenderTest {
 
     private String topic;
 
+    private String topicWithSubtopic;
+
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     public void setUp() {
         topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
+        topicWithSubtopic = String.format("%s.%s.%s", TENANT_ID, TOPIC_NAME, "subtopic");
         factory = mock(PubSubPublisherFactory.class);
         sender = new AbstractPubSubBasedMessageSender(factory, TOPIC_NAME, PROJECT_ID, tracer) {
         };
@@ -113,7 +116,7 @@ public class AbstractPubSubBasedMessageSenderTest {
     }
 
     /**
-     * Verifies that the send method throws a {@link ServerErrorException}.
+     * Verifies that the send method returns a failed future.
      */
     @Test
     public void testSendFailed() {
@@ -122,10 +125,34 @@ public class AbstractPubSubBasedMessageSenderTest {
                 Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
         when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
-        assertThrows(
-                ServerErrorException.class,
-                () -> sender.sendAndWaitForOutcome(topic, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
-                        Map.of(), NoopSpan.INSTANCE));
+        final var result = sender.sendAndWaitForOutcome(topic, TENANT_ID, DEVICE_ID, Buffer.buffer("test payload"),
+                Map.of(), NoopSpan.INSTANCE);
+
+        assertThat(result.failed()).isTrue();
+        result.onFailure(t -> assertThat(t.getClass()).isEqualTo(ServerErrorException.class));
+    }
+
+    /**
+     * Verifies that the send method returns a failed future on the fallback topic.
+     */
+    @Test
+    public void testSendFailedOnFallbackTopic() {
+        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        when(client.publish(Mockito.any(PubsubMessage.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
+        when(factory.getOrCreatePublisher(topicWithSubtopic)).thenReturn(client);
+
+        final PubSubPublisherClient fallbackClient = mock(PubSubPublisherClient.class);
+        when(fallbackClient.publish(Mockito.any(PubsubMessage.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
+        when(factory.getOrCreatePublisher(topic)).thenReturn(fallbackClient);
+
+        final var result = sender.sendAndWaitForOutcome(topicWithSubtopic, TENANT_ID, DEVICE_ID,
+                Buffer.buffer("test payload"),
+                Map.of(), NoopSpan.INSTANCE);
+
+        assertThat(result.failed()).isTrue();
+        result.onFailure(t -> assertThat(t.getClass()).isEqualTo(ServerErrorException.class));
     }
 
     /**
@@ -154,6 +181,39 @@ public class AbstractPubSubBasedMessageSenderTest {
         final var publishedMessage = ArgumentCaptor.forClass(PubsubMessage.class);
         Mockito.verify(client).publish(publishedMessage.capture());
         assertThat(publishedMessage.getValue().getAttributesMap()).containsExactlyEntriesIn(attributes);
+        assertThat(publishedMessage.getValue().getOrderingKey()).isEqualTo(DEVICE_ID);
+        assertThat(publishedMessage.getValue().getData()).isEqualTo(bs);
+    }
+
+    /**
+     * Verifies that the send method succeeded on the fallback topic.
+     */
+    @Test
+    public void testSucceededOnFallbackTopic() {
+        final byte[] b = new byte[22];
+        new Random().nextBytes(b);
+        final ByteString bs = ByteString.copyFrom(b);
+
+        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        when(client.publish(Mockito.any(PubsubMessage.class))).thenReturn(
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is null")));
+        when(factory.getOrCreatePublisher(topicWithSubtopic)).thenReturn(client);
+
+        final PubSubPublisherClient fallbackClient = mock(PubSubPublisherClient.class);
+        when(fallbackClient.publish(Mockito.any(PubsubMessage.class))).thenReturn(Future.succeededFuture());
+        when(factory.getOrCreatePublisher(topic)).thenReturn(fallbackClient);
+
+        final var result = sender.sendAndWaitForOutcome(
+                topicWithSubtopic,
+                TENANT_ID,
+                DEVICE_ID,
+                Buffer.buffer(b),
+                Map.of(),
+                NoopSpan.INSTANCE);
+
+        assertThat(result.succeeded()).isTrue();
+        final var publishedMessage = ArgumentCaptor.forClass(PubsubMessage.class);
+        Mockito.verify(client).publish(publishedMessage.capture());
         assertThat(publishedMessage.getValue().getOrderingKey()).isEqualTo(DEVICE_ID);
         assertThat(publishedMessage.getValue().getData()).isEqualTo(bs);
     }

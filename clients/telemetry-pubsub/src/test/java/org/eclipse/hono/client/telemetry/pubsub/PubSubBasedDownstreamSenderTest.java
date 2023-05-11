@@ -161,6 +161,38 @@ public class PubSubBasedDownstreamSenderTest {
     }
 
     /**
+     * Verifies that the PubSubClient is added successfully for topic Event including subtopics and the message is sent
+     * successfully.
+     */
+    @Test
+    public void testSendEventWithSubtopicsSucceeds() {
+        sender = new PubSubBasedDownstreamSender(vertx, factory, EVENT_TOPIC, PROJECT_ID, true, tracer);
+
+        final Map<String, Object> properties = Map.of(
+                "foo", "bar",
+                "orig_address",
+                String.format("%s/%s/%s/%s/%s/%s", EVENT_TOPIC, "test-tenant", "test-device", "subtopic1", "subtopic2",
+                        "?metadata=true"),
+                MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
+
+        when(client.publish(any(PubsubMessage.class))).thenReturn(Future.succeededFuture());
+        final String topic = String.format("%s.%s.%s.%s", "test-tenant", EVENT_TOPIC, "subtopic1", "subtopic2");
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
+
+        sender.start();
+        final Future<Void> result = sender.sendEvent(
+                tenant,
+                device,
+                contentType,
+                Buffer.buffer(payload),
+                properties,
+                null);
+        assertThat(result.succeeded()).isTrue();
+        verify(span).finish();
+        verify(client).publish(any(PubsubMessage.class));
+    }
+
+    /**
      * Verifies that the PubSubClient is added successfully for topic Telemetry and the message is sent successfully.
      */
     @Test
@@ -174,6 +206,40 @@ public class PubSubBasedDownstreamSenderTest {
         final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
         when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
         final String topic = String.format("%s.%s", "test-tenant", TELEMETRY_TOPIC);
+        when(factory.getOrCreatePublisher(topic)).thenReturn(client);
+
+        sender.start();
+        final Future<Void> result = sender.sendTelemetry(
+                tenant,
+                device,
+                QoS.AT_LEAST_ONCE,
+                contentType,
+                Buffer.buffer(payload),
+                properties,
+                null);
+        assertThat(result.succeeded()).isTrue();
+        verify(span).finish();
+        verify(client).publish(any(PubsubMessage.class));
+    }
+
+    /**
+     * Verifies that the PubSubClient is added successfully for topic Telemetry including subtopics and the message is
+     * sent successfully.
+     */
+    @Test
+    public void testSendTelemetryWithSubtopicsSucceeds() {
+        sender = new PubSubBasedDownstreamSender(vertx, factory, TELEMETRY_TOPIC, PROJECT_ID, true, tracer);
+
+        final Map<String, Object> properties = Map.of(
+                "foo", "bar",
+                "orig_address",
+                String.format("%s/%s/%s/%s/%s", TELEMETRY_TOPIC, "test-tenant", "test-device", "subtopic1",
+                        "subtopic2"),
+                MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
+
+        final PubSubPublisherClient client = mock(PubSubPublisherClient.class);
+        when(client.publish(Mockito.any())).thenReturn(Future.succeededFuture());
+        final String topic = String.format("%s.%s.%s.%s", "test-tenant", TELEMETRY_TOPIC, "subtopic1", "subtopic2");
         when(factory.getOrCreatePublisher(topic)).thenReturn(client);
 
         sender.start();

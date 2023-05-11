@@ -13,9 +13,11 @@
 package org.eclipse.hono.client.telemetry.pubsub;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.pubsub.AbstractPubSubBasedMessageSender;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
@@ -61,6 +63,8 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
      * The name of the Pub/Sub downstream message property containing the ID of the device registry the device belongs to.
      */
     private static final String PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID = "deviceRegistryId";
+
+    private static final String PUBSUB_PROPERTY_SUBFOLDER = "subFolder";
 
     private final boolean isDefaultsEnabled;
 
@@ -115,17 +119,25 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
+        final Map<String, String> propertiesStrings = properties.entrySet().stream()
+                .filter(entry -> entry.getValue() instanceof String)
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+
+        final List<String> subtopics = PubSubMessageHelper.getSubtopics(propertiesStrings);
+        final String subFolder = PubSubMessageHelper.getSubFolder(subtopics);
         final Map<String, Object> propsWithDefaults = addDefaults(
                 EventConstants.EVENT_ENDPOINT,
                 tenant,
                 device,
                 QoS.AT_LEAST_ONCE,
                 contentType,
-                properties);
+                properties,
+                subFolder);
 
         final Span currentSpan = startSpan("forward event", tenantId, deviceId, References.CHILD_OF,
                 context);
-        final String topic = PubSubMessageHelper.getTopicName(EventConstants.EVENT_ENDPOINT, tenantId);
+
+        final String topic = PubSubMessageHelper.getTopicName(EventConstants.EVENT_ENDPOINT, tenantId, subtopics);
         return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
@@ -153,13 +165,20 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
+        final Map<String, String> propertiesStrings = properties.entrySet().stream()
+                .filter(entry -> entry.getValue() instanceof String)
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+
+        final List<String> subtopics = PubSubMessageHelper.getSubtopics(propertiesStrings);
+        final String subFolder = PubSubMessageHelper.getSubFolder(subtopics);
         final Map<String, Object> propsWithDefaults = addDefaults(
                 TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenant,
                 device,
                 qos,
                 contentType,
-                properties);
+                properties,
+                subFolder);
 
         final Span currentSpan = startSpan(
                 "forward telemetry",
@@ -168,7 +187,7 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
                 qos == QoS.AT_MOST_ONCE ? References.FOLLOWS_FROM : References.CHILD_OF,
                 context);
 
-        final String topic = PubSubMessageHelper.getTopicName(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
+        final String topic = PubSubMessageHelper.getTopicName(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, subtopics);
         final var outcome = sendAndWaitForOutcome(topic, tenantId, deviceId, payload, propsWithDefaults,
                 currentSpan).onComplete(
                         ar -> currentSpan.finish());
@@ -186,7 +205,8 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
             final RegistrationAssertion device,
             final QoS qos,
             final String contentType,
-            final Map<String, Object> properties) {
+            final Map<String, Object> properties,
+            final String subFolder) {
 
         Objects.requireNonNull(topicEndpoint);
         Objects.requireNonNull(tenant);
@@ -202,6 +222,7 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_TENANT_ID, tenant.getTenantId());
         messageProperties.put(PUBSUB_DOWNSTREAM_PROPERTY_DEVICE_REGISTRY_ID, tenant.getTenantId());
         messageProperties.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
+        messageProperties.put(PUBSUB_PROPERTY_SUBFOLDER, subFolder);
 
         Optional.ofNullable(contentType)
                 .ifPresent(ct -> messageProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));
