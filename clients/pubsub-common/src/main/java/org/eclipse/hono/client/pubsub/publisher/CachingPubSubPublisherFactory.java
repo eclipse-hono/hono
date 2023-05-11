@@ -67,6 +67,11 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     }
 
     @Override
+    public Future<Void> closePublisher(final String topic) {
+        return removePublisher(topic);
+    }
+
+    @Override
     public Future<Void> closePublisher(final String topic, final String prefix) {
         final String topicName = PubSubMessageHelper.getTopicName(topic, prefix);
         return removePublisher(topicName);

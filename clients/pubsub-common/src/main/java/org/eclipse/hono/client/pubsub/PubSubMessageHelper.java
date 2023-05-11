@@ -13,6 +13,9 @@
 package org.eclipse.hono.client.pubsub;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,8 +42,8 @@ public final class PubSubMessageHelper {
     public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
 
     /**
-     * Prefix to use in the Pub/Sub message properties for marking properties of command messages that should be included
-     * in response messages indicating failure to deliver the command.
+     * Prefix to use in the Pub/Sub message properties for marking properties of command messages that should be
+     * included in response messages indicating failure to deliver the command.
      */
     public static final String DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX = "delivery-failure-notification-metadata";
 
@@ -50,8 +53,8 @@ public final class PubSubMessageHelper {
     /**
      * Gets the provider for credentials to use for authenticating to the Pub/Sub service.
      *
-     * @return An optional containing a CredentialsProvider to use for authenticating to the Pub/Sub service or an
-     *         empty optional if the given GoogleCredentials is {@code null}.
+     * @return An optional containing a CredentialsProvider to use for authenticating to the Pub/Sub service or an empty
+     *         optional if the given GoogleCredentials is {@code null}.
      */
     public static Optional<CredentialsProvider> getCredentialsProvider() {
         return Optional.ofNullable(getCredentials())
@@ -70,12 +73,78 @@ public final class PubSubMessageHelper {
     /**
      * Gets the topic name with the given prefix.
      *
-     * @param topic The endpoint of the topic (e.g. event)
-     * @param prefix The prefix of the Pub/Sub topic, it's either the tenant ID or the adapter instance ID
+     * @param topic The endpoint of the topic (e.g. event).
+     * @param prefix The prefix of the Pub/Sub topic, it's either the tenant ID or the adapter instance ID.
      * @return The topic containing the prefix identifier and the endpoint.
      */
     public static String getTopicName(final String topic, final String prefix) {
-        return String.format("%s.%s", prefix, topic);
+        return getTopicName(topic, prefix, new ArrayList<>());
+    }
+
+    /**
+     * Gets the topic name with the given prefix and subtopics.
+     *
+     * @param topic The endpoint of the topic (e.g. event).
+     * @param prefix The prefix of the Pub/Sub topic, it's either the tenant ID or the adapter instance ID.
+     * @param subtopics A list with the subtopics.
+     * @return The topic containing the prefix identifier, the endpoint and all the subtopics.
+     */
+    public static String getTopicName(final String topic, final String prefix, final List<String> subtopics) {
+        final StringBuilder topicBuilder = new StringBuilder();
+        topicBuilder.append(prefix).append(".").append(topic);
+        for (String subtopic : subtopics) {
+            topicBuilder.append(".").append(subtopic);
+        }
+        return topicBuilder.toString();
+    }
+
+    /**
+     * Gets the subtopics from the message attributes.
+     *
+     * @param attributesMap The attribute map.
+     * @return An ordered list containing all the subtopics.
+     */
+    public static List<String> getSubtopics(final Map<String, String> attributesMap) {
+        String origAddress = getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_ORIG_ADDRESS)
+                .orElse("");
+        origAddress = origAddress.startsWith("/") ? origAddress.substring(1) : origAddress;
+        final List<String> origAddressSplit = new ArrayList<>(Arrays.stream(origAddress.split("/")).toList());
+        // Subtopics are located starting at the 4th position (e.g. event/tenantId/deviceId/subtopic1/subtopic2/...).
+        if (origAddressSplit.size() < 4) {
+            return new ArrayList<>();
+        }
+        origAddressSplit.subList(0, 3).clear();
+        // Remove the last entry if it is a metadata property bag.
+        if (origAddressSplit.get(origAddressSplit.size() - 1).startsWith("?")) {
+            origAddressSplit.remove(origAddressSplit.size() - 1);
+        }
+        return origAddressSplit;
+    }
+
+    /**
+     * Gets the subFolder from the list of subtopics.
+     *
+     * @param subtopics The list of subtopics.
+     * @return An string containing the subFolder.
+     */
+    public static String getSubFolder(final List<String> subtopics) {
+        return String.join("/", subtopics);
+    }
+
+    /**
+     * Gets the topic endpoint as fallback from the given topic including subtopics.
+     *
+     * @param topic The topic containing the tenant and subtopic(s), e.g. tenant.telemetry.subtopic.
+     * @param tenantId The tenant identifier related to the topic.
+     * @return The original topic endpoint, e.g. telemetry, or {@code null} if no subtopic is defined.
+     */
+    public static String getTopicEndpointFromTopic(final String topic, final String tenantId) {
+        final String topicWithoutTenant = topic.replace(tenantId, "");
+        final String[] fallbackTopics = topicWithoutTenant.split("\\.");
+        if (fallbackTopics.length <= 2) {
+            return null;
+        }
+        return fallbackTopics[1];
     }
 
     /**
@@ -90,6 +159,7 @@ public final class PubSubMessageHelper {
         Objects.requireNonNull(message);
         return message.getData().toByteArray();
     }
+
     /**
      * Gets the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_ID} attribute.
      *
@@ -152,7 +222,8 @@ public final class PubSubMessageHelper {
     }
 
     /**
-     * Gets the properties of the attributes which starts with the prefix {@value DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX}.
+     * Gets the properties of the attributes which starts with the prefix
+     * {@value DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX}.
      *
      * @param attributesMap The attributes map to get the value from.
      * @return The properties.
