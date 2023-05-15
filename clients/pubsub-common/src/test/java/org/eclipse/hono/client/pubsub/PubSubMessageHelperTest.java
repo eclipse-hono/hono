@@ -66,12 +66,9 @@ public class PubSubMessageHelperTest {
     @Test
     public void testGetSubtopicsWithSubtopics() {
         final String metadata = "?metadata=true";
-        final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_ORIG_ADDRESS,
-                String.format("%s/%s/%s/%s/%s/%s", topic, tenant, device, subtopic1, subtopic2, metadata),
-                "", "");
+        final String origAddress = String.format("%s/%s/%s/%s/%s/%s", topic, tenant, device, subtopic1, subtopic2, metadata);
 
-        final List<String> result = PubSubMessageHelper.getSubtopics(attributesMap);
+        final List<String> result = PubSubMessageHelper.getSubtopics(origAddress);
         assertThat(result).hasSize(2);
         assertThat(result.get(0)).isEqualTo(subtopic1);
         assertThat(result.get(1)).isEqualTo(subtopic2);
@@ -82,11 +79,9 @@ public class PubSubMessageHelperTest {
      */
     @Test
     public void testGetSubtopicsWithoutSubtopics() {
-        final Map<String, String> attributesMap = getAttributes(
-                MessageHelper.APP_PROPERTY_ORIG_ADDRESS, String.format("%s/%s/%s", topic, tenant, device),
-                "", "");
+        final String origAddress = String.format("%s/%s/%s", topic, tenant, device);
 
-        final List<String> result = PubSubMessageHelper.getSubtopics(attributesMap);
+        final List<String> result = PubSubMessageHelper.getSubtopics(origAddress);
         assertThat(result).isEmpty();
     }
 

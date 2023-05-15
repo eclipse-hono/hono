@@ -15,6 +15,7 @@ package org.eclipse.hono.client.pubsub;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -78,7 +79,7 @@ public final class PubSubMessageHelper {
      * @return The topic containing the prefix identifier and the endpoint.
      */
     public static String getTopicName(final String topic, final String prefix) {
-        return getTopicName(topic, prefix, new ArrayList<>());
+        return getTopicName(topic, prefix, Collections.emptyList());
     }
 
     /**
@@ -99,19 +100,17 @@ public final class PubSubMessageHelper {
     }
 
     /**
-     * Gets the subtopics from the message attributes.
+     * Gets the subtopics from the orig_address attribute of the message.
      *
-     * @param attributesMap The attribute map.
-     * @return An ordered list containing all the subtopics.
+     * @param origAddress The orig_address attribute.
+     * @return A list containing all the subtopics in hierarchical order or an empty list if the topic has no subtopics.
      */
-    public static List<String> getSubtopics(final Map<String, String> attributesMap) {
-        String origAddress = getAttributesValue(attributesMap, MessageHelper.APP_PROPERTY_ORIG_ADDRESS)
-                .orElse("");
-        origAddress = origAddress.startsWith("/") ? origAddress.substring(1) : origAddress;
-        final List<String> origAddressSplit = new ArrayList<>(Arrays.stream(origAddress.split("/")).toList());
+    public static List<String> getSubtopics(final String origAddress) {
+        final String trimmedOrigAddress = origAddress.startsWith("/") ? origAddress.substring(1) : origAddress;
+        final List<String> origAddressSplit = new ArrayList<>(Arrays.stream(trimmedOrigAddress.split("/")).toList());
         // Subtopics are located starting at the 4th position (e.g. event/tenantId/deviceId/subtopic1/subtopic2/...).
         if (origAddressSplit.size() < 4) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
         origAddressSplit.subList(0, 3).clear();
         // Remove the last entry if it is a metadata property bag.
@@ -125,7 +124,7 @@ public final class PubSubMessageHelper {
      * Gets the subFolder from the list of subtopics.
      *
      * @param subtopics The list of subtopics.
-     * @return An string containing the subFolder.
+     * @return A string containing the subFolder.
      */
     public static String getSubFolder(final List<String> subtopics) {
         return String.join("/", subtopics);

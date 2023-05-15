@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.pubsub.AbstractPubSubBasedMessageSender;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
@@ -119,11 +118,12 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
-        final Map<String, String> propertiesStrings = properties.entrySet().stream()
-                .filter(entry -> entry.getValue() instanceof String)
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+        final String origAddress = Optional.ofNullable(properties.get(MessageHelper.APP_PROPERTY_ORIG_ADDRESS))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElse("");
 
-        final List<String> subtopics = PubSubMessageHelper.getSubtopics(propertiesStrings);
+        final List<String> subtopics = PubSubMessageHelper.getSubtopics(origAddress);
         final String subFolder = PubSubMessageHelper.getSubFolder(subtopics);
         final Map<String, Object> propsWithDefaults = addDefaults(
                 EventConstants.EVENT_ENDPOINT,
@@ -165,11 +165,12 @@ public final class PubSubBasedDownstreamSender extends AbstractPubSubBasedMessag
         final String tenantId = tenant.getTenantId();
         final String deviceId = device.getDeviceId();
 
-        final Map<String, String> propertiesStrings = properties.entrySet().stream()
-                .filter(entry -> entry.getValue() instanceof String)
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> (String) e.getValue()));
+        final String origAddress = Optional.ofNullable(properties.get(MessageHelper.APP_PROPERTY_ORIG_ADDRESS))
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .orElse("");
 
-        final List<String> subtopics = PubSubMessageHelper.getSubtopics(propertiesStrings);
+        final List<String> subtopics = PubSubMessageHelper.getSubtopics(origAddress);
         final String subFolder = PubSubMessageHelper.getSubFolder(subtopics);
         final Map<String, Object> propsWithDefaults = addDefaults(
                 TelemetryConstants.TELEMETRY_ENDPOINT,
