@@ -582,6 +582,7 @@
         </property>
       </activation>
       <properties>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
         <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
         <hono.postgres.disabled>true</hono.postgres.disabled>
         <hono.deviceregistry.type>file</hono.deviceregistry.type>
