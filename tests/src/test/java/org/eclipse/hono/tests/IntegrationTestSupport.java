@@ -498,7 +498,7 @@ public final class IntegrationTestSupport {
     /**
      * The default factor to apply when determining the timeout to use for executing test cases in a CI environment.
      */
-    public static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
+    public static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 4;
 
     /**
      * The number of seconds to add to the default timeout when creating Kafka topics.
