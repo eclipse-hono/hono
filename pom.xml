@@ -261,7 +261,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.41.0</version>
+          <version>0.42.1</version>
           <executions>
             <execution>
               <id>build_images</id>
@@ -307,21 +307,21 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.10.1</version>
+          <version>3.11.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.8.2</version>
+          <version>3.1.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.3.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.3.0</version>
           <configuration>
             <skipIfEmpty>true</skipIfEmpty>
             <archive>
@@ -334,7 +334,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.5.0</version>
           <configuration>
             <doclint>all,-accessibility</doclint>
           </configuration>
@@ -342,7 +342,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.0.0-M7</version>
+          <version>3.1.0</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
@@ -360,7 +360,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.0.0-M7</version>
+          <version>3.1.0</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
@@ -375,7 +375,7 @@
            -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.5.0</version>
           <executions>
             <execution>
               <id>copy_legal_docs</id>
@@ -394,7 +394,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.2.2</version>
           <dependencies>
             <dependency>
               <groupId>org.eclipse.hono</groupId>
@@ -425,7 +425,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
-          <version>1.0.0</version>
+          <version>1.1.0</version>
         </plugin>
         <plugin>
           <groupId>com.internetitem</groupId>
@@ -448,7 +448,7 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.7</version>
+          <version>0.8.10</version>
           <executions>
             <execution>
               <id>default-prepare-agent</id>
@@ -489,7 +489,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.6</version>
+          <version>3.1.0</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -498,7 +498,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>buildnumber-maven-plugin</artifactId>
-        <version>1.4</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <phase>validate</phase>
@@ -515,7 +515,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.3.0</version>
         <executions>
           <execution>
             <!-- Make sure that only non-snapshot versions are used for the dependencies.
