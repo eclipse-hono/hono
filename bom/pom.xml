@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -29,7 +29,7 @@
 
   <properties>
     <artemis.image.name>quay.io/artemiscloud/activemq-artemis-broker:1.0.6</artemis.image.name>
-    <assertj.version>3.23.1</assertj.version>
+    <assertj.version>3.24.2</assertj.version>
     <bouncycastle.version>1.71</bouncycastle.version>
     <caffeine.version>3.1.1</caffeine.version>
     <californium.version>3.7.0</californium.version>
@@ -37,7 +37,7 @@
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
-    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.40</jaeger.image.name>
+    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.45</jaeger.image.name>
     <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
     <!--
       We want to allow users to run containers in a rootless Docker environment.
@@ -48,20 +48,20 @@
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
     <kafka-client.version>3.3.2</kafka-client.version>
-    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.3.1</kafka.image.name>
+    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.3.3</kafka.image.name>
     <logback.version>1.2.11</logback.version>
     <mongodb-image.name>docker.io/library/mongo:4.4</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <netty.version>4.1.86.Final</netty.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
-    <qpid-jms.version>1.6.0</qpid-jms.version>
+    <qpid-jms.version>1.8.0</qpid-jms.version>
     <quarkus.platform.version>2.16.3.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
     <spring-security-crypto.version>5.7.6</spring-security-crypto.version>
     <truth.version>1.1.3</truth.version>
     <vertx.version>4.3.7</vertx.version>
-    <zookeeper.image.name>docker.io/confluentinc/cp-zookeeper:7.3.1</zookeeper.image.name>
+    <zookeeper.image.name>docker.io/confluentinc/cp-zookeeper:7.3.3</zookeeper.image.name>
 
     <!-- The port at which the health check server should expose its resources -->
     <health.check.port>8088</health.check.port>
