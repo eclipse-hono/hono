@@ -103,7 +103,7 @@ public final class PubSubMessageHelper {
      * Gets the subtopics from the orig_address attribute of the message.
      *
      * @param origAddress The orig_address attribute.
-     * @return A list containing all the subtopics in hierarchical order or an empty list if the topic has no subtopics.
+     * @return An immutable list containing all the subtopics in hierarchical order or an empty immutable list if the topic has no subtopics.
      */
     public static List<String> getSubtopics(final String origAddress) {
         final String trimmedOrigAddress = origAddress.startsWith("/") ? origAddress.substring(1) : origAddress;
@@ -117,7 +117,7 @@ public final class PubSubMessageHelper {
         if (origAddressSplit.get(origAddressSplit.size() - 1).startsWith("?")) {
             origAddressSplit.remove(origAddressSplit.size() - 1);
         }
-        return origAddressSplit;
+        return Collections.unmodifiableList(origAddressSplit);
     }
 
     /**
