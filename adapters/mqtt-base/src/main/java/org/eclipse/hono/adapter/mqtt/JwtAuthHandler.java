@@ -15,11 +15,11 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
+import org.eclipse.hono.adapter.auth.device.jwt.CredentialsParser;
 import org.eclipse.hono.adapter.auth.device.jwt.DefaultJwsValidator;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -36,7 +36,7 @@ import io.vertx.mqtt.MqttAuth;
  * An auth handler for extracting an {@value CredentialsConstants#FIELD_AUTH_ID},
  * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and JSON Web Token (JWT) from an MQTT CONNECT packet.
  */
-public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> {
+public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectContext> implements CredentialsParser {
 
     /**
      * Creates a new handler for a Hono client based auth provider.
@@ -117,7 +117,7 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
                 credentials = parseCredentialsFromClaims(claims);
             } else {
                 // extract tenant and device ID from MQTT client identifier
-                credentials = parseCredentialsFromClientIdentifier(context.deviceEndpoint().clientIdentifier());
+                credentials = parseCredentialsFromString(context.deviceEndpoint().clientIdentifier());
             }
             credentials.put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword());
             result.complete(credentials);
@@ -130,7 +130,15 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
         return result.future();
     }
 
-    private JsonObject parseCredentialsFromClientIdentifier(final String clientId) {
+    /**
+     * Extracts the tenantId and authId from a client identifier.
+     *
+     * @param clientId A client identifier containing the tenantId and authId.
+     * @return A JsonObject containing the tenantId and authId extracted from the client identifier.
+     * @throws ClientErrorException If tenantId or authId cannot correctly be extracted from the client identifier.
+     */
+    @Override
+    public JsonObject parseCredentialsFromString(final String clientId) {
         final String[] clientIdSplit = clientId.split("/");
         final int splitLength = clientIdSplit.length;
 
@@ -145,24 +153,5 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
                 .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .put(Claims.ISSUER, authId);
-    }
-
-    private JsonObject parseCredentialsFromClaims(final JsonObject claims) {
-
-        final var credentials = new JsonObject();
-        credentials.put(
-                CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
-                Optional.ofNullable(claims.getString(CredentialsConstants.CLAIM_TENANT_ID))
-                    .orElseThrow(() -> new ClientErrorException(
-                            HttpURLConnection.HTTP_UNAUTHORIZED,
-                            "JWT must specify tenant ID in %s claim".formatted(CredentialsConstants.CLAIM_TENANT_ID))));
-        final var authId = Optional.ofNullable(claims.getString(Claims.SUBJECT))
-                .orElseThrow(() -> new ClientErrorException(
-                        HttpURLConnection.HTTP_UNAUTHORIZED,
-                        "JWT must specify auth ID in %s claim".formatted(Claims.SUBJECT)));
-        credentials.put(CredentialsConstants.FIELD_AUTH_ID, authId);
-        final var issuer = Optional.ofNullable(claims.getString(Claims.ISSUER)).orElse(authId);
-        credentials.put(Claims.ISSUER, issuer);
-        return credentials;
     }
 }

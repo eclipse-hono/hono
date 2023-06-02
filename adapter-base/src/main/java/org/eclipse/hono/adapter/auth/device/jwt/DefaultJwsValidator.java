@@ -67,7 +67,7 @@ public class DefaultJwsValidator implements JwsValidator {
         }
         final String[] jwtSplit = jws.split("\\.", 3);
         if (jwtSplit.length != 3) {
-            throw new MalformedJwtException("String is not a a valid JWS structure");
+            throw new MalformedJwtException("String is not a valid JWS structure");
         }
 
         try {

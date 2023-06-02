@@ -50,6 +50,35 @@ for authentication. See [Device Identity]({{< relref "/concepts/device-identity.
 concepts.
 {{% /notice %}}
 
+### HTTP Bearer Auth
+
+The HTTP adapter supports authenticating clients using the *Bearer* HTTP authentication scheme. This requires a client
+to provide a signed [JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) as a *Bearer* token inside the
+authentication header. The information about the tenant and the authentication identifier can be presented to the
+protocol adapter in one of two ways:
+
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
+   the *tenant-id* and *auth-id* must be provided in the `iss` (*issuer*) and `sub` (*subject*) claims respectively,
+   and the `aud` (*audience*) claim must contain `hono-adapter`
+2. or inside the *URI*, in which case the *URI* must have the format for unauthenticated device even for authenticated
+   devices (see [Publish Telemetry Data (unauthenticated Device)]({{< relref "#publish-telemetry-data-unauthenticated-device" >}}).
+
+The adapter extracts the *auth-id*, *tenant* and JWT from the HTTP request and verifies them using the credentials that
+the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
+has on record for the client as described in
+[JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}}).
+If the JWT is verified in combination with the credentials and within its validity period, the client has been
+authenticated successfully and the connection is being established. The validity period is defined within the JWS
+payload by the mandatory claims `iat` ("issued at") and `exp` ("expiration time"). Please refer to
+[JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}})
+for more detailed information.
+
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
+concepts.
+{{% /notice %}}
+
 ## Message Limits
 
 The adapter rejects

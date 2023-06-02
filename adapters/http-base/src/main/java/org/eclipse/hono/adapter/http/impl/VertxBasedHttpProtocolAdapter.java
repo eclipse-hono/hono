@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,9 @@ import java.util.Optional;
 
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.jwt.DefaultJwsValidator;
+import org.eclipse.hono.adapter.auth.device.jwt.JwtAuthProvider;
+import org.eclipse.hono.adapter.auth.device.jwt.JwtCredentials;
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.auth.device.x509.SubjectDnCredentials;
@@ -27,6 +30,7 @@ import org.eclipse.hono.adapter.auth.device.x509.X509AuthProvider;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.JwtAuthHandler;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -56,28 +60,38 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
     private static final String ROUTE_EVENT_ENDPOINT = "/event";
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private DeviceCredentialsAuthProvider<JwtCredentials> jwtAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
 
     /**
-     * Sets the provider to use for authenticating devices based on
-     * a username and password.
+     * Sets the provider to use for authenticating devices based on a username and password.
      * <p>
-     * If not set explicitly using this method, a {@code UsernamePasswordAuthProvider}
-     * will be created during startup.
+     * If not set explicitly using this method, a {@code UsernamePasswordAuthProvider} will be created during startup.
      *
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
-    public void setUsernamePasswordAuthProvider(final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> provider) {
+    public void setUsernamePasswordAuthProvider(
+            final DeviceCredentialsAuthProvider<UsernamePasswordCredentials> provider) {
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
     /**
-     * Sets the provider to use for authenticating devices based on
-     * a client certificate.
+     * Sets the provider to use for authenticating devices based on a Json Web Token (JWT).
      * <p>
-     * If not set explicitly using this method, a {@code SubjectDnAuthProvider}
-     * will be created during startup.
+     * If not set explicitly using this method, a {@code JwtAuthProvider} will be created during startup.
+     *
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public void setJwtAuthProvider(final DeviceCredentialsAuthProvider<JwtCredentials> provider) {
+        this.jwtAuthProvider = Objects.requireNonNull(provider);
+    }
+
+    /**
+     * Sets the provider to use for authenticating devices based on a client certificate.
+     * <p>
+     * If not set explicitly using this method, a {@code SubjectDnAuthProvider} will be created during startup.
      *
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
@@ -106,6 +120,11 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
                     Optional.ofNullable(clientCertAuthProvider)
                         .orElseGet(() -> new X509AuthProvider(getCredentialsClient(), tracer)),
+                    this::handleBeforeCredentialsValidation));
+            authHandler.add(new JwtAuthHandler(
+                    Optional.ofNullable(jwtAuthProvider)
+                        .orElseGet(() -> new JwtAuthProvider(getCredentialsClient(), new DefaultJwsValidator(), tracer)),
+                    getConfig().getRealm(),
                     this::handleBeforeCredentialsValidation));
             authHandler.add(new HonoBasicAuthHandler(
                     Optional.ofNullable(usernamePasswordAuthProvider)

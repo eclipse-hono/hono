@@ -123,7 +123,7 @@ public class JwtAuthHandlerTest {
 
     /**
      * Verifies that the handler extracts the tenant and auth ID from the JWT,
-     * if the JWT's audience claim does has value {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
+     * if the JWT's audience claim does have value {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
      *
      * @param ctx The vert.x test context.
      */

@@ -65,16 +65,17 @@ concepts.
 
 ### JSON Web Token
 
-The MQTT adapter supports authenticating clients based on a JSON Web Token (JWT) provided during MQTT connection
-establishment. This requires a client to provide a *client identifier*, a *user* and a *password* field in its MQTT
-CONNECT packet as defined in
+The MQTT adapter supports authenticating clients based on a signed 
+[JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) provided during MQTT connection establishment. This requires
+a client to provide a *client identifier*, a *user* and a *password* field in its MQTT CONNECT packet as defined in
 [MQTT Version 3.1.1, Section 3.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028)
 when connecting to the MQTT adapter. The JWT must be sent in the password field. The content of the *user* field is
 ignored. The information about the tenant and the authentication identifier can be presented to the protocol adapter in
 one of two ways:
 
-1. Either as claims inside the JWT payload, in which case the *tenant-id* and *auth-id* must be provided in the `iss`
-   (*issuer*) and `sub` (*subject*) claims respectively, and the `aud` (*audience*) claim must contain `hono-adapter`
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
+   the *tenant-id* and *auth-id* must be provided in the `iss` (*issuer*) and `sub` (*subject*) claims respectively,
+   and the `aud` (*audience*) claim must contain `hono-adapter`
 2. or inside the *client identifier*, in which case the *client identifier* must have the following format:
    
    `*/${tenant-id}/[^/]*/${auth-id}`
@@ -89,7 +90,7 @@ credentials that the
 has on record for the client as described in
 [JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}}).
 If the JWT is verified in combination with the credentials and within its validity period, the client has been
-authenticated successfully and the connection is being established. The validity period is defined within the JWT's
+authenticated successfully and the connection is being established. The validity period is defined within the JWS
 payload by the mandatory claims `iat` ("issued at") and `exp` ("expiration time"). Please refer to
 [JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}})
 for more detailed information.
