@@ -23,15 +23,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.rpc.AlreadyExistsException;
 import com.google.api.gax.rpc.ApiException;
 import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
-import com.google.cloud.pubsub.v1.SubscriptionAdminClient.ListSubscriptionsPagedResponse;
 import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
-import com.google.cloud.pubsub.v1.TopicAdminClient.ListTopicsPagedResponse;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
 import com.google.protobuf.util.Durations;
-import com.google.pubsub.v1.ProjectName;
 import com.google.pubsub.v1.PushConfig;
 import com.google.pubsub.v1.Subscription;
 import com.google.pubsub.v1.SubscriptionName;
@@ -171,37 +169,23 @@ public class PubSubBasedAdminClientManager {
     }
 
     private Future<Void> getOrCreateTopic(final String projectId, final TopicName topic) {
-        if (topicExists(topic.toString())) {
+        if (topics.contains(topic.toString())) {
+            LOG.debug("Topic {} already exists, continue", topic);
             return Future.succeededFuture();
         }
-        final Topic createdTopic = topicAdminClient.createTopic(topic);
-        if (createdTopic == null) {
-            LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topic.toString(), projectId);
-            return Future.failedFuture("Topic creation failed.");
-        }
-        topics.add(topic.toString());
-        return Future.succeededFuture();
-    }
-
-    private boolean topicExists(final String topicId) {
-        if (topics.contains(topicId)) {
-            return true;
-        }
-        final ProjectName projectName = ProjectName.of(projectId);
         try {
-            final ListTopicsPagedResponse pagedResponse = topicAdminClient.listTopics(projectName);
-            if (pagedResponse != null) {
-                for (Topic topic : pagedResponse.iterateAll()) {
-                    if (topic.getName().equals(topicId)) {
-                        topics.add(topicId);
-                        return true;
-                    }
-                }
+            final Topic createdTopic = topicAdminClient.createTopic(topic);
+            if (createdTopic == null) {
+                LOG.error("Creating topic failed [topic: {}, projectId: {}]", topic, projectId);
+                return Future.failedFuture("Topic creation failed.");
             }
-            return false;
+            topics.add(topic.toString());
+            return Future.succeededFuture();
+        } catch (AlreadyExistsException ex) {
+            return Future.succeededFuture();
         } catch (ApiException e) {
-            LOG.error("Error listing topics on project {}", projectId, e);
-            return false;
+            LOG.error("Error creating topic {} on project {}", topic, projectId, e);
+            return Future.failedFuture("Topic creation failed.");
         }
 
     }
@@ -221,7 +205,8 @@ public class PubSubBasedAdminClientManager {
             final SubscriptionName subscription,
             final TopicName topic) {
 
-        if (subscriptionExists(subscription.toString())) {
+        if (subscriptions.contains(subscription.toString())) {
+            LOG.debug("Subscription {} already exists, continue", subscription);
             return Future.succeededFuture(subscription.getSubscription());
         }
         try {
@@ -241,32 +226,11 @@ public class PubSubBasedAdminClientManager {
             }
             subscriptions.add(createdSubscription.getName());
             return Future.succeededFuture(subscription.getSubscription());
+        } catch (AlreadyExistsException ex) {
+            return Future.succeededFuture(subscription.getSubscription());
         } catch (ApiException e) {
-            LOG.error("Error creating subscription {} for topic {} on project {}", subscription, topic,
-                    projectId, e);
+            LOG.error("Error creating subscription {} for topic {} on project {}", subscription, topic, projectId, e);
             return Future.failedFuture("Subscription creation failed.");
-        }
-    }
-
-    private boolean subscriptionExists(final String subscriptionName) {
-        if (subscriptions.contains(subscriptionName)) {
-            return true;
-        }
-        final ProjectName projectName = ProjectName.of(projectId);
-        try {
-            final ListSubscriptionsPagedResponse pagedResponse = subscriptionAdminClient.listSubscriptions(projectName);
-            if (pagedResponse != null) {
-                for (Subscription subscription : pagedResponse.iterateAll()) {
-                    if (subscription.getName().equals(subscriptionName)) {
-                        subscriptions.add(subscriptionName);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        } catch (Exception e) {
-            LOG.error("Error listing subscriptions on project {}", projectId, e);
-            return false;
         }
     }
 
