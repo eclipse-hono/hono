@@ -57,9 +57,8 @@ to provide a signed [JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JW
 authentication header. The information about the tenant and the authentication identifier can be presented to the
 protocol adapter in one of two ways:
 
-1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
-   the *tenant-id* and *auth-id* must be provided in the `iss` (*issuer*) and `sub` (*subject*) claims respectively,
-   and the `aud` (*audience*) claim must contain `hono-adapter`
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload. For more
+   information on this see [JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}})
 2. or inside the *URI*, in which case the *URI* must have the format for unauthenticated device even for authenticated
    devices (see [Publish Telemetry Data (unauthenticated Device)]({{< relref "#publish-telemetry-data-unauthenticated-device" >}}).
 

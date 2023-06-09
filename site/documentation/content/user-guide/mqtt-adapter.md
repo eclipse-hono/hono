@@ -73,9 +73,8 @@ when connecting to the MQTT adapter. The JWT must be sent in the password field.
 ignored. The information about the tenant and the authentication identifier can be presented to the protocol adapter in
 one of two ways:
 
-1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
-   the *tenant-id* and *auth-id* must be provided in the `iss` (*issuer*) and `sub` (*subject*) claims respectively,
-   and the `aud` (*audience*) claim must contain `hono-adapter`
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload. For more
+   information on this see [JSON Web Token based Authentication]({{< relref "/concepts/device-identity#json-web-token-based-authentication" >}})
 2. or inside the *client identifier*, in which case the *client identifier* must have the following format:
    
    `*/${tenant-id}/[^/]*/${auth-id}`

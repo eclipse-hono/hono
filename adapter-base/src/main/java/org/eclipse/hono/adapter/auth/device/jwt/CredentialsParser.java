@@ -29,11 +29,11 @@ import io.vertx.core.json.JsonObject;
 public interface CredentialsParser {
 
     /**
-     * Extracts the tenantId and authId from JWS Claims.
+     * Extracts the tenant-id, auth-id and issuer from JWS Claims.
      *
-     * @param claims A JsonObject containing the JWS Claims.
-     * @return A JsonObject containing the tenantId and authId extracted from the JWS Claims.
-     * @throws ClientErrorException If tenantId or authId cannot correctly be extracted from the JWS Claims.
+     * @param claims A JsonObject containing the JWS Claims "tid", "sub" and optionally "iss".
+     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id" if the input claims have no "iss" claim) extracted from the JWS Claims.
+     * @throws ClientErrorException If tenant-id or auth-id cannot correctly be extracted from the JWS Claims.
      */
     default JsonObject parseCredentialsFromClaims(final JsonObject claims) {
 
@@ -56,10 +56,11 @@ public interface CredentialsParser {
     }
 
     /**
-     * Extracts the tenantId and authId from a String.
+     * Extracts the tenant-id and auth-id from a String.
      *
-     * @param input An input String containing the tenantId and authId.
-     * @return A JsonObject containing the tenantId and authId extracted from the input String.
+     * @param input An input String containing the tenant-id and auth-id.
+     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id") extracted from the input String.
+     * @throws NullPointerException if the given string is {@code null}.
      */
     JsonObject parseCredentialsFromString(String input);
 }

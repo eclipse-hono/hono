@@ -150,15 +150,23 @@ the client certificate's *subject DN* and invokes the Credentials API's
 
 ### JSON Web Token based Authentication
 
-The HTTP and MQTT protocol adapter support authentication of devices with a signed
+The HTTP and MQTT protocol adapters support authentication of devices with a signed
 [JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) based mechanism.
 In this case, the protocol adapter tries to validate the token presented by the device using a public key on record.
 
 During connection establishment the device is expected to present the tenant identifier, authentication identifier and
-a valid and signed JWT to the protocol adapter.
+a valid and signed JWT to the protocol adapter. The information about the tenant and the authentication identifier can
+be presented to the protocol adapter in one of two ways:
 
-The JOSE header MUST contain the *typ* parameter with value `JWT` and MUST contain the *alg* parameter indicating the
-algorithm that has been used to create the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) signature.
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
+   the *tenant-id* and *auth-id* must be provided in the `tid` and `sub` (*subject*) claims respectively,
+   and the `aud` (*audience*) claim must contain `hono-adapter`
+2. or via an adapter specific mechanism. For more information see
+   [HTTP]({{< relref "/user-guide/http-adapter#http-bearer-auth" >}}) or
+   [MQTT]({{< relref "/user-guide/mqtt-adapter#json-web-token" >}})
+
+The JWT's JOSE header MUST contain the *typ* parameter with value `JWT` and MUST contain the *alg* parameter indicating
+the algorithm that has been used to create the JWS signature.
 `RS256`, `PS256`, `ES256` and their respective stronger variants are supported. The algorithm specified in the header
 must be compatible with at least one of the
 [*Raw Public Key* type credentials]({{< relref "/api/credentials#raw-public-key" >}}) registered for the device.
@@ -169,10 +177,6 @@ been created and also marks the start of its validity period. It must not be too
 (allowing 10 minutes for skew). The *nbf* (not before) claim is therefore not required and will be ignored.
 The *exp* claim marks the instant after which the token MUST be considered invalid. The lifetime of the token must
 be at most 24 hours plus skew.
-
-For a description on how the adapter tries to determine the device's tenant and authentication identifier see
-[HTTP]({{< relref "/user-guide/http-adapter#http-bearer-auth" >}}) or
-[MQTT]({{< relref "/user-guide/mqtt-adapter#json-web-token" >}})
 
 The protocol adapter then invokes the Credentials API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}})
 operation in order to retrieve the *rpk* (raw public key) type credentials that are on record for the device.

@@ -40,7 +40,8 @@ import io.vertx.ext.web.handler.HttpException;
 import io.vertx.ext.web.handler.impl.HTTPAuthorizationHandler;
 
 /**
- * A Hono specific version of vert.x web's standard {@code JWTAuthHandlerImpl}.
+ * An auth handler for extracting an {@value CredentialsConstants#FIELD_AUTH_ID},
+ * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and JSON Web Token (JWT) from an HTTP context.
  */
 public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider> implements CredentialsParser {
 
@@ -85,24 +86,6 @@ public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvi
             }
 
             final String token = parseAuthorization.result();
-            int segments = 0;
-            for (int i = 0; i < token.length(); i++) {
-                final char c = token.charAt(i);
-                if (c == '.') {
-                    if (++segments == 3) {
-                        handler.handle(Future.failedFuture(new HttpException(HttpURLConnection.HTTP_BAD_REQUEST, "Too many segments in token")));
-                        return;
-                    }
-                    continue;
-                }
-                if (Character.isLetterOrDigit(c) || c == '-' || c == '_') {
-                    continue;
-                }
-                // invalid character
-                handler.handle(Future.failedFuture(new HttpException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid character in token: " + (int) c)));
-                return;
-            }
-
             try {
                 final var claims = DefaultJwsValidator.getJwtClaims(token);
                 final JsonObject credentials;
@@ -156,11 +139,12 @@ public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvi
     }
 
     /**
-     * Extracts the tenantId and authId from a URI.
+     * Extracts the tenant-id and auth-id from a URI.
      *
-     * @param uri A URI containing the tenantId and authId.
-     * @return A JsonObject containing the tenantId and authId extracted from the URI.
-     * @throws ClientErrorException If tenantId or authId cannot correctly be extracted from the URI.
+     * @param uri A URI containing the tenant-id and auth-id.
+     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id") extracted from the URI.
+     * @throws NullPointerException if the given string is {@code null}.
+     * @throws ClientErrorException If tenant-id or auth-id cannot correctly be extracted from the URI.
      */
     @Override
     public JsonObject parseCredentialsFromString(final String uri) {

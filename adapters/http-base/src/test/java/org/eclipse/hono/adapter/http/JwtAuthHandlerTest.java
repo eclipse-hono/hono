@@ -24,6 +24,9 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.Key;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -51,7 +54,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -74,7 +76,14 @@ class JwtAuthHandlerTest {
     private HttpServerResponse resp;
 
     private static String getJws(final String audience, final String tenant, final String subject) {
-        final var key = Keys.hmacShaKeyFor("thisisthesharedkeywhichweusefortesting".getBytes());
+        final Key key;
+        try {
+            final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+            keyPairGenerator.initialize(256);
+            key = keyPairGenerator.generateKeyPair().getPrivate();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         final var builder = Jwts.builder().signWith(key);
         Optional.ofNullable(audience).ifPresent(builder::setAudience);
         Optional.ofNullable(tenant).ifPresent(t -> builder.claim(CredentialsConstants.CLAIM_TENANT_ID, t));

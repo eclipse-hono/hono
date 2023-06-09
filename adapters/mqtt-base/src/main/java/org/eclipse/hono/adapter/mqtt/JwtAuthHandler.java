@@ -131,11 +131,12 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
     }
 
     /**
-     * Extracts the tenantId and authId from a client identifier.
+     * Extracts the tenant-id and auth-id from a client identifier.
      *
-     * @param clientId A client identifier containing the tenantId and authId.
-     * @return A JsonObject containing the tenantId and authId extracted from the client identifier.
-     * @throws ClientErrorException If tenantId or authId cannot correctly be extracted from the client identifier.
+     * @param clientId A client identifier containing the tenant-id and auth-id.
+     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id") extracted from the client identifier.
+     * @throws NullPointerException if the given string is {@code null}.
+     * @throws ClientErrorException If tenant-id or auth-id cannot correctly be extracted from the client identifier.
      */
     @Override
     public JsonObject parseCredentialsFromString(final String clientId) {
