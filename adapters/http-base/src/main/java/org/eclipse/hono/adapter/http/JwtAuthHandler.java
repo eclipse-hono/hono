@@ -43,7 +43,7 @@ import io.vertx.ext.web.handler.impl.HTTPAuthorizationHandler;
  * An auth handler for extracting an {@value CredentialsConstants#FIELD_AUTH_ID},
  * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and JSON Web Token (JWT) from an HTTP context.
  */
-public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider> implements CredentialsParser {
+public final class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider> implements CredentialsParser {
 
     private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
 
@@ -52,7 +52,6 @@ public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvi
      *
      * @param authProvider The authentication provider to use for verifying the device identity.
      * @param realm The realm name.
-     * @throws NullPointerException if client auth is {@code null}.
      */
     public JwtAuthHandler(final DeviceCredentialsAuthProvider<JwtCredentials> authProvider, final String realm) {
         this(authProvider, realm, null);
@@ -67,7 +66,6 @@ public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvi
      *            before they get validated. Can be used to perform checks using the credentials and tenant information
      *            before the potentially expensive credentials validation is done. A failed future returned by the
      *            handler will fail the corresponding authentication attempt.
-     * @throws NullPointerException if client auth is {@code null}.
      */
     public JwtAuthHandler(final DeviceCredentialsAuthProvider<JwtCredentials> authProvider,
             final String realm,
@@ -148,6 +146,8 @@ public class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvi
      */
     @Override
     public JsonObject parseCredentialsFromString(final String uri) {
+
+        Objects.requireNonNull(uri);
 
         final String[] uriSplit = uri.split("/");
 

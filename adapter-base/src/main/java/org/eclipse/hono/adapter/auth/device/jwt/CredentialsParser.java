@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.auth.device.jwt;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -33,9 +34,12 @@ public interface CredentialsParser {
      *
      * @param claims A JsonObject containing the JWS Claims "tid", "sub" and optionally "iss".
      * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id" if the input claims have no "iss" claim) extracted from the JWS Claims.
+     * @throws NullPointerException If the given JsonObject is {@code null}.
      * @throws ClientErrorException If tenant-id or auth-id cannot correctly be extracted from the JWS Claims.
      */
     default JsonObject parseCredentialsFromClaims(final JsonObject claims) {
+
+        Objects.requireNonNull(claims);
 
         final var credentials = new JsonObject();
         credentials.put(

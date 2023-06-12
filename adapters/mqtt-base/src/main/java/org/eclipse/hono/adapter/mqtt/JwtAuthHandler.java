@@ -140,6 +140,9 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
      */
     @Override
     public JsonObject parseCredentialsFromString(final String clientId) {
+
+        Objects.requireNonNull(clientId);
+
         final String[] clientIdSplit = clientId.split("/");
         final int splitLength = clientIdSplit.length;
 
