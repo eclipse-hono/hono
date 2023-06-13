@@ -67,7 +67,7 @@ public class PubSubBasedAdminClientManager {
      */
     private final Set<String> topics = new HashSet<>();
     private final CredentialsProvider credentialsProvider;
-    private final Context context;
+    private final Vertx vertx;
     private SubscriptionAdminClient subscriptionAdminClient;
     private TopicAdminClient topicAdminClient;
 
@@ -81,9 +81,9 @@ public class PubSubBasedAdminClientManager {
     public PubSubBasedAdminClientManager(final String projectId, final CredentialsProvider credentialsProvider, final Vertx vertx) {
         this.projectId = Objects.requireNonNull(projectId);
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
+        this.vertx = Objects.requireNonNull(vertx);
         subscriptionAdminClientCreator = this::createSubscriptionAdminClient;
         topicAdminClientCreator = this::createTopicAdminClient;
-        context = vertx.getOrCreateContext();
     }
 
     private Future<SubscriptionAdminClient> createSubscriptionAdminClient() {
@@ -129,7 +129,6 @@ public class PubSubBasedAdminClientManager {
 
         return getOrCreateTopic(topic)
                 .onFailure(t -> LOG.warn("Error creating topic {}", topicAndSubscriptionName))
-                .recover(Future::failedFuture)
                 .compose(s -> getOrCreateSubscription(subscription, topic));
     }
 
@@ -146,22 +145,22 @@ public class PubSubBasedAdminClientManager {
             return Future.succeededFuture();
         }
         final Promise<Void> adminClientClosePromise = Promise.promise();
-        if (context == null) {
-            throw new IllegalStateException("Clients are not running on a Vert.x Context");
-        } else {
-            context.executeBlocking(future -> {
-                closeSubscriptionAdminClient();
-                closeTopicAdminClient();
-                future.complete();
-            }, adminClientClosePromise);
-            return adminClientClosePromise.future();
-        }
+        final Context context = vertx.getOrCreateContext();
+        context.executeBlocking(future -> {
+            closeSubscriptionAdminClient();
+            closeTopicAdminClient();
+            future.complete();
+        }, adminClientClosePromise);
+        return adminClientClosePromise.future();
     }
 
     private Future<Void> getOrCreateTopic(final TopicName topic) {
+        if (topics.contains(topic.toString())) {
+            LOG.debug("Topic {} already exists, continue", topic);
+            return Future.succeededFuture();
+        }
         return topicAdminClientCreator.get()
-                .onFailure(thr -> LOG.error("admin client creation failed", thr))
-                .recover(Future::failedFuture)
+                .onFailure(thr -> LOG.debug("admin client creation failed", thr))
                 .compose(client -> {
                     topicAdminClient = client;
                     return getOrCreateTopic(projectId, topic);
@@ -169,14 +168,10 @@ public class PubSubBasedAdminClientManager {
     }
 
     private Future<Void> getOrCreateTopic(final String projectId, final TopicName topic) {
-        if (topics.contains(topic.toString())) {
-            LOG.debug("Topic {} already exists, continue", topic);
-            return Future.succeededFuture();
-        }
         try {
             final Topic createdTopic = topicAdminClient.createTopic(topic);
             if (createdTopic == null) {
-                LOG.error("Creating topic failed [topic: {}, projectId: {}]", topic, projectId);
+                LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topic, projectId);
                 return Future.failedFuture("Topic creation failed.");
             }
             topics.add(topic.toString());
@@ -184,16 +179,19 @@ public class PubSubBasedAdminClientManager {
         } catch (AlreadyExistsException ex) {
             return Future.succeededFuture();
         } catch (ApiException e) {
-            LOG.error("Error creating topic {} on project {}", topic, projectId, e);
+            LOG.debug("Error creating topic {} on project {}", topic, projectId, e);
             return Future.failedFuture("Topic creation failed.");
         }
 
     }
 
     private Future<String> getOrCreateSubscription(final SubscriptionName subscription, final TopicName topic) {
+        if (subscriptions.contains(subscription.toString())) {
+            LOG.debug("Subscription {} already exists, continue", subscription);
+            return Future.succeededFuture(subscription.getSubscription());
+        }
         return subscriptionAdminClientCreator.get()
-                .onFailure(thr -> LOG.error("admin client creation failed", thr))
-                .recover(Future::failedFuture)
+                .onFailure(thr -> LOG.debug("admin client creation failed", thr))
                 .compose(client -> {
                     subscriptionAdminClient = client;
                     return getOrCreateSubscription(projectId, subscription, topic);
@@ -204,11 +202,6 @@ public class PubSubBasedAdminClientManager {
             final String projectId,
             final SubscriptionName subscription,
             final TopicName topic) {
-
-        if (subscriptions.contains(subscription.toString())) {
-            LOG.debug("Subscription {} already exists, continue", subscription);
-            return Future.succeededFuture(subscription.getSubscription());
-        }
         try {
             final Subscription request = Subscription.newBuilder()
                     .setName(subscription.toString())
@@ -219,7 +212,7 @@ public class PubSubBasedAdminClientManager {
                     .build();
             final Subscription createdSubscription = subscriptionAdminClient.createSubscription(request);
             if (createdSubscription == null) {
-                LOG.error("Creating subscription failed [subscription: {}, topic: {}, project: {}]", subscription,
+                LOG.debug("Creating subscription failed [subscription: {}, topic: {}, project: {}]", subscription,
                         topic,
                         projectId);
                 return Future.failedFuture("Subscription creation failed.");
@@ -229,7 +222,7 @@ public class PubSubBasedAdminClientManager {
         } catch (AlreadyExistsException ex) {
             return Future.succeededFuture(subscription.getSubscription());
         } catch (ApiException e) {
-            LOG.error("Error creating subscription {} for topic {} on project {}", subscription, topic, projectId, e);
+            LOG.debug("Error creating subscription {} for topic {} on project {}", subscription, topic, projectId, e);
             return Future.failedFuture("Subscription creation failed.");
         }
     }
