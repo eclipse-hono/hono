@@ -150,41 +150,33 @@ the client certificate's *subject DN* and invokes the Credentials API's
 
 ### JSON Web Token based Authentication
 
-The MQTT protocol adapter supports authentication of devices with a
+The HTTP and MQTT protocol adapters support authentication of devices with a signed
 [JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) based mechanism.
 In this case, the protocol adapter tries to validate the token presented by the device using a public key on record.
 
-During connection establishment the device presents a client identifier, a username and a password in its
-MQTT CONNECT packet to the protocol adapter. The value of the username field is ignored. The password field is
-expected to contain a valid [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) structure that
-contains a JWT in its payload.
+During connection establishment the device is expected to present the tenant identifier, authentication identifier and
+a valid and signed JWT to the protocol adapter. The information about the tenant and the authentication identifier can
+be presented to the protocol adapter in one of two ways:
 
-The JWS's header MUST contain the *typ* parameter with value `JWT` and MUST contain the *alg* parameter indicating the
-algorithm that has been used to create the JWS signature. `RS256`, `PS256`, `ES256` and their respective stronger
-variants are supported. The algorithm specified in the header must be compatible with at least one of the
+1. Either as claims inside the [JSON Web Signature](https://www.rfc-editor.org/rfc/rfc7515) (JWS) payload, in which case
+   the *tenant-id* and *auth-id* must be provided in the `tid` and `sub` (*subject*) claims respectively,
+   and the `aud` (*audience*) claim must contain `hono-adapter`
+2. or via an adapter specific mechanism. For more information see
+   [HTTP]({{< relref "/user-guide/http-adapter#http-bearer-auth" >}}) or
+   [MQTT]({{< relref "/user-guide/mqtt-adapter#json-web-token" >}})
+
+The JWT's JOSE header MUST contain the *typ* parameter with value `JWT` and MUST contain the *alg* parameter indicating
+the algorithm that has been used to create the JWS signature.
+`RS256`, `PS256`, `ES256` and their respective stronger variants are supported. The algorithm specified in the header
+must be compatible with at least one of the
 [*Raw Public Key* type credentials]({{< relref "/api/credentials#raw-public-key" >}}) registered for the device.
 
-The JWT in the payload MUST contain the claims *iat* (issued at) and *exp* (expiration time) with values provided
+The JWS payload MUST contain the claims *iat* (issued at) and *exp* (expiration time) with values provided
 in [Unix time](https://en.wikipedia.org/wiki/Unix_time). The *iat* claim marks the instant at which the token has
 been created and also marks the start of its validity period. It must not be too far in the past or the future
 (allowing 10 minutes for skew). The *nbf* (not before) claim is therefore not required and will be ignored.
 The *exp* claim marks the instant after which the token MUST be considered invalid. The lifetime of the token must
 be at most 24 hours plus skew.
-
-The adapter tries to determine the device's tenant and authentication identifier as follows:
-
-1. If the JWT contains the *aud* (intended audience) claim with value `hono-adapter`, then the JWT must contain
-   claims *tid* and *sub* (subject) from which the adapter extracts the tenant and authentication ID respectively.
-2. Otherwise, the adapter expects to find the tenant and authentication ID in the MQTT client identifier which
-   in this case MUST have the following format:
-   
-   ```
-   \*/{tenant-id}/[^/]\*/{auth-id}
-   ```
-
-   For example, a device that belongs to tenant `example-tenant` and for which *rpk* (raw public key) credentials
-   with an *auth-id* of `device-1` have been registered, would present a client identifier of
-   `tenants/example-tenant/devices/device-1` when connecting to the protocol adapter.
 
 The protocol adapter then invokes the Credentials API's [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}})
 operation in order to retrieve the *rpk* (raw public key) type credentials that are on record for the device.

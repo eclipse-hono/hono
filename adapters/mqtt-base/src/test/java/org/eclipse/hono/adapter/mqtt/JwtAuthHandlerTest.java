@@ -19,6 +19,9 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.Key;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -38,7 +41,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import io.opentracing.Span;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -76,7 +78,14 @@ public class JwtAuthHandlerTest {
     }
 
     private String getJws(final String audience, final String tenant, final String subject) {
-        final var key = Keys.hmacShaKeyFor("thisisthesharedkeywhichweusefortesting".getBytes());
+        final Key key;
+        try {
+            final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+            keyPairGenerator.initialize(256);
+            key = keyPairGenerator.generateKeyPair().getPrivate();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         final var builder = Jwts.builder().signWith(key);
         Optional.ofNullable(audience).ifPresent(builder::setAudience);
         Optional.ofNullable(tenant).ifPresent(t -> builder.claim(CredentialsConstants.CLAIM_TENANT_ID, t));
@@ -123,7 +132,7 @@ public class JwtAuthHandlerTest {
 
     /**
      * Verifies that the handler extracts the tenant and auth ID from the JWT,
-     * if the JWT's audience claim does has value {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
+     * if the JWT's audience claim does have value {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
      *
      * @param ctx The vert.x test context.
      */
