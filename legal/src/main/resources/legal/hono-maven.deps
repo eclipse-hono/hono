@@ -32,7 +32,7 @@ com.google.code.gson:gson:jar:2.10
 com.googlecode.juniversalchardet:juniversalchardet:jar:1.0.3
 com.google.errorprone:error_prone_annotations:jar:2.17.0
 com.google.guava:failureaccess:jar:1.0.1
-com.google.guava:guava:jar:31.1-jre
+com.google.guava:guava:jar:32.0.0-jre
 com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-gson:jar:1.42.3
 com.google.http-client:google-http-client:jar:1.42.3
@@ -44,7 +44,6 @@ com.h2database:h2:jar:2.1.214
 com.mchange:c3p0:jar:0.9.5.5
 com.mchange:mchange-commons-java:jar:0.2.19
 commons-codec:commons-codec:jar:1.15
-commons-logging:commons-logging:jar:1.2
 com.squareup.okhttp3:logging-interceptor:jar:3.14.9
 com.squareup.okhttp3:okhttp:jar:3.14.9
 com.squareup.okio:okio:jar:1.17.2
