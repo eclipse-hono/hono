@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
+import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
@@ -61,6 +62,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     private final CoapExchange exchange;
     private final DeviceUser originDevice;
     private final String authId;
+    // TODO: should this be here or should we use the config directly?
+    private final boolean isResponseTimestampEnabled;
     private final AtomicBoolean acceptTimerFlag = new AtomicBoolean(false);
     private final AtomicBoolean acceptFlag = new AtomicBoolean(false);
     private Sample timer;
@@ -70,11 +73,13 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final DeviceUser originDevice,
             final DeviceUser authenticatedDevice,
             final String authId,
+            final boolean isResponseTimestampEnabled,
             final Span span) {
         super(span, authenticatedDevice);
         this.exchange = exchange;
         this.originDevice = originDevice;
         this.authId = authId;
+        this.isResponseTimestampEnabled = isResponseTimestampEnabled;
     }
 
     /**
@@ -99,7 +104,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
         Objects.requireNonNull(span);
-        return new CoapContext(request, originDevice, authenticatedDevice, authId, span);
+        return new CoapContext(request, originDevice, authenticatedDevice, authId, false, span);
     }
 
     /**
@@ -110,6 +115,34 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
      *                            if the device has not been authenticated.
      * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
+     * @param isResponseTimestampEnabled TODO
+     * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
+     * @return The context.
+     * @throws NullPointerException if request, originDevice or span are {@code null}.
+     */
+    public static CoapContext fromRequest(
+            final CoapExchange request,
+            final DeviceUser originDevice,
+            final DeviceUser authenticatedDevice,
+            final String authId,
+            final boolean isResponseTimestampEnabled,
+            final Span span) {
+
+        Objects.requireNonNull(request);
+        Objects.requireNonNull(originDevice);
+        Objects.requireNonNull(span);
+        return new CoapContext(request, originDevice, authenticatedDevice, authId, false, span);
+    }
+
+    /**
+     * Creates a new context for a CoAP request.
+     *
+     * @param request The CoAP exchange representing the request.
+     * @param originDevice The device that the message originates from.
+     * @param authenticatedDevice The authenticated device that has uploaded the message or {@code null}
+     *                            if the device has not been authenticated.
+     * @param authId The authentication identifier of the request or {@code null} if the request is unauthenticated.
+     * @param isResponseTimestampEnabled TODO
      * @param span The <em>OpenTracing</em> root span that is used to track the processing of this context.
      * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
@@ -120,6 +153,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final DeviceUser originDevice,
             final DeviceUser authenticatedDevice,
             final String authId,
+            final boolean isResponseTimestampEnabled,
             final Span span,
             final Sample timer) {
 
@@ -128,7 +162,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(span);
         Objects.requireNonNull(timer);
 
-        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId, span);
+        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId, isResponseTimestampEnabled, span);
         result.timer = timer;
         return result;
     }
@@ -175,6 +209,15 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public String getAuthId() {
         return authId;
+    }
+
+    /**
+     * TODO is this needed?
+     *
+     * @return TODO
+     */
+    public boolean isResponseTimestampEnabled() {
+        return isResponseTimestampEnabled;
     }
 
     /**
@@ -407,6 +450,13 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @return The response code from the response.
      */
     public ResponseCode respond(final Response response) {
+        // TODO: remove System.out.prinln
+        System.out.println("adding time option to response (v2) [" + isResponseTimestampEnabled + "]" );
+        if (isResponseTimestampEnabled) {
+            // TODO: figure out the "correct" Option ID here.
+            final Option timeOption = new Option(0xff3c, System.currentTimeMillis());
+            response.getOptions().addOption(timeOption);
+        }
         acceptFlag.set(true);
         exchange.respond(response);
         return response.getCode();

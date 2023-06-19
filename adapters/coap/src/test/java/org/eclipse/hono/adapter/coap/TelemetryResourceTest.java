@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -334,6 +335,34 @@ public class TelemetryResourceTest extends ResourceTestBase {
                 any());
     }
 
+    @Test
+    public void testServerTimestampOptionIsSet(){
+
+        // TODO: more tests needed (ACK, CON, NON?)
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        givenAnAdapter(properties);
+        final Promise<Void> outcome = Promise.promise();
+        givenATelemetrySenderForAnyTenant(outcome);
+        final var resource = givenAResource(adapter);
+
+        // WHEN a device publishes a telemetry message with QoS 1
+        final Buffer payload = Buffer.buffer("some payload");
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, MediaTypeRegistry.TEXT_PLAIN);
+        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", true, span);
+
+        resource.handlePostRequest(context);
+
+        // TODO: properly define the option number
+        verify(coapExchange).respond(argThat((Response res) -> res.getOptions().hasOption(0xff3c)));
+        verify(coapExchange).respond(argThat((Response res) -> {
+            final byte[] optionTimeValue = res.getOptions().getOtherOption(0xff3c).getValue();
+            final long optionTime = new BigInteger(optionTimeValue).longValue();
+            return System.currentTimeMillis() >= optionTime;
+        }));
+    }
+
     /**
      * Verifies that a telemetry message is rejected due to the limit exceeded.
      *
@@ -530,7 +559,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
         final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
+        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", false, span);
 
         final Future<Void> result = resource.handlePostRequest(context);
 
