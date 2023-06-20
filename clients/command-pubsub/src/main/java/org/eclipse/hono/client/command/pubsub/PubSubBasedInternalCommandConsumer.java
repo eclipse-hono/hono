@@ -63,6 +63,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
     private final PubSubSubscriberFactory subscriberFactory;
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
     private final PubSubBasedAdminClientManager adminClientManager;
+    private final Vertx vertx;
     private MessageReceiver receiver;
 
     /**
@@ -89,19 +90,22 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
             final PubSubSubscriberFactory subscriberFactory,
             final String projectId,
             final CredentialsProvider credentialsProvider) {
-        Objects.requireNonNull(vertx);
         Objects.requireNonNull(projectId);
         Objects.requireNonNull(credentialsProvider);
+        this.vertx = Objects.requireNonNull(vertx);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.tracer = Objects.requireNonNull(tracer);
         this.subscriberFactory = Objects.requireNonNull(subscriberFactory);
-        this.adminClientManager = new PubSubBasedAdminClientManager(projectId, credentialsProvider, vertx);
+        this.adminClientManager = new PubSubBasedAdminClientManager(projectId, credentialsProvider);
         createReceiver();
         adminClientManager
-                .getOrCreateTopicAndSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
+                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
+                .onFailure(thr -> log.error("Could not create topic for endpoint {} and {}",
+                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
+                .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
                 .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
                         CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
                 .onSuccess(s -> subscriberFactory.getOrCreateSubscriber(s, receiver));
@@ -111,6 +115,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
      * Creates a Pub/Sub based internal command consumer. To be used for Unittests.
      *
      * @param commandResponseSender The sender used to send command responses.
+     * @param vertx The Vert.x instance to use.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
      * @param tenantClient The client to use for retrieving tenant configuration data.
@@ -122,6 +127,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
      */
     public PubSubBasedInternalCommandConsumer(
             final CommandResponseSender commandResponseSender,
+            final Vertx vertx,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final TenantClient tenantClient,
@@ -129,7 +135,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
             final PubSubSubscriberFactory subscriberFactory,
             final PubSubBasedAdminClientManager adminClientManager,
             final MessageReceiver receiver) {
-
+        this.vertx = Objects.requireNonNull(vertx);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
@@ -139,7 +145,10 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
         this.adminClientManager = Objects.requireNonNull(adminClientManager);
         this.receiver = Objects.requireNonNull(receiver);
         adminClientManager
-                .getOrCreateTopicAndSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
+                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
+                .onFailure(thr -> log.error("Could not create topic for endpoint {} and {}",
+                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
+                .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
                 .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
                         CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
                 .onSuccess(s -> subscriberFactory.getOrCreateSubscriber(s, receiver));
@@ -195,9 +204,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
     }
 
     private void createReceiver() {
-        receiver = (PubsubMessage message, AckReplyConsumer consumer) -> {
-            handleCommandMessage(message);
-        };
+        receiver = (PubsubMessage message, AckReplyConsumer consumer) -> handleCommandMessage(message);
     }
 
     Future<Void> handleCommandMessage(final PubsubMessage message) {
@@ -255,7 +262,11 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
     public Future<Void> stop() {
         return lifecycleStatus.runStopAttempt(() -> CompositeFuture.all(
                 subscriberFactory.closeSubscriber(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId),
-                adminClientManager.closeAdminClients()).mapEmpty());
+                vertx.executeBlocking(promise -> {
+                    adminClientManager.closeAdminClients();
+                    promise.complete();
+                })
+        ).mapEmpty());
     }
 
 }

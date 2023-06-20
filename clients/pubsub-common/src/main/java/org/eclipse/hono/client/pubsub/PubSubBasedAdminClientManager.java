@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +35,7 @@ import com.google.pubsub.v1.SubscriptionName;
 import com.google.pubsub.v1.Topic;
 import com.google.pubsub.v1.TopicName;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 
 /**
  * A Pub/Sub based admin client manager to manage topics and subscriptions. Wraps a TopicAdminClient and a
@@ -53,8 +49,6 @@ public class PubSubBasedAdminClientManager {
      * The message retention in milliseconds for a Pub/Sub subscription.
      */
     private static final long MESSAGE_RETENTION = 600000;
-    private final Supplier<Future<SubscriptionAdminClient>> subscriptionAdminClientCreator;
-    private final Supplier<Future<TopicAdminClient>> topicAdminClientCreator;
     private final String projectId;
 
     /**
@@ -67,7 +61,6 @@ public class PubSubBasedAdminClientManager {
      */
     private final Set<String> topics = new HashSet<>();
     private final CredentialsProvider credentialsProvider;
-    private final Vertx vertx;
     private SubscriptionAdminClient subscriptionAdminClient;
     private TopicAdminClient topicAdminClient;
 
@@ -76,14 +69,10 @@ public class PubSubBasedAdminClientManager {
      *
      * @param projectId The identifier of the Google Cloud Project to connect to.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
-     * @param vertx The Vert.x instance to use.
      */
-    public PubSubBasedAdminClientManager(final String projectId, final CredentialsProvider credentialsProvider, final Vertx vertx) {
+    public PubSubBasedAdminClientManager(final String projectId, final CredentialsProvider credentialsProvider) {
         this.projectId = Objects.requireNonNull(projectId);
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
-        this.vertx = Objects.requireNonNull(vertx);
-        subscriptionAdminClientCreator = this::createSubscriptionAdminClient;
-        topicAdminClientCreator = this::createTopicAdminClient;
     }
 
     private Future<SubscriptionAdminClient> createSubscriptionAdminClient() {
@@ -115,51 +104,38 @@ public class PubSubBasedAdminClientManager {
     }
 
     /**
-     * Gets an existing or creates a new Topic and Subscription on Pub/Sub based on the given topic endpoint and prefix.
-     *
-     * @param endpoint The endpoint name of the topic and the subscription, e.g. command_internal.
-     * @param prefix The prefix of the topic and the subscription, e.g. the adapter instance ID.
-     * @return A succeeded Future if topic and subscription are successfully created or already exists, or a failed
-     *         Future if the topic or the subscription could not be created.
-     */
-    public Future<String> getOrCreateTopicAndSubscription(final String endpoint, final String prefix) {
-        final String topicAndSubscriptionName = PubSubMessageHelper.getTopicName(endpoint, prefix);
-        final TopicName topic = TopicName.of(projectId, topicAndSubscriptionName);
-        final SubscriptionName subscription = SubscriptionName.of(projectId, topicAndSubscriptionName);
-
-        return getOrCreateTopic(topic)
-                .onFailure(t -> LOG.warn("Error creating topic {}", topicAndSubscriptionName))
-                .compose(s -> getOrCreateSubscription(subscription, topic));
-    }
-
-    /**
      * Closes the TopicAdminClient and the SubscriptionAdminClient if it exists. This method is expected to be invoked
      * as soon as the TopicAdminClient and the SubscriptionAdminClient is no longer needed.
      *
      * @return A future that is completed when the close operation completed or a succeeded future if no
      *         TopicAdminClient or SubscriptionAdminClient existed.
-     * @throws IllegalStateException if clients are not running on a Vert.x Context.
      */
     public Future<Void> closeAdminClients() {
         if (topicAdminClient == null && subscriptionAdminClient == null) {
             return Future.succeededFuture();
         }
-        final Promise<Void> adminClientClosePromise = Promise.promise();
-        final Context context = vertx.getOrCreateContext();
-        context.executeBlocking(future -> {
-            closeSubscriptionAdminClient();
-            closeTopicAdminClient();
-            future.complete();
-        }, adminClientClosePromise);
-        return adminClientClosePromise.future();
+        closeSubscriptionAdminClient();
+        closeTopicAdminClient();
+        return Future.succeededFuture();
     }
 
-    private Future<Void> getOrCreateTopic(final TopicName topic) {
+    /**
+     * Gets an existing topic or creates a new one on Pub/Sub based on the given topic endpoint and prefix.
+     *
+     * @param endpoint The endpoint name of the topic, e.g. command_internal.
+     * @param prefix The prefix of the topic, e.g. the adapter instance ID.
+     * @return A succeeded Future if the topic is successfully created or already exists, or a failed
+     *         Future if it could not be created.
+     */
+    public Future<String> getOrCreateTopic(final String endpoint, final String prefix) {
+        final String topicName = PubSubMessageHelper.getTopicName(endpoint, prefix);
+        final TopicName topic = TopicName.of(projectId, topicName);
+
         if (topics.contains(topic.toString())) {
             LOG.debug("Topic {} already exists, continue", topic);
-            return Future.succeededFuture();
+            return Future.succeededFuture(topic.getTopic());
         }
-        return topicAdminClientCreator.get()
+        return createTopicAdminClient()
                 .onFailure(thr -> LOG.debug("admin client creation failed", thr))
                 .compose(client -> {
                     topicAdminClient = client;
@@ -167,17 +143,17 @@ public class PubSubBasedAdminClientManager {
                 });
     }
 
-    private Future<Void> getOrCreateTopic(final String projectId, final TopicName topic) {
+    private Future<String> getOrCreateTopic(final String projectId, final TopicName topic) {
         try {
             final Topic createdTopic = topicAdminClient.createTopic(topic);
             if (createdTopic == null) {
                 LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topic, projectId);
                 return Future.failedFuture("Topic creation failed.");
             }
-            topics.add(topic.toString());
-            return Future.succeededFuture();
+            topics.add(createdTopic.getName());
+            return Future.succeededFuture(topic.getTopic());
         } catch (AlreadyExistsException ex) {
-            return Future.succeededFuture();
+            return Future.succeededFuture(topic.getTopic());
         } catch (ApiException e) {
             LOG.debug("Error creating topic {} on project {}", topic, projectId, e);
             return Future.failedFuture("Topic creation failed.");
@@ -185,12 +161,24 @@ public class PubSubBasedAdminClientManager {
 
     }
 
-    private Future<String> getOrCreateSubscription(final SubscriptionName subscription, final TopicName topic) {
+    /**
+     * Gets an existing subscription or creates a new one on Pub/Sub based on the given subscription endpoint and prefix.
+     *
+     * @param endpoint The endpoint name of the subscription, e.g. command_internal.
+     * @param prefix The prefix of the subscription, e.g. the adapter instance ID.
+     * @return A succeeded Future if the subscription is successfully created or already exists, or a failed
+     *         Future if it could not be created.
+     */
+    public Future<String> getOrCreateSubscription(final String endpoint, final String prefix) {
+        final String topicAndSubscriptionName = PubSubMessageHelper.getTopicName(endpoint, prefix);
+        final TopicName topic = TopicName.of(projectId, topicAndSubscriptionName);
+        final SubscriptionName subscription = SubscriptionName.of(projectId, topicAndSubscriptionName);
+
         if (subscriptions.contains(subscription.toString())) {
             LOG.debug("Subscription {} already exists, continue", subscription);
             return Future.succeededFuture(subscription.getSubscription());
         }
-        return subscriptionAdminClientCreator.get()
+        return createSubscriptionAdminClient()
                 .onFailure(thr -> LOG.debug("admin client creation failed", thr))
                 .compose(client -> {
                     subscriptionAdminClient = client;
