@@ -185,9 +185,6 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 deviceAndAuth.getOriginDevice(),
                 deviceAndAuth.getAuthenticatedDevice(),
                 deviceAndAuth.getAuthId(),
-                // TODO: should this be passed into the CoapContext or
-                //       should CoapContext access the config directly?
-                getAdapter().getConfig().isResponseTimestampEnabled(),
                 span,
                 getAdapter().getMetrics().startTimer());
     }

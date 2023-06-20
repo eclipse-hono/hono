@@ -162,4 +162,19 @@ public class CoapContextTest {
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
     }
+
+    /**
+     * Verifies that the global ACK timeout is used if a tenant specific value is configured that is not a number.
+     */
+    @Test
+    void testTimeOptionIsIncludedInResponseIfPresentInRequest() {
+        final CoapExchange exchange = mock(CoapExchange.class);
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        //coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, "not-a-number");
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        ctx.startAcceptTimer(vertx, tenant, 500);
+        verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
+    }
 }
