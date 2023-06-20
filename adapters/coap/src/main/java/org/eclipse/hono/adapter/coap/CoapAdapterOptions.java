@@ -152,11 +152,4 @@ public interface CoapAdapterOptions {
      */
     @WithDefault("500")
     int timeoutToAck();
-
-    /**
-     * TODO.
-     * @return TODO
-     */
-    @WithDefault("false")
-    boolean responseTimestampEnabled();
 }

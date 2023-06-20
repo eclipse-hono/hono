@@ -66,10 +66,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * that time, the status gets removed and a new request will fail.
      */
     public static final int DEFAULT_BLOCKWISE_STATUS_LIFETIME = 300000;
-    /**
-     * TODO Is this actually needed? Is the default in CoapAdapterOptions not enough?
-     */
-    public static final boolean DEFAULT_RESPONSE_TIMESTAMP = false;
 
     static {
         DEFAULT_CONNECTOR_THREADS = 2;
@@ -95,7 +91,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int blockwiseStatusLifetime = DEFAULT_BLOCKWISE_STATUS_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
-    private boolean responseTimestampEnabled = DEFAULT_RESPONSE_TIMESTAMP;
 
     /**
      * Creates properties using default values.
@@ -119,7 +114,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
         setIdSplitRegex(options.idSplitRegex());
         this.insecureNetworkConfig = options.insecureNetworkConfig().orElse(null);
         this.messageOffloadingEnabled = options.messageOffloadingEnabled();
-        this.responseTimestampEnabled = options.responseTimestampEnabled();
         this.networkConfig = options.networkConfig().orElse(null);
         this.secureNetworkConfig = options.secureNetworkConfig().orElse(null);
         setTimeoutToAck(options.timeoutToAck());
@@ -471,21 +465,5 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
             throw new IllegalArgumentException("timeout to ack must be at least -1");
         }
         this.timeoutToAck = timeoutToAck;
-    }
-
-    /**
-     * TODO.
-     * @return todo.
-     */
-    public final boolean isResponseTimestampEnabled() {
-        return responseTimestampEnabled;
-    }
-
-    /**
-     * TODO.
-     * @param responseTimestampEnabled todo.
-     */
-    public final void setResponseTimestampEnabled(final boolean responseTimestampEnabled) {
-        this.responseTimestampEnabled = responseTimestampEnabled;
     }
 }

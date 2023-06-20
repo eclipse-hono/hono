@@ -49,6 +49,9 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * The query parameter which is used to indicate an empty notification.
      */
     public static final String PARAM_EMPTY_CONTENT = "empty";
+
+    public static final int TIME_OPTION_NUMBER = 0xff20;
+
     /**
      * The query parameter which is used to indicate, that a piggypacked response is supported by the device.
      * (Legacy support for device with firmware versions not supporting  piggypacked response.)
@@ -58,7 +61,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
                             TelemetryConstants.TELEMETRY_ENDPOINT_SHORT,
                             EventConstants.EVENT_ENDPOINT_SHORT,
                             CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT);
-    private static final int TIME_OPTION_NUMBER = 0xff20;
 
     private final CoapExchange exchange;
     private final DeviceUser originDevice;

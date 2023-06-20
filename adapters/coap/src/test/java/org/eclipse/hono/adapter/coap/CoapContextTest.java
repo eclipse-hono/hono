@@ -168,6 +168,7 @@ public class CoapContextTest {
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfPresentInRequest() {
+        // TODO: should I be testing anything here and if so, how?
         final CoapExchange exchange = mock(CoapExchange.class);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         //coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, "not-a-number");

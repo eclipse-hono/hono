@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import static org.eclipse.hono.adapter.coap.CoapContext.TIME_OPTION_NUMBER;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -359,14 +360,16 @@ public class TelemetryResourceTest extends ResourceTestBase {
 
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        verify(coapExchange).respond(argThat((Response res) -> res.getOptions().hasOption(0xff20)));
+        verify(coapExchange).respond(argThat((Response res) -> res.getOptions().hasOption(TIME_OPTION_NUMBER)));
         verify(coapExchange).respond(argThat((Response res) -> {
-            final byte[] optionTimeValue = res.getOptions().getOtherOption(0xff20).getValue();
+            final byte[] optionTimeValue = res.getOptions().getOtherOption(TIME_OPTION_NUMBER).getValue();
             final long optionTime = new BigInteger(optionTimeValue).longValue();
             return System.currentTimeMillis() >= optionTime;
         }));
     }
 
+    // TODO: should these tests be somewhere else? This is only testing the telemetry endpoint but these tests are more
+    //       general as they apply to all endpoints. Should this be in CoapContextTest?
     /**
      * TODO.
      */
