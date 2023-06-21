@@ -75,48 +75,38 @@ public class PubSubBasedAdminClientManager {
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
     }
 
-    private Future<SubscriptionAdminClient> createSubscriptionAdminClient() {
-        try {
-            final SubscriptionAdminSettings adminSettings = SubscriptionAdminSettings
-                    .newBuilder()
-                    .setCredentialsProvider(credentialsProvider)
-                    .build();
-            final SubscriptionAdminClient adminClient = SubscriptionAdminClient.create(adminSettings);
-            return Future.succeededFuture(adminClient);
-        } catch (IOException e) {
-            LOG.debug("Error initializing subscription admin client: {}", e.getMessage());
-            return Future.failedFuture("Error creating client");
+    private Future<TopicAdminClient> getOrCreateTopicAdminClient() {
+        if (topicAdminClient != null) {
+            return Future.succeededFuture(topicAdminClient);
         }
-    }
-
-    private Future<TopicAdminClient> createTopicAdminClient() {
         try {
             final TopicAdminSettings adminSettings = TopicAdminSettings
                     .newBuilder()
                     .setCredentialsProvider(credentialsProvider)
                     .build();
-            final TopicAdminClient adminClient = TopicAdminClient.create(adminSettings);
-            return Future.succeededFuture(adminClient);
+            topicAdminClient = TopicAdminClient.create(adminSettings);
+            return Future.succeededFuture(topicAdminClient);
         } catch (IOException e) {
             LOG.debug("Error initializing topic admin client: {}", e.getMessage());
             return Future.failedFuture("Error creating client");
         }
     }
 
-    /**
-     * Closes the TopicAdminClient and the SubscriptionAdminClient if it exists. This method is expected to be invoked
-     * as soon as the TopicAdminClient and the SubscriptionAdminClient is no longer needed.
-     *
-     * @return A future that is completed when the close operation completed or a succeeded future if no
-     *         TopicAdminClient or SubscriptionAdminClient existed.
-     */
-    public Future<Void> closeAdminClients() {
-        if (topicAdminClient == null && subscriptionAdminClient == null) {
-            return Future.succeededFuture();
+    private Future<SubscriptionAdminClient> getOrCreateSubscriptionAdminClient() {
+        if (subscriptionAdminClient != null) {
+            return Future.succeededFuture(subscriptionAdminClient);
         }
-        closeSubscriptionAdminClient();
-        closeTopicAdminClient();
-        return Future.succeededFuture();
+        try {
+            final SubscriptionAdminSettings adminSettings = SubscriptionAdminSettings
+                    .newBuilder()
+                    .setCredentialsProvider(credentialsProvider)
+                    .build();
+            subscriptionAdminClient = SubscriptionAdminClient.create(adminSettings);
+            return Future.succeededFuture(subscriptionAdminClient);
+        } catch (IOException e) {
+            LOG.debug("Error initializing subscription admin client: {}", e.getMessage());
+            return Future.failedFuture("Error creating client");
+        }
     }
 
     /**
@@ -135,17 +125,14 @@ public class PubSubBasedAdminClientManager {
             LOG.debug("Topic {} already exists, continue", topic);
             return Future.succeededFuture(topic.getTopic());
         }
-        return createTopicAdminClient()
+        return getOrCreateTopicAdminClient()
                 .onFailure(thr -> LOG.debug("admin client creation failed", thr))
-                .compose(client -> {
-                    topicAdminClient = client;
-                    return getOrCreateTopic(projectId, topic);
-                });
+                .compose(client -> getOrCreateTopic(projectId, topic, client));
     }
 
-    private Future<String> getOrCreateTopic(final String projectId, final TopicName topic) {
+    private Future<String> getOrCreateTopic(final String projectId, final TopicName topic, final TopicAdminClient client) {
         try {
-            final Topic createdTopic = topicAdminClient.createTopic(topic);
+            final Topic createdTopic = client.createTopic(topic);
             if (createdTopic == null) {
                 LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topic, projectId);
                 return Future.failedFuture("Topic creation failed.");
@@ -178,18 +165,16 @@ public class PubSubBasedAdminClientManager {
             LOG.debug("Subscription {} already exists, continue", subscription);
             return Future.succeededFuture(subscription.getSubscription());
         }
-        return createSubscriptionAdminClient()
+        return getOrCreateSubscriptionAdminClient()
                 .onFailure(thr -> LOG.debug("admin client creation failed", thr))
-                .compose(client -> {
-                    subscriptionAdminClient = client;
-                    return getOrCreateSubscription(projectId, subscription, topic);
-                });
+                .compose(client -> getOrCreateSubscription(projectId, subscription, topic, client));
     }
 
     private Future<String> getOrCreateSubscription(
             final String projectId,
             final SubscriptionName subscription,
-            final TopicName topic) {
+            final TopicName topic,
+            final SubscriptionAdminClient client) {
         try {
             final Subscription request = Subscription.newBuilder()
                     .setName(subscription.toString())
@@ -198,7 +183,7 @@ public class PubSubBasedAdminClientManager {
                     .setAckDeadlineSeconds(0)
                     .setMessageRetentionDuration(Durations.fromMillis(MESSAGE_RETENTION))
                     .build();
-            final Subscription createdSubscription = subscriptionAdminClient.createSubscription(request);
+            final Subscription createdSubscription = client.createSubscription(request);
             if (createdSubscription == null) {
                 LOG.debug("Creating subscription failed [subscription: {}, topic: {}, project: {}]", subscription,
                         topic,
@@ -213,6 +198,19 @@ public class PubSubBasedAdminClientManager {
             LOG.debug("Error creating subscription {} for topic {} on project {}", subscription, topic, projectId, e);
             return Future.failedFuture("Subscription creation failed.");
         }
+    }
+
+    /**
+     * Closes the TopicAdminClient and the SubscriptionAdminClient if they exist. This method is expected to be invoked
+     * as soon as the TopicAdminClient and the SubscriptionAdminClient is no longer needed.
+     * This method will bock the current thread for up to 10 seconds!
+     */
+    public void closeAdminClients() {
+        if (topicAdminClient == null && subscriptionAdminClient == null) {
+            return;
+        }
+        closeSubscriptionAdminClient();
+        closeTopicAdminClient();
     }
 
     private void closeSubscriptionAdminClient() {
