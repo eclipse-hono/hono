@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.eclipse.hono.adapter.coap.CoapContext.TIME_OPTION_NUMBER;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -74,6 +73,8 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class TelemetryResourceTest extends ResourceTestBase {
+
+    public static final int TIME_OPTION_NUMBER = CoapContext.TIME_OPTION_NUMBER;
 
     private TelemetryResource givenAResource(final CoapProtocolAdapter adapter) {
 

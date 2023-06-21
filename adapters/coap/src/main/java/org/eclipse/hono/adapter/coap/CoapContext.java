@@ -65,8 +65,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     private final CoapExchange exchange;
     private final DeviceUser originDevice;
     private final String authId;
-    // TODO: should this be here or should we use the config directly?
-    private final boolean isResponseTimestampEnabled;
     private final AtomicBoolean acceptTimerFlag = new AtomicBoolean(false);
     private final AtomicBoolean acceptFlag = new AtomicBoolean(false);
     private Sample timer;
@@ -76,18 +74,11 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
             final DeviceUser originDevice,
             final DeviceUser authenticatedDevice,
             final String authId,
-            final boolean isResponseTimestampEnabled,
             final Span span) {
         super(span, authenticatedDevice);
         this.exchange = exchange;
         this.originDevice = originDevice;
         this.authId = authId;
-        this.isResponseTimestampEnabled = isResponseTimestampEnabled;
-    }
-
-    private static boolean shouldResponseIncludeTimeOption(final CoapExchange request) {
-        return Optional.ofNullable(request.getRequestOptions()).filter(opts -> opts.hasOption(TIME_OPTION_NUMBER)).isPresent()
-                || request.getQueryParameter("hono-response-timestamp") != null;
     }
 
     /**
@@ -113,7 +104,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(originDevice);
         Objects.requireNonNull(span);
 
-        return new CoapContext(request, originDevice, authenticatedDevice, authId, shouldResponseIncludeTimeOption(request), span);
+        return new CoapContext(request, originDevice, authenticatedDevice, authId, span);
     }
 
     /**
@@ -142,7 +133,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(span);
         Objects.requireNonNull(timer);
 
-        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId, shouldResponseIncludeTimeOption(request), span);
+        final CoapContext result = new CoapContext(request, originDevice, authenticatedDevice, authId, span);
         result.timer = timer;
         return result;
     }
@@ -189,15 +180,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public String getAuthId() {
         return authId;
-    }
-
-    /**
-     * TODO is this needed?
-     *
-     * @return TODO
-     */
-    public boolean isResponseTimestampEnabled() {
-        return isResponseTimestampEnabled;
     }
 
     /**
@@ -421,6 +403,11 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         respond(response);
     }
 
+    private boolean shouldResponseIncludeTimeOption() {
+        return Optional.ofNullable(exchange.getRequestOptions()).filter(opts -> opts.hasOption(TIME_OPTION_NUMBER)).isPresent()
+                || exchange.getQueryParameter("hono-response-timestamp") != null;
+    }
+
     /**
      * Sends a response to the device.
      * <p>
@@ -431,8 +418,9 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public ResponseCode respond(final Response response) {
         // TODO: remove System.out.println
-        System.out.println("adding time option to response (v4) [" + isResponseTimestampEnabled + "]" );
-        if (isResponseTimestampEnabled) {
+        final boolean shouldResponseIncludeTimeOption = shouldResponseIncludeTimeOption();
+        System.out.println("adding time option to response (v4) [" + shouldResponseIncludeTimeOption + "]" );
+        if (shouldResponseIncludeTimeOption) {
             // TODO: figure out the "correct" Option ID here.
             final Option timeOption = new Option(TIME_OPTION_NUMBER, System.currentTimeMillis());
             response.getOptions().addOption(timeOption);
