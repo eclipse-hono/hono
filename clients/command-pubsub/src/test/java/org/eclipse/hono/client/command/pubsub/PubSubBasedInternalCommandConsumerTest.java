@@ -70,7 +70,7 @@ public class PubSubBasedInternalCommandConsumerTest {
 
     private final String adapterInstanceId = "test-adapter";
 
-    private final String subscription = String.format("%s.%s", adapterInstanceId,
+    private final String topicAndSubscription = String.format("%s.%s", adapterInstanceId,
             CommandConstants.INTERNAL_COMMAND_ENDPOINT);
 
     private PubSubSubscriberClient subscriber;
@@ -85,6 +85,7 @@ public class PubSubBasedInternalCommandConsumerTest {
 
     @BeforeEach
     void setUp() {
+        final Vertx vertxMock = mock(Vertx.class);
         commandResponseSender = mock(CommandResponseSender.class);
 
         final Tracer tracer = TracingMockSupport.mockTracer(TracingMockSupport.mockSpan());
@@ -104,19 +105,23 @@ public class PubSubBasedInternalCommandConsumerTest {
 
         final PubSubBasedAdminClientManager adminClientManager = mock(PubSubBasedAdminClientManager.class);
         when(adminClientManager
-                .getOrCreateTopicAndSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
-                        .thenReturn(Future.succeededFuture(subscription));
+                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
+                .thenReturn(Future.succeededFuture(topicAndSubscription));
+        when(adminClientManager
+                .getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
+                        .thenReturn(Future.succeededFuture(topicAndSubscription));
 
         subscriber = mock(PubSubSubscriberClient.class);
         when(subscriber.subscribe(true)).thenReturn(Future.succeededFuture());
 
         final MessageReceiver receiver = mock(MessageReceiver.class);
         final PubSubSubscriberFactory subscriberFactory = mock(PubSubSubscriberFactory.class);
-        when(subscriberFactory.getOrCreateSubscriber(subscription, receiver))
+        when(subscriberFactory.getOrCreateSubscriber(topicAndSubscription, receiver))
                 .thenReturn(subscriber);
 
         internalCommandConsumer = new PubSubBasedInternalCommandConsumer(
                 commandResponseSender,
+                vertxMock,
                 adapterInstanceId,
                 commandHandlers,
                 tenantClient,
