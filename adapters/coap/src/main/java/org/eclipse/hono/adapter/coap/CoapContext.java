@@ -50,8 +50,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public static final String PARAM_EMPTY_CONTENT = "empty";
 
-    public static final int TIME_OPTION_NUMBER = 0xff20;
-
     /**
      * The query parameter which is used to indicate, that a piggypacked response is supported by the device.
      * (Legacy support for device with firmware versions not supporting  piggypacked response.)
@@ -404,8 +402,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     }
 
     private boolean shouldResponseIncludeTimeOption() {
-        return Optional.ofNullable(exchange.getRequestOptions()).filter(opts -> opts.hasOption(TIME_OPTION_NUMBER)).isPresent()
-                || exchange.getQueryParameter("hono-response-timestamp") != null;
+        return Optional.ofNullable(exchange.getRequestOptions()).filter(opts -> opts.hasOption(CoapConstants.TIME_OPTION_NUMBER)).isPresent()
+                || exchange.getQueryParameter(CoapConstants.HEADER_SERVER_TIME_IN_RESPONSE) != null;
     }
 
     /**
@@ -419,10 +417,9 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     public ResponseCode respond(final Response response) {
         // TODO: remove System.out.println
         final boolean shouldResponseIncludeTimeOption = shouldResponseIncludeTimeOption();
-        System.out.println("adding time option to response (v4) [" + shouldResponseIncludeTimeOption + "]" );
+        System.out.println("adding time option to response (v5) [" + shouldResponseIncludeTimeOption + "]" );
         if (shouldResponseIncludeTimeOption) {
-            // TODO: figure out the "correct" Option ID here.
-            final Option timeOption = new Option(TIME_OPTION_NUMBER, System.currentTimeMillis());
+            final Option timeOption = new Option(CoapConstants.TIME_OPTION_NUMBER, System.currentTimeMillis());
             response.getOptions().addOption(timeOption);
         }
         acceptFlag.set(true);
