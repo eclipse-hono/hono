@@ -1,28 +1,28 @@
 /**
  * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
- *
+ * <p>
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
- *
+ * <p>
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0
- *
+ * <p>
  * SPDX-License-Identifier: EPL-2.0
  */
 
 
 package org.eclipse.hono.adapter.coap;
 
-import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.eclipse.californium.core.coap.CoAP;
+import static com.google.common.truth.Truth.assertThat;
+
 import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
@@ -40,9 +40,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import io.opentracing.Span;
 import io.vertx.core.Vertx;
-
-import java.math.BigInteger;
-
 
 /**
  * Tests verifying behavior of {@link CoapContext}.
@@ -183,30 +180,18 @@ public class CoapContextTest {
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
-        /*
         final Response response = mock(Response.class);
         final OptionSet responseOptions = new OptionSet();
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
         assertThat(responseOptions.hasOption(CoapConstants.TIME_OPTION_NUMBER));
-        long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
+        final long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
         assertThat(serverTime >= System.currentTimeMillis());
-
-         */
-
-        verify(ctx).respond(argThat((Response res) -> CoAP.ResponseCode.CHANGED.equals(res.getCode())));
-        verify(ctx).respond(argThat((Response res) -> res.getOptions().hasOption(CoapConstants.TIME_OPTION_NUMBER)));
-        verify(ctx).respond(argThat((Response res) -> {
-            final byte[] optionTimeValue = res.getOptions().getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getValue();
-            final long optionTime = new BigInteger(optionTimeValue).longValue();
-            return System.currentTimeMillis() >= optionTime;
-        }));
-
     }
 
     /**
-     * TODO.
+     * TODO. test both "true" and empty value for parameter?
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfParameterPresentInRequest() {
@@ -222,7 +207,7 @@ public class CoapContextTest {
         ctx.respond(response);
         verify(response).getOptions();
         assertThat(responseOptions.hasOption(CoapConstants.TIME_OPTION_NUMBER));
-        long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
+        final long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
         assertThat(serverTime >= System.currentTimeMillis());
     }
 }
