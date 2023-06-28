@@ -37,6 +37,7 @@ import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 import org.eclipse.hono.service.base.jdbc.store.model.JdbcBasedDeviceDto;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
@@ -68,6 +69,19 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     private static final Logger log = LoggerFactory.getLogger(TableManagementStore.class);
 
+    private static final String TENANT_ID = "tenant_id";
+    private static final String DEVICE_ID = "device_id";
+    private static final String VERSION = "version";
+    private static final String DATA = "data";
+    private static final String EXPECTED_VERSION = "expected_version";
+    private static final String PAGE_SIZE = "page_size";
+    private static final String PAGE_OFFSET = "page_offset";
+    private static final String CREATED = "created";
+    private static final String AUTO_PROVISIONED = "auto_provisioned";
+    private static final String NEXT_VERSION = "next_version";
+    private static final String GATEWAY_FILTER = "gateways";
+    private static final String FIELD = "field";
+    private static final String VALUE = "value";
     private final Statement createStatement;
     private final Statement createMemberOfStatement;
     private final Statement deleteAllMemberOfStatement;
@@ -85,8 +99,16 @@ public class TableManagementStore extends AbstractDeviceStore {
     private final Statement updateDeviceVersionStatement;
 
     private final Statement countDevicesOfTenantStatement;
+    private final Statement countGatewayDevicesOfTenant;
+    private final Statement countDevicesExcludeGatewaysOfTenant;
+    private final Statement coundDevicesWithFilter;
 
     private final Statement findDevicesStatement;
+    private final Statement findDevicesOfTenantWithFilterStatement;
+    private final Statement findGatewaysStatement;
+    private final Statement findDevicesExcludeGatewaysOfTenantStatement;
+
+
 
     /**
      * Create a new instance.
@@ -102,101 +124,143 @@ public class TableManagementStore extends AbstractDeviceStore {
         this.createStatement = cfg
                 .getRequiredStatement("create")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
-                        "version",
-                        "data",
-                        "created",
-                        "auto_provisioned");
+                        TENANT_ID,
+                        DEVICE_ID,
+                        VERSION,
+                        DATA,
+                        CREATED,
+                        AUTO_PROVISIONED);
 
         this.createMemberOfStatement = cfg
                 .getRequiredStatement("createMemberOf")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
+                        TENANT_ID,
+                        DEVICE_ID,
                         "group_id");
 
         this.deleteAllMemberOfStatement = cfg
                 .getRequiredStatement("deleteAllMemberOf")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id");
+                        TENANT_ID,
+                        DEVICE_ID);
 
         this.updateRegistrationVersionedStatement = cfg
                 .getRequiredStatement("updateRegistrationVersioned")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
-                        "next_version",
-                        "data",
-                        "expected_version",
+                        TENANT_ID,
+                        DEVICE_ID,
+                        NEXT_VERSION,
+                        DATA,
+                        EXPECTED_VERSION,
                         "updated_on",
                         "auto_provisioning_notification_sent");
 
         this.deleteStatement = cfg
                 .getRequiredStatement("delete")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id");
+                        TENANT_ID,
+                        DEVICE_ID);
 
         this.deleteVersionedStatement = cfg
                 .getRequiredStatement("deleteVersioned")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
-                        "expected_version");
+                        TENANT_ID,
+                        DEVICE_ID,
+                        EXPECTED_VERSION);
 
         this.dropTenantStatement = cfg
                 .getRequiredStatement("dropTenant")
                 .validateParameters(
-                        "tenant_id");
+                        TENANT_ID);
 
         this.readForUpdateStatement = cfg.getRequiredStatement("readForUpdate")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id");
+                        TENANT_ID,
+                        DEVICE_ID);
 
         this.readCredentialsStatement = cfg
                 .getRequiredStatement("readCredentials")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id");
+                        TENANT_ID,
+                        DEVICE_ID);
 
         this.insertCredentialEntryStatement = cfg
                 .getRequiredStatement("insertCredentialEntry")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
+                        TENANT_ID,
+                        DEVICE_ID,
                         "type",
                         "auth_id",
-                        "data");
+                        DATA);
 
         this.deleteAllCredentialsStatement = cfg
                 .getRequiredStatement("deleteAllCredentials")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id");
+                        TENANT_ID,
+                        DEVICE_ID);
 
         this.updateDeviceVersionStatement = cfg
                 .getRequiredStatement("updateDeviceVersion")
                 .validateParameters(
-                        "tenant_id",
-                        "device_id",
-                        "next_version",
-                        "expected_version");
+                        TENANT_ID,
+                        DEVICE_ID,
+                        NEXT_VERSION,
+                        EXPECTED_VERSION);
 
         this.countDevicesOfTenantStatement = cfg
                 .getRequiredStatement("countDevicesOfTenant")
                 .validateParameters(
-                        "tenant_id");
+                        TENANT_ID);
+
+        this.countGatewayDevicesOfTenant = cfg
+                .getRequiredStatement("countGatewayDevicesOfTenant")
+                .validateParameters(
+                        TENANT_ID);
+
+        this.countDevicesExcludeGatewaysOfTenant = cfg
+                .getRequiredStatement("countDevicesExcludeGatewaysOfTenant")
+                .validateParameters(
+                        TENANT_ID);
+
+        this.coundDevicesWithFilter = cfg
+                .getRequiredStatement("countDevicesOfTenantWithFilter")
+                .validateParameters(
+                        TENANT_ID,
+                        FIELD,
+                        VALUE);
 
         this.findDevicesStatement = cfg
                 .getRequiredStatement("findDevicesOfTenant")
                 .validateParameters(
-                        "tenant_id",
-                        "page_size",
-                        "page_offset");
+                        TENANT_ID,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
 
+        this.findDevicesOfTenantWithFilterStatement = cfg
+                .getRequiredStatement("findDevicesOfTenantWithFilter")
+                .validateParameters(
+                        TENANT_ID,
+                        FIELD,
+                        VALUE,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
+
+        this.findGatewaysStatement = cfg
+                .getRequiredStatement("findGatewayDevicesOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
+
+
+        this.findDevicesExcludeGatewaysOfTenantStatement = cfg
+                .getRequiredStatement("findDevicesExcludeGatewaysOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        FIELD,
+                        VALUE,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
     }
 
     /**
@@ -257,17 +321,17 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) -> {
 
                     final var expanded = this.createStatement.expand(params -> {
-                        params.put("tenant_id", deviceDto.getTenantId());
-                        params.put("device_id", deviceDto.getDeviceId());
-                        params.put("version", deviceDto.getVersion());
-                        params.put("data", deviceDto.getDeviceJson());
-                        params.put("created", Timestamp.from(deviceDto.getCreationTime()));
-                        params.put("auto_provisioned", deviceDto.isAutoProvisioned());
+                        params.put(TENANT_ID, deviceDto.getTenantId());
+                        params.put(DEVICE_ID, deviceDto.getDeviceId());
+                        params.put(VERSION, deviceDto.getVersion());
+                        params.put(DATA, deviceDto.getDeviceJson());
+                        params.put(CREATED, Timestamp.from(deviceDto.getCreationTime()));
+                        params.put(AUTO_PROVISIONED, deviceDto.isAutoProvisioned());
                     });
 
                     log.debug("createDevice - statement: {}", expanded);
 
-                    return getDeviceCount(key.getTenantId(), span.context())
+                    return getDeviceCount(key.getTenantId(), span.context(), this.countDevicesOfTenantStatement, null, null)
                             .compose(currentDeviceCount -> tenant.checkDeviceLimitReached(
                                     key.getTenantId(),
                                     currentDeviceCount,
@@ -293,11 +357,11 @@ public class TableManagementStore extends AbstractDeviceStore {
             final SpanContext context) {
 
         return CompositeFuture.all(memberOf.stream()
-                .map(groupId -> {
+                        .map(groupId -> {
 
                     final var expanded = this.createMemberOfStatement.expand(params -> {
-                        params.put("tenant_id", key.getTenantId());
-                        params.put("device_id", key.getDeviceId());
+                        params.put(TENANT_ID, key.getTenantId());
+                        params.put(DEVICE_ID, key.getDeviceId());
                         params.put("group_id", groupId);
                     });
 
@@ -318,8 +382,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                                    final SpanContext context) {
 
         final var expanded = this.deleteAllMemberOfStatement.expand(params -> {
-            params.put("tenant_id", key.getTenantId());
-            params.put("device_id", key.getDeviceId());
+            params.put(TENANT_ID, key.getTenantId());
+            params.put(DEVICE_ID, key.getDeviceId());
         });
 
         log.debug("deleteGroups - statement: {}", expanded);
@@ -365,11 +429,11 @@ public class TableManagementStore extends AbstractDeviceStore {
             final Span span) {
 
         final var expanded = statement.expand(map -> {
-            map.put("tenant_id", key.getTenantId());
-            map.put("device_id", key.getDeviceId());
-            map.put("next_version", nextVersion);
-            map.put("data", jsonValue);
-            resourceVersion.ifPresent(version -> map.put("expected_version", version));
+            map.put(TENANT_ID, key.getTenantId());
+            map.put(DEVICE_ID, key.getDeviceId());
+            map.put(NEXT_VERSION, nextVersion);
+            map.put(DATA, jsonValue);
+            resourceVersion.ifPresent(version -> map.put(EXPECTED_VERSION, version));
         });
 
         log.debug("update - statement: {}", expanded);
@@ -411,7 +475,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        resourceVersion.ifPresent(version -> span.setTag("version", version));
+        resourceVersion.ifPresent(version -> span.setTag(VERSION, version));
 
         final var memberOf = Optional.ofNullable(device.getMemberOf())
                 .<Set<String>>map(HashSet::new)
@@ -440,11 +504,11 @@ public class TableManagementStore extends AbstractDeviceStore {
                                 // update the version, this will release the lock
                                 .compose(version -> this.updateRegistrationVersionedStatement
                                         .expand(map -> {
-                                            map.put("tenant_id", deviceDto.getTenantId());
-                                            map.put("device_id", deviceDto.getDeviceId());
-                                            map.put("data", deviceDto.getDeviceJson());
-                                            map.put("expected_version", version);
-                                            map.put("next_version", deviceDto.getVersion());
+                                            map.put(TENANT_ID, deviceDto.getTenantId());
+                                            map.put(DEVICE_ID, deviceDto.getDeviceId());
+                                            map.put(DATA, deviceDto.getDeviceJson());
+                                            map.put(EXPECTED_VERSION, version);
+                                            map.put(NEXT_VERSION, deviceDto.getVersion());
                                             map.put("updated_on", Timestamp.from(deviceDto.getUpdatedOn()));
                                             map.put("auto_provisioning_notification_sent",
                                                     deviceDto.isAutoProvisioningNotificationSent());
@@ -530,7 +594,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        resourceVersion.ifPresent(version -> span.setTag("version", version));
+        resourceVersion.ifPresent(version -> span.setTag(VERSION, version));
 
         final Statement statement;
         if (resourceVersion.isPresent()) {
@@ -540,9 +604,9 @@ public class TableManagementStore extends AbstractDeviceStore {
         }
 
         final var expanded = statement.expand(map -> {
-            map.put("tenant_id", key.getTenantId());
-            map.put("device_id", key.getDeviceId());
-            resourceVersion.ifPresent(version -> map.put("expected_version", version));
+            map.put(TENANT_ID, key.getTenantId());
+            map.put(DEVICE_ID, key.getDeviceId());
+            resourceVersion.ifPresent(version -> map.put(EXPECTED_VERSION, version));
         });
 
         log.debug("delete - statement: {}", expanded);
@@ -573,7 +637,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .start();
 
         final var expanded = this.dropTenantStatement.expand(params -> {
-            params.put("tenant_id", tenantId);
+            params.put(TENANT_ID, tenantId);
         });
 
         log.debug("delete - statement: {}", expanded);
@@ -590,10 +654,13 @@ public class TableManagementStore extends AbstractDeviceStore {
      *
      * @param tenantId The tenant to count devices for.
      * @param spanContext The span to contribute to.
+     * @param countStatement The count statement to use.
+     * @param field the field of filter expression
+     * @param value the value of the filter expression
      * @return A future tracking the outcome of the operation.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public Future<Integer> getDeviceCount(final String tenantId, final SpanContext spanContext) {
+    public Future<Integer> getDeviceCount(final String tenantId, final SpanContext spanContext, final Statement countStatement, final String field, final String value) {
 
         Objects.requireNonNull(tenantId);
 
@@ -601,8 +668,10 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        final var expanded = this.countDevicesOfTenantStatement.expand(params -> {
-            params.put("tenant_id", tenantId);
+        final var expanded = countStatement.expand(params -> {
+            params.put(TENANT_ID, tenantId);
+            params.put(FIELD, field);
+            params.put(VALUE, value);
         });
 
         log.debug("count - statement: {}", expanded);
@@ -651,94 +720,94 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag("num_credentials", credentials.size())
                 .start();
 
-        resourceVersion.ifPresent(version -> span.setTag("version", version));
+        resourceVersion.ifPresent(version -> span.setTag(VERSION, version));
 
         final String nextVersion = UUID.randomUUID().toString();
 
         return SQL.runTransactionally(this.client, this.tracer, span.context(), (connection, context) ->
 
-                readDeviceForUpdate(connection, key, context)
+                        readDeviceForUpdate(connection, key, context)
 
-                    // check if we got back a result, if not this will abort early
-                    .compose(result -> extractVersionForUpdate(result, resourceVersion))
+                                // check if we got back a result, if not this will abort early
+                                .compose(result -> extractVersionForUpdate(result, resourceVersion))
 
-                    // take the version and start processing on
-                    .compose(version -> Future.succeededFuture()
+                                // take the version and start processing on
+                                .compose(version -> Future.succeededFuture()
 
-                            .compose(x -> {
-                                final Promise<CredentialsDto> result = Promise.promise();
-                                final var updatedCredentialsDto = CredentialsDto.forUpdate(
-                                        key.getTenantId(),
-                                        key.getDeviceId(),
-                                        credentials,
-                                        nextVersion);
+                                        .compose(x -> {
+                                            final Promise<CredentialsDto> result = Promise.promise();
+                                            final var updatedCredentialsDto = CredentialsDto.forUpdate(
+                                                    key.getTenantId(),
+                                                    key.getDeviceId(),
+                                                    credentials,
+                                                    nextVersion);
 
-                                if (updatedCredentialsDto.requiresMerging()) {
-                                    getCredentialsDto(key, connection, span)
-                                        .map(updatedCredentialsDto::merge)
-                                        .onComplete(result);
-                                } else {
-                                    // simply replace the existing credentials with the
-                                    // updated ones provided by the client
-                                    result.complete(updatedCredentialsDto);
-                                }
-                                return result.future();
-                            })
+                                            if (updatedCredentialsDto.requiresMerging()) {
+                                                getCredentialsDto(key, connection, span)
+                                                        .map(updatedCredentialsDto::merge)
+                                                        .onComplete(result);
+                                            } else {
+                                                // simply replace the existing credentials with the
+                                                // updated ones provided by the client
+                                                result.complete(updatedCredentialsDto);
+                                            }
+                                            return result.future();
+                                        })
 
-                            .compose(updatedCredentials -> this.deleteAllCredentialsStatement
-                                    // delete the existing entries
-                                    .expand(map -> {
-                                        map.put("tenant_id", key.getTenantId());
-                                        map.put("device_id", key.getDeviceId());
-                                    })
-                                    .trace(this.tracer, span.context())
-                                    .update(connection)
-                                    .map(updatedCredentials)
-                            )
+                                        .compose(updatedCredentials -> this.deleteAllCredentialsStatement
+                                                // delete the existing entries
+                                                .expand(map -> {
+                                                    map.put(TENANT_ID, key.getTenantId());
+                                                    map.put(DEVICE_ID, key.getDeviceId());
+                                                })
+                                                .trace(this.tracer, span.context())
+                                                .update(connection)
+                                                .map(updatedCredentials)
+                                        )
 
-                            // then create new entries
-                            .compose(updatedCredentials -> {
-                                updatedCredentials.createMissingSecretIds();
-                                return CompositeFuture.all(updatedCredentials.getData().stream()
-                                    .map(JsonObject::mapFrom)
-                                    .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
-                                    .map(c -> this.insertCredentialEntryStatement
-                                            .expand(map -> {
-                                                map.put("tenant_id", key.getTenantId());
-                                                map.put("device_id", key.getDeviceId());
-                                                map.put("type", c.getString("type"));
-                                                map.put("auth_id", c.getString("auth-id"));
-                                                map.put("data", c.toString());
-                                            })
-                                            .trace(this.tracer, span.context())
-                                            .update(connection))
-                                    .collect(Collectors.toList()))
-                                    .mapEmpty();
-                            })
+                                        // then create new entries
+                                        .compose(updatedCredentials -> {
+                                            updatedCredentials.createMissingSecretIds();
+                                            return CompositeFuture.all(updatedCredentials.getData().stream()
+                                                            .map(JsonObject::mapFrom)
+                                                            .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
+                                                            .map(c -> this.insertCredentialEntryStatement
+                                                                    .expand(map -> {
+                                                                        map.put(TENANT_ID, key.getTenantId());
+                                                                        map.put(DEVICE_ID, key.getDeviceId());
+                                                                        map.put("type", c.getString("type"));
+                                                                        map.put("auth_id", c.getString("auth-id"));
+                                                                        map.put(DATA, c.toString());
+                                                                    })
+                                                                    .trace(this.tracer, span.context())
+                                                                    .update(connection))
+                                                            .collect(Collectors.toList()))
+                                                    .mapEmpty();
+                                        })
 
-                            // update the version, this will release the lock
-                            .compose(x -> this.updateDeviceVersionStatement
-                                    .expand(map -> {
-                                        map.put("tenant_id", key.getTenantId());
-                                        map.put("device_id", key.getDeviceId());
-                                        map.put("expected_version", version);
-                                        map.put("next_version", nextVersion);
-                                    })
-                                    .trace(this.tracer, span.context())
-                                    .update(connection)
+                                        // update the version, this will release the lock
+                                        .compose(x -> this.updateDeviceVersionStatement
+                                                .expand(map -> {
+                                                    map.put(TENANT_ID, key.getTenantId());
+                                                    map.put(DEVICE_ID, key.getDeviceId());
+                                                    map.put(EXPECTED_VERSION, version);
+                                                    map.put(NEXT_VERSION, nextVersion);
+                                                })
+                                                .trace(this.tracer, span.context())
+                                                .update(connection)
 
-                                    // check the update outcome
-                                    .compose(TableManagementStore::checkUpdateOutcome))
+                                                // check the update outcome
+                                                .compose(TableManagementStore::checkUpdateOutcome))
 
-                            .map(true)
+                                        .map(true)
 
-                    ))
+                                ))
 
-                    // when not found, then return "false"
-                    .recover(err -> recoverNotFound(span, err, () -> false))
+                // when not found, then return "false"
+                .recover(err -> recoverNotFound(span, err, () -> false))
 
-                    .map(ok -> new Versioned<>(nextVersion, ok))
-                    .onComplete(x -> span.finish());
+                .map(ok -> new Versioned<>(nextVersion, ok))
+                .onComplete(x -> span.finish());
 
     }
 
@@ -750,8 +819,8 @@ public class TableManagementStore extends AbstractDeviceStore {
         return readCredentialsStatement
                 // get the current credentials set
                 .expand(map -> {
-                    map.put("tenant_id", key.getTenantId());
-                    map.put("device_id", key.getDeviceId());
+                    map.put(TENANT_ID, key.getTenantId());
+                    map.put(DEVICE_ID, key.getDeviceId());
                 })
                 .trace(this.tracer, span.context())
                 .query(connection)
@@ -789,7 +858,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     }
 
     private static Future<String> extractVersionForUpdate(final ResultSet device, final Optional<String> resourceVersion) {
-        final Optional<String> version = device.getRows(true).stream().map(o -> o.getString("version")).findAny();
+        final Optional<String> version = device.getRows(true).stream().map(o -> o.getString(VERSION)).findAny();
 
         if (version.isEmpty()) {
             log.debug("No version or no row found -> entity not found");
@@ -835,8 +904,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .start();
 
         final var expanded = this.readCredentialsStatement.expand(map -> {
-            map.put("tenant_id", key.getTenantId());
-            map.put("device_id", key.getDeviceId());
+            map.put(TENANT_ID, key.getTenantId());
+            map.put(DEVICE_ID, key.getDeviceId());
         });
 
         final Promise<SQLConnection> promise = Promise.promise();
@@ -878,7 +947,7 @@ public class TableManagementStore extends AbstractDeviceStore {
         final var entries = result.getRows(true);
 
         return entries.stream()
-                .map(o -> o.getString("data"))
+                .map(o -> o.getString(DATA))
                 .map(s -> Json.decodeValue(s, CommonCredential.class))
                 .collect(Collectors.toList());
 
@@ -887,36 +956,59 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Gets a list of devices of a specific tenant.
      *
-     * @param tenantId the tenantId to search devices
-     * @param pageSize the page size
-     * @param pageOffset the page offset
+     * @param tenantId The tenantId to search devices.
+     * @param pageSize The page size.
+     * @param pageOffset The page offset.
+     * @param filters The list of filters.
      * @param spanContext The span to contribute to.
-     * @return A future containing devices
+     * @return A future containing devices.
      */
-    public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset,
-            final SpanContext spanContext) {
+    public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset, final List<Filter> filters,
+                                                          final SpanContext spanContext) {
 
+        Statement findDeviceSqlStatement = this.findDevicesStatement;
+        Statement countStatement = this.countDevicesOfTenantStatement;
+        final var filter = filters.stream().findFirst();
 
-        final var expanded = this.findDevicesStatement.expand(map -> {
-            map.put("tenant_id", tenantId);
-            map.put("page_size", pageSize);
-            map.put("page_offset", pageOffset);
+        final String field = (filter.isPresent()) ? filter.get().getField().toString().replace("/", "") : "";
+        final String value = (filter.isPresent()) ? filter.get().getValue().toString().replace("/", "") : "";
+
+        if (filter.isPresent()) {
+            if (field.equals(GATEWAY_FILTER)) {
+                findDeviceSqlStatement = Boolean.parseBoolean(value) ? findGatewaysStatement : findDevicesExcludeGatewaysOfTenantStatement;
+                if (value.equalsIgnoreCase("true")) {
+                    countStatement = this.countGatewayDevicesOfTenant;
+                } else {
+                    countStatement = this.countDevicesExcludeGatewaysOfTenant;
+                }
+            } else {
+                findDeviceSqlStatement = findDevicesOfTenantWithFilterStatement;
+                countStatement = this.coundDevicesWithFilter;
+            }
+        }
+
+        final var expanded = findDeviceSqlStatement.expand(map -> {
+            map.put(TENANT_ID, tenantId);
+            map.put(PAGE_SIZE, pageSize);
+            map.put(PAGE_OFFSET, pageOffset);
+            map.put(FIELD, field);
+            map.put(VALUE, value);
         });
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "find devices", getClass().getSimpleName())
-            .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
-            .start();
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .start();
 
-        final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context());
+        final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context(), countStatement, field, value);
 
         return deviceCountFuture
                 .compose(count -> expanded.trace(this.tracer, span.context()).query(this.client))
                 .map(r -> {
                     if (r.getNumRows() == 0) {
-                         throw new ClientErrorException(
-                                 tenantId,
-                                 HttpURLConnection.HTTP_NOT_FOUND,
-                                 "no devices matching searching criteria");
+                        throw new ClientErrorException(
+                                tenantId,
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no devices matching searching criteria");
                     } else {
                         final var entries = r.getRows(true);
                         span.log(Map.of(
@@ -924,7 +1016,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                 "rows", entries.size()));
                         final List<DeviceWithId> list = new ArrayList<>();
                         for (var entry : entries) {
-                            final var id = entry.getString("device_id");
+                            final var id = entry.getString(DEVICE_ID);
                             final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(tenantId, id, entry);
                             list.add(DeviceWithId.from(id, deviceDto.getDeviceWithStatus()));
                         }
