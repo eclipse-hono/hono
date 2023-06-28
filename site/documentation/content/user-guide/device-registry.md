@@ -105,7 +105,8 @@ The JDBC based registry implementation does not support the following features:
 
 * Registration information can be retrieved using the
   [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
-  Registry Management API, but the *filterJson* and *sortJson* query parameters are (currently) being ignored.
+  Registry Management API. The  *filterJson* query parameter currently only allows one filter expression per request,
+  the *sortJson* query parameter is (currently) being ignored.
   The result set will always be sorted by the device Id in ascending order.
 {{% /notice %}}
 
