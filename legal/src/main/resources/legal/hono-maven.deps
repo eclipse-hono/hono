@@ -271,10 +271,10 @@ org.apache.qpid:proton-j:jar:0.34.0
 org.apache.sshd:sshd-common:jar:2.9.2
 org.checkerframework:checker-qual:jar:3.29.0
 org.conscrypt:conscrypt-openjdk-uber:jar:2.5.2
-org.eclipse.californium:californium-core:jar:3.7.0
-org.eclipse.californium:californium-legal:jar:3.7.0
-org.eclipse.californium:element-connector:jar:3.7.0
-org.eclipse.californium:scandium:jar:3.7.0
+org.eclipse.californium:californium-core:jar:3.8.0
+org.eclipse.californium:californium-legal:jar:3.8.0
+org.eclipse.californium:element-connector:jar:3.8.0
+org.eclipse.californium:scandium:jar:3.8.0
 org.eclipse.microprofile.config:microprofile-config-api:jar:2.0.1
 org.eclipse.microprofile.context-propagation:microprofile-context-propagation-api:jar:1.2
 org.eclipse.microprofile.health:microprofile-health-api:jar:3.1

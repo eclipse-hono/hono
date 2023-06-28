@@ -32,7 +32,7 @@
     <assertj.version>3.24.2</assertj.version>
     <bouncycastle.version>1.71</bouncycastle.version>
     <caffeine.version>3.1.1</caffeine.version>
-    <californium.version>3.7.0</californium.version>
+    <californium.version>3.8.0</californium.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>32.0.1-jre</guava.version>
