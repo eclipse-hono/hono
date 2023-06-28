@@ -17,14 +17,14 @@ import org.eclipse.californium.core.coap.Option;
 
 /**
  * CoAP custom time option.
- * <p/>
+ * <p>
  * Used in CoAP request to indicate that the client wants to get the servers system-time in milliseconds.
  * Any value in the option as part of a request is ignored.
- * <p/>
+ * <p>
  * If the option is present in a request, the server adds also a time option to the response with the
  * servers system-time in milliseconds. Also, a client can request this option be included in a response via a
  * request parameter, "hono-time".
- * <p/>
+ * <p>
  * This option uses the same option number as is used in the Californium cloud-demo-server application
  * (<a href="https://github.com/boaks/californium/blob/add_cloud_demo_server/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java#L49">see here</a>).
  * TODO: update link once it's been merged into the eclipse-californium project.
@@ -33,11 +33,11 @@ public final class TimeOption extends Option {
 
     /**
      * The COAP option number.
-     * <p/>
+     * <p>
      * <b>NOTE:</b> this option number is in the "experimental" range and as such is not suitable for
      * interoperability with other CoAP implementations. This implementation should be changed if CoAP ever
      * defines its own official option number for reporting server time.
-     * <p/>
+     * <p>
      * For further information and discussion, see:
      * <ul>
      *   <li> <a href="https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#option-numbers">IANA CoAP Option Numbers</a> </li>
