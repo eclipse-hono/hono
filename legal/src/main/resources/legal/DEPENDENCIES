@@ -265,10 +265,10 @@ maven/mavencentral/org.apache.qpid/proton-j/0.34.0, Apache-2.0, approved, clearl
 maven/mavencentral/org.apache.sshd/sshd-common/2.9.2, Apache-2.0 AND ISC, approved, #3224
 maven/mavencentral/org.checkerframework/checker-qual/3.29.0, MIT, approved, clearlydefined
 maven/mavencentral/org.conscrypt/conscrypt-openjdk-uber/2.5.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.eclipse.californium/californium-core/3.7.0, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/californium-legal/3.7.0, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/element-connector/3.7.0, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/scandium/3.7.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/californium-core/3.8.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/californium-legal/3.8.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/element-connector/3.8.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/scandium/3.8.0, , approved, science.californium
 maven/mavencentral/org.eclipse.microprofile.config/microprofile-config-api/2.0.1, Apache-2.0, approved, technology.microprofile
 maven/mavencentral/org.eclipse.microprofile.context-propagation/microprofile-context-propagation-api/1.2, Apache-2.0, approved, technology.microprofile
 maven/mavencentral/org.eclipse.microprofile.health/microprofile-health-api/3.1, Apache-2.0, approved, technology.microprofile
@@ -341,5 +341,5 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-util/1.20.3.Final, Apach
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500/1.20.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-cert/1.20.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-cert-util/1.20.3.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.xerial.snappy/snappy-java/1.1.8.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.xerial.snappy/snappy-java/1.1.8.4, Apache-2.0 AND (Apache-2.0 AND BSD-3-Clause), approved, #9098
 maven/mavencentral/org.yaml/snakeyaml/1.33, Apache-2.0, approved, clearlydefined
