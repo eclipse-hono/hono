@@ -3,8 +3,8 @@ title = "AMQP Adapter Client for Java"
 weight = 390
 +++
 
-Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of 
-(prototype) devices, (protocol) gateways or (end-to-end) tests. The client is based on Eclipse Vert.x.
+Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of
+(prototype) devices, (protocol) gateways and/or (end-to-end) tests. The client is based on Eclipse Vert.x.
 
 The client is represented by the [AmqpAdapterClient](https://github.com/eclipse-hono/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
 class in the *hono-client-device-amqp* module.
