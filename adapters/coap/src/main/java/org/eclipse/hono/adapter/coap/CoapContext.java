@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
-import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
@@ -102,7 +101,6 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         Objects.requireNonNull(request);
         Objects.requireNonNull(originDevice);
         Objects.requireNonNull(span);
-
         return new CoapContext(request, originDevice, authenticatedDevice, authId, span);
     }
 
@@ -424,7 +422,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public ResponseCode respond(final Response response) {
         if (shouldResponseIncludeTimeOption()) {
-            final Option timeOption = new Option(TimeOption.COAP_OPTION_TIME_NUMBER, System.currentTimeMillis());
+            final TimeOption timeOption = new TimeOption(System.currentTimeMillis());
             response.getOptions().addOption(timeOption);
         }
         acceptFlag.set(true);

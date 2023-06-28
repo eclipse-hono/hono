@@ -26,6 +26,10 @@ import org.eclipse.californium.core.coap.Response;
  * If the option is present in a request, the server adds also a {@link TimeOption} to the {@link Response} with the
  * server's system-time in milliseconds. Also, a client can request this option be included in a response via a
  * {@link Request} parameter, "hono-time".
+ * <p/>
+ * This option uses the same option number as is used in the Californium cloud-demo-server application
+ * (<a href="https://github.com/boaks/californium/blob/add_cloud_demo_server/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java#L49">see here</a>).
+ * TODO: update link once it's been merged into the eclipse-californium project.
  *
  * @since 2.4.0
  */
@@ -53,13 +57,6 @@ public class TimeOption extends Option {
      * response (as a time option).
      */
     public static final String COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME = "hono-time";
-
-    /**
-     * Create time option with current system time.
-     */
-    public TimeOption() {
-        this(System.currentTimeMillis());
-    }
 
     /**
      * Create time option.

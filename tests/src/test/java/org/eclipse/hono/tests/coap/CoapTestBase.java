@@ -1374,7 +1374,7 @@ public abstract class CoapTestBase {
 
     /**
      * Verify that the CoAP adapter responds with a time option in the response when request includes
-     * the "hono-time" parameter.
+     * the "hono-time" query parameter.
      *
      * @param ctx The vert.x test context.
      */
@@ -1414,8 +1414,8 @@ public abstract class CoapTestBase {
     }
 
     /**
-     * Verify that the CoAP adapter responds with a time option in the response when request includes
-     * the "hono-time" parameter.
+     * Verify that the CoAP adapter response does not include a time option when neither the time option nor the
+     * query parameter are present in the request.
      *
      * @param ctx The vert.x test context.
      */
