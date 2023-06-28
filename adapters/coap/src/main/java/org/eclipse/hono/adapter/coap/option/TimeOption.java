@@ -1,39 +1,35 @@
 /**
  * Copyright (c) 2023 Contributors to the Eclipse Foundation
- * <p>
+ *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
- * <p>
+ *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0
- * <p>
+ *
  * SPDX-License-Identifier: EPL-2.0
  */
 
 package org.eclipse.hono.adapter.coap.option;
 
 import org.eclipse.californium.core.coap.Option;
-import org.eclipse.californium.core.coap.Request;
-import org.eclipse.californium.core.coap.Response;
 
 /**
  * CoAP custom time option.
  * <p/>
- * Used in {@link Request} to indicate that the client wants to get the servers system-time in milliseconds.
+ * Used in CoAP request to indicate that the client wants to get the servers system-time in milliseconds.
  * Any value in the option as part of a request is ignored.
  * <p/>
- * If the option is present in a request, the server adds also a {@link TimeOption} to the {@link Response} with the
- * server's system-time in milliseconds. Also, a client can request this option be included in a response via a
- * {@link Request} parameter, "hono-time".
+ * If the option is present in a request, the server adds also a time option to the response with the
+ * servers system-time in milliseconds. Also, a client can request this option be included in a response via a
+ * request parameter, "hono-time".
  * <p/>
  * This option uses the same option number as is used in the Californium cloud-demo-server application
  * (<a href="https://github.com/boaks/californium/blob/add_cloud_demo_server/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java#L49">see here</a>).
  * TODO: update link once it's been merged into the eclipse-californium project.
- *
- * @since 2.4.0
  */
-public class TimeOption extends Option {
+public final class TimeOption extends Option {
 
     /**
      * The COAP option number.

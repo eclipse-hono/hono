@@ -42,6 +42,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import io.opentracing.Span;
 import io.vertx.core.Vertx;
 
+import com.google.common.collect.Range;
+
 /**
  * Tests verifying behavior of {@link CoapContext}.
  *
@@ -185,22 +187,12 @@ public class CoapContextTest {
         assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isFalse();
     }
 
-
-    /**
-     * Ensures that a timestamp happened within a half second ago.
-     *
-     * @param timestamp the timestamp to check
-     */
-    private void assertTimestampWithinRangeOfCurrentTime(final long timestamp) {
-        final long timeDiff = System.currentTimeMillis() - timestamp;
-        assertThat(timeDiff).isLessThan(500);
-    }
-
     /**
      * Verifies that the CoAP time option is in the response if requested by a request option.
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfOptionPresentInRequest() {
+        final long start = System.currentTimeMillis();
         final CoapExchange exchange = mock(CoapExchange.class);
         final OptionSet options = new OptionSet();
         options.addOption(new Option(TimeOption.COAP_OPTION_TIME_NUMBER, new byte[0]));
@@ -216,7 +208,8 @@ public class CoapContextTest {
         verify(response).getOptions();
         assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
         final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
-        assertTimestampWithinRangeOfCurrentTime(serverTime);
+        final long end = System.currentTimeMillis();
+        assertThat(serverTime).isIn(Range.closed(start, end));
     }
 
     /**
@@ -224,6 +217,7 @@ public class CoapContextTest {
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfParameterPresentInRequest() {
+        final long start = System.currentTimeMillis();
         final CoapExchange exchange = mock(CoapExchange.class);
         when(exchange.getQueryParameter(eq(TimeOption.COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME))).thenReturn("true");
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
@@ -237,6 +231,7 @@ public class CoapContextTest {
         verify(response).getOptions();
         assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
         final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
-        assertTimestampWithinRangeOfCurrentTime(serverTime);
+        final long end = System.currentTimeMillis();
+        assertThat(serverTime).isIn(Range.closed(start, end));
     }
 }
