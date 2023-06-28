@@ -16,12 +16,14 @@ package org.eclipse.hono.deviceregistry.jdbc.impl;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceWithId;
@@ -58,8 +60,8 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
     }
 
     /**
-     * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}
-     * when no matching devices are found.
+     * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND} when no matching
+     * devices are found.
      *
      * @param ctx The vert.x test context.
      */
@@ -73,40 +75,40 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 List.of(),
                 List.of(),
                 NoopSpan.INSTANCE)
-        .onComplete(ctx.failing(t -> {
-            ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
-            ctx.completeNow();
-        }));
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that a request to search devices with valid pageSize succeeds and the result is in accordance
-     * with the specified page size.
+     * Verifies that a request to search devices with valid pageSize succeeds and the result is in accordance with the
+     * specified page size.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     void testSearchDevicesWithPageSize(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
-        final int pageSize = 2;
+        final int pageSize = 3;
         final int pageOffset = 0;
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true),
                 "testDevice3", new Device().setEnabled(true)))
-            .compose(ok -> getDeviceManagementService()
-                    .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(s -> {
-                ctx.verify(() -> {
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                    assertThat(s.getPayload().getTotal()).isEqualTo(3);
-                    assertThat(s.getPayload().getResult()).hasSize(pageSize);
-                    assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
-                    assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice2");
-                });
-                ctx.completeNow();
-            }));
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(s.getPayload().getTotal()).isEqualTo(3);
+                                assertThat(s.getPayload().getResult()).hasSize(pageSize);
+                                assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
+                                assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice2");
+                            });
+                            ctx.completeNow();
+                        }));
     }
 
     /**
@@ -119,24 +121,131 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
     void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 1;
-        final int pageOffset = 2;
+        final int pageOffset = 0;
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true),
                 "testDevice3", new Device().setEnabled(true)))
-            .compose(ok -> getDeviceManagementService()
-                    .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(s -> {
-                ctx.verify(() -> {
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                    assertThat(searchResult.getTotal()).isEqualTo(3);
-                    assertThat(searchResult.getResult()).hasSize(pageSize);
-                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice3");
-                });
-                ctx.completeNow();
-            }));
+                                final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                                assertThat(searchResult.getTotal()).isEqualTo(3);
+                                assertThat(searchResult.getResult()).hasSize(pageSize);
+                                assertThat(searchResult.getResult().size()).isEqualTo(1);
+                            });
+                            ctx.completeNow();
+                        }));
+    }
+
+    @Test
+    void testSearchGatewayDevices(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 1;
+        final int pageOffset = 0;
+        final List<Filter> filters = new ArrayList<>();
+        final Filter filter1 = new Filter("/gateways", "true");
+        filters.add(filter1);
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice2")),
+                "testDevice2", new Device().setEnabled(true),
+                "testDevice3", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(s.getPayload().getTotal()).isEqualTo(1);
+                                assertThat(s.getPayload().getResult()).hasSize(1);
+                                assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice2");
+                            });
+                            ctx.completeNow();
+                        }));
+    }
+
+    @Test
+    void testSearchDevicesExcludeGateways(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 2;
+        final int pageOffset = 0;
+        final List<Filter> filters = new ArrayList<>();
+
+        final Filter filter1 = new Filter("/gateways", "false");
+        filters.add(filter1);
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice2")),
+                "testDevice2", new Device().setEnabled(true),
+                "testDevice3", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(s.getPayload().getTotal()).isEqualTo(2);
+                                assertThat(s.getPayload().getResult()).hasSize(2);
+                                assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
+                                assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice3");
+                            });
+                            ctx.completeNow();
+                        }));
+    }
+
+    @Test
+    void testSearchAllDevices(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 3;
+        final int pageOffset = 0;
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice2")),
+                "testDevice2", new Device().setEnabled(true),
+                "testDevice3", new Device().setEnabled(true)))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(s.getPayload().getTotal()).isEqualTo(3);
+                                assertThat(s.getPayload().getResult()).hasSize(pageSize);
+                                assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
+                                assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice2");
+                                assertThat(s.getPayload().getResult().get(2).getId()).isEqualTo("testDevice3");
+                            });
+                            ctx.completeNow();
+                        }));
+    }
+
+    @Test
+    void TestSearchDevicesWithFilter(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 3;
+        final int pageOffset = 0;
+        final List<Filter> filters = new ArrayList<>();
+        final Filter filter1 = new Filter("/via", "[\"testDevice2\"]");
+        filters.add(filter1);
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice2")),
+                "testDevice2", new Device().setEnabled(true),
+                "testDevice3", new Device().setEnabled(true).setVia(List.of("testDevice2")),
+                "testDevice4", new Device().setEnabled(true).setVia(List.of("testDevice1"))))
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                                assertThat(s.getPayload().getTotal()).isEqualTo(2);
+                                assertThat(s.getPayload().getResult()).hasSize(2);
+                                assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
+                                assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice3");
+                            });
+                            ctx.completeNow();
+                        }));
     }
 }
