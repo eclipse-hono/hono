@@ -26,6 +26,7 @@ import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -401,9 +402,16 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
         respond(response);
     }
 
+    /**
+     * Checks whether the request includes either the time option or the hono-time parameter which
+     * indicates that the response should include a time option with the server time.
+     *
+     * @return <code>true</code> if response should include the time option containing the server time.
+     */
     private boolean shouldResponseIncludeTimeOption() {
-        return Optional.ofNullable(exchange.getRequestOptions()).filter(opts -> opts.hasOption(CoapConstants.TIME_OPTION_NUMBER)).isPresent()
-                || exchange.getQueryParameter(CoapConstants.HEADER_SERVER_TIME_IN_RESPONSE) != null;
+        return Optional.ofNullable(
+                exchange.getRequestOptions()).filter(opts -> opts.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isPresent()
+                || exchange.getQueryParameter(TimeOption.COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME) != null;
     }
 
     /**
@@ -415,11 +423,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @return The response code from the response.
      */
     public ResponseCode respond(final Response response) {
-        // TODO: remove System.out.println
-        final boolean shouldResponseIncludeTimeOption = shouldResponseIncludeTimeOption();
-        System.out.println("adding time option to response (v5) [" + shouldResponseIncludeTimeOption + "]" );
-        if (shouldResponseIncludeTimeOption) {
-            final Option timeOption = new Option(CoapConstants.TIME_OPTION_NUMBER, System.currentTimeMillis());
+        if (shouldResponseIncludeTimeOption()) {
+            final Option timeOption = new Option(TimeOption.COAP_OPTION_TIME_NUMBER, System.currentTimeMillis());
             response.getOptions().addOption(timeOption);
         }
         acceptFlag.set(true);

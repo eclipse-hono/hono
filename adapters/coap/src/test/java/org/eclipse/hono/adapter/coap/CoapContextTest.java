@@ -27,6 +27,7 @@ import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -168,13 +169,41 @@ public class CoapContextTest {
     }
 
     /**
-     * TODO.
+     * Verifies that the CoAP time option is not in the response if not requested by either a request option or parameter.
+     */
+    @Test
+    void testTimeOptionIsNotIncludedInResponseIfNotRequested() {
+        final CoapExchange exchange = mock(CoapExchange.class);
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        final Response response = mock(Response.class);
+        final OptionSet responseOptions = new OptionSet();
+        when(response.getOptions()).thenReturn(responseOptions);
+        ctx.respond(response);
+        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isFalse();
+    }
+
+
+    /**
+     * Ensures that a timestamp happened within a half second ago.
+     *
+     * @param timestamp the timestamp to check
+     */
+    private void assertTimestampWithinRangeOfCurrentTime(final long timestamp) {
+        final long timeDiff = System.currentTimeMillis() - timestamp;
+        assertThat(timeDiff).isLessThan(500);
+    }
+
+    /**
+     * Verifies that the CoAP time option is in the response if requested by a request option.
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfOptionPresentInRequest() {
         final CoapExchange exchange = mock(CoapExchange.class);
         final OptionSet options = new OptionSet();
-        options.addOption(new Option(CoapConstants.TIME_OPTION_NUMBER));
+        options.addOption(new Option(TimeOption.COAP_OPTION_TIME_NUMBER, new byte[0]));
         when(exchange.getRequestOptions()).thenReturn(options);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
@@ -185,18 +214,18 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(CoapConstants.TIME_OPTION_NUMBER));
-        final long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
-        assertThat(serverTime >= System.currentTimeMillis());
+        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
+        assertTimestampWithinRangeOfCurrentTime(serverTime);
     }
 
     /**
-     * TODO. test both "true" and empty value for parameter?
+     * Verifies that the CoAP time option is in the response if requested by a request parameter.
      */
     @Test
     void testTimeOptionIsIncludedInResponseIfParameterPresentInRequest() {
         final CoapExchange exchange = mock(CoapExchange.class);
-        when(exchange.getQueryParameter(eq(CoapConstants.HEADER_SERVER_TIME_IN_RESPONSE))).thenReturn("true");
+        when(exchange.getQueryParameter(eq(TimeOption.COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME))).thenReturn("true");
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
@@ -206,8 +235,8 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(CoapConstants.TIME_OPTION_NUMBER));
-        final long serverTime = responseOptions.getOtherOption(CoapConstants.TIME_OPTION_NUMBER).getLongValue();
-        assertThat(serverTime >= System.currentTimeMillis());
+        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
+        assertTimestampWithinRangeOfCurrentTime(serverTime);
     }
 }

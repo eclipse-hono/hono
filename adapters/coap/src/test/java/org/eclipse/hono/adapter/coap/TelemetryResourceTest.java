@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -34,7 +33,6 @@ import java.util.function.Function;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
-import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
@@ -73,8 +71,6 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class TelemetryResourceTest extends ResourceTestBase {
-
-    public static final int TIME_OPTION_NUMBER = CoapContext.TIME_OPTION_NUMBER;
 
     private TelemetryResource givenAResource(final CoapProtocolAdapter adapter) {
 
@@ -336,71 +332,6 @@ public class TelemetryResourceTest extends ResourceTestBase {
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
                 any());
-    }
-
-    /**
-     * TODO.
-     */
-    @Test
-    public void testServerTimeOptionIsSetInResponseWhenRequestedQoS0() {
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        givenATelemetrySenderForAnyTenant();
-        final var resource = givenAResource(adapter);
-
-        // WHEN a device publishes an telemetry message
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        options.addOption(new Option(0xff20));
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.NON, options);
-        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        resource.handlePostRequest(context);
-
-        // THEN the device gets a response indicating success
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        verify(coapExchange).respond(argThat((Response res) -> res.getOptions().hasOption(TIME_OPTION_NUMBER)));
-        verify(coapExchange).respond(argThat((Response res) -> {
-            final byte[] optionTimeValue = res.getOptions().getOtherOption(TIME_OPTION_NUMBER).getValue();
-            final long optionTime = new BigInteger(optionTimeValue).longValue();
-            return System.currentTimeMillis() >= optionTime;
-        }));
-    }
-
-    // TODO: should these tests be somewhere else? This is only testing the telemetry endpoint but these tests are more
-    //       general as they apply to all endpoints. Should this be in CoapContextTest?
-    /**
-     * TODO.
-     */
-    @Test
-    public void testServerTimeOptionIsSetInResponseWhenRequestedQoS1() {
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        givenAnAdapter(properties);
-        final Promise<Void> outcome = Promise.promise();
-        givenATelemetrySenderForAnyTenant(outcome);
-        final var resource = givenAResource(adapter);
-
-        // WHEN a device publishes an telemetry message with QoS 1
-        final Buffer payload = Buffer.buffer("some payload");
-        final OptionSet options = new OptionSet();
-        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        options.addOption(new Option(0xff20));
-        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final DeviceUser authenticatedDevice = new DeviceUser("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
-
-        resource.handlePostRequest(context);
-        outcome.complete();
-
-        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
-        verify(coapExchange).respond(argThat((Response res) -> res.getOptions().hasOption(0xff20)));
-        verify(coapExchange).respond(argThat((Response res) -> {
-            final byte[] optionTimeValue = res.getOptions().getOtherOption(0xff20).getValue();
-            final long optionTime = new BigInteger(optionTimeValue).longValue();
-            return System.currentTimeMillis() >= optionTime;
-        }));
     }
 
     /**
