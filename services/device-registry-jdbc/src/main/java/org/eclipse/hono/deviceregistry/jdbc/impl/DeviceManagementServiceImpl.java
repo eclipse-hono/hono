@@ -79,7 +79,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                                 Optional.of(r.getVersion()))
                 )
 
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -112,7 +112,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         Optional.empty(),
                         Optional.of(r.getVersion())))
 
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -131,7 +131,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         return Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT);
                     }
                 })
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -141,7 +141,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
         return this.store
                 .dropTenant(tenantId, span.context())
                 .map(r -> Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT))
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
     }
 
     @Override
@@ -161,12 +161,12 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
-        return store.findDevices(tenantId, pageSize, pageOffset, span.context())
+        return store.findDevices(tenantId, pageSize, pageOffset, filters, span.context())
             .map(result -> OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
                     result,
                     Optional.empty(),
                     Optional.empty()))
-            .recover(e -> Services.recover(e));
+            .recover(Services::recover);
     }
 }
