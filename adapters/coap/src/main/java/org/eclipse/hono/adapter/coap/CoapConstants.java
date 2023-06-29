@@ -26,6 +26,7 @@ public abstract class CoapConstants {
      * A tag to use for keeping track of a CoAP message type.
      */
     public static final StringTag TAG_COAP_MESSAGE_TYPE = new StringTag("coap.message_type");
+
     /**
      * A tag to use for keeping track of a CoAP response code.
      */

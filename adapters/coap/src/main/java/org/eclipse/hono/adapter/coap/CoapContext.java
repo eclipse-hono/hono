@@ -25,6 +25,7 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -48,6 +49,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * The query parameter which is used to indicate an empty notification.
      */
     public static final String PARAM_EMPTY_CONTENT = "empty";
+
     /**
      * The query parameter which is used to indicate, that a piggypacked response is supported by the device.
      * (Legacy support for device with firmware versions not supporting  piggypacked response.)
@@ -399,6 +401,19 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
+     * Checks whether the request includes either the time option or the hono-time parameter which
+     * indicates that the response should include a time option with the server time.
+     *
+     * @return <code>true</code> if response should include the time option containing the server time.
+     */
+    private boolean shouldResponseIncludeTimeOption() {
+        return Optional.ofNullable(exchange.getRequestOptions())
+                .map(opts -> opts.hasOption(TimeOption.NUMBER))
+                .orElse(false)
+                || exchange.getQueryParameter(TimeOption.QUERY_PARAMETER_NAME) != null;
+    }
+
+    /**
      * Sends a response to the device.
      * <p>
      * This also accepts the exchange.
@@ -407,6 +422,11 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @return The response code from the response.
      */
     public ResponseCode respond(final Response response) {
+        if (shouldResponseIncludeTimeOption()) {
+            // Add a time option with the current time to the response
+            final TimeOption timeOption = new TimeOption();
+            response.getOptions().addOption(timeOption);
+        }
         acceptFlag.set(true);
         exchange.respond(response);
         return response.getCode();

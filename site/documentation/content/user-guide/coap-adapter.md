@@ -78,8 +78,13 @@ page lists all (currently) registered codes and the corresponding media types.
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and 
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -96,6 +101,10 @@ page lists all (currently) registered codes and the corresponding media types.
     In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
     its response to the command. `command` and `command_response` will be used if the request also uses the fully spelled
     out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device.
   * (optional) Error details, if status code is >= 4.00.
@@ -180,8 +189,13 @@ downstream application attached which could send any commands to the device.
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -198,6 +212,10 @@ downstream application attached which could send any commands to the device.
     expecting  a response. In the latter case, the *location-path* option contains exactly the URI-path that the
     device must use when sending its response to the command. `command` and `command_response` will be used if the request
     also uses the fully spelled out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -282,8 +300,13 @@ unauthenticated devices.
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -301,6 +324,10 @@ unauthenticated devices.
     must use when sending its response to the command. Note that in both cases the `${deviceId}` path segment indicates
     the device that the command is targeted at. `command` and `command_response` will be used if the request also uses
     the fully spelled out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -385,8 +412,13 @@ The example above assumes that a gateway device has been registered with `psk` c
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -403,6 +435,10 @@ The example above assumes that a gateway device has been registered with `psk` c
     In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
     its response to the command. `command` and `command_response` will be used if the request also uses the fully spelled
     out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -475,8 +511,13 @@ downstream application attached which could send any commands to the device.
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -493,6 +534,10 @@ downstream application attached which could send any commands to the device.
     expecting  a response. In the latter case, the *location-path* option contains exactly the URI-path that the
     device must use when sending its response to the command. `command` and `command_response` will be used if the request
     also uses the fully spelled out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -565,8 +610,13 @@ unauthenticated devices.
     downstream. Otherwise, the content type of the downstream message will be set to `application/octet-stream`, if the payload
     is not empty and no default content type has been defined for the origin device or its tenant (see
     [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+  * (optional) *experimental option 0xfde8 (time)*: Request that the response include the server time.
+    If this option is present in the request, the server will add the same option to its response where the value will
+    indicate the server time (as milliseconds since UNIX epoch). The request option does not need to have a value, and
+    any value will, in fact, be ignored.
 * Query Parameters:
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-time*: Indicates that the client wants to receive the server time as a response option.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload matching the given content type.
@@ -584,6 +634,10 @@ unauthenticated devices.
     must use when sending its response to the command. Note that in both cases the `${deviceId}` path segment indicates
     the device that the command is targeted at. `command` and `command_response` will be used if the request also uses
     the fully spelled out endpoint name.
+  * (optional) *experimental option 0xfde8 (time)*: This option will only be present if the request contained this
+    option (with or without value) or the request contained the `hono-time` query parameter. The value of this option
+    in a response will indicate the server timestamp (as milliseconds since UNIX epoch) at the time the response was
+    sent.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.

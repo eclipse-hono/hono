@@ -21,7 +21,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static com.google.common.truth.Truth.assertThat;
+
+import org.eclipse.californium.core.coap.Option;
+import org.eclipse.californium.core.coap.OptionSet;
+import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -33,9 +39,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.google.common.collect.Range;
+
 import io.opentracing.Span;
 import io.vertx.core.Vertx;
-
 
 /**
  * Tests verifying behavior of {@link CoapContext}.
@@ -161,5 +168,71 @@ public class CoapContextTest {
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that the CoAP time option is not in the response if not requested by either a request option or parameter.
+     */
+    @Test
+    void testTimeOptionIsNotIncludedInResponseIfNotRequested() {
+        final CoapExchange exchange = mock(CoapExchange.class);
+        when(exchange.getRequestOptions()).thenReturn(new OptionSet());
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        final Response response = mock(Response.class);
+        final OptionSet responseOptions = new OptionSet();
+        when(response.getOptions()).thenReturn(responseOptions);
+        ctx.respond(response);
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isFalse();
+    }
+
+    /**
+     * Verifies that the CoAP time option is in the response if requested by a request option.
+     */
+    @Test
+    void testTimeOptionIsIncludedInResponseIfOptionPresentInRequest() {
+        final long start = System.currentTimeMillis();
+        final CoapExchange exchange = mock(CoapExchange.class);
+        final OptionSet requestOptions = new OptionSet();
+        requestOptions.addOption(new Option(TimeOption.NUMBER, new byte[0]));
+        when(exchange.getRequestOptions()).thenReturn(requestOptions);
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        final Response response = mock(Response.class);
+        final OptionSet responseOptions = new OptionSet();
+        when(response.getOptions()).thenReturn(responseOptions);
+        ctx.respond(response);
+        verify(response).getOptions();
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
+        final long end = System.currentTimeMillis();
+        assertThat(serverTime).isIn(Range.closed(start, end));
+    }
+
+    /**
+     * Verifies that the CoAP time option is in the response if requested by a request parameter.
+     */
+    @Test
+    void testTimeOptionIsIncludedInResponseIfParameterPresentInRequest() {
+        final long start = System.currentTimeMillis();
+        final CoapExchange exchange = mock(CoapExchange.class);
+        when(exchange.getQueryParameter(eq(TimeOption.QUERY_PARAMETER_NAME))).thenReturn("true");
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        final Response response = mock(Response.class);
+        final OptionSet responseOptions = new OptionSet();
+        when(response.getOptions()).thenReturn(responseOptions);
+        ctx.respond(response);
+        verify(response).getOptions();
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
+        final long end = System.currentTimeMillis();
+        assertThat(serverTime).isIn(Range.closed(start, end));
     }
 }

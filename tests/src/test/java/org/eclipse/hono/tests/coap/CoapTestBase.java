@@ -48,6 +48,7 @@ import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
+import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.network.CoapEndpoint;
@@ -61,6 +62,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
 import org.eclipse.californium.scandium.dtls.x509.SingleCertificateProvider;
 import org.eclipse.californium.scandium.dtls.x509.StaticNewAdvancedCertificateVerifier;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -95,6 +97,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 
@@ -1309,6 +1312,145 @@ public abstract class CoapTestBase {
                                 return response;
                             });
                 });
+    }
+
+    /**
+     * Ensures that a timestamp is within 2 seconds of current system clock.
+     * This is necessary because the test containers may have a clock drift of a few milliseconds
+     * from the host clock.
+     *
+     * @param ts the timestamp to check
+     */
+//    private void assertTimestampWithinRangeOfCurrentTime(final long ts) {
+//        // Use a buffer time of 2 seconds
+//        final long buffer = 2000;
+//        final long currentTime = System.currentTimeMillis();
+//        assertThat(ts).isIn(Range.closed(currentTime - buffer, currentTime + buffer));
+//    }
+
+    /**
+     * Verify that the CoAP adapter responds with a time option in the response when request includes
+     * a time option.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testServerTimeResponseWithRequestOption(final VertxTestContext ctx) {
+        final Checkpoint checks = ctx.checkpoint(2);
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    checks.flag();
+                }))
+                .compose(ok -> {
+                    final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                    request.getOptions().addOtherOption(new Option(TimeOption.NUMBER, new byte[0]));
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future();
+                })
+                .onSuccess(res -> {
+                    ctx.verify(() -> {
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
+                        // Unit tests verify that the time value is correct but due to minute time differences in the
+                        // containers running integration tests it suffices to verify that the value is non zero.
+                        assertThat(serverTimeValue).isGreaterThan(0L);
+                    });
+                    checks.flag();
+                })
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verify that the CoAP adapter responds with a time option in the response when request includes
+     * the {@value TimeOption#QUERY_PARAMETER_NAME} query parameter.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testServerTimeResponseWithRequestParameter(final VertxTestContext ctx) {
+        final Checkpoint checks = ctx.checkpoint(2);
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    checks.flag();
+                }))
+                .compose(ok -> {
+                    final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                    final URI uri = URI.create(request.getURI() + "?hono-time");
+                    request.setURI(uri);
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future();
+                })
+                .onSuccess(res -> {
+                    ctx.verify(() -> {
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
+                        // Unit tests verify that the time value is correct but due to minute time differences in the
+                        // containers running integration tests it suffices to verify that the value is non zero.
+                        assertThat(serverTimeValue).isGreaterThan(0L);
+                    });
+                    checks.flag();
+                })
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verify that the CoAP adapter response does not include a time option when neither the time option nor the
+     * query parameter are present in the request.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testNoServerTimeResponse(final VertxTestContext ctx) {
+
+        final Checkpoint checks = ctx.checkpoint(2);
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    //ctx.completeNow();
+                    checks.flag();
+                }))
+                .compose(ok -> {
+                    final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future();
+                })
+                .onSuccess(res -> {
+                    ctx.verify(() -> {
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isFalse();
+                    });
+                    checks.flag();
+                })
+                .onFailure(ctx::failNow);
     }
 
     /**
