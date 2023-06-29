@@ -176,6 +176,7 @@ public class CoapContextTest {
     @Test
     void testTimeOptionIsNotIncludedInResponseIfNotRequested() {
         final CoapExchange exchange = mock(CoapExchange.class);
+        when(exchange.getRequestOptions()).thenReturn(new OptionSet());
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
@@ -184,7 +185,7 @@ public class CoapContextTest {
         final OptionSet responseOptions = new OptionSet();
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
-        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isFalse();
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isFalse();
     }
 
     /**
@@ -194,9 +195,9 @@ public class CoapContextTest {
     void testTimeOptionIsIncludedInResponseIfOptionPresentInRequest() {
         final long start = System.currentTimeMillis();
         final CoapExchange exchange = mock(CoapExchange.class);
-        final OptionSet options = new OptionSet();
-        options.addOption(new Option(TimeOption.COAP_OPTION_TIME_NUMBER, new byte[0]));
-        when(exchange.getRequestOptions()).thenReturn(options);
+        final OptionSet requestOptions = new OptionSet();
+        requestOptions.addOption(new Option(TimeOption.NUMBER, new byte[0]));
+        when(exchange.getRequestOptions()).thenReturn(requestOptions);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
@@ -206,8 +207,8 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
-        final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
         final long end = System.currentTimeMillis();
         assertThat(serverTime).isIn(Range.closed(start, end));
     }
@@ -219,7 +220,7 @@ public class CoapContextTest {
     void testTimeOptionIsIncludedInResponseIfParameterPresentInRequest() {
         final long start = System.currentTimeMillis();
         final CoapExchange exchange = mock(CoapExchange.class);
-        when(exchange.getQueryParameter(eq(TimeOption.COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME))).thenReturn("true");
+        when(exchange.getQueryParameter(eq(TimeOption.QUERY_PARAMETER_NAME))).thenReturn("true");
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
         final var authenticatedDevice = new DeviceUser(tenant.getTenantId(), "device-id");
@@ -229,8 +230,8 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isTrue();
-        final long serverTime = responseOptions.getOtherOption(TimeOption.COAP_OPTION_TIME_NUMBER).getLongValue();
+        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
+        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
         final long end = System.currentTimeMillis();
         assertThat(serverTime).isIn(Range.closed(start, end));
     }

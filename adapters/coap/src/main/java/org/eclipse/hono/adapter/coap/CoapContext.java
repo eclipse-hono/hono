@@ -407,9 +407,10 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * @return <code>true</code> if response should include the time option containing the server time.
      */
     private boolean shouldResponseIncludeTimeOption() {
-        return Optional.ofNullable(
-                exchange.getRequestOptions()).filter(opts -> opts.hasOption(TimeOption.COAP_OPTION_TIME_NUMBER)).isPresent()
-                || exchange.getQueryParameter(TimeOption.COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME) != null;
+        return Optional.ofNullable(exchange.getRequestOptions())
+                .map(opts -> opts.hasOption(TimeOption.NUMBER))
+                .orElse(false)
+                || exchange.getQueryParameter(TimeOption.QUERY_PARAMETER_NAME) != null;
     }
 
     /**

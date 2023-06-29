@@ -22,8 +22,8 @@ import org.eclipse.californium.core.coap.Option;
  * Any value in the option as part of a request is ignored.
  * <p>
  * If the option is present in a request, the server adds also a time option to the response with the
- * servers system-time in milliseconds. Also, a client can request this option be included in a response via a
- * request parameter, "hono-time".
+ * servers system-time in milliseconds. Also, a client can request this option be included in a response via the
+ * {@value #QUERY_PARAMETER_NAME} request parameter.
  * <p>
  * This option uses the same option number as is used in the Californium cloud-demo-server application
  * (<a href="https://github.com/boaks/californium/blob/add_cloud_demo_server/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java#L49">see here</a>).
@@ -46,13 +46,20 @@ public final class TimeOption extends Option {
      *   <li> <a href="https://github.com/eclipse-hono/hono/pull/3503">Pull request for adding a time option to Hono</a> </li>
      * </ul>
      */
-    public static final int COAP_OPTION_TIME_NUMBER = 0xfde8;
+    public static final int NUMBER = 0xfde8;
 
     /**
      * The request parameter name clients should use to request the server <em>time</em> be sent back as part of the
      * response (as a time option).
      */
-    public static final String COAP_OPTION_TIME_REQUEST_QUERY_PARAMETER_NAME = "hono-time";
+    public static final String QUERY_PARAMETER_NAME = "hono-time";
+
+    /**
+     * Create time option with current system time.
+     */
+    public TimeOption() {
+        super(NUMBER, System.currentTimeMillis());
+    }
 
     /**
      * Create time option.
@@ -60,7 +67,7 @@ public final class TimeOption extends Option {
      * @param time time in system milliseconds.
      */
     public TimeOption(final long time) {
-        super(COAP_OPTION_TIME_NUMBER, time);
+        super(NUMBER, time);
     }
 
     /**
@@ -69,6 +76,6 @@ public final class TimeOption extends Option {
      * @param value time in system milliseconds as byte array.
      */
     public TimeOption(final byte[] value) {
-        super(COAP_OPTION_TIME_NUMBER, value);
+        super(NUMBER, value);
     }
 }
