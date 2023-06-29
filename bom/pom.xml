@@ -414,6 +414,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-adapter-coap</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-service-base</artifactId>
         <version>${project.version}</version>
       </dependency>

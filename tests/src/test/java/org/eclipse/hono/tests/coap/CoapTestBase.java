@@ -62,6 +62,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
 import org.eclipse.californium.scandium.dtls.x509.SingleCertificateProvider;
 import org.eclipse.californium.scandium.dtls.x509.StaticNewAdvancedCertificateVerifier;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -128,9 +129,6 @@ public abstract class CoapTestBase {
 
     private static final String COMMAND_TO_SEND = "setDarkness";
     private static final String COMMAND_JSON_KEY = "darkness";
-
-    // TODO: possibly add a dependency on the `hono-adapter-coap` module and use the constant from there?
-    private static final int TIME_OPTION_NUMBER = 0xfde8;
 
     /**
      * A logger to be shared with subclasses.
@@ -1357,14 +1355,14 @@ public abstract class CoapTestBase {
                     final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
                     final Promise<CoapResponse> result = Promise.promise();
                     final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
-                    request.getOptions().addOtherOption(new Option(TIME_OPTION_NUMBER, new byte[0]));
+                    request.getOptions().addOtherOption(new Option(TimeOption.NUMBER, new byte[0]));
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future();
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TIME_OPTION_NUMBER)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TIME_OPTION_NUMBER).getLongValue();
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
                         assertTimestampWithinRangeOfCurrentTime(serverTimeValue);
                     });
                     checks.flag();
@@ -1374,7 +1372,7 @@ public abstract class CoapTestBase {
 
     /**
      * Verify that the CoAP adapter responds with a time option in the response when request includes
-     * the "hono-time" query parameter.
+     * the {@value TimeOption#QUERY_PARAMETER_NAME} query parameter.
      *
      * @param ctx The vert.x test context.
      */
@@ -1404,8 +1402,8 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TIME_OPTION_NUMBER)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TIME_OPTION_NUMBER).getLongValue();
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
                         assertTimestampWithinRangeOfCurrentTime(serverTimeValue);
                     });
                     checks.flag();
@@ -1446,7 +1444,7 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TIME_OPTION_NUMBER)).isFalse();
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isFalse();
                     });
                     checks.flag();
                 })

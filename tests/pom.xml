@@ -273,6 +273,17 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-coap</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.slf4j</groupId>
+          <artifactId>slf4j-jboss-logmanager</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
