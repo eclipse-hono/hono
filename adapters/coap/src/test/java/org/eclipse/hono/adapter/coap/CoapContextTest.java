@@ -39,10 +39,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.google.common.collect.Range;
+
 import io.opentracing.Span;
 import io.vertx.core.Vertx;
-
-import com.google.common.collect.Range;
 
 /**
  * Tests verifying behavior of {@link CoapContext}.
