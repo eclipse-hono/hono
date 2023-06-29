@@ -101,7 +101,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     private final Statement countDevicesOfTenantStatement;
     private final Statement countGatewayDevicesOfTenant;
     private final Statement countDevicesExcludeGatewaysOfTenant;
-    private final Statement coundDevicesWithFilter;
+    private final Statement countDevicesWithFilter;
 
     private final Statement findDevicesStatement;
     private final Statement findDevicesOfTenantWithFilterStatement;
@@ -222,7 +222,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .validateParameters(
                         TENANT_ID);
 
-        this.coundDevicesWithFilter = cfg
+        this.countDevicesWithFilter = cfg
                 .getRequiredStatement("countDevicesOfTenantWithFilter")
                 .validateParameters(
                         TENANT_ID,
@@ -983,7 +983,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 }
             } else {
                 findDeviceSqlStatement = findDevicesOfTenantWithFilterStatement;
-                countStatement = this.coundDevicesWithFilter;
+                countStatement = this.countDevicesWithFilter;
             }
         }
 

@@ -200,7 +200,7 @@ countDevicesOfTenantWithFilter: |
    WHERE 
       tenant_id=:tenant_id
    AND
-      data->>:field = :value
+      jsonb_exists((data->:field), :value)
 
 findDevicesOfTenant: |
    SELECT * 
@@ -217,7 +217,7 @@ findDevicesOfTenantWithFilter: |
    WHERE 
       tenant_id=:tenant_id
    AND
-      data->>:field = :value
+      jsonb_exists((data->:field), :value)
    ORDER BY device_id ASC
    LIMIT :page_size
    OFFSET :page_offset

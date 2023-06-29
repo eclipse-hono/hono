@@ -1687,12 +1687,7 @@ components:
       filterJson:
         name: filterJson
         in: query
-        description: |
-           
-          Using the following filter filterJson={"field": "/gateways","value": false}, all devices can be listed
-          excluding gateways. With the filter filterJson={"field": "/gateways","value": true} it is possible to
-          list only gateways.
-         
+        description: |        
           A predicate that objects in the result set must match. If this parameter is specified multiple
           times, objects in the result set must match all predicates.
           The predicate is specified as a string representing a JSON object complying with the following schema
@@ -1742,6 +1737,12 @@ components:
             value: "{\"field\": \"/ext/count\",\"value\": 15}"
           string field:
             value: "{\"field\": \"/ext/brand\",\"value\": \"eclipse*\"}"
+          only gateways:
+            value: "{\"field\": \"/gateways\",\"value\": true}"
+          only devices:
+            value: "{\"field\": \"/gateways\",\"value\": false}"
+          via contains value:
+            value: "{\"field\": \"/via\",\"value\": \"gateway_123\"}"
 
       sortJson:
         name: sortJson
