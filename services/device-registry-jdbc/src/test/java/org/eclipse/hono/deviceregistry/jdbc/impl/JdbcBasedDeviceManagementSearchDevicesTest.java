@@ -227,7 +227,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
         final int pageSize = 3;
         final int pageOffset = 0;
         final List<Filter> filters = new ArrayList<>();
-        final Filter filter1 = new Filter("/via", "[\"testDevice2\"]");
+        final Filter filter1 = new Filter("/via", "testDevice2");
         filters.add(filter1);
 
         createDevices(tenantId, Map.of(
