@@ -50,8 +50,8 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     /**
      * Create a new instance.
      *
-     * @param vertx The vert.x instance to use.
-     * @param store The backing store to use.
+     * @param vertx      The vert.x instance to use.
+     * @param store      The backing store to use.
      * @param properties The service properties.
      */
     public DeviceManagementServiceImpl(final Vertx vertx, final TableManagementStore store, final DeviceServiceOptions properties) {
@@ -79,7 +79,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                                 Optional.of(r.getVersion()))
                 )
 
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -112,7 +112,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         Optional.empty(),
                         Optional.of(r.getVersion())))
 
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -131,7 +131,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         return Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT);
                     }
                 })
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
 
     }
 
@@ -141,7 +141,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
         return this.store
                 .dropTenant(tenantId, span.context())
                 .map(r -> Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT))
-                .recover(e -> Services.recover(e));
+                .recover(Services::recover);
     }
 
     @Override
@@ -151,22 +151,22 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
 
     @Override
     protected Future<OperationResult<SearchResult<DeviceWithId>>> processSearchDevices(
-        final String tenantId,
-        final int pageSize,
-        final int pageOffset,
-        final List<Filter> filters,
-        final List<Sort> sortOptions,
-        final Span span) {
+            final String tenantId,
+            final int pageSize,
+            final int pageOffset,
+            final List<Filter> filters,
+            final List<Sort> sortOptions,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
-        return store.findDevices(tenantId, pageSize, pageOffset, span.context())
-            .map(result -> OperationResult.ok(
-                    HttpURLConnection.HTTP_OK,
-                    result,
-                    Optional.empty(),
-                    Optional.empty()))
-            .recover(e -> Services.recover(e));
+        return store.findDevices(tenantId, pageSize, pageOffset, filters, span.context())
+                .map(result -> OperationResult.ok(
+                        HttpURLConnection.HTTP_OK,
+                        result,
+                        Optional.empty(),
+                        Optional.empty()))
+                .recover(Services::recover);
     }
 }

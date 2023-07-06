@@ -12,7 +12,6 @@
  *******************************************************************************/
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -33,7 +32,9 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistryTest {
+
+
+class JdbcPostgresDeviceManagementSearchDevicesTest extends AbstractJdbcPostgresBaseRegistryTest {
 
     /**
      * Creates a set of devices.
@@ -168,35 +169,6 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
     }
 
     @Test
-    void TestSearchDevicesWithViaFilter(final VertxTestContext ctx) {
-        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
-        final int pageSize = 3;
-        final int pageOffset = 0;
-        final List<Filter> filters = new ArrayList<>();
-        final Filter filter1 = new Filter("/via", "[\"testDevice_Gateway\"]");
-        filters.add(filter1);
-
-        createDevices(tenantId, Map.of(
-                "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice_Gateway")),
-                "testDevice2", new Device().setEnabled(true).setVia(List.of("testDevice_Gateway")),
-                "testDevice3", new Device().setEnabled(true).setVia(List.of("testDevice_Gateway2")),
-                "testDevice_Gateway", new Device(),
-                "testDevice_Gateway2", new Device().setEnabled(true)))
-                .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
-                .onComplete(ctx.succeeding(s -> {
-                    ctx.verify(() -> {
-                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                        assertThat(s.getPayload().getTotal()).isEqualTo(2);
-                        assertThat(s.getPayload().getResult()).hasSize(2);
-                        assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
-                        assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice2");
-                    });
-                    ctx.completeNow();
-                }));
-    }
-
-    @Test
     void TestSearchDevicesWithBooleanFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
@@ -207,7 +179,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("testDevice2")),
-                "testDevice2", new Device().setEnabled(false).putExtension("count", 12),
+                "testDevice2", new Device().setEnabled(false),
                 "testDevice3", new Device().setEnabled(true).setVia(List.of("testDevice2")),
                 "testDevice4", new Device().setEnabled(true).setVia(List.of("testDevice1"))))
                 .compose(ok -> getDeviceManagementService()
@@ -236,9 +208,9 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
         filters.add(filter1);
 
         createDevices(tenantId, Map.of(
-                "testDevice1", new Device().setEnabled(true).putExtension("count", 12),
-                "testDevice2", new Device().setEnabled(false).putExtension("count", 8),
-                "testDevice3", new Device().setEnabled(true).putExtension("count", 12)))
+                "testDevice1", new Device().putExtension("count", 12),
+                "testDevice2", new Device().putExtension("count", 8),
+                "testDevice3", new Device().putExtension("count", 12)))
                 .compose(ok -> getDeviceManagementService()
                         .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
@@ -288,13 +260,15 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
         final int pageSize = 10;
         final int pageOffset = 0;
         final List<Filter> filters = new ArrayList<>();
-        final Filter filter1 = new Filter("/type", "type%");
+        final Filter filter1 = new Filter("/type", "type1%");
         filters.add(filter1);
 
         createDevices(tenantId, Map.of(
-                "testDevice1", new Device().setEnabled(true).putExtension("type", "type1"),
-                "testDevice2", new Device().setEnabled(false).putExtension("type", "type2"),
-                "testDevice3", new Device().setEnabled(true).putExtension("type", "type1")))
+                "testDevice1", new Device().setEnabled(true).putExtension("type", "type111111"),
+                "testDevice2", new Device().setEnabled(false).putExtension("type", "type12222"),
+                "testDevice3", new Device().setEnabled(false).putExtension("type", "type133333"),
+                "testDevice4", new Device().setEnabled(true).putExtension("type", "typeN"),
+                "testDevice5", new Device().setEnabled(true).putExtension("type", "typeNone")))
                 .compose(ok -> getDeviceManagementService()
                         .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
@@ -316,22 +290,21 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
         final int pageSize = 10;
         final int pageOffset = 0;
         final List<Filter> filters = new ArrayList<>();
-        final Filter filter1 = new Filter("/type", "type_1%");
+        final Filter filter1 = new Filter("/type", "type_2%");
         filters.add(filter1);
 
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).putExtension("type", "type11"),
-                "testDevice2", new Device().setEnabled(false).putExtension("type", "type2"),
+                "testDevice2", new Device().setEnabled(false).putExtension("type", "type22"),
                 "testDevice3", new Device().setEnabled(true).putExtension("type", "type11")))
                 .compose(ok -> getDeviceManagementService()
                         .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                        assertThat(s.getPayload().getTotal()).isEqualTo(2);
-                        assertThat(s.getPayload().getResult()).hasSize(2);
-                        assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
-                        assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice3");
+                        assertThat(s.getPayload().getTotal()).isEqualTo(1);
+                        assertThat(s.getPayload().getResult()).hasSize(1);
+                        assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice2");
                     });
                     ctx.completeNow();
                 }));

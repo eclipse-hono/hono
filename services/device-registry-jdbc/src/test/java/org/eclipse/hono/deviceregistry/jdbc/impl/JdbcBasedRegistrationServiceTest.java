@@ -31,7 +31,7 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implements AbstractRegistrationServiceTest {
+class JdbcBasedRegistrationServiceTest extends AbstractJdbcBaseRegistryTest implements AbstractRegistrationServiceTest {
 
     /**
      * Verifies that a request to create more devices than the globally configured limit fails with a 403.

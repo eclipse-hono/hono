@@ -35,7 +35,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
-class RegistryServiceTest extends AbstractJdbcRegistryTest {
+class BaseRegistryServiceTest extends AbstractJdbcBaseRegistryTest {
 
     private static final String DEFAULT_TENANT = "default";
 

@@ -69,24 +69,24 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
-abstract class AbstractJdbcRegistryTest {
+abstract class AbstractJdbcBaseRegistryTest {
     enum DatabaseType {
         H2,
         POSTGRESQL
     }
     protected static final Span SPAN = NoopSpan.INSTANCE;
 
-    private static final DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
-    private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
+    protected static DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
+    protected static  DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcBaseRegistryTest.class.getSimpleName()
             + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
     private static final Map<DatabaseType, JdbcDatabaseContainer<?>> DATABASE_CONTAINER_CACHE = new ConcurrentHashMap<>();
-    private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
+    private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcBaseRegistryTest.class.getSimpleName()
             + ".postgresqlImageName", "postgres:12-alpine");
 
     private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());
 
     private static final Tracer TRACER = NoopTracerFactory.create();
-    private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "resources", "sql", DATABASE_TYPE.name().toLowerCase());
+    protected static Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "resources", "sql", DATABASE_TYPE.name().toLowerCase());
 
     private static final Path BASE_DIR = Path.of("target").toAbsolutePath();
 

@@ -1687,10 +1687,11 @@ components:
       filterJson:
         name: filterJson
         in: query
-        description: |
+        description: |        
           A predicate that objects in the result set must match. If this parameter is specified multiple
           times, objects in the result set must match all predicates.
           The predicate is specified as a string representing a JSON object complying with the following schema
+            
           ```
           {
             "type": "object",

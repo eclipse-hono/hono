@@ -174,9 +174,9 @@ countDevicesOfTenant: |
 
 findDevicesOfTenant: |
    SELECT * 
-   FROM %s
-   WHERE
+   FROM %s 
+   WHERE 
       tenant_id=:tenant_id
-   ORDER BY device_id
+   ORDER BY device_id ASC
    LIMIT :page_size
    OFFSET :page_offset

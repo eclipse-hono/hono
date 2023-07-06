@@ -34,7 +34,7 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedCredentialsServiceTest extends AbstractJdbcRegistryTest implements CredentialsServiceTestBase {
+class JdbcBasedCredentialsServiceTest extends AbstractJdbcBaseRegistryTest implements CredentialsServiceTestBase {
 
     /**
      * Verifies that a request to update credentials of a device fails with a 403 status code

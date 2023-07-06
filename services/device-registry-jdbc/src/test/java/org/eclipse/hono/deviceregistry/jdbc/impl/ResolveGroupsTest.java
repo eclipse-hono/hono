@@ -40,7 +40,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
-class ResolveGroupsTest extends AbstractJdbcRegistryTest {
+class ResolveGroupsTest extends AbstractJdbcBaseRegistryTest {
 
     private <T> Handler<AsyncResult<OperationResult<T>>> assertSuccess(final VertxTestContext context, final int statusCode) {
         return context.succeeding(result -> {
