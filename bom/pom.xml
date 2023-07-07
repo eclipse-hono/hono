@@ -55,7 +55,7 @@
     <native.builder-image.name>mandrel</native.builder-image.name>
     <netty.version>4.1.94.Final</netty.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
-    <qpid-jms.version>1.8.0</qpid-jms.version>
+    <qpid-jms.version>1.10.0</qpid-jms.version>
     <quarkus.platform.version>2.16.8.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
     <spring-security-crypto.version>5.7.6</spring-security-crypto.version>
