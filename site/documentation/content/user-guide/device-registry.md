@@ -66,6 +66,43 @@ The JDBC based registry implementation does not support the following features:
   multiple tenants can not be configured to use the same trust anchor(s).
 {{% /notice %}}
 
+#### Registering a Certificate Authority
+
+Devices can use an X.509 client certificate for authenticating to Hono's protocol adapters. In order for this to work,
+one or more root *certificate authorities* (CAs) need to be registered with the tenant that the devices belong to.
+
+The [Management API]({{< relref "/api/management#tenants/updateTenant" >}}) can be used to register CAs based on a public
+key plus some meta data. It also supports registering CAs using PEM files that contain a signed certificate.
+
+Given a certificate in a PEM file (i.e. one that begins with `-----BEGIN CERTIFICATE-----` and ends with
+`-----END CERTIFICATE-----`), the Base64 string representing the certificate's binary encoding can be extracted
+from the file using the following command:
+
+```sh
+CERT=$(openssl x509 -in my-ca-cert.pem -outform PEM | sed /^---/d | sed -z 's/\n//g')
+```
+
+The CA can then be registered using the Management API:
+
+```sh
+TENANT_ID=my-tenant
+REGISTRY_IP=hono.eclipseprojects.io
+curl --location 'https://${REGISTRY_IP}:28443/v1/tenants/${TENANT_ID}'
+--header 'content-type: application/json'
+--data '{
+  "trusted-ca": [
+    {
+      "cert": "'${CERT}'"
+    }
+  ],
+  "ext": {
+    "messaging-type": "kafka"
+  }
+}'
+```
+
+The `TENANT_ID` and `REGISTRY_IP` variables need to be adapted to the Hono installation and tenant being used.
+
 #### Registration Limits
 
 The registry implementations support the enforcement of *registration limits* defined at the tenant level.
@@ -113,3 +150,4 @@ The JDBC based registry implementation does not support the following features:
 
 The device's credentials can be managed using the Device Registry Management API's
 [credentials related resources]({{< relref "/api/management#credentials" >}}).
+
