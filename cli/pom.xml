@@ -40,6 +40,7 @@
       deploy this module's artifacts to the configured project repository
      -->
     <skipStaging>true</skipStaging>
+    <maven.install.skip>true</maven.install.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <gpg.skip>true</gpg.skip>
