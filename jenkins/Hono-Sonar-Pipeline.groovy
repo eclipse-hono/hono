@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,7 @@ pipeline {
             - name: "HOME"
               value: "/home/jenkins"
           - name: "hono-builder"
-            image: "eclipse/hono-builder:2.2.0"
+            image: "eclipse/hono-builder:2.3.1"
             imagePullPolicy: "Always"
             tty: true
             command:
