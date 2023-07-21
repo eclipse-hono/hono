@@ -4,6 +4,30 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 2.4.0 (not released yet)
+
+### New features
+
+* Hono now supports using Google Pub/Sub as the messaging infrastructure. The Admin Guide and the API documentation have
+  been amended with corresponding information on how to configure Hono and applications for using Pub/Sub.
+* Hono's MQTT and HTTP adapters now support using JSON Web Tokens (JWT) for authentication. In particular, the adapters
+  allow devices that have been connected to Google's IoT Core endpoints to connect to Hono instead. The User Guides have
+  been amended with corresponding information regarding configuration and usage.
+
+### Fixes & Enhancements
+
+* The JDBC based device registry now supports searching for tenants and devices including paging. However, filtering and
+  sorting is not implemented yet.
+
+## 2.3.1
+
+### Fixes & Enhancements
+
+* Using Maven 3.9.x for building Hono was not possible and resulted in an error. This has been fixed.
+* The Device Registry User Guide has been amended with information on how to configure the trust anchor of a tenant
+  using a PEM file.
+* The demo keys and certificates that come with Hono for testing purposes had expired and have been recreated.
+
 ## 2.3.0
 
 ### New features
