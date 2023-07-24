@@ -413,7 +413,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             qos,
                             payload.length(),
                             getTtdStatus(context),
-                            context.getTimer());
+                            context.getTimer(),
+                            MetricsTags.ProcessingOutcomeReason.from(t));
                     TracingHelper.logError(currentSpan, t);
                     commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
                     return Future.failedFuture(t);

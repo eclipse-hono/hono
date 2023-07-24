@@ -260,6 +260,19 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
     }
 
     @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final Timer.Sample timer,
+            final MetricsTags.ProcessingOutcomeReason reason) {
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, MetricsTags.TtdStatus.NONE, timer, reason);
+    }
+
+    @Override
     public final void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
@@ -269,6 +282,21 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Timer.Sample timer) {
+
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, ttdStatus, timer, null);
+    }
+
+    @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Timer.Sample timer,
+            final MetricsTags.ProcessingOutcomeReason reason) {
 
         Objects.requireNonNull(type);
         Objects.requireNonNull(tenantId);
@@ -284,10 +312,14 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         }
 
         final Tags tags = Tags.of(type.asTag())
-                .and(MetricsTags.getTenantTag(tenantId))
-                .and(outcome.asTag())
-                .and(qos.asTag())
-                .and(ttdStatus.asTag());
+            .and(MetricsTags.getTenantTag(tenantId))
+            .and(outcome.asTag())
+            .and(qos.asTag())
+            .and(ttdStatus.asTag());
+
+        if (reason != null) {
+            tags.and(reason.asTag());
+        }
 
         timer.stop(this.registry.timer(METER_TELEMETRY_PROCESSING_DURATION, tags));
 

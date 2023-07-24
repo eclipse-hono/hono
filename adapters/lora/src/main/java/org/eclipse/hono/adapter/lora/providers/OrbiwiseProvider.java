@@ -82,7 +82,10 @@ public class OrbiwiseProvider extends JsonBasedLoraProvider {
     protected LoraMessageType getMessageType(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
-        return LoraMessageType.UPLINK;
+        if (loraMessage.containsKey(FIELD_ORBIWISE_PAYLOAD)) {
+            return LoraMessageType.UPLINK;
+        }
+        return LoraMessageType.UNKNOWN;
     }
 
     @Override

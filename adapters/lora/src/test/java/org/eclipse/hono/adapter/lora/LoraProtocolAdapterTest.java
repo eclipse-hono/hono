@@ -89,6 +89,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
     private Span processMessageSpan;
     private Vertx vertx;
     private WebClient webClient;
+    private HttpAdapterMetrics metrics;
 
     /**
      * Sets up the fixture.
@@ -118,7 +119,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         when(tracer.buildSpan(eq(LoraProtocolAdapter.SPAN_NAME_PROCESS_MESSAGE))).thenReturn(processMessageSpanBuilder);
         when(tracer.buildSpan(argThat(opName -> !opName.equals(LoraProtocolAdapter.SPAN_NAME_PROCESS_MESSAGE)))).thenReturn(otherSpanBuilder);
 
-        final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
+        metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(mock(Sample.class));
 
         final LoraCommandSubscriptions commandSubscriptions = new LoraCommandSubscriptions(vertx, tracer);

@@ -41,7 +41,6 @@ import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
-import org.eclipse.hono.adapter.AdapterDisabledException;
 import org.eclipse.hono.adapter.AuthorizationException;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
@@ -67,8 +66,10 @@ import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNot
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -1325,7 +1326,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             ProcessingOutcome.from(t),
                             context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
                             context.getPayloadSize(),
-                            context.getTimer());
+                            context.getTimer(),
+                            MetricsTags.ProcessingOutcomeReason.from(t));
                     return Future.failedFuture(t);
 
                 }).map(ok -> {

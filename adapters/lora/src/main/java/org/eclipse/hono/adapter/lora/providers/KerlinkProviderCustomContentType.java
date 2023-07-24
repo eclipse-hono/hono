@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -57,7 +58,12 @@ public class KerlinkProviderCustomContentType extends JsonBasedLoraProvider {
      */
     @Override
     public LoraMessageType getMessageType(final JsonObject loraMessage) {
-        return LoraMessageType.UPLINK;
+        final Optional<Object> payload = LoraUtils.getChildObject(loraMessage, FIELD_UPLINK_USER_DATA, JsonObject.class)
+            .map(userData -> userData.getValue(FIELD_UPLINK_PAYLOAD));
+        if (payload.isPresent()) {
+            return LoraMessageType.UPLINK;
+        }
+        return LoraMessageType.UNKNOWN;
     }
 
     /**

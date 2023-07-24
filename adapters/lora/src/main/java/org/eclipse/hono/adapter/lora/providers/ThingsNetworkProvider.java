@@ -76,7 +76,10 @@ public class ThingsNetworkProvider extends JsonBasedLoraProvider {
      */
     @Override
     protected LoraMessageType getMessageType(final JsonObject loraMessage) {
-        return LoraMessageType.UPLINK;
+        if (loraMessage.containsKey(FIELD_TTN_PAYLOAD_RAW)) {
+            return LoraMessageType.UPLINK;
+        }
+        return LoraMessageType.UNKNOWN;
     }
 
     @Override
