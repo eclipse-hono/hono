@@ -42,7 +42,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistr
      * @param devices  The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    private Future<Void> createDevices(final String tenantId, final Map<String, Device> devices) {
+     Future<Void> createDevices(final String tenantId, final Map<String, Device> devices) {
         Future<Void> current = Future.succeededFuture();
 
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
