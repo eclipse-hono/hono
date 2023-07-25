@@ -34,7 +34,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedTenantManagementSearchTenantsTest extends AbstractJdbcBaseRegistryTest {
+class JdbcBasedTenantManagementSearchTenantsTest extends AbstractJdbcRegistryTest {
 
     /**
      * Creates a set of tenants.

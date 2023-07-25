@@ -17,7 +17,7 @@ import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedTenantServiceTest extends AbstractJdbcBaseRegistryTest implements AbstractTenantServiceTest {
+class JdbcBasedTenantServiceTest extends AbstractJdbcRegistryTest implements AbstractTenantServiceTest {
 
     @Override
     public void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(

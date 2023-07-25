@@ -21,7 +21,7 @@ class JdbcPostgresDeviceManagementSearchDevicesTest extends JdbcBasedDeviceManag
     protected JdbcPostgresDeviceManagementSearchDevicesTest() {
         super();
         DEFAULT_DATABASE_TYPE = DatabaseType.POSTGRESQL;
-        DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcBaseRegistryTest.class.getSimpleName()
+        DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
                 + "_postgresql" + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
         EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "resources", "sql", DATABASE_TYPE.name().toLowerCase());
     }

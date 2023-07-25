@@ -661,8 +661,8 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param tenantId       The tenant to count devices for.
      * @param spanContext    The span to contribute to.
      * @param countStatement The count statement to use.
-     * @param field          the field of filter expression
-     * @param value          the value of the filter expression
+     * @param field          The field of filter expression.
+     * @param value          The value of the filter expression.
      * @return A future tracking the outcome of the operation.
      * @throws NullPointerException if tenant is {@code null}.
      */
@@ -925,7 +925,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param tenantId    The tenantId to search devices.
      * @param pageSize    The page size.
      * @param pageOffset  The page offset.
-     * @param filters     The list of filters.
+     * @param filters     The list of filters (currently only the first value of the list will be used).
      * @param spanContext The span to contribute to.
      * @return A future containing devices.
      */

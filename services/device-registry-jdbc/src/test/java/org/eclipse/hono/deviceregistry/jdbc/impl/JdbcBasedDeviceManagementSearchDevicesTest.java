@@ -33,7 +33,7 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
-class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcBaseRegistryTest {
+class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTest {
 
     /**
      * Creates a set of devices.

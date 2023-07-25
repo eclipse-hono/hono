@@ -43,7 +43,7 @@ import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class TenantServiceTest extends AbstractJdbcBaseRegistryTest {
+class TenantServiceTest extends AbstractJdbcRegistryTest {
 
     private Handler<AsyncResult<TenantResult<JsonObject>>> assertNotFound(final VertxTestContext context) {
 

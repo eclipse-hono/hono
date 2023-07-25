@@ -69,7 +69,7 @@ import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
 @ExtendWith(VertxExtension.class)
-abstract class AbstractJdbcBaseRegistryTest {
+abstract class AbstractJdbcRegistryTest {
     enum DatabaseType {
         H2,
         POSTGRESQL
@@ -77,10 +77,10 @@ abstract class AbstractJdbcBaseRegistryTest {
     protected static final Span SPAN = NoopSpan.INSTANCE;
 
     protected static DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
-    protected static  DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcBaseRegistryTest.class.getSimpleName()
+    protected static  DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
             + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
     private static final Map<DatabaseType, JdbcDatabaseContainer<?>> DATABASE_CONTAINER_CACHE = new ConcurrentHashMap<>();
-    private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcBaseRegistryTest.class.getSimpleName()
+    private static final String POSTGRESQL_IMAGE_NAME = System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
             + ".postgresqlImageName", "postgres:12-alpine");
 
     private static final AtomicLong UNIQUE_ID_GENERATOR = new AtomicLong(System.currentTimeMillis());

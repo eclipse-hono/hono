@@ -60,7 +60,7 @@ The tenants in the registry can be managed using the Device Registry Management 
 The JDBC based registry implementation does not support the following features:
 
 * Tenants can be retrieved using the [search tenants]({{< relref "/api/management#tenants/searchTenants" >}})
-  operation defined by the Device Registry Management API, but the *sortJson* query parameters are
+  operation defined by the Device Registry Management API, but the *sortJson* query parameter is
   (currently) being ignored. The result set will always be sorted by the tenant Id in ascending order.
 * The *alias* and *trust-anchor-group* properties defined on a tenant are being ignored by the registry. Consequently,
   multiple tenants can not be configured to use the same trust anchor(s).
