@@ -925,7 +925,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param tenantId    The tenantId to search devices.
      * @param pageSize    The page size.
      * @param pageOffset  The page offset.
-     * @param filters     The list of filters (currently only the first value of the list will be used).
+     * @param filters     The list of filters (currently only the first value of the list is used).
      * @param spanContext The span to contribute to.
      * @return A future containing devices.
      */
