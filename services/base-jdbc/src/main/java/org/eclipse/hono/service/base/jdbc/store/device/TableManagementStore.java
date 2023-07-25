@@ -278,8 +278,8 @@ public class TableManagementStore extends AbstractDeviceStore {
      * It returns the plain result set from the query, which may also be empty.
      *
      * @param connection The connection to use.
-     * @param key        The key of the device.
-     * @param span       The span to contribute to.
+     * @param key The key of the device.
+     * @param span The span to contribute to.
      * @return A future tracking the outcome of the operation.
      */
     protected Future<ResultSet> readDeviceForUpdate(final SQLConnection connection, final DeviceKey key, final SpanContext span) {
