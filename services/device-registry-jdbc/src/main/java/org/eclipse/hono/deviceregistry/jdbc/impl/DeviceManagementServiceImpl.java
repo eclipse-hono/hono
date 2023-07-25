@@ -50,8 +50,8 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     /**
      * Create a new instance.
      *
-     * @param vertx      The vert.x instance to use.
-     * @param store      The backing store to use.
+     * @param vertx The vert.x instance to use.
+     * @param store The backing store to use.
      * @param properties The service properties.
      */
     public DeviceManagementServiceImpl(final Vertx vertx, final TableManagementStore store, final DeviceServiceOptions properties) {
