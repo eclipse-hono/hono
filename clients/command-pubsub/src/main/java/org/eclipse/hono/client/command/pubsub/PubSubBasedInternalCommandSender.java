@@ -102,7 +102,10 @@ public class PubSubBasedInternalCommandSender extends AbstractPubSubBasedMessage
         attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_PROJECT_ID, projectId);
         attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, !command.isOneWay());
         Optional.ofNullable(command.getGatewayId()).ifPresent(
-                id -> attributes.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, id));
+                id -> {
+                    attributes.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, id);
+                    attributes.put(MessageHelper.APP_PROPERTY_CMD_VIA, id);
+                });
         return attributes;
     }
 }
