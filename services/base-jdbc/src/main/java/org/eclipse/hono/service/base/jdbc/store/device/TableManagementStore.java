@@ -108,7 +108,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      *
      * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
-     * @param cfg    The SQL statement configuration.
+     * @param cfg The SQL statement configuration.
      */
     public TableManagementStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
@@ -297,12 +297,12 @@ public class TableManagementStore extends AbstractDeviceStore {
      * a duplicate entity or constraint violation. This will be translated into a
      * failed future with an {@link org.eclipse.hono.service.base.jdbc.store.DuplicateKeyException}.
      *
-     * @param key                         The key of the device to create.
-     * @param device                      The device data.
-     * @param tenant                      The configuration of the tenant that the device belongs to.
+     * @param key The key of the device to create.
+     * @param device The device data.
+     * @param tenant The configuration of the tenant that the device belongs to.
      * @param globalDevicesPerTenantLimit The globally defined maximum number of devices per tenant. A value
      *                                    &lt;= 0 will be interpreted as no limit being defined.
-     * @param spanContext                 The span to contribute to.
+     * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
     public Future<Versioned<Void>> createDevice(
@@ -418,12 +418,12 @@ public class TableManagementStore extends AbstractDeviceStore {
      * not exists. If the device exists, but the resource version does not match, the result
      * will fail with an {@link OptimisticLockingException}.
      *
-     * @param key             The key of the device to update.
-     * @param statement       The statement to use for the update.
-     * @param jsonValue       The value to set.
+     * @param key The key of the device to update.
+     * @param statement The statement to use for the update.
+     * @param jsonValue The value to set.
      * @param resourceVersion The optional resource version.
-     * @param nextVersion     The new version to set.
-     * @param span            The span to contribute to.
+     * @param nextVersion The new version to set.
+     * @param span The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
     protected Future<UpdateResult> updateJsonField(
@@ -464,10 +464,10 @@ public class TableManagementStore extends AbstractDeviceStore {
      * with either the {@code updateRegistration} or {@code updateRegistrationVersioned}
      * statement.
      *
-     * @param key             The key of the device to update.
-     * @param device          The device data to store.
+     * @param key The key of the device to update.
+     * @param device The device data to store.
      * @param resourceVersion The optional resource version.
-     * @param spanContext     The span to contribute to.
+     * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
     public Future<Versioned<Void>> updateDevice(
@@ -547,7 +547,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * If there is exactly one row, it will read the device registration information from the column
      * {@code data} and optionally current resource version from the column {@code version}.
      *
-     * @param key         The key of the device to read.
+     * @param key The key of the device to read.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
@@ -585,9 +585,9 @@ public class TableManagementStore extends AbstractDeviceStore {
      * the named parameters {@code tenant_id}, {@code device_id}, and {@code expected_version} (if set).
      * It will return the plain update result of the operation.
      *
-     * @param key             The key of the device to delete.
+     * @param key The key of the device to delete.
      * @param resourceVersion An optional resource version.
-     * @param spanContext     The span to contribute to.
+     * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
     public Future<UpdateResult> deleteDevice(
@@ -632,7 +632,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Delete all devices belonging to the provided tenant.
      *
-     * @param tenantId    The tenant to clean up.
+     * @param tenantId The tenant to clean up.
      * @param spanContext The span to contribute to.
      * @return A future tracking the outcome of the operation.
      */
@@ -658,11 +658,11 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Gets the number of devices that are registered for a tenant.
      *
-     * @param tenantId       The tenant to count devices for.
-     * @param spanContext    The span to contribute to.
+     * @param tenantId The tenant to count devices for.
+     * @param spanContext The span to contribute to.
      * @param countStatement The count statement to use.
-     * @param field          The field of filter expression.
-     * @param value          The value of the filter expression.
+     * @param field The field of filter expression.
+     * @param value The value of the filter expression.
      * @return A future tracking the outcome of the operation.
      * @throws NullPointerException if tenant is {@code null}.
      */
@@ -708,10 +708,10 @@ public class TableManagementStore extends AbstractDeviceStore {
      * If the resource version was provided, but the provided version was no longer the current version,
      * then the future will fail with a {@link OptimisticLockingException}.
      *
-     * @param key             The key of the device to update.
-     * @param credentials     The credentials to set.
+     * @param key The key of the device to update.
+     * @param credentials The credentials to set.
      * @param resourceVersion The optional resource version to update.
-     * @param spanContext     The span to contribute to.
+     * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
     public Future<Versioned<Boolean>> setCredentials(
@@ -858,7 +858,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * result must be empty. If no credentials could be found for an existing device,
      * the result must not be empty, but provide an empty {@link CredentialsReadResult}.
      *
-     * @param key         The key of the device.
+     * @param key The key of the device.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
@@ -922,10 +922,10 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Gets a list of devices of a specific tenant.
      *
-     * @param tenantId    The tenantId to search devices.
-     * @param pageSize    The page size.
-     * @param pageOffset  The page offset.
-     * @param filters     The list of filters (currently only the first value of the list is used).
+     * @param tenantId The tenantId to search devices.
+     * @param pageSize The page size.
+     * @param pageOffset The page offset.
+     * @param filters The list of filters (currently only the first value of the list is used).
      * @param spanContext The span to contribute to.
      * @return A future containing devices.
      */
