@@ -53,3 +53,23 @@ resolveGroups: |
       tenant_id=:tenant_id
    AND
       group_id in (select unnest((string_to_array(:group_ids,','))::varchar[]))
+
+countDevicesOfTenantWithFilter: |
+   SELECT COUNT(*) AS deviceCount FROM %1$s    
+   WHERE 
+      tenant_id=:tenant_id
+   AND
+     data->>:field LIKE CAST(:value AS VARCHAR) OR
+     jsonb_extract_path(data,'ext')->>:field LIKE CAST(:value as varchar)
+
+findDevicesOfTenantWithFilter: |
+   SELECT * 
+   FROM %s 
+   WHERE 
+      tenant_id=:tenant_id
+   AND
+     data->>:field LIKE CAST(:value AS VARCHAR) OR
+   jsonb_extract_path(data,'ext')->>:field LIKE CAST(:value as varchar)
+   ORDER BY device_id ASC
+   LIMIT :page_size
+   OFFSET :page_offset
