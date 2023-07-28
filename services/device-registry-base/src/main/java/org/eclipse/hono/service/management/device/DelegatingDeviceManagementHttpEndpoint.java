@@ -185,8 +185,14 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 RegistryManagementConstants.PARAM_FILTER_JSON, Filter.class);
         final Future<List<Sort>> sortOptions = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
+        final Future<Optional<Boolean>> isGateway = getRequestParameter(
+                ctx,
+                RegistryManagementConstants.PARAM_IS_GATEWAY,
+                Optional.empty(),
+                CONVERTER_BOOLEAN,
+                value -> true);
 
-        Future.all(pageSize, pageOffset, filters, sortOptions)
+        Future.all(pageSize, pageOffset, filters, sortOptions, isGateway)
                 .onSuccess(ok -> TracingHelper.TAG_TENANT_ID.set(span, tenantId))
                 .compose(ok -> getService().searchDevices(
                         tenantId,
@@ -194,6 +200,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                         pageOffset.result(),
                         filters.result(),
                         sortOptions.result(),
+                        isGateway.result(),
                         span))
                 .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
                 .onFailure(t -> failRequest(ctx, t, span))

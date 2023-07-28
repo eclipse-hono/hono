@@ -70,6 +70,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     pageOffset,
                     List.of(filter),
                     List.of(),
+                    Optional.empty(),
                     NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -94,7 +95,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 "testDevice2", new Device().setEnabled(false)))
             .compose(ok -> getDeviceManagementService()
                     .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
-                            NoopSpan.INSTANCE))
+                            Optional.empty(), NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -124,12 +125,12 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
-            .compose(ok -> getDeviceManagementService()
-                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
-                            List.of(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(s -> {
-                ctx.verify(() -> {
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        .compose(ok -> getDeviceManagementService()
+                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
+                                        List.of(), Optional.empty(), NoopSpan.INSTANCE))
+                                .onComplete(ctx.succeeding(s -> {
+                                    ctx.verify(() -> {
+                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
                     final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(1);
@@ -158,7 +159,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 "testDevice2", new Device().setEnabled(true)))
             .compose(ok -> getDeviceManagementService()
                     .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(),
-                            NoopSpan.INSTANCE))
+                            Optional.empty(), NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -196,6 +197,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     0,
                     List.of(filter),
                     List.of(),
+                    Optional.empty(),
                     NoopSpan.INSTANCE))
             .compose(response -> {
                 ctx.verify(() -> {
@@ -217,6 +219,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                         1,
                         List.of(filter),
                         List.of(),
+                        Optional.empty(),
                         NoopSpan.INSTANCE);
             })
             .onComplete(ctx.succeeding(s -> {
@@ -253,7 +256,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 "testDevice2", new Device().setEnabled(true).setExtensions(Map.of("id", "bbb"))))
             .compose(ok -> getDeviceManagementService()
                     .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(sortOption),
-                            NoopSpan.INSTANCE))
+                            Optional.empty(), NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -291,6 +294,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     0,
                     List.of(),
                     List.of(),
+                    Optional.empty(),
                     NoopSpan.INSTANCE))
             .compose(response -> {
                 ctx.verify(() -> {
@@ -309,7 +313,8 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     pageSize,
                     1,
                     List.of(),
-                    List.of(),
+                    List.of(), 
+                    Optional.empty(),
                     NoopSpan.INSTANCE);
             })
             .onComplete(ctx.succeeding(s -> {
@@ -354,6 +359,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                         pageOffset,
                         List.of(filter1, filter2),
                         List.of(sortOption),
+                        Optional.empty(),
                         NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
@@ -396,6 +402,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                         pageOffset,
                         List.of(filter1, filter2),
                         List.of(sortOption),
+                        Optional.empty(),
                         NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {

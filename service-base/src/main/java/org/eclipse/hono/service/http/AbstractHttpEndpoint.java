@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -81,6 +81,13 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         } catch (final NumberFormatException e) {
             throw new IllegalArgumentException("value is not an integer");
         }
+    };
+
+    /**
+     * A function that tries to parse a string into an Optional boolean.
+     */
+    protected static final Function<String, Optional<Boolean>> CONVERTER_BOOLEAN =  s -> {
+        return Strings.isNullOrEmpty(s) ? Optional.empty() : Optional.of(Boolean.valueOf(s));
     };
 
     /**

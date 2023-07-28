@@ -39,7 +39,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
      * Creates a set of devices.
      *
      * @param tenantId The tenant identifier.
-     * @param devices  The devices to create.
+     * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
      Future<Void> createDevices(final String tenantId, final Map<String, Device> devices) {
@@ -74,6 +74,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                         0,
                         List.of(),
                         List.of(),
+                        Optional.empty(),
                         NoopSpan.INSTANCE)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -98,7 +99,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(true),
                 "testDevice3", new Device().setEnabled(true)))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -128,7 +129,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(true),
                 "testDevice3", new Device().setEnabled(true)))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -153,7 +154,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(true),
                 "testDevice3", new Device().setEnabled(true)))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -168,7 +169,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
     }
 
     @Test
-    void TestSearchDevicesWithViaFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithViaFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 3;
         final int pageOffset = 0;
@@ -183,7 +184,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice_Gateway", new Device(),
                 "testDevice_Gateway2", new Device().setEnabled(true)))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -197,7 +198,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
     }
 
     @Test
-    void TestSearchDevicesWithBooleanFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithBooleanFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -211,7 +212,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice3", new Device().setEnabled(true).setVia(List.of("testDevice2")),
                 "testDevice4", new Device().setEnabled(true).setVia(List.of("testDevice1"))))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -227,7 +228,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
 
 
     @Test
-    void TestSearchDevicesWithIntegerFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithIntegerFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -240,7 +241,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(false).putExtension("count", 8),
                 "testDevice3", new Device().setEnabled(true).putExtension("count", 12)))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -255,7 +256,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
 
 
     @Test
-    void TestSearchDevicesWithStringFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithStringFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -268,7 +269,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(false).putExtension("type", "type_2"),
                 "testDevice3", new Device().setEnabled(true).putExtension("type", "type_1")))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -283,7 +284,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
 
 
     @Test
-    void TestSearchDevicesWithStringAllCharsWildcardsFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithStringAllCharsWildcardsFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -296,7 +297,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(false).putExtension("type", "type2"),
                 "testDevice3", new Device().setEnabled(true).putExtension("type", "type1")))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -311,7 +312,7 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
     }
 
     @Test
-    void TestSearchDevicesWithStringOneCharWildcardsFilter(final VertxTestContext ctx) {
+    void testSearchDevicesWithStringOneCharWildcardsFilter(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
         final int pageSize = 10;
         final int pageOffset = 0;
@@ -324,7 +325,56 @@ class JdbcBasedDeviceManagementSearchDevicesTest extends AbstractJdbcRegistryTes
                 "testDevice2", new Device().setEnabled(false).putExtension("type", "type2"),
                 "testDevice3", new Device().setEnabled(true).putExtension("type", "type11")))
                 .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), NoopSpan.INSTANCE))
+                        .searchDevices(tenantId, pageSize, pageOffset, filters, List.of(), Optional.empty(), NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        assertThat(s.getPayload().getTotal()).isEqualTo(2);
+                        assertThat(s.getPayload().getResult()).hasSize(2);
+                        assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice1");
+                        assertThat(s.getPayload().getResult().get(1).getId()).isEqualTo("testDevice3");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+
+    @Test
+    void testSearchAllGateways(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 10;
+        final int pageOffset = 0;
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setVia(List.of("testDevice2")),
+                "testDevice2", new Device(),
+                "testDevice3", new Device().setVia(List.of("testDevice2"))))
+                .compose(ok -> getDeviceManagementService()
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), Optional.of(true), NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        assertThat(s.getPayload().getTotal()).isEqualTo(1);
+                        assertThat(s.getPayload().getResult()).hasSize(1);
+                        assertThat(s.getPayload().getResult().get(0).getId()).isEqualTo("testDevice2");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+
+    @Test
+    void testSearchOnlyDevices(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 10;
+        final int pageOffset = 0;
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device().setVia(List.of("testDevice2")),
+                "testDevice2", new Device(),
+                "testDevice3", new Device().setVia(List.of("testDevice2"))))
+                .compose(ok -> getDeviceManagementService()
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(), List.of(), Optional.of(false), NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);

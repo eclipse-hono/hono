@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -91,6 +91,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 anyInt(),
                 any(List.class),
                 any(List.class),
+                any(Optional.class),
                 any(Span.class)))
             .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_OK)));
         final var endpoint = new DelegatingDeviceManagementHttpEndpoint<>(vertx, service);
@@ -300,6 +301,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 eq(DelegatingDeviceManagementHttpEndpoint.DEFAULT_PAGE_OFFSET),
                 argThat(List::isEmpty),
                 argThat(List::isEmpty),
+                any(Optional.class),
                 any(Span.class));
     }
 
@@ -351,6 +353,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                                 Direction.DESC == sortOption.getDirection();
                     }
                 }),
+                any(Optional.class),
                 any(Span.class));
     }
 
@@ -419,6 +422,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 anyInt(),
                 any(List.class),
                 any(List.class),
+                any(Optional.class),
                 any(Span.class));
     }
 

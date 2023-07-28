@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -117,6 +117,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * result set.
      */
     public static final String PARAM_SORT_JSON = "sortJson";
+
+    /**
+     * The name of the boolean filter query parameter for searching gateways or only devices.
+     */
+    public static final String PARAM_IS_GATEWAY = "isGateway";
 
 
     // DEVICES
