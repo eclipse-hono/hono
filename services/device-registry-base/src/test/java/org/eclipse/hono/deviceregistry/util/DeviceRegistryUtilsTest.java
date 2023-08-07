@@ -110,4 +110,9 @@ public class DeviceRegistryUtilsTest {
         assertThat(expectedAuthorities.getJsonObject(0)
                 .containsKey(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE)).isFalse();
     }
+
+    @Test
+    void testGetRegexExpressionForSearchOperation() {
+        assertThat(DeviceRegistryUtils.getRegexExpressionForSearchOperation("user-1*")).isEqualTo("^\\Quser-1\\E(.*)$");
+    }
 }
