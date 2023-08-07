@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -1314,18 +1314,17 @@ public abstract class CoapTestBase {
     }
 
     /**
-     * Ensures that a timestamp is within 2 seconds of current system clock.
-     * This is necessary because the test containers may have a clock drift of a few milliseconds
-     * from the host clock.
+     * Ensures that a CoAP response contains a server time option.
      *
-     * @param ts the timestamp to check
+     * @param response The CoAP response.
      */
-//    private void assertTimestampWithinRangeOfCurrentTime(final long ts) {
-//        // Use a buffer time of 2 seconds
-//        final long buffer = 2000;
-//        final long currentTime = System.currentTimeMillis();
-//        assertThat(ts).isIn(Range.closed(currentTime - buffer, currentTime + buffer));
-//    }
+    private void assertResponseContainsServerTime(final CoapResponse response) {
+        final var serverTimeOption = response.getOptions().getOtherOption(TimeOption.NUMBER);
+        assertThat(serverTimeOption).isNotNull();
+        // Unit tests verify that the time value is correct but due to minute time differences in the
+        // containers running integration tests it suffices to verify that the value is non zero.
+        assertThat(serverTimeOption.getLongValue()).isGreaterThan(0L);
+    }
 
     /**
      * Verify that the CoAP adapter responds with a time option in the response when request includes
@@ -1352,18 +1351,12 @@ public abstract class CoapTestBase {
                     final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
                     final Promise<CoapResponse> result = Promise.promise();
                     final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
-                    request.getOptions().addOtherOption(new TimeOption(new byte[0]));
+                    request.getOptions().addOption(new TimeOption(0));
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future();
                 })
                 .onSuccess(res -> {
-                    ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.DEFINTION).getLongValue();
-                        // Unit tests verify that the time value is correct but due to minute time differences in the
-                        // containers running integration tests it suffices to verify that the value is non zero.
-                        assertThat(serverTimeValue).isGreaterThan(0L);
-                    });
+                    ctx.verify(() -> assertResponseContainsServerTime(res));
                     checks.flag();
                 })
                 .onFailure(ctx::failNow);
@@ -1400,13 +1393,7 @@ public abstract class CoapTestBase {
                     return result.future();
                 })
                 .onSuccess(res -> {
-                    ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.DEFINTION).getLongValue();
-                        // Unit tests verify that the time value is correct but due to minute time differences in the
-                        // containers running integration tests it suffices to verify that the value is non zero.
-                        assertThat(serverTimeValue).isGreaterThan(0L);
-                    });
+                    ctx.verify(() -> assertResponseContainsServerTime(res));
                     checks.flag();
                 })
                 .onFailure(ctx::failNow);
@@ -1445,7 +1432,7 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isFalse();
+                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isFalse();
                     });
                     checks.flag();
                 })

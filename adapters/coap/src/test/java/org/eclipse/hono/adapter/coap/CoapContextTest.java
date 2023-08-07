@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
@@ -196,7 +195,7 @@ public class CoapContextTest {
         final long start = System.currentTimeMillis();
         final CoapExchange exchange = mock(CoapExchange.class);
         final OptionSet requestOptions = new OptionSet();
-        requestOptions.addOption(new Option(TimeOption.NUMBER, new byte[0]));
+        requestOptions.addOption(new TimeOption(0));
         when(exchange.getRequestOptions()).thenReturn(requestOptions);
         final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
         final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
@@ -207,10 +206,10 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
-        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
+        final var serverTime = responseOptions.getOtherOption(TimeOption.NUMBER);
+        assertThat(serverTime).isNotNull();
         final long end = System.currentTimeMillis();
-        assertThat(serverTime).isIn(Range.closed(start, end));
+        assertThat(serverTime.getLongValue()).isIn(Range.closed(start, end));
     }
 
     /**
@@ -230,9 +229,9 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isTrue();
-        final long serverTime = responseOptions.getOtherOption(TimeOption.NUMBER).getLongValue();
+        final var serverTime = responseOptions.getOtherOption(TimeOption.NUMBER);
+        assertThat(serverTime).isNotNull();
         final long end = System.currentTimeMillis();
-        assertThat(serverTime).isIn(Range.closed(start, end));
+        assertThat(serverTime.getLongValue()).isIn(Range.closed(start, end));
     }
 }

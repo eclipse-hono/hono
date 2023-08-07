@@ -424,8 +424,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     public ResponseCode respond(final Response response) {
         if (shouldResponseIncludeTimeOption()) {
             // Add a time option with the current time to the response
-            final TimeOption timeOption = new TimeOption();
-            response.getOptions().addOption(timeOption);
+            response.getOptions().addOption(new TimeOption());
         }
         acceptFlag.set(true);
         exchange.respond(response);
