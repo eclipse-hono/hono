@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.proton.ProtonHelper;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.service.auth.BCryptHelper;
 import org.junit.jupiter.api.Test;
 
 

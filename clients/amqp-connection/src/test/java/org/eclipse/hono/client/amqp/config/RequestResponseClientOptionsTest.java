@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,6 @@ package org.eclipse.hono.client.amqp.config;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
-import org.eclipse.hono.client.amqp.config.RequestResponseClientOptions;
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 

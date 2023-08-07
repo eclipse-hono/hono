@@ -395,11 +395,11 @@ public class KafkaBasedCommandSenderTest {
                 0,
                 -1L,
                 TimestampType.NO_TIMESTAMP_TYPE,
-                -1L,
                 -1,
                 -1,
                 deviceId,
                 payload,
-                new RecordHeaders(headers.toArray(Header[]::new)));
+                new RecordHeaders(headers.toArray(Header[]::new)),
+                Optional.empty());
     }
 }

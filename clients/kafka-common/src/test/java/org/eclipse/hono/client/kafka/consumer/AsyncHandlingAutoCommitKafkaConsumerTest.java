@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -914,9 +914,18 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final byte[] timestamp2SecondsAgo = Json.encode(Instant.now().minusSeconds(2).toEpochMilli()).getBytes();
         final RecordHeader creationTime = new RecordHeader("creation-time", timestamp2SecondsAgo);
 
-        return new ConsumerRecord<>(TOPIC, PARTITION, 0, ConsumerRecord.NO_TIMESTAMP, TimestampType.NO_TIMESTAMP_TYPE,
-                (long) ConsumerRecord.NULL_CHECKSUM, ConsumerRecord.NULL_SIZE, ConsumerRecord.NULL_SIZE, "key_0",
-                Buffer.buffer(), new RecordHeaders(new Header[] { ttl, creationTime }));
+        return new ConsumerRecord<>(
+                TOPIC,
+                PARTITION,
+                0,
+                ConsumerRecord.NO_TIMESTAMP,
+                TimestampType.NO_TIMESTAMP_TYPE,
+                ConsumerRecord.NULL_SIZE,
+                ConsumerRecord.NULL_SIZE,
+                "key_0",
+                Buffer.buffer(),
+                new RecordHeaders(new Header[] { ttl, creationTime }),
+                Optional.empty());
     }
 
     /**

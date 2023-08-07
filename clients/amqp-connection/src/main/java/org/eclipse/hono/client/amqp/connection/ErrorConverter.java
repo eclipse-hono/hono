@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 
 /**
  * Utility methods for converting AMQP 1.0 error conditions to

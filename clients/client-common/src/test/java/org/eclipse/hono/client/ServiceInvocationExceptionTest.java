@@ -44,7 +44,9 @@ public class ServiceInvocationExceptionTest {
     public void testExtractStatusCodeFromServiceInvocationException() {
 
         final ServiceInvocationException exception = new ServiceInvocationException(
-                HttpURLConnection.HTTP_NOT_FOUND) { };
+                HttpURLConnection.HTTP_NOT_FOUND) {
+                    private static final long serialVersionUID = 1L;
+        };
         assertThat(ServiceInvocationException.extractStatusCode(exception)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
     }
 
