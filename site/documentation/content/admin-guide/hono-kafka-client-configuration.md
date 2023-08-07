@@ -111,6 +111,22 @@ The Kafka clients require at least the `bootstrap.servers` property to be set. T
 required to enable Kafka based messaging.
 {{% /notice %}}
 
+{{% notice tip %}}
+The Kafka client configuration is composed of a number of properties that have an ambiguous mapping to environment
+variable names. For example, the property keys `a.b`, `a-b` and `a_b` would all map to the environment variable `A_B`.
+To resolve this ambiguity, the configuration framework relies on the correct property being defined in a configuration
+source with a lower presedence than the environment variable configuration source. It's therefore necessary to provide
+any such configuration property in the `application.yml` file or as a Java system property to help the configuration
+system disambiguate the property key, even if only providing a placeholder value. Once that has been done, it's 
+possible to override the value provided with an environment variable.
+{{% /notice %}}
+
+{{% notice tip %}}
+Any of the Kafka configuration options that use a period (`.`) in the key must use a double underscore in the 
+environment variable name. For example, the environment variable name to represent 
+`hono.kafka.commonClientConfig."bootstrap.servers"` is `HONO_KAFKA_COMMONCLIENTCONFIG__BOOTSTRAP_SERVERS__`.
+{{% /notice %}}
+
 ## Using TLS
 
 The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection
