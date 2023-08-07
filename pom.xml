@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -178,10 +178,6 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <maven.compiler.release>17</maven.compiler.release>
-
-    <!-- configure timestamp format to be injected into legal docs -->
-    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
-    <timestamp>${maven.build.timestamp}</timestamp>
 
     <!--
       during development we allow dependencies on SNAPSHOT versions,
@@ -496,23 +492,6 @@
 
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>create-timestamp</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <timestampFormat>MMM dd, yyyy</timestampFormat>
-          <timestampPropertyName>build.date</timestampPropertyName>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>3.3.0</version>
@@ -651,22 +630,6 @@
                 <configuration>
                   <lifecycleMappingMetadata>
                     <pluginExecutions>
-                      <pluginExecution>
-                        <pluginExecutionFilter>
-                          <groupId>org.codehaus.mojo</groupId>
-                          <artifactId>buildnumber-maven-plugin</artifactId>
-                          <versionRange>[1.4,)</versionRange>
-                          <goals>
-                            <goal>create-timestamp</goal>
-                          </goals>
-                        </pluginExecutionFilter>
-                        <action>
-                          <execute>
-                            <runOnConfiguration>true</runOnConfiguration>
-                            <runOnIncremental>true</runOnIncremental>
-                          </execute>
-                        </action>
-                      </pluginExecution>
                       <pluginExecution>
                         <!--
                          Disable unpack-dependencies goal in order to prevent the m2eclipse
