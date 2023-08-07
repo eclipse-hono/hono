@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -124,20 +124,20 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
-                                        List.of(), NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
+                            List.of(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(1);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(1);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -187,21 +187,21 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
-                                        List.of(sortOption),
-                                        NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getDeviceManagementService()
+                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
+                            List.of(sortOption),
+                            NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(2);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -253,24 +253,31 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter2 = new Filter("/ext/value", "test$1*e");
         final Sort sortOption = new Sort("/id");
 
-        createDevices(tenantId, Map.of(
-                "testDevice", new Device(),
-                "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
-                "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value"))))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
-                                        List.of(sortOption), NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+        createDevices(
+                tenantId,
+                Map.of(
+                        "testDevice", new Device(),
+                        "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
+                        "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value")))
+                )
+                .compose(ok -> getDeviceManagementService().searchDevices(
+                        tenantId,
+                        pageSize,
+                        pageOffset,
+                        List.of(filter1, filter2),
+                        List.of(sortOption),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(1);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                        assertThat(searchResult.getTotal()).isEqualTo(1);
+                        assertThat(searchResult.getResult()).hasSize(1);
+                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -288,25 +295,32 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter2 = new Filter("/ext/value", "test$?Value");
         final Sort sortOption = new Sort("/id");
 
-        createDevices(tenantId, Map.of(
-                "testDevice-x", new Device().setExtensions(Map.of("value", "test$Value")),
-                "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
-                "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value"))))
-                        .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2),
-                                        List.of(sortOption), NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+        createDevices(
+                tenantId,
+                Map.of(
+                        "testDevice-x", new Device().setExtensions(Map.of("value", "test$Value")),
+                        "testDevice-1", new Device().setExtensions(Map.of("value", "test$1Value")),
+                        "testDevice-2", new Device().setExtensions(Map.of("value", "test$2Value")))
+                )
+                .compose(ok -> getDeviceManagementService().searchDevices(
+                        tenantId,
+                        pageSize,
+                        pageOffset,
+                        List.of(filter1, filter2),
+                        List.of(sortOption),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(2);
-                                        assertThat(searchResult.getResult()).hasSize(2);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
-                                        assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice-2");
-                                    });
-                                    ctx.completeNow();
-                                })));
+                        final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                        assertThat(searchResult.getTotal()).isEqualTo(2);
+                        assertThat(searchResult.getResult()).hasSize(2);
+                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice-1");
+                        assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice-2");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
