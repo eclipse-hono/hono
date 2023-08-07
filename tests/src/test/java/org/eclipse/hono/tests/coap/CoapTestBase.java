@@ -48,7 +48,6 @@ import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
-import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.network.CoapEndpoint;
@@ -1353,14 +1352,14 @@ public abstract class CoapTestBase {
                     final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
                     final Promise<CoapResponse> result = Promise.promise();
                     final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
-                    request.getOptions().addOtherOption(new Option(TimeOption.NUMBER, new byte[0]));
+                    request.getOptions().addOtherOption(new TimeOption(new byte[0]));
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future();
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
+                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.DEFINTION).getLongValue();
                         // Unit tests verify that the time value is correct but due to minute time differences in the
                         // containers running integration tests it suffices to verify that the value is non zero.
                         assertThat(serverTimeValue).isGreaterThan(0L);
@@ -1402,8 +1401,8 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isTrue();
-                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.NUMBER).getLongValue();
+                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isTrue();
+                        final long serverTimeValue = res.getOptions().getOtherOption(TimeOption.DEFINTION).getLongValue();
                         // Unit tests verify that the time value is correct but due to minute time differences in the
                         // containers running integration tests it suffices to verify that the value is non zero.
                         assertThat(serverTimeValue).isGreaterThan(0L);
@@ -1446,7 +1445,7 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isFalse();
+                        assertThat(res.getOptions().hasOption(TimeOption.DEFINTION)).isFalse();
                     });
                     checks.flag();
                 })
