@@ -118,7 +118,7 @@ To resolve this ambiguity, the configuration framework relies on the correct pro
 source with a lower presedence than the environment variable configuration source. It's therefore necessary to provide
 any such configuration property in the `application.yml` file or as a Java system property to help the configuration
 system disambiguate the property key, even if only providing a placeholder value. Once that has been done, it's 
-possible to override the value provided with an environment variable.
+possible to override the value with an environment variable.
 {{% /notice %}}
 
 {{% notice tip %}}
