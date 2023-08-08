@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.coap.option;
 
 import org.eclipse.californium.core.coap.Option;
+import org.eclipse.californium.core.coap.option.IntegerRangeOptionDefinition;
 
 /**
  * CoAP custom time option.
@@ -55,6 +56,11 @@ public final class TimeOption extends Option {
     public static final String QUERY_PARAMETER_NAME = "hono-time";
 
     /**
+     * This option's definition to be used with the Californium option registry.
+     */
+    public static final IntegerRangeOptionDefinition DEFINITION = new IntegerRangeOptionDefinition(NUMBER, "Server-Time", true, 0, Long.MAX_VALUE);
+
+    /**
      * Create time option with current system time.
      */
     public TimeOption() {
@@ -67,6 +73,6 @@ public final class TimeOption extends Option {
      * @param time time in system milliseconds.
      */
     public TimeOption(final long time) {
-        super(NUMBER, time);
+        super(DEFINITION, time);
     }
 }

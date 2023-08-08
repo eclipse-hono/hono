@@ -408,7 +408,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     private boolean shouldResponseIncludeTimeOption() {
         return Optional.ofNullable(exchange.getRequestOptions())
-                .map(opts -> opts.hasOption(TimeOption.NUMBER))
+                .map(opts -> opts.hasOption(TimeOption.DEFINITION))
                 .orElse(false)
                 || exchange.getQueryParameter(TimeOption.QUERY_PARAMETER_NAME) != null;
     }

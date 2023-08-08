@@ -50,6 +50,8 @@ import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.core.coap.option.MapBasedOptionRegistry;
+import org.eclipse.californium.core.coap.option.StandardOptionRegistry;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.EndpointManager;
 import org.eclipse.californium.elements.config.Configuration;
@@ -227,7 +229,9 @@ public abstract class CoapTestBase {
      * @return The client.
      */
     protected CoapClient getCoapClient() {
-        return new CoapClient();
+        final CoapEndpoint.Builder builder = CoapEndpoint.builder();
+        builder.setOptionRegistry(new MapBasedOptionRegistry(StandardOptionRegistry.getDefaultOptionRegistry(), TimeOption.DEFINITION));
+        return new CoapClient().setEndpoint(builder.build());
     }
 
     /**
@@ -298,6 +302,7 @@ public abstract class CoapTestBase {
         dtlsConnectorConfig.set(DtlsConfig.DTLS_VERIFY_SERVER_CERTIFICATES_SUBJECT, false);
         final DtlsConnectorConfig dtlsConfig = dtlsConnectorConfig.build();
         final CoapEndpoint.Builder builder = CoapEndpoint.builder();
+        builder.setOptionRegistry(new MapBasedOptionRegistry(StandardOptionRegistry.getDefaultOptionRegistry(), TimeOption.DEFINITION));
         builder.setConfiguration(dtlsConfig.getConfiguration());
         builder.setConnector(new DTLSConnector(dtlsConfig));
         return new CoapClient().setEndpoint(builder.build());
@@ -1163,7 +1168,10 @@ public abstract class CoapTestBase {
                 : getCoapsClient(deviceId, tenantId, SECRET);
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(client, createCoapsOrCoapRequest(endpointConfig, deviceId, 0)),
+                () -> warmUp(
+                        client,
+                        endpointConfig.isSubscribeAsUnauthenticatedDevice() ? createCoapRequest(Code.POST, getPostResource(), 0)
+                                : createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
 
                     msg.getTimeUntilDisconnectNotification()
@@ -1272,7 +1280,10 @@ public abstract class CoapTestBase {
                 : deviceId;
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                () -> warmUp(
+                        client,
+                        endpointConfig.isSubscribeAsUnauthenticatedDevice() ? createCoapRequest(Code.POST, getPostResource(), 0)
+                                : createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = msg.getTimeTillDisconnect();
                     logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
@@ -1319,7 +1330,7 @@ public abstract class CoapTestBase {
      * @param response The CoAP response.
      */
     private void assertResponseContainsServerTime(final CoapResponse response) {
-        final var serverTimeOption = response.getOptions().getOtherOption(TimeOption.NUMBER);
+        final var serverTimeOption = response.getOptions().getOtherOption(TimeOption.DEFINITION);
         assertThat(serverTimeOption).isNotNull();
         // Unit tests verify that the time value is correct but due to minute time differences in the
         // containers running integration tests it suffices to verify that the value is non zero.
@@ -1432,7 +1443,7 @@ public abstract class CoapTestBase {
                 })
                 .onSuccess(res -> {
                     ctx.verify(() -> {
-                        assertThat(res.getOptions().hasOption(TimeOption.NUMBER)).isFalse();
+                        assertThat(res.getOptions().hasOption(TimeOption.DEFINITION)).isFalse();
                     });
                     checks.flag();
                 })
@@ -1478,7 +1489,10 @@ public abstract class CoapTestBase {
                 : deviceId;
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                () -> warmUp(
+                        client,
+                        endpointConfig.isSubscribeAsUnauthenticatedDevice() ? createCoapRequest(Code.POST, getPostResource(), 0)
+                                : createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = msg.getTimeTillDisconnect();
                     logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
@@ -1559,7 +1573,10 @@ public abstract class CoapTestBase {
                 : deviceId;
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                () -> warmUp(
+                        client,
+                        endpointConfig.isSubscribeAsUnauthenticatedDevice() ? createCoapRequest(Code.POST, getPostResource(), 0)
+                                : createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = msg.getTimeTillDisconnect();
                     logger.debug("north-bound message received {}, ttd: {}", msg, ttd);

@@ -184,7 +184,7 @@ public class CoapContextTest {
         final OptionSet responseOptions = new OptionSet();
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
-        assertThat(responseOptions.hasOption(TimeOption.NUMBER)).isFalse();
+        assertThat(responseOptions.hasOption(TimeOption.DEFINITION)).isFalse();
     }
 
     /**
@@ -206,10 +206,10 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        final var serverTime = responseOptions.getOtherOption(TimeOption.NUMBER);
-        assertThat(serverTime).isNotNull();
+        final var serverTimeOption = responseOptions.getOtherOption(TimeOption.DEFINITION);
+        assertThat(serverTimeOption).isNotNull();
         final long end = System.currentTimeMillis();
-        assertThat(serverTime.getLongValue()).isIn(Range.closed(start, end));
+        assertThat(serverTimeOption.getLongValue()).isIn(Range.closed(start, end));
     }
 
     /**
@@ -229,9 +229,9 @@ public class CoapContextTest {
         when(response.getOptions()).thenReturn(responseOptions);
         ctx.respond(response);
         verify(response).getOptions();
-        final var serverTime = responseOptions.getOtherOption(TimeOption.NUMBER);
-        assertThat(serverTime).isNotNull();
+        final var serverTimeOption = responseOptions.getOtherOption(TimeOption.DEFINITION);
+        assertThat(serverTimeOption).isNotNull();
         final long end = System.currentTimeMillis();
-        assertThat(serverTime.getLongValue()).isIn(Range.closed(start, end));
+        assertThat(serverTimeOption.getLongValue()).isIn(Range.closed(start, end));
     }
 }

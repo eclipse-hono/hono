@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.eclipse.californium.core.coap.CoAP;
+import org.eclipse.californium.core.coap.option.MapBasedOptionRegistry;
+import org.eclipse.californium.core.coap.option.StandardOptionRegistry;
 import org.eclipse.californium.core.config.CoapConfig;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
@@ -43,6 +45,7 @@ import org.eclipse.californium.scandium.dtls.x509.SingleCertificateProvider;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.DeviceInfoSupplier;
+import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.util.Constants;
@@ -102,6 +105,9 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
             final CoapAdapterProperties config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
+        StandardOptionRegistry.setDefaultOptionRegistry(new MapBasedOptionRegistry(
+                StandardOptionRegistry.getDefaultOptionRegistry(),
+                TimeOption.DEFINITION));
     }
 
     /**
