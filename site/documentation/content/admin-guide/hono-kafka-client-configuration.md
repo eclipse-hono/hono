@@ -113,12 +113,15 @@ required to enable Kafka based messaging.
 
 {{% notice tip %}}
 The Kafka client configuration is composed of a number of properties that have an ambiguous mapping to environment
-variable names. For example, the property keys `a.b`, `a-b` and `a_b` would all map to the environment variable `A_B`.
-To resolve this ambiguity, the configuration framework relies on the correct property being defined in a configuration
-source with a lower precedence than the environment variable configuration source. It's therefore necessary to provide
-any such configuration property in the `application.yml` file or as a Java system property to help the configuration
-system disambiguate the property key, even if only providing a placeholder value. Once that has been done, it's 
-possible to override the value with an environment variable.
+variable names. For example, the property key `"bootstrap.servers"` in the `hono.kafka.commonClientConfig` map would
+have the same mapping to an environment variable as `"bootstrap-servers"` and `"bootstrap_servers"` (they would all map
+to `__BOOTSTRAP_SERVER__`).
+
+To resolve this ambiguity and allow ambiguous properties to be overridden using environment variables, the configuration 
+framework relies on the correct property being defined in a configuration source which uses unambiguous property key 
+representations and has a lower precedence than the environment variable configuration source. It's therefore necessary 
+to provide any such configuration property in the `application.yml` file or as a Java system property to help the 
+configuration system disambiguate the property key, even if only providing a placeholder value.
 {{% /notice %}}
 
 {{% notice tip %}}
