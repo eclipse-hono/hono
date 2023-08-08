@@ -151,7 +151,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // support CORS headers for PUTing telemetry
         router.routeWithRegex("\\/telemetry\\/.+")
-                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .handler(CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                         .allowedMethod(HttpMethod.PUT)
                         .allowedHeader(Constants.HEADER_QOS_LEVEL)
                         .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
@@ -165,7 +165,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             // support CORS headers for POSTing telemetry
             router.route(ROUTE_TELEMETRY_ENDPOINT)
-                    .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                    .handler(CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                             .allowedMethod(HttpMethod.POST)
                             .allowedHeader(Constants.HEADER_QOS_LEVEL)
                             .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
@@ -205,7 +205,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // support CORS headers for PUTing events
         router.routeWithRegex("\\/event\\/.+")
-                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .handler(CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                         .allowedMethod(HttpMethod.PUT)
                         .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
                         .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
@@ -218,7 +218,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             // support CORS headers for POSTing events
             router.route(ROUTE_EVENT_ENDPOINT)
-                    .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                    .handler(CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                             .allowedMethod(HttpMethod.POST)
                             .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
                             .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
@@ -258,7 +258,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID);
 
         // support CORS headers for PUTing command response messages
-        final var corsHandler = CorsHandler.create(getConfig().getCorsAllowedOrigin())
+        final var corsHandler = CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                 .allowedMethod(HttpMethod.PUT)
                 .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())

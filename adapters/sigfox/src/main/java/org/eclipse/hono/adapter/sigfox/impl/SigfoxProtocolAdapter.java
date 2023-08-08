@@ -132,7 +132,7 @@ public final class SigfoxProtocolAdapter
     }
 
     private Handler<RoutingContext> dataCorsHandler() {
-        return CorsHandler.create(getConfig().getCorsAllowedOrigin())
+        return CorsHandler.create().addOrigin(getConfig().getCorsAllowedOrigin())
                 .allowedMethod(HttpMethod.GET)
                 .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())

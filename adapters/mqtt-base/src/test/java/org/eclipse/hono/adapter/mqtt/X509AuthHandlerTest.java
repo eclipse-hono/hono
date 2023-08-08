@@ -157,6 +157,7 @@ public class X509AuthHandlerTest {
             }));
     }
 
+    @SuppressWarnings("deprecation")
     private static X509Certificate getClientCertificate(final String subject, final String issuer) {
 
         final X509Certificate cert = mock(X509Certificate.class);
