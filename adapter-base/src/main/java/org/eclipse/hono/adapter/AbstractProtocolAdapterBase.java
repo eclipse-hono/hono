@@ -1062,6 +1062,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <li>The adapter is disabled for the tenant that the client belongs to.</li>
      * <li>The authenticated device or gateway is disabled or not registered.</li>
      * <li>The tenant is disabled or does not exist.</li>
+     * <li>The authenticated device is not authorized anymore (e.g. device credentials expired).</li>
      * </ul>
      *
      * @param error The error to be checked.
@@ -1096,7 +1097,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             return Future.succeededFuture(error instanceof AdapterDisabledException
                     || error instanceof GatewayDisabledOrNotRegisteredException
-                    || error instanceof TenantDisabledOrNotRegisteredException);
+                    || error instanceof TenantDisabledOrNotRegisteredException
+                    || error instanceof AuthorizationException);
         }
     }
 }
