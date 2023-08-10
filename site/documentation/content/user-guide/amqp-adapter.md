@@ -135,6 +135,7 @@ are listed below.
 * The adapter is disabled for the tenant that the client belongs to.
 * The authenticated device or gateway is disabled or not registered.
 * The tenant is disabled or does not exist.
+* The authenticated device is not authorized anymore.
 
 ## Command-line Client
 

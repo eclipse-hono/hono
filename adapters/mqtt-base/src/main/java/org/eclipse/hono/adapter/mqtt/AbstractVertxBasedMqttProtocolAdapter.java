@@ -1306,6 +1306,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         private boolean disconnectOnExpired() {
             if (authenticatedDevice != null && authenticatedDevice.expired()) {
+                log.debug("Credentials of device {} have expired - Disconnecting device.", authenticatedDevice.getDeviceId());
                 endpoint.close();
                 return true;
             }
@@ -1314,7 +1315,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         private Future<Void> checkExpiration(final MqttContext context) {
             if (context.authenticatedDevice() != null && context.authenticatedDevice().expired()) {
-               return Future.failedFuture(new MqttConnectionException(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED));
+               return Future.failedFuture(new AuthorizationException(context.tenant(), "Device credentials expired.", null));
             } else {
                return Future.succeededFuture();
             }
