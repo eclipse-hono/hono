@@ -4,7 +4,7 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.4.0 (not released yet)
+## 2.4.0
 
 ### New features
 
@@ -13,11 +13,21 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Hono's MQTT and HTTP adapters now support using JSON Web Tokens (JWT) for authentication. In particular, the adapters
   allow devices that have been connected to Google's IoT Core endpoints to connect to Hono instead. The User Guides have
   been amended with corresponding information regarding configuration and usage.
+* The CoAP adapter now allows clients to retrieve the CoAP adapter's current time by means of including a query parameter
+  and/or request option.
+* The HTTP protocol adapter now supports authenticating devices using the JWT based authentication scheme employed by
+  Google IoT Core.
+* The command router now has experimental support for routing commands received via Google Pub/Sub to connected devices.
+* The authentication identifier being created for devices that are using client certificate based auto-provising can now
+  be specified as a pattern based on fields from the certificate's subject DN.
 
 ### Fixes & Enhancements
 
-* The JDBC based device registry now supports searching for tenants and devices including paging. However, filtering and
-  sorting is not implemented yet.
+* The JDBC based device registry now supports searching for tenants and devices including paging. However, sorting is not
+  implemented (yet) and the number of filter predicates is (currently) limited to one.
+* The MQTT adapter failed to close a connection with a client after the JWT used by the client for authentication had expired.
+  This has been fixed.
+* Hono could not be built using Maven 3.9.0 and newer. This has been fixed.
 
 ## 2.3.1
 

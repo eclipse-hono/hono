@@ -29,6 +29,11 @@ The Command & Control API for Pub/Sub is an alternative to the
 [Command & Control API for Kafka]({{< relref "/api/command-and-control-kafka" >}}) for applications that want to
 use Pub/Sub instead of an Apache Kafka&trade; broker to send command messages to devices.
 
+{{% notice warning %}}
+Support for the Google Pub/Sub based Command & Control API is considered **experimental** and may change without
+further notice.
+{{% /notice %}}
+
 ## Send a One-Way Command
 
 Business Applications use this operation to send a command to a device for which they do not expect to receive a
