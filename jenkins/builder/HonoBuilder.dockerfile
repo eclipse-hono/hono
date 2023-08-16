@@ -16,12 +16,12 @@
 # The resulting image can be used to build Hono from source, including the native executable
 # of the hono-cli artifact.
 
-FROM debian:stable-slim
+FROM debian:bullseye-slim
 
-ARG MANDREL_VERSION=22.3.1.0-Final
+ARG MANDREL_VERSION=22.3.3.1-Final
 # either java11 or java17
 ARG JDK_VERSION=java17
-ARG MVN_VERSION=3.8.6
+ARG MVN_VERSION=3.8.8
 
 ENV GRAALVM_HOME=/graalvm
 ENV MAVEN_HOME=/maven
