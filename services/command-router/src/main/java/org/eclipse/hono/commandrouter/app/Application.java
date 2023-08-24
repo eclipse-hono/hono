@@ -64,7 +64,7 @@ import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactor
 import org.eclipse.hono.commandrouter.impl.pubsub.PubSubBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.NotificationSupportingServiceApplication;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;

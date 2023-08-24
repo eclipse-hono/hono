@@ -225,7 +225,7 @@
     <module>bom</module>
     <module>core</module>
     <module>cli</module>
-    <module>client-device-connection-infinispan</module>
+    <!--<module>client-device-connection-infinispan</module>-->
     <module>clients</module>
     <module>demo-certs</module>
     <module>examples</module>
@@ -235,6 +235,8 @@
     <module>site</module>
     <module>test-utils</module>
     <module>tests</module>
+    <module>client-device-connection</module>
+    <module>caches</module>
   </modules>
 
   <pluginRepositories>

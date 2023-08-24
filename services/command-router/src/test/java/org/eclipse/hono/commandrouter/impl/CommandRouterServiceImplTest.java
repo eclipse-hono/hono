@@ -41,7 +41,7 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.DeviceConnectionInfo;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;

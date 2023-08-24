@@ -23,20 +23,18 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.cache.Cache;
+import org.eclipse.hono.cache.CommonCacheConfig;
+import org.eclipse.hono.cache.CommonCacheOptions;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandRouterServiceOptions;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.impl.UnknownStatusProvidingService;
-import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
-import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
-import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheOptions;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
-import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.deviceconnection.CacheBasedDeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.infinispan.InfinispanRemoteConfigurationOptions;
+import org.eclipse.hono.deviceconnection.infinispan.InfinispanRemoteConfigurationProperties;
+import org.eclipse.hono.deviceconnection.redis.RedisCache;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
@@ -65,14 +63,14 @@ public class DeviceConnectionInfoProducer {
 
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
-            final BasicCache<String, String> cache,
+            final Cache<String, String> cache,
             final Tracer tracer,
             final AdapterInstanceStatusService adapterInstanceStatusService) {
         return new CacheBasedDeviceConnectionInfo(cache, tracer, adapterInstanceStatusService);
     }
 
     @Produces
-    BasicCache<String, String> cache(
+    Cache<String, String> cache(
             final Vertx vertx,
             @ConfigMapping(prefix = "hono.commandRouter.cache.common")
             final CommonCacheOptions commonCacheOptions,
@@ -81,6 +79,7 @@ public class DeviceConnectionInfoProducer {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
+        /*
         if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring embedded cache");
             return new EmbeddedCache<>(
@@ -94,6 +93,9 @@ public class DeviceConnectionInfoProducer {
                     infinispanCacheConfig,
                     commonCacheConfig);
         }
+         */
+        LOG.info("Creating a new REDIS cache.");
+        return new RedisCache<String, String>();
     }
 
     private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {

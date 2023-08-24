@@ -38,7 +38,7 @@ import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterResult;
 import org.eclipse.hono.commandrouter.CommandRouterService;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
