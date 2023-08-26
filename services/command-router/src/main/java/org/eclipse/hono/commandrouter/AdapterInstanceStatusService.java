@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.deviceconnection.AdapterInstanceStatusProvider;
+import org.eclipse.hono.deviceconnection.common.AdapterInstanceStatusProvider;
 import org.eclipse.hono.util.Lifecycle;
 
 /**

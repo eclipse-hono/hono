@@ -1,0 +1,6 @@
+hono:
+  cache:
+    common:
+      cacheName: "the-cache"
+      checkKey: "the-key"
+      checkValue: "the-value"

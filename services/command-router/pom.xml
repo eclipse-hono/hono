@@ -27,20 +27,16 @@
     <!--
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan</artifactId>
+      <artifactId>hono-client-device-connection</artifactId>
     </dependency>
     -->
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-device-connection</artifactId>
+      <artifactId>client-device-connection-infinispan</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-cache-infinispan</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-cache-redis</artifactId>
+      <artifactId>client-device-connection-redis</artifactId>
     </dependency>
 
     <dependency>

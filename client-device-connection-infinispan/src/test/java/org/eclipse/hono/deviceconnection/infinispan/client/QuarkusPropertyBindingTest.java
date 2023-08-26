@@ -19,6 +19,8 @@ import java.util.List;
 
 import javax.security.sasl.Sasl;
 
+import org.eclipse.hono.deviceconnection.common.CommonCacheConfig;
+import org.eclipse.hono.deviceconnection.common.CommonCacheOptions;
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.infinispan.client.hotrod.configuration.ClusterConfiguration;
 import org.infinispan.client.hotrod.configuration.Configuration;

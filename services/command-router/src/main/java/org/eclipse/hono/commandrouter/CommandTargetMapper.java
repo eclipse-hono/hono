@@ -15,7 +15,7 @@ package org.eclipse.hono.commandrouter;
 
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.commandrouter.impl.CommandTargetMapperImpl;
-import org.eclipse.hono.deviceconnection.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.common.DeviceConnectionInfo;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;

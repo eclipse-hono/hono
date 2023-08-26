@@ -21,10 +21,10 @@
     <relativePath>../bom</relativePath>
   </parent>
   <!-- TODO: review in PR request, is there a reason this artifact ID does not start with "hono-"? -->
-  <artifactId>client-device-connection-infinispan</artifactId>
+  <artifactId>client-device-connection-redis</artifactId>
 
-  <name>Hotrod Device Connection client</name>
-  <description>A Hotrod based client for accessing device connection information in an Infinispan data grid.</description>
+  <name>Redis Device Connection client</name>
+  <description>A Redis based client for accessing device connection information in a Redis cluster.</description>
 
   <dependencies>
     <dependency>
@@ -32,6 +32,21 @@
       <artifactId>client-device-connection</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>redis.clients</groupId>
+      <artifactId>jedis</artifactId>
+      <version>4.3.1</version>
+    </dependency>
+
+    <!--
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-client-hotrod</artifactId>
@@ -50,8 +65,18 @@
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
     </dependency>
-
-    <!-- TODO: PR review, should this not come transiently from the client-device-connection module? -->
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-core</artifactId>
@@ -86,34 +111,6 @@
           <artifactId>quarkus-fs-util</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <!-- TODO: PR review, what of the following is needed since we depend on the common module which has these? -->
-    <!--
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>redis.clients</groupId>
-      <artifactId>jedis</artifactId>
-      <version>4.3.1</version>
     </dependency>
     -->
 

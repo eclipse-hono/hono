@@ -1,0 +1,34 @@
+hono:
+  cache:
+    infinispan:
+      serverList: "data-grid:11222"
+      authServerName: "data-grid"
+      authUsername: "user"
+      authPassword: "secret"
+      authRealm: "ApplicationRealm"
+      cluster:
+        siteA: "hostA1:11222; hostA2:11223"
+        siteB: "hostB1:11222; hostB2:11223"
+      connectionPool:
+        minIdle: 10
+        maxActive: 10
+        maxPendingRequests: 400
+        maxWait: 500
+      defaultExecutorFactory:
+        poolSize: 200
+      saslMechanism: "DIGEST-MD5"
+      saslProperties:
+        "javax.security.sasl.qop": "auth"
+      socketTimeout: 5000
+      connectTimeout: 5000
+      keyStoreFileName: "/etc/hono/key-store.p12"
+      keyStoreType: "PKCS12"
+      keyStorePassword: "key-store-secret"
+      keyAlias: "infinispan"
+      keyStoreCertificatePassword: "cert-secret"
+      trustStorePath: "/etc/hono/trust-store.p12"
+      trustStoreFileName: "/etc/hono/trust-store-file.p12"
+      trustStoreType: "PKCS12"
+      trustStorePassword: "trust-store-secret"
+      useSsl: true
+      sslCiphers: "TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256"
