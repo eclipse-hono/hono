@@ -178,27 +178,56 @@ public interface AbstractDeviceManagementSearchDevicesTest {
     @Test
     default void testSearchDevicesWithPageOffset(final VertxTestContext ctx) {
         final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
-        final int pageSize = 1;
-        final int pageOffset = 1;
+        final int pageSize = 6;
         final Filter filter = new Filter("/enabled", true);
-        final Sort sortOption = new Sort("/id");
 
-        sortOption.setDirection(Sort.Direction.DESC);
         createDevices(tenantId, Map.of(
+                "testDevice0", new Device().setEnabled(true),
                 "testDevice1", new Device().setEnabled(true),
-                "testDevice2", new Device().setEnabled(true)))
-            .compose(ok -> getDeviceManagementService()
-                    .searchDevices(tenantId, pageSize, pageOffset, List.of(filter),
-                            List.of(sortOption),
-                            NoopSpan.INSTANCE))
+                "testDevice2", new Device().setEnabled(true),
+                "testDevice3", new Device().setEnabled(true),
+                "testDevice4", new Device().setEnabled(true),
+                "testDevice5", new Device().setEnabled(true),
+                "testDevice6", new Device().setEnabled(true),
+                "testDevice7", new Device().setEnabled(true)))
+            .compose(ok -> getDeviceManagementService().searchDevices(
+                    tenantId,
+                    pageSize,
+                    0,
+                    List.of(filter),
+                    List.of(),
+                    NoopSpan.INSTANCE))
+            .compose(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final var searchResult = response.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(8);
+                    assertThat(searchResult.getResult()).hasSize(6);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice0");
+                    assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice1");
+                    assertThat(searchResult.getResult().get(2).getId()).isEqualTo("testDevice2");
+                    assertThat(searchResult.getResult().get(3).getId()).isEqualTo("testDevice3");
+                    assertThat(searchResult.getResult().get(4).getId()).isEqualTo("testDevice4");
+                    assertThat(searchResult.getResult().get(5).getId()).isEqualTo("testDevice5");
+                });
+                return getDeviceManagementService().searchDevices(
+                        tenantId,
+                        pageSize,
+                        1,
+                        List.of(filter),
+                        List.of(),
+                        NoopSpan.INSTANCE);
+            })
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
-                    assertThat(searchResult.getTotal()).isEqualTo(2);
-                    assertThat(searchResult.getResult()).hasSize(1);
-                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                    final var searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(8);
+                    assertThat(searchResult.getResult()).hasSize(2);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice6");
+                    assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice7");
                 });
                 ctx.completeNow();
             }));
@@ -233,6 +262,65 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     assertThat(searchResult.getTotal()).isEqualTo(2);
                     assertThat(searchResult.getResult()).hasSize(1);
                     assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice2");
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to search devices without a sort option succeeds and the result set is sorted
+     * by device ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testSearchDevicesSortsResultById(final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 4;
+
+        createDevices(tenantId, Map.of(
+                "testDevice1", new Device(),
+                "testDevice5", new Device(),
+                "testDevice3", new Device(),
+                "testDevice4", new Device(),
+                "testDevice2", new Device(),
+                "testDevice6", new Device()))
+            .compose(ok -> getDeviceManagementService().searchDevices(
+                    tenantId,
+                    pageSize,
+                    0,
+                    List.of(),
+                    List.of(),
+                    NoopSpan.INSTANCE))
+            .compose(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final var searchResult = response.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(6);
+                    assertThat(searchResult.getResult()).hasSize(4);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                    assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice2");
+                    assertThat(searchResult.getResult().get(2).getId()).isEqualTo("testDevice3");
+                    assertThat(searchResult.getResult().get(3).getId()).isEqualTo("testDevice4");
+                });
+                return getDeviceManagementService().searchDevices(
+                    tenantId,
+                    pageSize,
+                    1,
+                    List.of(),
+                    List.of(),
+                    NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final var searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(6);
+                    assertThat(searchResult.getResult()).hasSize(2);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice5");
+                    assertThat(searchResult.getResult().get(1).getId()).isEqualTo("testDevice6");
                 });
                 ctx.completeNow();
             }));
