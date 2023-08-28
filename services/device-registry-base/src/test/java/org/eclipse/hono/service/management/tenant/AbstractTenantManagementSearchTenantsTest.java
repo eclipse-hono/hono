@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,8 @@ package org.eclipse.hono.service.management.tenant;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -222,6 +224,64 @@ public interface AbstractTenantManagementSearchTenantsTest {
                     assertThat(searchResult.getTotal()).isEqualTo(2);
                     assertThat(searchResult.getResult()).hasSize(1);
                     assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to search tenants without a sort option succeeds and the result set is sorted
+     * by tenant ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testSearchTenantsSortsResultById(final VertxTestContext ctx) {
+        final var tenants = Map.of(
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant(),
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant(),
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant(),
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant(),
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant(),
+                DeviceRegistryUtils.getUniqueIdentifier(), new Tenant());
+        final var tenantIds = new ArrayList<String>(tenants.keySet());
+        Collections.sort(tenantIds);
+        final int pageSize = 4;
+
+        createTenants(tenants)
+            .onFailure(ctx::failNow)
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    0,
+                    List.of(),
+                    List.of(),
+                    NoopSpan.INSTANCE))
+            .compose(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final var payload = response.getPayload();
+                    assertThat(payload.getTotal()).isEqualTo(6);
+                    assertThat(payload.getResult()).hasSize(4);
+                    final var foundTenantIds = payload.getResult().stream().map(TenantWithId::getId).collect(Collectors.toList());
+                    assertThat(foundTenantIds).containsExactlyElementsIn(tenantIds.subList(0, 4));
+                });
+                return getTenantManagementService().searchTenants(
+                    pageSize,
+                    1,
+                    List.of(),
+                    List.of(),
+                    NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final var payload = response.getPayload();
+                    assertThat(payload.getTotal()).isEqualTo(6);
+                    assertThat(payload.getResult()).hasSize(2);
+                    final var foundTenantIds = payload.getResult().stream().map(TenantWithId::getId).collect(Collectors.toList());
+                    assertThat(foundTenantIds).containsExactlyElementsIn(tenantIds.subList(4, 6));
                 });
                 ctx.completeNow();
             }));
