@@ -595,6 +595,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
+        <artifactId>vertx-redis-client</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
         <artifactId>vertx-kafka-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>

@@ -56,7 +56,6 @@
     <service.startup.timeout>120000</service.startup.timeout>
     <!-- color used by components of the AMQP Messaging Network for logging -->
     <log.color.amqp-network>magenta</log.color.amqp-network>
-    <log.color.kafka>magenta</log.color.kafka>
     <!-- color used by components of the device registry for logging -->
     <log.color.hono-device-registry>green</log.color.hono-device-registry>
     <!-- color used by protocol adapters for logging -->
@@ -760,6 +759,7 @@
       <properties>
         <mongodb.port>27017</mongodb.port>
         <kafka.port>9094</kafka.port>
+        <redis.port>6379</redis.port>
         <qpid.amqps.port>15671</qpid.amqps.port>
         <qpid.amqp.port>15672</qpid.amqp.port>
 
@@ -1280,6 +1280,35 @@
                       <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
                       <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
                       <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
+                    </env>
+                  </run>
+                </image>
+                <!-- ##### Redis ##### -->
+                <image>
+                  <name>bitnami/redis</name>
+                  <alias>hono-redis-test</alias>
+                  <run>
+                    <skip>false</skip>
+                    <ports>
+                      <port>6379:6379</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>redis</alias>
+                    </network>
+                    <memorySwap>1500000000</memorySwap>
+                    <memory>1500000000</memory>
+                    <log>
+                      <prefix>Redis</prefix>
+                      <color>${log.color.extra-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(Ready to accept connections).*</log>
+                    </wait>
+                    <env>
+                      <ALLOW_EMPTY_PASSWORD>yes</ALLOW_EMPTY_PASSWORD>
                     </env>
                   </run>
                 </image>
@@ -2243,7 +2272,7 @@
                 <configuration>
                   <removeVolumes>true</removeVolumes>
                   <removeNamePattern>**/hono-*-test:*</removeNamePattern>
-                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*,postgres-*</stopNamePattern>
+                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*,postgres-*,redis-*</stopNamePattern>
                 </configuration>
               </execution>
             </executions>

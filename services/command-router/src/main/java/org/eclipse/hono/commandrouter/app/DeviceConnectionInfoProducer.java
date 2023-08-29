@@ -32,9 +32,13 @@ import org.eclipse.hono.deviceconnection.common.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.common.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.common.CommonCacheOptions;
 import org.eclipse.hono.deviceconnection.common.DeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.deviceconnection.redis.client.RedisCache;
+import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationProperties;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
@@ -79,8 +83,13 @@ public class DeviceConnectionInfoProducer {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
-        /*
-        if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
+
+        if (true) {
+            LOG.info("Creating a new REDIS cache.");
+            final var p = new RedisRemoteConfigurationProperties();
+            p.setConnectionString("redis://redis:6379");
+            return RedisCache.from(vertx, p);
+        } else if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring embedded cache");
             return new EmbeddedCache<>(
                     vertx,
@@ -93,9 +102,6 @@ public class DeviceConnectionInfoProducer {
                     infinispanCacheConfig,
                     commonCacheConfig);
         }
-         */
-        LOG.info("Creating a new REDIS cache.");
-        return new RedisCache<String, String>();
     }
 
     private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {

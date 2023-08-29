@@ -205,7 +205,14 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
         Objects.requireNonNull(keys);
 
-        return withCache(aCache -> aCache.getAllAsync(keys));
+        final var result = withCache(aCache -> aCache.getAllAsync(keys));
+        result.onSuccess(r -> {
+            LOG.info("BasicCache: getAll() ({})", keys.size());
+            final var resultKeys = r.keySet();
+            r.forEach((k, v) -> LOG.info("BasicCache#getAll() result: {}:{}", k, v));
+            keys.forEach((k) -> LOG.info("BasicCache#getAll() keys exist in result: {} / {}", k, resultKeys.contains(k)));
+        });
+        return result;
     }
 
     /**
