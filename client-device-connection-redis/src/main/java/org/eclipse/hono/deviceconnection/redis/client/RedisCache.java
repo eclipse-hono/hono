@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.deviceconnection.common.Cache;
+import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ import io.vertx.redis.client.RedisConnection;
  * @param <K> TODO
  * @param <V> TODO
  */
-public class RedisCache<K, V> implements Cache<K, V> {
+public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(RedisCache.class);
 
@@ -59,7 +60,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
      * @param vertx TODO.
      * @param properties TODO.
      */
-    public RedisCache(final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
+    private RedisCache(final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(properties);
@@ -68,9 +69,9 @@ public class RedisCache<K, V> implements Cache<K, V> {
         this.properties = properties;
 
         LOG.info("Initializing REDIS cache!");
-        createRedisClient()
-                .onSuccess( c -> LOG.info("Connected to Redis"))
-                .onFailure( t -> LOG.error("Could not connect to Redis", t));
+        //createRedisClient()
+        //        .onSuccess( c -> LOG.info("Connected to Redis"))
+        //        .onFailure( t -> LOG.error("Could not connect to Redis", t));
     }
 
     /**
@@ -90,9 +91,33 @@ public class RedisCache<K, V> implements Cache<K, V> {
         return new RedisCache<>(vertx, properties);
     }
 
-    /**
+    @Override
+    public Future<Void> start() {
+        LOG.info("REDIS: starting cache");
+        final Promise<Void> promise = Promise.promise();
+        /*
+        createRedisClient()
+                .onSuccess(c -> promise.complete())
+                .onFailure(promise::fail);
+        return promise.future();
+         */
+        redis = Redis.createClient(vertx, properties);
+        redis.connect()
+                .onSuccess(c -> client = c)
+                .onFailure(promise::fail);
+        return promise.future();
+    }
+
+    @Override
+    public Future<Void> stop() {
+        LOG.info("REDIS: stopping cache");
+        redis.close();
+        return Future.succeededFuture();
+    }
+
+    /*
      * Will create a redis client and set up a reconnect handler when there is an exception in the connection.
-     */
+     *
     private Future<RedisConnection> createRedisClient() {
         final Promise<RedisConnection> promise = Promise.promise();
 
@@ -143,6 +168,7 @@ public class RedisCache<K, V> implements Cache<K, V> {
             vertx.setTimer(backoff, timer -> createRedisClient().onFailure(t -> attemptReconnect(retry + 1)));
         }
     }
+     */
 
     @Override
     public Future<JsonObject> checkForCacheAvailability() {
@@ -151,11 +177,10 @@ public class RedisCache<K, V> implements Cache<K, V> {
         Objects.requireNonNull(client);
 
         final Promise<JsonObject> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
-        redis.ping(List.of())
+        final RedisAPI api = RedisAPI.api(client);
+        api.ping(List.of())
                 .onSuccess(v -> promise.complete(new JsonObject()))
                 .onFailure(promise::fail);
-
         return promise.future();
     }
 
@@ -163,8 +188,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
     public Future<Void> put(final K key, final V value) {
         LOG.info("REDIS: put {}={}", key, value);
         final Promise<Void> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
-        redis.set(List.of(key.toString(), value.toString()))
+        final RedisAPI api = RedisAPI.api(client);
+        api.set(List.of(key.toString(), value.toString()))
                 .onSuccess(v -> promise.complete())
                 .onFailure(promise::fail);
         return promise.future();
@@ -175,12 +200,12 @@ public class RedisCache<K, V> implements Cache<K, V> {
         LOG.info("REDIS: put {}={} ({} {})", key, value, lifespan, lifespanUnit);
         final long millis = lifespanUnit.toMillis(lifespan);
         final Promise<Void> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
+        final RedisAPI api = RedisAPI.api(client);
         final List<String> params = new ArrayList<>(List.of(key.toString(), value.toString()));
         if (millis > 0) {
             params.addAll(List.of("PX", String.valueOf(millis)));
         }
-        redis.set(params)
+        api.set(params)
                 .onSuccess(v -> promise.complete())
                 .onFailure(promise::fail);
         return promise.future();
@@ -190,12 +215,12 @@ public class RedisCache<K, V> implements Cache<K, V> {
     public Future<Void> putAll(final Map<? extends K, ? extends V> data) {
         LOG.info("REDIS: putAll ({})", data.size());
         final Promise<Void> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
+        final RedisAPI api = RedisAPI.api(client);
         final List<String> keyValues = new ArrayList<>(data.size() * 2);
         data.forEach((k, v) -> {
             keyValues.add(k.toString());
             keyValues.add(v.toString()); });
-        redis.mset(keyValues)
+        api.mset(keyValues)
                 .onSuccess(v -> promise.complete())
                 .onFailure(promise::fail);
         return promise.future();
@@ -206,16 +231,16 @@ public class RedisCache<K, V> implements Cache<K, V> {
         LOG.info("REDIS: putAll ({}) ({} {})", data.size(), lifespan, lifespanUnit);
         final Promise<Void> promise = Promise.promise();
         final long millis = lifespanUnit.toMillis(lifespan);
-        final RedisAPI redis = RedisAPI.api(client);
-        redis.multi();
+        final RedisAPI api = RedisAPI.api(client);
+        api.multi();
         data.forEach((k, v) -> {
             final List<String> params = new ArrayList<>(List.of(k.toString(), v.toString()));
             if (millis > 0) {
                 params.addAll(List.of("PX", String.valueOf(millis)));
             }
-            redis.set(params);
+            api.set(params);
         });
-        redis.exec()
+        api.exec()
                 .onSuccess(v -> promise.complete())
                 .onFailure(promise::fail);
         return promise.future();
@@ -225,8 +250,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
     public Future<V> get(final K key) {
         LOG.info("REDIS: get {}", key);
         final Promise<V> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
-        redis.get(key.toString())
+        final RedisAPI api = RedisAPI.api(client);
+        api.get(key.toString())
                 .onSuccess(v -> promise.complete((V) v) )
                 .onFailure(promise::fail);
         return promise.future();
@@ -237,8 +262,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
         LOG.info("REDIS: remove {}={}", key, value);
         //TODO: why is the value being passed here? Do we need to use that?
         final Promise<Boolean> promise = Promise.promise();
-        final RedisAPI redis = RedisAPI.api(client);
-        redis.del(List.of(key.toString()))
+        final RedisAPI api = RedisAPI.api(client);
+        api.del(List.of(key.toString()))
                 .onSuccess(v -> promise.complete(true))
                 .onFailure(promise::fail);
         return promise.future();
@@ -249,19 +274,19 @@ public class RedisCache<K, V> implements Cache<K, V> {
         LOG.info("REDIS: getAll {}", keys.size());
         final Promise<Map<K, V>> promise = Promise.promise();
 
-        final RedisAPI redis = RedisAPI.api(client);
+        final RedisAPI api = RedisAPI.api(client);
         // Make sure the keys are in order and we can pop off the front
         final LinkedList<String> keyList = new LinkedList<>(keys.stream().map(String::valueOf).toList());
         keyList.forEach(i -> LOG.info("REDIS: Item: {}", i));
         final Map<K, V> result = new HashMap<>(keyList.size());
-        redis.mget(keyList)
+        api.mget(keyList)
                 .onComplete(v -> {
                     LOG.info("REDIS: Got {} items back...", v.result().stream().toList().size());
                     v.result().forEach(i -> {
                         LOG.info("Iterating through result list: {}", i);
                         try {
                             if (i != null) { // TODO: this is kinda strange but some results are null and the BasicCache does not include those in the returned result. Ask about/investigate.
-                                result.put((K) keyList.removeFirst(), i == null ? null : (V) i.toString());
+                                result.put((K) keyList.removeFirst(), (V) i.toString());
                             }
                         } catch (Exception e) {
                             LOG.info(" - got exception {}", e.getMessage());
