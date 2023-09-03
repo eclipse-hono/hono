@@ -14,6 +14,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When using Pub/Sub messaging, there were potentially issues concerning the AMQP connection between protocol adapter
   and command router, leading for example to timeouts when MQTT devices subscribed/unsubscribed to the command topic.
   This has been fixed.
+* The integration tests now use Apache Kafka 3.5.0 in Raft mode which no longer requires running a separate Apache Zookeeper
+  instance and thus simplifies test setup and configuration.
 
 ### Deprecations
 
