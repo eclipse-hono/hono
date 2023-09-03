@@ -138,6 +138,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final Promise<ProtonReceiver> result = Promise.promise();
         context.runOnContext(go -> {
+            log.debug("creating command consumer for tenant [{}]", tenantId);
             final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(
                     tenantId, commandTargetDeviceId));
             recv.setAutoAccept(false);
@@ -321,7 +322,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 : deviceId;
 
         final int totalNoOfCommandsToSend = 60;
-        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
+        connectAndSubscribe(
+                ctx,
+                commandTargetDeviceId,
+                endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender),
                 totalNoOfCommandsToSend);
         if (ctx.failed()) {

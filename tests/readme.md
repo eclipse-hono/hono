@@ -27,7 +27,6 @@ This starts the following Docker containers and runs the test cases against them
 * MongoDB server
 * Hono Authentication service
 * Hono Device Registration service
-* Apache Zookeeper
 * Apache Kafka
 * Hono Command Router service
 * Hono HTTP adapter
