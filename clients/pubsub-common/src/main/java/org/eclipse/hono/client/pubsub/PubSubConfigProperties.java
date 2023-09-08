@@ -10,11 +10,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.client.pubsub;
+
+import jakarta.inject.Singleton;
 
 /**
  * Common configuration properties required for access to Pub/Sub.
  */
+@Singleton
 public final class PubSubConfigProperties {
 
     private String projectId = null;

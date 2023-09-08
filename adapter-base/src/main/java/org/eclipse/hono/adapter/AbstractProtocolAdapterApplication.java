@@ -59,6 +59,7 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubBasedAdminClientManager;
 import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
@@ -441,6 +442,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                                         vertx,
                                         pubSubConfigProperties.getProjectId(),
                                         provider);
+                                final var pubSubBasedAdminClientManager = new PubSubBasedAdminClientManager(
+                                        pubSubConfigProperties,
+                                        provider,
+                                        vertx);
 
                                 commandConsumerFactory.registerInternalCommandConsumer(
                                         (id, handlers) -> new PubSubBasedInternalCommandConsumer(
@@ -451,8 +456,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                                                 tenantClient,
                                                 tracer,
                                                 subscriberFactory,
-                                                pubSubConfigProperties.getProjectId(),
-                                                provider));
+                                                pubSubBasedAdminClientManager,
+                                                null
+                                                ));
                             }
                         }, () -> LOG.error("Could not initialize Pub/Sub based internal command consumer, no Credentials Provider present."));
             }
