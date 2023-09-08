@@ -38,6 +38,9 @@ public class JdbcProperties {
     private String username;
     private String password;
     private Integer maximumPoolSize;
+    private Integer minimumPoolSize;
+    private Integer initialPoolSize;
+    private Integer maximumIdleTime;
     private String tableName;
 
     /**
@@ -57,6 +60,9 @@ public class JdbcProperties {
         Objects.requireNonNull(options);
         setDriverClass(options.driverClass());
         options.maximumPoolSize().ifPresent(this::setMaximumPoolSize);
+        options.minimumPoolSize().ifPresent(this::setMinimumPoolSize);
+        options.initialPoolSize().ifPresent(this::setInitialPoolSize);
+        options.maximumIdleTime().ifPresent(this::setMaximumIdleTime);
         options.password().ifPresent(this::setPassword);
         options.tableName().ifPresent(this::setTableName);
         setUrl(options.url());
@@ -98,6 +104,27 @@ public class JdbcProperties {
         return maximumPoolSize;
     }
 
+    public void setMinimumPoolSize(final Integer minimumPoolSize) {
+        this.minimumPoolSize = minimumPoolSize;
+    }
+    public Integer getMinimumPoolSize() {
+        return minimumPoolSize;
+    }
+
+    public void setInitialPoolSize(final Integer initialPoolSize) {
+        this.initialPoolSize = initialPoolSize;
+    }
+    public Integer getInitialPoolSize() {
+        return initialPoolSize;
+    }
+
+    public void setMaximumIdleTime(final Integer maximumIdleTime) {
+        this.maximumIdleTime = maximumIdleTime;
+    }
+    public Integer getMaximumIdleTime() {
+        return maximumIdleTime;
+    }
+
     public String getTableName() {
         return tableName;
     }
@@ -125,6 +152,15 @@ public class JdbcProperties {
         }
         if (dataSourceProperties.getMaximumPoolSize() != null) {
             config.put("max_pool_size", dataSourceProperties.getMaximumPoolSize());
+        }
+        if (dataSourceProperties.getMinimumPoolSize() != null) {
+            config.put("min_pool_size", dataSourceProperties.getMinimumPoolSize());
+        }
+        if (dataSourceProperties.getInitialPoolSize() != null) {
+            config.put("initial_pool_size", dataSourceProperties.getInitialPoolSize());
+        }
+        if (dataSourceProperties.getMaximumIdleTime() != null) {
+            config.put("max_idle_time", dataSourceProperties.getMaximumIdleTime());
         }
 
         log.info("Creating new SQL client: {} - table: {}", config, dataSourceProperties.getTableName());

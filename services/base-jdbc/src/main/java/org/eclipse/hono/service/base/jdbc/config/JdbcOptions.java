@@ -61,6 +61,27 @@ public interface JdbcOptions {
     OptionalInt maximumPoolSize();
 
     /**
+     * Gets the minimum size of the DB connection pool.
+     *
+     * @return The minimum number of connections in the pool.
+     */
+    OptionalInt minimumPoolSize();
+
+    /**
+     * Gets the initial size of the DB connection pool.
+     *
+     * @return The initial number of connections in the pool.
+     */
+    OptionalInt initialPoolSize();
+
+    /**
+     * Gets the maximum idle time of connections in the DB connection pool.
+     *
+     * @return The maximum idle time of connections in the pool.
+     */
+    OptionalInt maximumIdleTime();
+
+    /**
      * Gets the name of the table that contains the data.
      *
      * @return The table name.
