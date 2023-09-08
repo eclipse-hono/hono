@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
+
 package org.eclipse.hono.client.command.pubsub;
 
 import java.net.HttpURLConnection;
@@ -33,7 +34,6 @@ import org.eclipse.hono.util.LifecycleStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.api.gax.core.CredentialsProvider;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.pubsub.v1.PubsubMessage;
@@ -63,7 +63,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
     private final PubSubBasedAdminClientManager adminClientManager;
     private final Vertx vertx;
-    private MessageReceiver receiver;
+    private final MessageReceiver receiver;
 
     /**
      * Creates a Pub/Sub based internal command consumer.
@@ -75,54 +75,10 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
      * @param tenantClient The client to use for retrieving tenant configuration data.
      * @param tracer The OpenTracing tracer.
      * @param subscriberFactory The subscriber factory for creating Pub/Sub subscribers for receiving messages.
-     * @param projectId The identifier of the Google Cloud Project to connect to.
-     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
-     * @throws NullPointerException If any of these parameters are {@code null}.
-     */
-    public PubSubBasedInternalCommandConsumer(
-            final CommandResponseSender commandResponseSender,
-            final Vertx vertx,
-            final String adapterInstanceId,
-            final CommandHandlers commandHandlers,
-            final TenantClient tenantClient,
-            final Tracer tracer,
-            final PubSubSubscriberFactory subscriberFactory,
-            final String projectId,
-            final CredentialsProvider credentialsProvider) {
-        Objects.requireNonNull(projectId);
-        Objects.requireNonNull(credentialsProvider);
-        this.vertx = Objects.requireNonNull(vertx);
-        this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
-        this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
-        this.commandHandlers = Objects.requireNonNull(commandHandlers);
-        this.tenantClient = Objects.requireNonNull(tenantClient);
-        this.tracer = Objects.requireNonNull(tracer);
-        this.subscriberFactory = Objects.requireNonNull(subscriberFactory);
-        this.adminClientManager = new PubSubBasedAdminClientManager(projectId, credentialsProvider);
-        createReceiver();
-        adminClientManager
-                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
-                .onFailure(thr -> log.error("Could not create topic for endpoint {} and {}",
-                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
-                .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
-                .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
-                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
-                .onSuccess(s -> subscriberFactory.getOrCreateSubscriber(s, receiver));
-    }
-
-    /**
-     * Creates a Pub/Sub based internal command consumer. To be used for Unittests.
-     *
-     * @param commandResponseSender The sender used to send command responses.
-     * @param vertx The Vert.x instance to use.
-     * @param adapterInstanceId The adapter instance id.
-     * @param commandHandlers The command handlers to choose from for handling a received command.
-     * @param tenantClient The client to use for retrieving tenant configuration data.
-     * @param tracer The OpenTracing tracer.
-     * @param subscriberFactory The subscriber factory for creating Pub/Sub subscribers for receiving messages.
-     * @param adminClientManager The Pub/Sub based admin client manager to manage topics and subscriptions.
+     * @param adminClientManager The factory to create Pub/Sub based admin client manager to manage topics and
+     *            subscriptions.
      * @param receiver The message receiver used to process the received message.
-     * @throws NullPointerException If any of these parameters are {@code null}.
+     * @throws NullPointerException If any of these parameters except receiver are {@code null}.
      */
     public PubSubBasedInternalCommandConsumer(
             final CommandResponseSender commandResponseSender,
@@ -142,15 +98,11 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
         this.tracer = Objects.requireNonNull(tracer);
         this.subscriberFactory = Objects.requireNonNull(subscriberFactory);
         this.adminClientManager = Objects.requireNonNull(adminClientManager);
-        this.receiver = Objects.requireNonNull(receiver);
-        adminClientManager
-                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
-                .onFailure(thr -> log.error("Could not create topic for endpoint {} and {}",
-                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
-                .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId))
-                .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
-                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
-                .onSuccess(s -> subscriberFactory.getOrCreateSubscriber(s, receiver));
+        this.receiver = receiver != null ? receiver : createReceiver();
+    }
+
+    private MessageReceiver createReceiver() {
+        return this::handleCommandMessage;
     }
 
     @Override
@@ -191,19 +143,24 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
             return Future.failedFuture(new IllegalStateException("subscriber is already started/stopping"));
         }
 
-        final String subscriptionId = PubSubMessageHelper.getTopicName(
-                CommandConstants.INTERNAL_COMMAND_ENDPOINT,
-                adapterInstanceId);
-        return subscriberFactory
-                .getOrCreateSubscriber(subscriptionId, receiver)
-                .subscribe(true)
+        return adminClientManager
+                .getOrCreateTopic(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId)
+                .onFailure(thr -> log.error("Could not create topic for endpoint {} and {}",
+                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
+                .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT,
+                        adapterInstanceId))
+                .onComplete(v -> vertx.executeBlocking(promise -> {
+                    adminClientManager.closeAdminClients();
+                    promise.complete();
+                }))
+                .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
+                        CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
+                .compose(s -> subscriberFactory.getOrCreateSubscriber(PubSubMessageHelper.getTopicName(
+                        CommandConstants.INTERNAL_COMMAND_ENDPOINT,
+                        adapterInstanceId), receiver).subscribe(true))
                 .onSuccess(s -> lifecycleStatus.setStarted())
                 .onFailure(
                         e -> log.warn("Error starting Internal Command Consumer for adapter {}", adapterInstanceId, e));
-    }
-
-    private void createReceiver() {
-        receiver = this::handleCommandMessage;
     }
 
     Future<Void> handleCommandMessage(final PubsubMessage message, final AckReplyConsumer consumer) {
@@ -260,13 +217,8 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
 
     @Override
     public Future<Void> stop() {
-        return lifecycleStatus.runStopAttempt(() -> Future.all(
-                subscriberFactory.closeSubscriber(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId),
-                vertx.executeBlocking(promise -> {
-                    adminClientManager.closeAdminClients();
-                    promise.complete();
-                })
-        ).mapEmpty());
+        return lifecycleStatus.runStopAttempt(
+                () -> subscriberFactory.closeSubscriber(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId));
     }
 
 }

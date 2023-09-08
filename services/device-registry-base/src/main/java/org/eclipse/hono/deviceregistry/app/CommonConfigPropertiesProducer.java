@@ -19,8 +19,6 @@ import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
-import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
-import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigOptions;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 
@@ -47,12 +45,6 @@ public class CommonConfigPropertiesProducer {
         result.setServerRoleIfUnknown("AMQP Messaging Network");
         result.setNameIfNotSet("Hono Device Registry");
         return result;
-    }
-
-    @Produces
-    @Singleton
-    PubSubConfigProperties pubSubConfigProperties(final PubSubPublisherOptions options) {
-        return new PubSubConfigProperties(options);
     }
 
     @Produces
