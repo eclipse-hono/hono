@@ -156,7 +156,7 @@ public class CommandConstants {
      * @return The new adapter instance identifier.
      */
     public static String getNewAdapterInstanceId(final String adapterName, final int counter) {
-        final String k8sContainerId = KubernetesContainerUtil.getContainerId();
+        final String k8sContainerId = CgroupV1KubernetesContainerUtil.getContainerId();
         if (k8sContainerId == null || k8sContainerId.length() < 12) {
             return getNewAdapterInstanceIdForNonK8sEnv(adapterName);
         } else {

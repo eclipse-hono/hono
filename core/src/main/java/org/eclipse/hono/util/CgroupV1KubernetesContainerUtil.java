@@ -31,14 +31,14 @@ import org.slf4j.LoggerFactory;
  * This class has been copied from <em>org.apache.logging.log4j.kubernetes.ContainerUtil</em> from the
  * <em>log4j-kubernetes</em> module of the <a href="https://github.com/apache/logging-log4j2">Apache Log4j 2</a>
  * project (commit a50abb9). Adaptations have been done concerning the used logger and the Hono code style.
- * Also a fix regarding cri-containerd container ids has been applied.
+ * Also, a fix regarding cri-containerd container ids has been applied.
  */
-public class KubernetesContainerUtil {
+public class CgroupV1KubernetesContainerUtil {
     private static final int MAXLENGTH = 65;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesContainerUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CgroupV1KubernetesContainerUtil.class);
 
-    private KubernetesContainerUtil() {
+    private CgroupV1KubernetesContainerUtil() {
     }
 
     /**
@@ -60,16 +60,16 @@ public class KubernetesContainerUtil {
             final File file = new File("/proc/self/cgroup");
             if (file.exists()) {
                 try (Stream<String> lines = Files.lines(file.toPath())) {
-                    final String id = lines.map(KubernetesContainerUtil::getContainerId).filter(Objects::nonNull)
+                    final String id = lines.map(CgroupV1KubernetesContainerUtil::getContainerId).filter(Objects::nonNull)
                             .findFirst().orElse(null);
-                    LOGGER.debug("Found container id {}", id);
+                    LOGGER.debug("Found container id via cgroup v1: {}", id);
                     return id;
                 }
             } else {
-                LOGGER.warn("Unable to access container information");
+                LOGGER.warn("Unable to access '/proc/self/cgroup' to get container information");
             }
         } catch (final IOException ioe) {
-            LOGGER.warn("Error obtaining container id: {}", ioe.getMessage());
+            LOGGER.warn("Error obtaining container id via cgroup v1: {}", ioe.getMessage());
         }
         return null;
     }
