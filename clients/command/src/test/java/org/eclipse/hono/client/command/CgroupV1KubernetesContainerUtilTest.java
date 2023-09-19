@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.client.command;
 
 import static com.google.common.truth.Truth.assertThat;
 
