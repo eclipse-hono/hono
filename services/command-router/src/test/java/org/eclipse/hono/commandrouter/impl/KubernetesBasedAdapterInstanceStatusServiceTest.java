@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,8 +24,8 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.command.CommandRoutingUtil;
 import org.eclipse.hono.util.AdapterInstanceStatus;
-import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,7 +174,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     public void testServiceReportsStateOfUnknownAdapterInstanceAsDeadAfterDelay() {
 
         final String nonExistingInstanceId = "old-adapter-pod_000000000000_0";
-        assertThat(CommandConstants.getK8sPodNameAndContainerIdFromAdapterInstanceId(nonExistingInstanceId))
+        assertThat(CommandRoutingUtil.getK8sPodNameAndContainerIdFromAdapterInstanceId(nonExistingInstanceId))
                 .isNotNull();
 
         final Pod pod0 = createAdapterPodWithRunningContainer("adapterTestPod0");

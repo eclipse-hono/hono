@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,10 +29,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.command.CommandRoutingUtil;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -123,7 +123,7 @@ public class InternalKafkaTopicCleanupServiceTest {
     }
 
     private String getCmdInternalTopic(final String podName, final String containerId, final int counter) {
-        final String adapterInstanceId = CommandConstants.getNewAdapterInstanceIdForK8sEnv(
+        final String adapterInstanceId = CommandRoutingUtil.getNewAdapterInstanceIdForK8sEnv(
                 podName, containerId, counter);
         return new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId).toString();
     }
