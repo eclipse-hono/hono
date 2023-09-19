@@ -19,7 +19,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.hono.util.CgroupV1KubernetesContainerUtil;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.Strings;
 

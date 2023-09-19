@@ -14,7 +14,7 @@
  * See the license for the specific language governing permissions and
  * limitations under the license.
  */
-package org.eclipse.hono.util;
+package org.eclipse.hono.client.command;
 
 import java.io.File;
 import java.io.IOException;
