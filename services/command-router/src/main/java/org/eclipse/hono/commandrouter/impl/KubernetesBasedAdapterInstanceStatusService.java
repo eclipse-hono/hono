@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,9 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.command.CommandRoutingUtil;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.util.AdapterInstanceStatus;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -357,7 +357,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
             LOG.debug("no status info available for adapter instance id [{}]; service not active", adapterInstanceId);
             return AdapterInstanceStatus.UNKNOWN;
         }
-        final Pair<String, String> matchedPodNameAndContainerIdPair = CommandConstants
+        final Pair<String, String> matchedPodNameAndContainerIdPair = CommandRoutingUtil
                 .getK8sPodNameAndContainerIdFromAdapterInstanceId(adapterInstanceId);
         if (matchedPodNameAndContainerIdPair == null) {
             return AdapterInstanceStatus.UNKNOWN;
