@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.eclipse.hono.util.KubernetesContainerUtil;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +31,8 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractKafkaConfigProperties {
 
     private static final AtomicInteger ID_COUNTER = new AtomicInteger();
+
+    private static final String COMPONENT_UID_DEFAULT = getK8sComponentUId();
 
     /**
      * A logger to be shared with subclasses.
@@ -50,15 +51,15 @@ public abstract class AbstractKafkaConfigProperties {
      * Creates a new instance.
      */
     protected AbstractKafkaConfigProperties() {
-        this.componentUId = getComponentUIdFromEnv();
+        this.componentUId = COMPONENT_UID_DEFAULT;
     }
 
-    private String getComponentUIdFromEnv() {
-        final String k8sContainerId = KubernetesContainerUtil.getContainerId();
-        if (k8sContainerId != null && k8sContainerId.length() >= 12) {
+    private static String getK8sComponentUId() {
+        if (System.getenv("KUBERNETES_SERVICE_HOST") != null) {
             // running in Kubernetes: use HOSTNAME env var containing the pod name
             final String podName = System.getenv("HOSTNAME");
-            return String.format("%s_%s", podName, k8sContainerId.substring(0, 12));
+            final String random = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 12);
+            return String.format("%s_%s", podName, random);
         }
         return null;
     }
@@ -88,7 +89,7 @@ public abstract class AbstractKafkaConfigProperties {
      * Sets the component unique ID to be included in the client ID along with a counter value.
      * <p>
      * This overrides the unique ID determined automatically in case this application is running in Kubernetes
-     * (consisting of Pod/Container ID then).
+     * (containing the Pod name then).
      * <p>
      * Setting {@code null} here means that a UUID will be used in the client ID instead of component unique ID and
      * counter value.
@@ -133,7 +134,7 @@ public abstract class AbstractKafkaConfigProperties {
      * has been applied.
      * <p>
      * It is ensured that the returned map contains a unique {@code client.id}. The client ID will be created from the
-     * given client name, followed by a unique ID (containing component identifiers if running in Kubernetes).
+     * given client name, followed by a unique ID (containing a component identifier if running in Kubernetes).
      * An already set {@code client.id} property value will be used as prefix for the client ID.
      *
      * @param clientName A name for the client to include in the added {@code client.id} property.
