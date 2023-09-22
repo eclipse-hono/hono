@@ -43,23 +43,25 @@ public class CommandRoutingUtil {
     /**
      * Creates a new adapter instance identifier, used for identifying the protocol adapter to route a command to.
      * <p>
-     * If this method is invoked from within a docker container in a Kubernetes cluster, the format is
-     * <em>[prefix]_[docker_container_id]_[counter]</em>, with prefix being the name of the Kubernetes pod.
+     * If this application is running in a Kubernetes cluster and the container id is supplied as parameter here,
+     * the format of the returned id is <em>[prefix]_[container_id]_[counter]</em>, with prefix being the name of
+     * the Kubernetes pod.
      * See also {@link #getK8sPodNameAndContainerIdFromAdapterInstanceId(String)}.
      * <p>
      * If not running in a Kubernetes cluster, a random id with the given adapter name as prefix is used.
      *
      * @param adapterName The adapter name.
+     * @param k8sContainerId The container id or {@code null} if not running in Kubernetes.
      * @param counter The counter value to use.
      * @return The new adapter instance identifier.
      */
-    public static String getNewAdapterInstanceId(final String adapterName, final int counter) {
-        final String k8sContainerId = CgroupV1KubernetesContainerUtil.getContainerId();
+    public static String getNewAdapterInstanceId(final String adapterName, final String k8sContainerId,
+            final int counter) {
         if (k8sContainerId == null || k8sContainerId.length() < 12) {
             return getNewAdapterInstanceIdForNonK8sEnv(adapterName);
         } else {
-            // running in Kubernetes: prefer HOSTNAME env var containing the pod name
-            String prefix = System.getenv("HOSTNAME");
+            // running in Kubernetes: use pod name as prefix
+            String prefix = KubernetesContainerInfoProvider.getInstance().getPodName();
             if (Strings.isNullOrEmpty(prefix)) {
                 prefix = adapterName;
             }
