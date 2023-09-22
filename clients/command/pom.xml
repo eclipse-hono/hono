@@ -67,11 +67,26 @@
       <artifactId>opentracing-noop</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-kubernetes-client</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.spec.javax.xml.bind</groupId>
+          <artifactId>jboss-jaxb-api_2.3_spec</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
 
     <!-- testing -->
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-server-mock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
 
