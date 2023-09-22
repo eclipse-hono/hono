@@ -563,7 +563,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 ProtocolAdapterCommandConsumerFactoryImpl.class.getName());
-        return new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, getComponentName());
+        return new ProtocolAdapterCommandConsumerFactoryImpl(vertx, commandRouterClient, getComponentName());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {
