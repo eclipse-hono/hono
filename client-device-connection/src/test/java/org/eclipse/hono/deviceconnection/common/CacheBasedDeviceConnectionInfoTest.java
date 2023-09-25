@@ -50,7 +50,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -397,7 +396,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @Test
     public void testGetCommandHandlingAdapterInstancesWithTerminatedAdapterInstance(final VertxTestContext ctx) {
 
-        final AdapterInstanceStatusProvider statusProvider = Mockito.mock(AdapterInstanceStatusProvider.class);
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
 
         final Promise<Void> listenerTracker = Promise.promise();
@@ -442,7 +441,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @Test
     public void testGetCommandHandlingAdapterInstancesWithSuspectedAdapterInstance(final VertxTestContext ctx) {
 
-        final AdapterInstanceStatusProvider statusProvider = Mockito.mock(AdapterInstanceStatusProvider.class);
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
 
         final String deviceId = "testDevice";
@@ -762,7 +761,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesWithTerminatedAdapterInstanceContainer(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
 
-        final AdapterInstanceStatusProvider statusProvider = Mockito.mock(AdapterInstanceStatusProvider.class);
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
 
         final String deviceId = "testDevice";
@@ -814,7 +813,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @MethodSource("extraUnusedViaGateways")
     public void testGetCommandHandlingAdapterInstancesWithSuspectedAdapterInstanceContainer(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
 
-        final AdapterInstanceStatusProvider statusProvider = Mockito.mock(AdapterInstanceStatusProvider.class);
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
         info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
 
         final String deviceId = "testDevice";
