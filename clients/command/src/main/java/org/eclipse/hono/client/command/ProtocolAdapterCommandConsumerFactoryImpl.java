@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.client.util.ServiceClient;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
@@ -75,7 +74,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
         Objects.requireNonNull(adapterName);
 
-        this.adapterInstanceId = CommandConstants.getNewAdapterInstanceId(adapterName,
+        this.adapterInstanceId = CommandRoutingUtil.getNewAdapterInstanceId(adapterName,
                 ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
         if (commandRouterClient instanceof ConnectionLifecycle<?>) {
             ((ConnectionLifecycle<?>) commandRouterClient).addReconnectListener(con -> reenableCommandRouting());

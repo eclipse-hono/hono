@@ -288,8 +288,14 @@ public final class MongoDbDocumentBuilder {
     }
 
     private void applySortingOptions(final List<Sort> sortOptions, final Function<JsonPointer, String> fieldMapper) {
-        sortOptions.forEach(sortOption -> document.put(fieldMapper.apply(sortOption.getField()),
-                mapSortingDirection(sortOption.getDirection())));
+        if (sortOptions.isEmpty()) {
+            // if no fields to sort by have been specified, sort by "/id"
+            document.put(fieldMapper.apply(FIELD_ID), mapSortingDirection(Sort.Direction.ASC));
+        } else {
+            sortOptions.forEach(sortOption -> document.put(
+                    fieldMapper.apply(sortOption.getField()),
+                    mapSortingDirection(sortOption.getDirection())));
+        }
     }
 
     private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {

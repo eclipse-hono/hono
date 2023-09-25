@@ -432,13 +432,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 }
             }
 
-            if (!appConfig.isPubSubMessagingDisabled()) {
+            if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
                 PubSubMessageHelper.getCredentialsProvider()
                         .ifPresentOrElse(provider -> {
                             final var pubsubCommandResponseSender = messagingClientProviders
                                     .getCommandResponseSenderProvider()
                                     .getClient(MessagingType.pubsub);
-                            if (pubsubCommandResponseSender != null  && pubSubConfigProperties.isProjectIdConfigured()) {
+                            if (pubsubCommandResponseSender != null) {
                                 final var subscriberFactory = new CachingPubSubSubscriberFactory(
                                         vertx,
                                         pubSubConfigProperties.getProjectId(),

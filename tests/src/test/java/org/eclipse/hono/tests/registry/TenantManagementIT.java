@@ -23,7 +23,9 @@ import java.net.HttpURLConnection;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.device.Device;
@@ -56,6 +59,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
@@ -890,29 +894,54 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
          */
         @Test
         public void testSearchTenantsWithValidPageOffsetSucceeds(final VertxTestContext ctx) {
-            final String tenantId1 = getHelper().getRandomTenantId();
-            final String tenantId2 = getHelper().getRandomTenantId();
-            final Tenant tenant1 = new Tenant().setExtensions(Map.of("id", "aaa"));
-            final Tenant tenant2 = new Tenant().setExtensions(Map.of("id", "bbb"));
-            final int pageSize = 1;
-            final int pageOffset = 1;
-            final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(
-                    getHelper().registry.addTenant(tenantId1, tenant1),
-                    getHelper().registry.addTenant(tenantId2, tenant2))
-                    .compose(ok -> getHelper().registry.searchTenants(Optional.of(pageSize), Optional.of(pageOffset),
-                            List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
-                    .onComplete(ctx.succeeding(httpResponse -> {
-                        ctx.verify(() -> {
-                            final SearchResult<TenantWithId> searchResult = JacksonCodec
-                                    .decodeValue(httpResponse.body(), new TypeReference<>() { });
-                            assertThat(searchResult.getTotal()).isEqualTo(2);
-                            assertThat(searchResult.getResult()).hasSize(1);
-                            assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
-                        });
-                        ctx.completeNow();
-                    }));
+            final var tenants = Map.of(
+                    getHelper().getRandomTenantId(), new Tenant(),
+                    getHelper().getRandomTenantId(), new Tenant(),
+                    getHelper().getRandomTenantId(), new Tenant(),
+                    getHelper().getRandomTenantId(), new Tenant(),
+                    getHelper().getRandomTenantId(), new Tenant(),
+                    getHelper().getRandomTenantId(), new Tenant());
+            final var tenantIds = new ArrayList<String>(tenants.keySet());
+            Collections.sort(tenantIds);
+            final int pageSize = 4;
+
+            createTenants(tenants)
+                .compose(ok -> getHelper().registry.searchTenants(
+                        Optional.of(pageSize),
+                        Optional.empty(),
+                        List.of(),
+                        List.of(),
+                        HttpURLConnection.HTTP_OK))
+                .compose(response -> {
+                    ctx.verify(() -> {
+                        final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                .decodeValue(response.body(), new TypeReference<>() { });
+
+                        assertThat(searchResult.getTotal()).isEqualTo(6);
+                        assertThat(searchResult.getResult()).hasSize(4);
+                        final var foundTenantIds = searchResult.getResult().stream().map(TenantWithId::getId).collect(Collectors.toList());
+                        assertThat(foundTenantIds).containsExactlyElementsIn(tenantIds.subList(0, 4));
+                    });
+                    return getHelper().registry.searchTenants(
+                            Optional.of(pageSize),
+                            Optional.of(1),
+                            List.of(),
+                            List.of(),
+                            HttpURLConnection.HTTP_OK);
+                })
+                .onComplete(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        final SearchResult<TenantWithId> searchResult = JacksonCodec
+                                .decodeValue(response.body(), new TypeReference<>() { });
+
+                        assertThat(searchResult.getTotal()).isEqualTo(6);
+                        assertThat(searchResult.getResult()).hasSize(2);
+                        final var foundTenantIds = searchResult.getResult().stream().map(TenantWithId::getId).collect(Collectors.toList());
+                        assertThat(foundTenantIds).containsExactlyElementsIn(tenantIds.subList(4, 6));
+                    });
+                    ctx.completeNow();
+                }));
         }
 
         /**
@@ -1109,6 +1138,25 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                         });
                         ctx.completeNow();
                     }));
+        }
+
+        /**
+         * Creates a set of tenants.
+         *
+         * @param tenantsToCreate The tenants to be created. The keys are the tenant identifiers.
+         * @return A succeeded future if all the tenants have been created successfully.
+         */
+        private Future<Void> createTenants(final Map<String, Tenant> tenantsToCreate) {
+
+            @SuppressWarnings("rawtypes")
+            final List<Future> creationResult = tenantsToCreate.entrySet().stream()
+                    .map(entry -> getHelper().registry.addTenant(entry.getKey(), entry.getValue())
+                        .map(response -> {
+                            assertThat(response.statusCode()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                            return null;
+                        }))
+                    .collect(Collectors.toList());
+            return CompositeFuture.all(creationResult).mapEmpty();
         }
 
         private <T> String getFilterJson(final String field, final T value, final String operator) {
