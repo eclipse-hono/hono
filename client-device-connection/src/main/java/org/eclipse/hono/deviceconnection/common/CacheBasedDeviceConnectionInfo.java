@@ -105,7 +105,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      * @throws NullPointerException if cache or tracer is {@code null}.
      */
     public CacheBasedDeviceConnectionInfo(final Cache<String, String> cache, final Tracer tracer,
-                                          final AdapterInstanceStatusProvider adapterInstanceStatusProvider) {
+            final AdapterInstanceStatusProvider adapterInstanceStatusProvider) {
         this.cache = Objects.requireNonNull(cache);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterInstanceStatusProvider = Optional.ofNullable(adapterInstanceStatusProvider)
