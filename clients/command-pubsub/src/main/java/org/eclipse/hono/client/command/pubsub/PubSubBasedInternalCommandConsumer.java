@@ -204,10 +204,11 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
     }
 
     private void createReceiver() {
-        receiver = (PubsubMessage message, AckReplyConsumer consumer) -> handleCommandMessage(message);
+        receiver = this::handleCommandMessage;
     }
 
-    Future<Void> handleCommandMessage(final PubsubMessage message) {
+    Future<Void> handleCommandMessage(final PubsubMessage message, final AckReplyConsumer consumer) {
+        consumer.ack();
         final PubSubBasedCommand command;
         try {
             command = PubSubBasedCommand.fromRoutedCommandMessage(message);
