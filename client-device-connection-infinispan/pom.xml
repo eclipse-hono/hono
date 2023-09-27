@@ -32,6 +32,15 @@
       <artifactId>client-device-connection</artifactId>
     </dependency>
 
+    <dependency> <!-- TODO: should I remove hono-legal and just bring it in transiently from client-device-connection? -->
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-legal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
@@ -51,10 +60,6 @@
       <artifactId>infinispan-query-dsl</artifactId>
     </dependency>
 
-    <dependency> <!-- TODO: review should this be included here or just in the parent module? -->
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-legal</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-core</artifactId>
@@ -64,10 +69,6 @@
       <artifactId>hono-client-common</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
     <dependency>
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config-core</artifactId>
