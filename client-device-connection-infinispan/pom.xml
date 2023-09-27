@@ -43,10 +43,6 @@
 
     <dependency>
       <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
       <artifactId>infinispan-client-hotrod</artifactId>
       <exclusions>
         <exclusion>
@@ -58,6 +54,10 @@
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-query-dsl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-core</artifactId>
     </dependency>
 
     <dependency>
