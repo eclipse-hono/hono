@@ -30,18 +30,40 @@
         <dependency>
             <groupId>org.eclipse.hono</groupId>
             <artifactId>hono-legal</artifactId>
+            <!-- TODO: review, should this be here and in both dependant modules (infinispan and redis)? -->
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-client-common</artifactId>
+            <!-- TODO: both hono-core and hono-client-common are direct dependencies, but just declaring this one is enough -->
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.hono</groupId>
-            <artifactId>hono-client-common</artifactId>
+            <groupId>io.opentracing</groupId>
+            <artifactId>opentracing-api</artifactId>
+            <!-- TODO: this is a direct dependency but was included before through a transient dependency -->
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config-core</artifactId>
+            <!-- TODO: review, should we rather depened on smallrye-config (core is a transient dependency) -->
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
-            <artifactId>vertx-web</artifactId>
+            <artifactId>vertx-core</artifactId>
+            <!-- TODO: review, should we rather depened on vertx-web (vertx-core is a transient dependency) -->
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-health-check</artifactId>
+            <!-- TODO: review, should we rather depened on vertx-web (vertx-health-check is a transient dependency) -->
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
