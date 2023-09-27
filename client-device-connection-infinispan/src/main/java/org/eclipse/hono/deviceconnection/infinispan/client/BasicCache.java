@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -156,6 +157,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> put(final K key, final V value) {
+        LOG.info("BASIC: put {}={}", key, value);
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
@@ -164,6 +166,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
+        LOG.info("BASIC: put {}={} ({} {})", key, value, lifespan, lifespanUnit);
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
         Objects.requireNonNull(lifespanUnit);
@@ -173,6 +176,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> putAll(final Map<? extends K, ? extends V> data) {
+        LOG.info("BASIC: putAll ({})", data.size());
         Objects.requireNonNull(data);
 
         return withCache(aCache -> aCache.putAllAsync(data));
@@ -180,6 +184,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> putAll(final Map<? extends K, ? extends V> data, final long lifespan, final TimeUnit lifespanUnit) {
+        LOG.info("BASIC: putAll ({}) ({} {})", data.size(), lifespan, lifespanUnit);
         Objects.requireNonNull(data);
         Objects.requireNonNull(lifespanUnit);
 
@@ -188,6 +193,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Boolean> remove(final K key, final V value) {
+        LOG.info("BASIC: remove {}={}", key, value);
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
@@ -196,6 +202,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<V> get(final K key) {
+        LOG.info("BASIC: get {}", key);
         Objects.requireNonNull(key);
 
         return withCache(aCache -> aCache.getAsync(key));
@@ -203,14 +210,15 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
+        LOG.info("BASIC: getAll {}", keys.size());
         Objects.requireNonNull(keys);
 
+        final LinkedList<String> keyList = new LinkedList<>(keys.stream().map(String::valueOf).toList());
+        keyList.forEach(i -> LOG.info("BASIC: Key: {}", i));
         final var result = withCache(aCache -> aCache.getAllAsync(keys));
         result.onSuccess(r -> {
-            LOG.info("BasicCache: getAll() ({})", keys.size());
-            final var resultKeys = r.keySet();
-            r.forEach((k, v) -> LOG.info("BasicCache#getAll() result: {}:{}", k, v));
-            keys.forEach((k) -> LOG.info("BasicCache#getAll() keys exist in result: {} / {}", k, resultKeys.contains(k)));
+            LOG.info("BASIC: Got {} items back...", r.size());
+            r.forEach((k, v) -> LOG.info("Iterating through result list: {}", v));
         });
         return result;
     }

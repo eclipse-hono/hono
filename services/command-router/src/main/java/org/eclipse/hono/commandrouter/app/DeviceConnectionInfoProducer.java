@@ -84,7 +84,9 @@ public class DeviceConnectionInfoProducer {
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
 
-        if (true) {
+        final String cacheBackend = System.getProperty("cache.backend");
+        LOG.info("######################### Cache Backend: {}", cacheBackend);
+        if ("redis".equalsIgnoreCase(cacheBackend)) {
             LOG.info("Creating a new REDIS cache.");
             final var p = new RedisRemoteConfigurationProperties();
             p.setConnectionString("redis://redis:6379");
