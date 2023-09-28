@@ -69,18 +69,19 @@
       <artifactId>hono-client-common</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>io.smallrye.config</groupId>
-      <artifactId>smallrye-config-core</artifactId>
+    <dependency> <!-- TODO: changed from vertx-web because there only seems to be dependency on -core. Maybe there are runtime dependencies though??? -->
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
     </dependency>
+
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
+    <dependency> <!-- TODO: added because there is direct dependency on it but it was brought in transiently before (probably through Quarkus) -->
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config-core</artifactId>
     </dependency>
 
     <dependency>
