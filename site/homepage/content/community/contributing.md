@@ -24,18 +24,18 @@ You might also want to take a look at our [GitHub Issues](https://github.com/ecl
 
 ## Eclipse Contributor Agreement
 
-Before your contribution can be accepted by the project team contributors must
+In order to be able to contribute to Eclipse Foundation projects you must
 electronically sign the Eclipse Contributor Agreement (ECA).
 
-* http://www.eclipse.org/legal/ECA.php
+* https://www.eclipse.org/legal/ECA.php
 
-Commits that are provided by non-committers must have a Signed-off-by field in
-the footer indicating that the author is aware of the terms by which the
-contribution has been provided to the project. The non-committer must
-additionally have an Eclipse Foundation account and must have a signed Eclipse
-Contributor Agreement (ECA) on file.
+The ECA provides the Eclipse Foundation with a permanent record that you agree
+that each of your contributions will comply with the commitments documented in
+the Developer Certificate of Origin (DCO). Having an ECA on file associated with
+the email address matching the "Author" field of your contribution's Git commits
+fulfills the DCO's requirement that you sign-off on your contributions.
 
-For more information, please see the Eclipse Committer Handbook:
+For more information, please see the Eclipse Project Handbook:
 https://www.eclipse.org/projects/handbook/#resources-commit
 
 ## Conventions
@@ -73,8 +73,7 @@ https://www.eclipse.org/projects/handbook/#resources-commit
 9. Commit your changes into your *feature branch*.
 10. Use descriptive and meaningful commit messages.
 11. Squash multiple commits related to the same feature/issue into a single one, if reasonable.
-12. Make sure you use the `-s` flag when committing in order to add a *Signed-off-by* footer as mentioned above.
-13. Push your changes to your branch in your forked repository.
+12. Push your changes to your branch in your forked repository.
 
 ## Submitting the Changes
 

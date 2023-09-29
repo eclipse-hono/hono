@@ -15,18 +15,18 @@ In order to get you started as fast as possible we need to go through some organ
 
 ## Eclipse Contributor Agreement
 
-Before your contribution can be accepted by the project team contributors must
+In order to be able to contribute to Eclipse Foundation projects you must
 electronically sign the Eclipse Contributor Agreement (ECA).
 
-* http://www.eclipse.org/legal/ECA.php
+* https://www.eclipse.org/legal/ECA.php
 
-Commits that are provided by non-committers must have a Signed-off-by field in
-the footer indicating that the author is aware of the terms by which the
-contribution has been provided to the project. The non-committer must
-additionally have an Eclipse Foundation account and must have a signed Eclipse
-Contributor Agreement (ECA) on file.
+The ECA provides the Eclipse Foundation with a permanent record that you agree
+that each of your contributions will comply with the commitments documented in
+the Developer Certificate of Origin (DCO). Having an ECA on file associated with
+the email address matching the "Author" field of your contribution's Git commits
+fulfills the DCO's requirement that you sign-off on your contributions.
 
-For more information, please see the Eclipse Committer Handbook:
+For more information, please see the Eclipse Project Handbook:
 https://www.eclipse.org/projects/handbook/#resources-commit
 
 ## Making your Changes
@@ -41,7 +41,6 @@ https://www.eclipse.org/projects/handbook/#resources-commit
 * Use descriptive and meaningful commit messages. In particular, start the first line of the commit message with the
   number of the issue that the commit addresses, e.g. `[#9865] Add token based authentication.`
 * Squash multiple commits that are related to each other semantically into a single one
-* Make sure you use the `-s` flag when committing as explained above
 * Push your changes to your branch in your forked repository
 
 ## Submitting the Changes
