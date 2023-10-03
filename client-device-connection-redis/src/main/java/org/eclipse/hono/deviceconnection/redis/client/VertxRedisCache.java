@@ -42,9 +42,9 @@ import io.vertx.redis.client.Response;
 /**
  * TODO.
  */
-public class RedisCache implements Cache<String, String>, Lifecycle {
+public class VertxRedisCache implements Cache<String, String>, Lifecycle {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RedisCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VertxRedisCache.class);
 
     private static final int MAX_RECONNECT_RETRIES = 16;
 
@@ -61,7 +61,7 @@ public class RedisCache implements Cache<String, String>, Lifecycle {
      * @param vertx TODO.
      * @param properties TODO.
      */
-    private RedisCache(final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
+    private VertxRedisCache(final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(properties);
@@ -83,13 +83,13 @@ public class RedisCache implements Cache<String, String>, Lifecycle {
      *
      * @return TODO.
      */
-    public static RedisCache from(
+    public static VertxRedisCache from(
             final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(properties);
 
-        return new RedisCache(vertx, properties);
+        return new VertxRedisCache(vertx, properties);
     }
 
     @Override

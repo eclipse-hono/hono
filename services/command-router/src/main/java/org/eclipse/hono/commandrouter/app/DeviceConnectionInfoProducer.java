@@ -37,9 +37,9 @@ import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.eclipse.hono.deviceconnection.redis.client.RedisCache;
-import org.eclipse.hono.deviceconnection.redis.client.RedisQuarkusCache;
+import org.eclipse.hono.deviceconnection.redis.client.QuarkusRedisCache;
 import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationProperties;
+import org.eclipse.hono.deviceconnection.redis.client.VertxRedisCache;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
@@ -93,13 +93,13 @@ public class DeviceConnectionInfoProducer {
         final String cacheBackend = System.getProperty("cache.backend");
         LOG.info("######################### Cache Backend: {}", cacheBackend);
         if (true) {
-            return new RedisQuarkusCache(reactiveRedisDataSource);
+            return new QuarkusRedisCache(reactiveRedisDataSource);
         }
         if ("redis".equalsIgnoreCase(cacheBackend)) {
             LOG.info("Creating a new REDIS cache.");
             final var p = new RedisRemoteConfigurationProperties();
             p.setConnectionString("redis://redis:6379");
-            return RedisCache.from(vertx, p);
+            return VertxRedisCache.from(vertx, p);
         } else if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring embedded cache");
             return new EmbeddedCache<>(
