@@ -21,6 +21,7 @@ import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
@@ -37,6 +38,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.deviceconnection.redis.client.RedisCache;
+import org.eclipse.hono.deviceconnection.redis.client.RedisQuarkusCache;
 import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationProperties;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -48,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
+import io.quarkus.redis.datasource.ReactiveRedisDataSource;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 
@@ -64,6 +67,9 @@ public class DeviceConnectionInfoProducer {
 
     @ConfigProperty(name = "hono.commandRouter.cache.embedded.configurationFile", defaultValue = "/etc/hono/cache-config.xml")
     String configFile;
+
+    @Inject
+    ReactiveRedisDataSource reactiveRedisDataSource;
 
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
@@ -86,6 +92,9 @@ public class DeviceConnectionInfoProducer {
 
         final String cacheBackend = System.getProperty("cache.backend");
         LOG.info("######################### Cache Backend: {}", cacheBackend);
+        if (true) {
+            return new RedisQuarkusCache(reactiveRedisDataSource);
+        }
         if ("redis".equalsIgnoreCase(cacheBackend)) {
             LOG.info("Creating a new REDIS cache.");
             final var p = new RedisRemoteConfigurationProperties();

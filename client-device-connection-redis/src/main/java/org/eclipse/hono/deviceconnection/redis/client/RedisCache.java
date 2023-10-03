@@ -41,10 +41,8 @@ import io.vertx.redis.client.Response;
 
 /**
  * TODO.
- * @param <K> TODO
- * @param <V> TODO
  */
-public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
+public class RedisCache implements Cache<String, String>, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(RedisCache.class);
 
@@ -85,18 +83,18 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
      *
      * @return TODO.
      */
-    public static RedisCache<String, String> from(
+    public static RedisCache from(
             final Vertx vertx, final RedisRemoteConfigurationProperties properties) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(properties);
 
-        return new RedisCache<>(vertx, properties);
+        return new RedisCache(vertx, properties);
     }
 
     @Override
     public Future<Void> start() {
-        LOG.info("REDIS: starting cache");
+        LOG.info("VREDIS: starting cache");
         return createRedisClient()
                 .flatMap(c -> Future.succeededFuture());
         /*
@@ -117,7 +115,7 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> stop() {
-        LOG.info("REDIS: stopping cache");
+        LOG.info("VREDIS: stopping cache");
         redis.close();
         return Future.succeededFuture();
     }
@@ -130,7 +128,7 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
 
         // make sure to invalidate old connection if present
         if (redis != null) {
-            redis.close();;
+            redis.close();
         }
 
         if (CONNECTING.compareAndSet(false, true)) {
@@ -177,7 +175,7 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<JsonObject> checkForCacheAvailability() {
-        LOG.info("REDIS: checking for cache availability");
+        LOG.info("VREDIS: checking for cache availability");
 
         Objects.requireNonNull(client);
 
@@ -190,8 +188,8 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<Void> put(final K key, final V value) {
-        LOG.info("REDIS: put {}={}", key, value);
+    public Future<Void> put(final String key, final String value) {
+        LOG.info("VREDIS: put {}={}", key, value);
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
@@ -203,13 +201,13 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<Void> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
-        LOG.info("REDIS: put {}={} ({} {})", key, value, lifespan, lifespanUnit);
+    public Future<Void> put(final String key, final String value, final long lifespan, final TimeUnit lifespanUnit) {
+        LOG.info("VREDIS: put {}={} ({} {})", key, value, lifespan, lifespanUnit);
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
             final RedisAPI api = RedisAPI.api(connection);
-            final List<String> params = new ArrayList<>(List.of(key.toString(), value.toString()));
+            final List<String> params = new ArrayList<>(List.of(key, value));
             final long millis = lifespanUnit.toMillis(lifespan);
             if (millis > 0) {
                 params.addAll(List.of("PX", String.valueOf(millis)));
@@ -221,16 +219,16 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<Void> putAll(final Map<? extends K, ? extends V> data) {
-        LOG.info("REDIS: putAll ({})", data.size());
+    public Future<Void> putAll(final Map<? extends String, ? extends String> data) {
+        LOG.info("VREDIS: putAll ({})", data.size());
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
             final RedisAPI api = RedisAPI.api(connection);
             final List<String> keyValues = new ArrayList<>(data.size() * 2);
             data.forEach((k, v) -> {
-                keyValues.add(k.toString());
-                keyValues.add(v.toString());
+                keyValues.add(k);
+                keyValues.add(v);
             });
             return api.mset(keyValues)
                     .eventually(ignored -> connection.close())
@@ -239,8 +237,8 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<Void> putAll(final Map<? extends K, ? extends V> data, final long lifespan, final TimeUnit lifespanUnit) {
-        LOG.info("REDIS: putAll ({}) ({} {})", data.size(), lifespan, lifespanUnit);
+    public Future<Void> putAll(final Map<? extends String, ? extends String> data, final long lifespan, final TimeUnit lifespanUnit) {
+        LOG.info("VREDIS: putAll ({}) ({} {})", data.size(), lifespan, lifespanUnit);
         Objects.requireNonNull(client);
 
         final long millis = lifespanUnit.toMillis(lifespan);
@@ -267,21 +265,21 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<V> get(final K key) {
-        LOG.info("REDIS: get {}", key);
+    public Future<String> get(final String key) {
+        LOG.info("VREDIS: get {}", key);
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
             final RedisAPI api = RedisAPI.api(connection);
             return api.get(String.valueOf(key))
-                    .flatMap(value -> Future.succeededFuture((V) String.valueOf(value)))
+                    .flatMap(value -> Future.succeededFuture(String.valueOf(value)))
                     .eventually(ignored -> connection.close());
         });
     }
 
     @Override
-    public Future<Boolean> remove(final K key, final V value) {
-        LOG.info("REDIS: remove {}={}", key, value);
+    public Future<Boolean> remove(final String key, final String value) {
+        LOG.info("VREDIS: remove {}={}", key, value);
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
@@ -308,23 +306,23 @@ public class RedisCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
-        LOG.info("REDIS: getAll {}", keys.size());
+    public Future<Map<String, String>> getAll(final Set<? extends String> keys) {
+        LOG.info("VREDIS: getAll {}", keys.size());
         Objects.requireNonNull(client);
 
         return redis.connect().flatMap(connection -> {
             final RedisAPI api = RedisAPI.api(connection);
             final LinkedList<String> keyList = new LinkedList<>(keys.stream().map(String::valueOf).toList());
-            keyList.forEach(i -> LOG.info("REDIS: Key: {}", i));
-            final Map<K, V> result = new HashMap<>(keyList.size());
+            keyList.forEach(i -> LOG.info("VREDIS: Key: {}", i));
+            final Map<String, String> result = new HashMap<>(keyList.size());
             return api.mget(keyList)
                     .flatMap(values -> {
-                        LOG.info("REDIS: Got {} items back...", values.stream().toList().size());
+                        LOG.info("VREDIS: Got {} items back...", values.stream().toList().size());
                         values.forEach(i -> {
                             LOG.info("Iterating through result list: {}", i);
                             try {
                                 if (i != null) { // TODO: this is kinda strange but some results are null and the BasicCache does not include those in the returned result. Ask about/investigate.
-                                    result.put((K) keyList.removeFirst(), (V) i.toString());
+                                    result.put(keyList.removeFirst(), i.toString());
                                 } else {
                                     keyList.removeFirst();
                                 }
