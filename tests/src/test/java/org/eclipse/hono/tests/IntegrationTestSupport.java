@@ -70,6 +70,7 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.test.JUnitTests;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -492,7 +493,7 @@ public final class IntegrationTestSupport {
     /**
      * Pattern used for the <em>name</em> field of the {@code @ParameterizedTest} annotation.
      */
-    public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
+    public static final String PARAMETERIZED_TEST_NAME_PATTERN = JUnitTests.PARAMETERIZED_TEST_NAME_PATTERN;
 
     /**
      * The default factor to apply when determining the timeout to use for executing test cases in a CI environment.
@@ -655,13 +656,13 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static MessagingKafkaConsumerConfigProperties getKafkaConsumerConfig() {
-        LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
-        final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
-        consumerConfig.setConsumerConfig(Map.of(
+        LOGGER.info("Kafka Consumers are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        final var configProps = new MessagingKafkaConsumerConfigProperties();
+        configProps.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
                 ConsumerConfig.GROUP_ID_CONFIG, "its-" + UUID.randomUUID()));
-        return consumerConfig;
+        return configProps;
     }
 
     /**
@@ -670,11 +671,11 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static MessagingKafkaProducerConfigProperties getKafkaProducerConfig() {
-        LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
-        final MessagingKafkaProducerConfigProperties consumerConfig = new MessagingKafkaProducerConfigProperties();
-        consumerConfig.setProducerConfig(Map.of(
+        LOGGER.info("Kafka Producers are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        final var configProps = new MessagingKafkaProducerConfigProperties();
+        configProps.setProducerConfig(Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
-        return consumerConfig;
+        return configProps;
     }
 
     /**
@@ -683,7 +684,7 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static KafkaAdminClientConfigProperties getKafkaAdminClientConfig() {
-        LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        LOGGER.info("Kafka Admin Clients are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
         final KafkaAdminClientConfigProperties adminClientConfig = new KafkaAdminClientConfigProperties();
         adminClientConfig.setAdminClientConfig(Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
