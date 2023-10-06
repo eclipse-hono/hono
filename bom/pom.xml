@@ -38,12 +38,6 @@
     <infinispan-image.name>quay.io/infinispan/server-native:13.0.12.Final</infinispan-image.name>
     <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.45</jaeger.image.name>
     <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
-    <!--
-      We want to allow users to run containers in a rootless Docker environment.
-      For that purpose, the JVM needs to support cgroups v2 based resource limits
-      specified on the containers. OpenJDK supports this starting with version 15:
-      https://bugs.openjdk.java.net/browse/JDK-8230305
-     -->
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
     <kafka-client.version>3.3.2</kafka-client.version>

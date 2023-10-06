@@ -73,14 +73,6 @@
 
   <developers>
     <developer>
-      <id>hkonsyk</id>
-      <name>Henryk Konsek</name>
-      <email>hekonsek@gmail.com</email>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
       <id>khudalla</id>
       <name>Kai Hudalla</name>
       <email>kai.hudalla@bosch.io</email>
@@ -98,55 +90,6 @@
       <email>dejan@sensatic.net</email>
       <roles>
         <role>Lead</role>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>dguggemos</id>
-      <name>Dominik Guggemos</name>
-      <email>dominik.guggemos@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>ppatierno</id>
-      <name>Paolo Patierno</name>
-      <email>ppatierno@live.com</email>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>kfrank</id>
-      <name>Karsten Frank</name>
-      <email>karsten.frank@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>mpellmann</id>
-      <name>Marc Pellmann</name>
-      <email>marc.pellmann@bosch-si.com</email>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>ctron</id>
-      <name>Jens Reimann</name>
-      <email>ctron@dentrassi.de</email>
-      <url>https://dentrassi.de</url>
-      <organization>Red Hat Inc</organization>
-      <organizationUrl>https://redhat.com</organizationUrl>
-      <roles>
         <role>Committer</role>
       </roles>
     </developer>
