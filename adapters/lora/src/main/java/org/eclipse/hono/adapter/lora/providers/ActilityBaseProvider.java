@@ -30,11 +30,14 @@ import io.vertx.core.json.JsonObject;
 abstract class ActilityBaseProvider extends JsonBasedLoraProvider {
     protected static final String FIELD_ACTILITY_CHANNEL = "Channel";
     protected static final String FIELD_ACTILITY_FPORT = "FPort";
+    protected static final String FIELD_ACTILITY_DEV_ALTITUDE = "DevAlt";
+    protected static final String FIELD_ACTILITY_DEV_LATITUDE = "DevLAT";
+    protected static final String FIELD_ACTILITY_DEV_LONGITUDE = "DevLON";
     protected static final String FIELD_ACTILITY_FRAME_COUNT_UPLINK = "FCntUp";
-    protected static final String FIELD_ACTILITY_LATITUTDE = "LrrLAT";
-    protected static final String FIELD_ACTILITY_LONGITUDE = "LrrLON";
     protected static final String FIELD_ACTILITY_LRR = "Lrr";
     protected static final String FIELD_ACTILITY_LRR_ID = "Lrrid";
+    protected static final String FIELD_ACTILITY_LRR_LATITUDE = "LrrLAT";
+    protected static final String FIELD_ACTILITY_LRR_LONGITUDE = "LrrLON";
     protected static final String FIELD_ACTILITY_LRR_RSSI = "LrrRSSI";
     protected static final String FIELD_ACTILITY_LRR_SNR = "LrrSNR";
     protected static final String FIELD_ACTILITY_LRRS = "Lrrs";
