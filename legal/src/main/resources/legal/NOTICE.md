@@ -25,6 +25,7 @@ of the Eclipse Public License 2.0 which is available at https://www.eclipse.org/
 * Copyright 2020 Lari Hotari
 * Copyright 2022-2023 SOTEC GmbH & Co KG
 * Copyright 2023 Controlant hf.
+* Copyright 2023 Harri Smått
 
 # Third-party Content
 

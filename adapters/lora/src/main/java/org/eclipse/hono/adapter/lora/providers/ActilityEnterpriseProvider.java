@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,6 +54,11 @@ public class ActilityEnterpriseProvider extends ActilityBaseProvider {
         LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_CHANNEL, String.class)
             .map(this::getFrequency)
             .ifPresent(data::setFrequency);
+        Optional.ofNullable(LoraUtils.newLocation(
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_LONGITUDE, Double.class),
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_LATITUDE, Double.class),
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_ALTITUDE, Double.class)))
+                    .ifPresent(data::setLocation);
 
         LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRRS, JsonObject.class)
             .map(lrrs -> lrrs.getValue(FIELD_ACTILITY_LRR))
@@ -70,8 +75,8 @@ public class ActilityEnterpriseProvider extends ActilityBaseProvider {
                             .ifPresent(s -> gwId.ifPresent(id -> {
                                 if (id.equals(s)) {
                                     Optional.ofNullable(LoraUtils.newLocation(
-                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LONGITUDE, Double.class),
-                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LATITUTDE, Double.class),
+                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRR_LONGITUDE, Double.class),
+                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRR_LATITUDE, Double.class),
                                             Optional.empty()))
                                         .ifPresent(gateway::setLocation);
                                 }

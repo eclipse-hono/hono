@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,5 +51,9 @@ public class ActilityEnterpriseProviderTest extends LoraProviderTestBase<Actilit
         assertThat(data.getFunctionPort()).isEqualTo(2);
         assertThat(data.getFrameCount()).isEqualTo(57);
         assertThat(data.getFrequency()).isEqualTo(868.5);
+
+        assertThat(data.getLocation().getLatitude()).isEqualTo(61.499146);
+        assertThat(data.getLocation().getLongitude()).isEqualTo(23.765516);
+        assertThat(data.getLocation().getAltitude()).isEqualTo(0.000001);
     }
 }
