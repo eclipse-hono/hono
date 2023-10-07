@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,6 @@
 
 
 package org.eclipse.hono.service.auth.delegating.quarkus;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
 
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.AuthenticationService;
@@ -35,6 +31,9 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.health.api.HealthRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of an application scoped {@link AuthenticationService} which delegates

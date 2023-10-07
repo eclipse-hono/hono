@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,6 @@
  */
 
 package org.eclipse.hono.deviceregistry.app;
-
-
-import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
@@ -58,6 +54,8 @@ import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 /**
  * A factory base class for creating AMQP 1.0 based endpoints of Hono's south bound APIs.

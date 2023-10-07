@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,11 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -36,8 +31,13 @@ import io.opentelemetry.sdk.extension.trace.jaeger.sampler.JaegerRemoteSamplerPr
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
-import io.quarkus.arc.properties.IfBuildProperty;
-import io.quarkus.opentelemetry.runtime.config.TracerRuntimeConfig;
+import io.quarkus.opentelemetry.runtime.config.build.SamplerType;
+import io.quarkus.opentelemetry.runtime.config.runtime.OTelRuntimeConfig;
+import io.quarkus.opentelemetry.runtime.config.runtime.TracesRuntimeConfig;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 /**
  * A producer for a custom OpenTelemetry Sampler.
@@ -175,7 +175,6 @@ public final class SamplerProducer {
      */
     @Singleton
     @Produces
-    @IfBuildProperty(name = "quarkus.opentelemetry.enabled", stringValue = "true")
     Resource resource() {
 
         final var attributes = Attributes.of(
@@ -190,23 +189,16 @@ public final class SamplerProducer {
     /**
      * Creates a custom sampler based configuration properties.
      *
-     * @param tracerRuntimeConfig The Quarkus specific OTEL configuration properties.
+     * @param otelRuntimeConfig The Quarkus specific OTEL configuration properties.
      * @return The sampler.
      */
     @Singleton
     @Produces
-    @IfBuildProperty(name = "quarkus.opentelemetry.enabled", stringValue = "true")
-    Sampler sampler(final TracerRuntimeConfig tracerRuntimeConfig) {
-        final var samplerConfig = tracerRuntimeConfig.sampler;
-        if (samplerConfig.parentBased) {
-            LOG.warn("""
-                    'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'true' - \
-                    custom Hono Sampler will not be applied to child spans""");
-        }
+    Sampler sampler(final OTelRuntimeConfig otelRuntimeConfig) {
         final String samplerName = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER))
-                .orElse(samplerConfig.samplerName);
+                .orElse(SamplerType.ALWAYS_ON.getValue());
 
-        Sampler sampler = getBaseSampler(samplerName, samplerConfig);
+        Sampler sampler = getBaseSampler(samplerName, otelRuntimeConfig.traces());
         sampler = Sampler.parentBased(sampler);
         if (LOG.isInfoEnabled()) {
             LOG.info("using OpenTelemetry Sampler [{}]", sampler.toString());
@@ -220,7 +212,7 @@ public final class SamplerProducer {
         return new DropBySpanNamePrefixSampler(sampler, prefixesOfSpansToDrop);
     }
 
-    private Sampler getBaseSampler(final String samplerName, final TracerRuntimeConfig.SamplerConfig samplerConfig) {
+    private Sampler getBaseSampler(final String samplerName, final TracesRuntimeConfig tracesRuntimeConfig) {
         switch (samplerName) {
         // see https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/
         case "jaeger_remote", "parentbased_jaeger_remote":
@@ -230,7 +222,7 @@ public final class SamplerProducer {
         case "always_off", "parentbased_always_off", "off":
             return Sampler.alwaysOff();
         case "traceidratio", "parentbased_traceidratio", "ratio":
-            return traceIdRatioBasedSampler(samplerConfig);
+            return traceIdRatioBasedSampler(tracesRuntimeConfig);
         // also support rate-limiting sampler directly, i.e. without using Jaeger remote sampler
         case "rate_limiting", "parentbased_rate_limiting", "rate-limiting":
             return rateLimitingSampler();
@@ -244,7 +236,7 @@ public final class SamplerProducer {
         return new JaegerRemoteSamplerProvider().createSampler(otelConfig);
     }
 
-    private Sampler traceIdRatioBasedSampler(final TracerRuntimeConfig.SamplerConfig samplerConfig) {
+    private Sampler traceIdRatioBasedSampler(final TracesRuntimeConfig tracesRuntimeConfig) {
         final Optional<Double> samplerArg = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER_ARG))
                 .map(s -> {
                     try {
@@ -254,7 +246,7 @@ public final class SamplerProducer {
                         return 1.0d;
                     }
                 })
-                .or(() -> samplerConfig.ratio);
+                .or(() -> tracesRuntimeConfig.samplerArg());
 
         return Sampler.traceIdRatioBased(samplerArg.orElse(1.0d));
     }

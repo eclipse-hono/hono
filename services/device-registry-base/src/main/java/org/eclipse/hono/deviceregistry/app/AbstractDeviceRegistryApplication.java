@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,6 @@ package org.eclipse.hono.deviceregistry.app;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.inject.Inject;
-
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
@@ -29,6 +27,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
+import jakarta.inject.Inject;
 
 /**
  * A base class for the device registry main application class.

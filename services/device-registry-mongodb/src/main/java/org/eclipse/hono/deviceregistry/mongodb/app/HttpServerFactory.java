@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,6 @@ package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import java.util.Optional;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
@@ -32,6 +29,8 @@ import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
 import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.handler.BasicAuthHandler;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * A factory for creating Device Registry Management API endpoints.

@@ -19,8 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 
-import javax.inject.Inject;
-
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;
@@ -104,6 +102,7 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import jakarta.inject.Inject;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.

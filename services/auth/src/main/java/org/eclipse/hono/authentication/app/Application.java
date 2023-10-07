@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,6 @@ package org.eclipse.hono.authentication.app;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
 import org.eclipse.hono.authentication.AuthenticationServerMetrics;
@@ -39,6 +36,8 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * The Quarkus based Authentication server main application class.

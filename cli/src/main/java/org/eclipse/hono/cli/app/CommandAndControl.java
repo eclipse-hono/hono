@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,8 +25,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import javax.inject.Singleton;
-
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.cli.util.CommandUtils;
 import org.eclipse.hono.cli.util.IntegerVariableConverter;
@@ -50,6 +48,7 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 import io.vertx.core.buffer.Buffer;
+import jakarta.inject.Singleton;
 import picocli.CommandLine;
 import picocli.CommandLine.ExitCode;
 import picocli.shell.jline3.PicocliCommands;

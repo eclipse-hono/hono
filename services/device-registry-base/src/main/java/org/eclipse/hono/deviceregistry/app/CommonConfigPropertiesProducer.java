@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.ClientOptions;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
@@ -30,6 +25,10 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigOptio
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 
 import io.smallrye.config.ConfigMapping;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Named;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of registry service configuration properties commonly used in registry implementations.

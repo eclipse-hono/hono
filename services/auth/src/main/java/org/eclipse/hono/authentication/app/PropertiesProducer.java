@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,6 @@
 
 package org.eclipse.hono.authentication.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -27,6 +23,9 @@ import org.eclipse.hono.service.auth.JjwtBasedAuthTokenFactory;
 
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A producer for the Authentication Server's JWK resource.

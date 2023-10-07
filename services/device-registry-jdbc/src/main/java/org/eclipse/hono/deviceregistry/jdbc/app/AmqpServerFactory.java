@@ -14,9 +14,6 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.deviceregistry.app.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.config.SchemaCreator;
@@ -27,6 +24,9 @@ import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
 import org.eclipse.hono.service.tenant.TenantService;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * A factory for creating AMQP 1.0 based endpoints of Hono's south bound APIs.

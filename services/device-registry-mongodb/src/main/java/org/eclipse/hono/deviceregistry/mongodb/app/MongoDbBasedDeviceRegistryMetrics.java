@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,14 +13,13 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.deviceregistry.metrics.DeviceRegistryMetricsAdapter;
 import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * Metrics reported by the registry.

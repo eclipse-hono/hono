@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,13 +14,12 @@
 
 package org.eclipse.hono.cli;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-
 import org.eclipse.hono.cli.util.CommandUtils;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.quarkus.picocli.runtime.PicocliCommandLineFactory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
 import picocli.CommandLine;
 
 /**

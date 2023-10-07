@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,6 @@ package org.eclipse.hono.deviceregistry.metrics;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.enterprise.event.Observes;
-import javax.inject.Inject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +23,8 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Future;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 
 /**
  * A base class for implementing device registry metrics.
