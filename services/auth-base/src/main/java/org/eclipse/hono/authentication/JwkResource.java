@@ -16,16 +16,15 @@ package org.eclipse.hono.authentication;
 
 import java.util.Objects;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-
 import org.eclipse.hono.service.auth.AuthTokenFactory;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 
 /**
  * A resource for retrieving a JSON Web Key set that contains the (public) key that clients

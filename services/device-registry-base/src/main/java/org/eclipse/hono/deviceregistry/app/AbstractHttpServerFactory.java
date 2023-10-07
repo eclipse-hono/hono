@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  */
 
 package org.eclipse.hono.deviceregistry.app;
-
-import javax.inject.Inject;
 
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -28,6 +26,7 @@ import org.eclipse.hono.service.management.tenant.TenantManagementService;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
+import jakarta.inject.Inject;
 
 /**
  * A factory base class for creating Device Registry Management API endpoints.

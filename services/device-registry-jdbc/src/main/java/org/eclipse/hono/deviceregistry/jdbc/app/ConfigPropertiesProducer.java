@@ -14,14 +14,14 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceStoreOptions;
 import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceStoreProperties;
 import org.eclipse.hono.service.base.jdbc.config.JdbcTenantStoreOptions;
 import org.eclipse.hono.service.base.jdbc.config.JdbcTenantStoreProperties;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of registry service configuration properties.

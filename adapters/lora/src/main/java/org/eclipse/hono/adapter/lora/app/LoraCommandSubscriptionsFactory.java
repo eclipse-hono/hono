@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,14 +13,13 @@
 
 package org.eclipse.hono.adapter.lora.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.adapter.lora.LoraCommandSubscriptions;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A factory class that creates Lora adapter command subscriptions class. It'll always be a {@link Singleton}.

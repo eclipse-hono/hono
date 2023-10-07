@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,8 +18,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import javax.enterprise.context.ApplicationScoped;
-
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
 import org.eclipse.microprofile.health.Readiness;
@@ -35,7 +33,7 @@ import io.vertx.ext.healthchecks.CheckResult;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.RoutingContext;
-
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * A SmallRye Health based {@link HealthCheckServer} that adapts Vert.x Health Checks to MicroProfile Health checks.

@@ -19,10 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandRouterServiceOptions;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
@@ -48,6 +44,9 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of an application scoped {@link DeviceConnectionInfo} instance.

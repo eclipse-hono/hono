@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,7 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.yaml.snakeyaml.constructor.ConstructorException;
+import org.yaml.snakeyaml.composer.ComposerException;
 
 /**
  * Testing {@link Statement}.
@@ -132,7 +132,7 @@ public class StatementTest {
 
         assertFalse(Files.isRegularFile(markerFile), "Marker file must not exist");
         assertNotNull(expected);
-        assertThat(expected).isInstanceOf(ConstructorException.class);
+        assertThat(expected).isInstanceOf(ComposerException.class);
     }
 
 }

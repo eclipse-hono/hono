@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,6 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.deviceregistry.app.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
@@ -29,6 +26,9 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * A factory for creating AMQP 1.0 based endpoints of Hono's south bound APIs.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,13 +12,12 @@
  */
 package org.eclipse.hono.service.tracing;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.opentracingshim.OpenTracingShim;
 import io.opentracing.Tracer;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A producer for an OpenTracing Tracer.

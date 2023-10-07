@@ -12,9 +12,9 @@
  */
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
-import javax.enterprise.context.ApplicationScoped;
-
 import org.eclipse.hono.deviceregistry.app.AbstractDeviceRegistryApplication;
+
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * The Quarkus based JDBC registry main application class.
