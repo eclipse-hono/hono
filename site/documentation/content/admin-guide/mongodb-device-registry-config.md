@@ -21,9 +21,12 @@ The registry is compatible and known to work with following MongoDB versions:
 * [MongoDB 4.4](https://www.mongodb.com/docs/v4.4/release-notes/4.4/)
 * [MongoDB 5.0](https://www.mongodb.com/docs/v5.0/release-notes/5.0/)
 * [MongoDB 6.0](https://www.mongodb.com/docs/v6.0/release-notes/6.0/)
+* [MongoDB 7.0](https://www.mongodb.com/docs/v7.0/release-notes/7.0/)
 
-{{% notice info %}}
-The registry had originally been implemented as a Spring Boot application. That variant has been removed in Hono 2.0.0.
+{{% notice warning %}}
+According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
+for Mongo DB 4.4 will end Feb 2024. Consequently, support for Mongo 4.4 in Hono has been deprecated and will be removed
+in a future version altogether. Users are encouraged to migrate to Mongo DB 6.0 or later.
 {{% /notice %}}
 
 ## Service Configuration
