@@ -42,7 +42,7 @@
     <jjwt.version>0.11.5</jjwt.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.3.5</kafka.image.name>
     <logback.version>1.4.11</logback.version>
-    <mongodb-image.name>docker.io/library/mongo:4.4</mongodb-image.name>
+    <mongodb-image.name>docker.io/library/mongo:6.0</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>

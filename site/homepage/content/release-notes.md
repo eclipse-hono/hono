@@ -12,6 +12,14 @@ description = "Information about changes in recent Hono releases. Includes new f
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
   a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
 
+### Deprecations
+
+* According to the [MongoDB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
+  for MongoDB 4.4 will end Feb 2024.
+  Until that date the MongoDB based Device Registry will be tested with MongoDB 4.4, 5.0, 6.0 and 7.0 in the CI workflows.
+  However, support for MongoDB 4.4 in Hono has been deprecated and will be removed in a future version altogether.
+  Users are encouraged to migrate to MongoDB 6.0 or later.
+
 ## 2.4.0
 
 ### New features
