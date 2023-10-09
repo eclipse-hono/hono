@@ -10,9 +10,9 @@ gateway:
     serverRole: AMQP adapter
 
 quarkus:
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: INFO
     min-level: TRACE
     category:

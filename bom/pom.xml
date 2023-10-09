@@ -187,6 +187,8 @@ otel.traces.sampler.arg=endpoint=http://${docker.host.address:localhost}:4317
 quarkus.devservices.enabled=false
 # app id
 quarkus.application.name=${app.id}
+# console color, also applies to console logging
+quarkus.console.color=true
 # Log setup
 quarkus.log.level=INFO
 quarkus.log.category."io.quarkus.vertx.core.runtime".level=DEBUG

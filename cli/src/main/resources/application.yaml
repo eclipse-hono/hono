@@ -1,9 +1,9 @@
 quarkus:
   banner:
     enabled: false
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: ERROR
     min-level: TRACE
     category:

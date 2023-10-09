@@ -103,9 +103,9 @@ quarkus:
     exporter:
       otlp:
         endpoint: "${otel-collector.endpoint}"
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: INFO
     min-level: TRACE
     category:
