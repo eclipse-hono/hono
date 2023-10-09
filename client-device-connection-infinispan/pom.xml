@@ -36,7 +36,12 @@
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-client-hotrod</artifactId>
+      <artifactId>infinispan-core-jakarta</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-client-hotrod-jakarta</artifactId>
       <exclusions>
         <exclusion>
           <groupId>io.netty</groupId>
@@ -47,10 +52,12 @@
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-query-dsl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-core</artifactId>
+      <exclusions>
+       <exclusion>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-commons</artifactId>
+       </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -140,10 +147,6 @@
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>javax.transaction</groupId>
-      <artifactId>javax.transaction-api</artifactId>
     </dependency>
   </dependencies>
 
