@@ -42,6 +42,7 @@ jobs:
         cache: "maven"
     - name: "Build native images"
       run: |
+        df -h
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
         -Pbuild-native-image,metrics-prometheus -am \
@@ -50,21 +51,25 @@ jobs:
         :hono-tests
     - name: "Run integration tests with Mongo DB and Kafka"
       run: |
+        df -h
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=mongodb \
         -Dhono.messaging-infra.type=kafka -Dhono.commandrouting.cache=server \
         -Prun-tests,jaeger
     - name: "Build JDBC registry image"
       run: |
+        df -h
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Pbuild-docker-image,metrics-prometheus -am -pl :hono-service-device-registry-jdbc
     - name: "Run integration tests with Sandbox-like configuration"
       run: |
+        df -h
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=file \
         -Dhono.messaging-infra.type=amqp -Dhono.commandrouting.cache=embedded \
         -Prun-tests
     - name: "Create CLI native executable"
       run: |
+        df -h
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Pbuild-cli-native-executable -am -pl :hono-cli
