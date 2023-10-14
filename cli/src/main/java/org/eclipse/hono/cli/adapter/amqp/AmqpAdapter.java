@@ -186,14 +186,23 @@ public class AmqpAdapter implements Callable<Integer> {
     }
 
     private void validateConnectionOptions() {
-        if (!connectionOptions.useSandbox && (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty())) {
+        if (connectionOptions.useSandbox) {
+            if (!connectionOptions.trustStorePath.isPresent()) {
+                throw new ParameterException(
+                        spec.commandLine(),
+                        """
+                        Missing required option: '--ca-file=<path>' needs to be specified \
+                        when using '--sandbox'.
+                        """);
+            }
+        } else if (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty()) {
             throw new ParameterException(
                     spec.commandLine(),
                     """
                     Missing required option: both '--host=<hostname>' and '--port=<portNumber> need to \
-                    be specified if not using '--sandbox'.
+                    be specified when not using '--sandbox'.
                     """);
-        }        
+        }
     }
 
     /**
@@ -207,12 +216,17 @@ public class AmqpAdapter implements Callable<Integer> {
             return Future.succeededFuture(client);
         }
 
+        validateConnectionOptions();
         final var clientConfig = new ClientConfigProperties();
         clientConfig.setReconnectAttempts(5);
         clientConfig.setServerRole("Hono AMQP Adapter");
+        connectionOptions.trustStorePath.ifPresent(path -> {
+            clientConfig.setTrustStorePath(path);
+            connectionOptions.trustStorePassword.ifPresent(clientConfig::setTrustStorePassword);
+        });
         if (connectionOptions.useSandbox) {
             clientConfig.setHost(ConnectionOptions.SANDBOX_HOST_NAME);
-            clientConfig.setPort(5672);
+            clientConfig.setPort(5671);
             Optional.ofNullable(connectionOptions.credentials).ifPresentOrElse(
                     creds -> {
                         clientConfig.setUsername(creds.username);
@@ -222,14 +236,10 @@ public class AmqpAdapter implements Callable<Integer> {
                         clientConfig.setUsername(SANDBOX_DEFAULT_DEVICE_AUTH_ID);
                         clientConfig.setPassword(SANDBOX_DEFAULT_DEVICE_PWD);
                     });
-            connectionOptions.trustStorePath.ifPresent(path -> {
-                clientConfig.setPort(5671);
-                clientConfig.setTrustStorePath(path);
-            });
         } else {
-            validateConnectionOptions();
             connectionOptions.hostname.ifPresent(clientConfig::setHost);
             connectionOptions.portNumber.ifPresent(clientConfig::setPort);
+            clientConfig.setHostnameVerificationRequired(!connectionOptions.disableHostnameVerification);
             if (clientCertInfo != null) {
                 clientConfig.setCertPath(clientCertInfo.certPath);
                 clientConfig.setKeyPath(clientCertInfo.keyPath);
@@ -237,9 +247,7 @@ public class AmqpAdapter implements Callable<Integer> {
                 clientConfig.setUsername(connectionOptions.credentials.username);
                 clientConfig.setPassword(connectionOptions.credentials.password);
             }
-            connectionOptions.trustStorePath.ifPresent(clientConfig::setTrustStorePath);
         }
-
         final var clientFactory = AmqpAdapterClient.create(HonoConnection.newConnection(vertx, clientConfig));
         return clientFactory.connect()
                 .onSuccess(con -> {

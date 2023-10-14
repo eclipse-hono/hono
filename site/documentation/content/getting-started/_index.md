@@ -120,7 +120,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 EOS
@@ -136,7 +136,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 ~~~
