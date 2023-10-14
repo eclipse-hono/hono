@@ -148,13 +148,18 @@ adapter and prompts the user for a command to execute:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt
 ~~~
 ~~~
 hono-cli/amqp-device>
 ~~~
 
 A list of available commands can be displayed using the `help` command, `exit` will close the client.
+
+{% notice info %}
+The example command above uses the default path to a Linux based system's trusted CA certificates.
+The path may need to be adapted when running on a different type of operating system.
+{{% /notice %}}
 
 ## Publishing Telemetry Data
 
@@ -208,7 +213,7 @@ Start the client in interactive mode:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp -H hono.eclipseprojects.io -P 5672 -u sensor1@DEFAULT_TENANT -p hono-secret
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt
 ~~~
 ~~~
 hono-cli/amqp-device>
@@ -231,7 +236,7 @@ The message can also be sent in non-interactive mode:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox telemetry --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt telemetry --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 Note that sending the message this way will take a little longer than in interactive mode because the connection to the
@@ -277,7 +282,7 @@ publishing some JSON data on behalf of device `4711` of tenant `DEFAULT_TENANT` 
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox telemetry --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt telemetry --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 {{% notice info %}}
@@ -329,7 +334,7 @@ some JSON data on behalf of device `4712`:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox -u gw@DEFAULT_TENANT -p gw-secret telemetry --device 4712 --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt -u gw@DEFAULT_TENANT -p gw-secret telemetry --device 4712 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 {{% notice info %}}
@@ -381,7 +386,7 @@ Publish a JSON string for the authenticated device (`4711`):
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt event --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 ## Publish an Event (unauthenticated Device)
@@ -422,7 +427,7 @@ publishing some JSON data on behalf of device `4711` of tenant `DEFAULT_TENANT` 
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox event --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt event --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 {{% notice info %}}
@@ -467,7 +472,7 @@ some JSON data on behalf of device `4712`:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp --sandbox -u gw@DEFAULT_TENANT -p gw-secret event --device 4712 --payload '{"foo": "bar"}' --content-type application/json
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt -u gw@DEFAULT_TENANT -p gw-secret event --device 4712 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
 {{% notice info %}}
@@ -599,7 +604,7 @@ Start the client in interactive mode:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar amqp -H hono.eclipseprojects.io -P 5672 -u sensor1@DEFAULT_TENANT -p hono-secret
+java -jar hono-cli-*-exec.jar amqp --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt 
 hono-cli/amqp-device>
 ~~~
 
@@ -646,7 +651,7 @@ command to send a request-response command to device `4711`:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar app --sandbox --amqp command req -d 4711 -n setColor --payload '{"r": 128,"g": 100,"b": 50}'
+java -jar hono-cli-*-exec.jar app --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt command req -d 4711 -n setColor --payload '{"r": 128,"g": 100,"b": 50}'
 ~~~
 
 This will result in the device's response being printed to the console:
@@ -659,7 +664,7 @@ It is also possible to send a one-way command:
 
 ~~~sh
 # in directory: hono/cli/target/
-java -jar hono-cli-*-exec.jar app --sandbox --amqp command ow -d 4711 -n setVolume --payload '{"level": 50}'
+java -jar hono-cli-*-exec.jar app --sandbox --ca-file /etc/ssl/certs/ca-certificates.crt command ow -d 4711 -n setVolume --payload '{"level": 50}'
 ~~~
 
 ## Downstream Meta Data

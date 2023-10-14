@@ -99,14 +99,23 @@ public class NorthBoundApis {
     ApplicationClient<? extends MessageContext> client;
 
     private void validateConnectionOptions() {
-        if (!connectionOptions.useSandbox && (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty())) {
+        if (connectionOptions.useSandbox) {
+            if (!connectionOptions.trustStorePath.isPresent()) {
+                throw new ParameterException(
+                        spec.commandLine(),
+                        """
+                        Missing required option: '--ca-file=<path>' needs to be specified \
+                        when using '--sandbox'.
+                        """);
+            }
+        } else if (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty()) {
             throw new ParameterException(
                     spec.commandLine(),
                     """
                     Missing required option: both '--host=<hostname>' and '--port=<portNumber> need to \
-                    be specified if not using '--sandbox'.
+                    be specified when not using '--sandbox'.
                     """);
-        }        
+        }
     }
 
     private String scramJaasConfig(final String username, final String password) {
@@ -116,13 +125,25 @@ public class NorthBoundApis {
     }
 
     Future<KafkaApplicationClientImpl> createKafkaClient() {
+
+        validateConnectionOptions();
         final var commonProps = new HashMap<String, String>();
         final String bootstrapServers;
 
+        connectionOptions.trustStorePath
+            .ifPresent(path -> {
+                commonProps.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, path);
+                connectionOptions.trustStorePassword
+                    .ifPresent(pwd -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, pwd));
+
+                Optional.ofNullable(FileFormat.detect(path))
+                    .ifPresent(fileFormat -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, fileFormat.name()));
+            });
+
         if (connectionOptions.useSandbox) {
-            bootstrapServers = "%1$s:9092,%1$s:9094".formatted(ConnectionOptions.SANDBOX_HOST_NAME);
+            bootstrapServers = "%s:9094".formatted(ConnectionOptions.SANDBOX_HOST_NAME);
             commonProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            commonProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
+            commonProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_SSL.name);
             commonProps.put(SaslConfigs.SASL_MECHANISM, ScramMechanism.SCRAM_SHA_512.mechanismName());
             Optional.ofNullable(connectionOptions.credentials)
                 .ifPresentOrElse(
@@ -133,22 +154,11 @@ public class NorthBoundApis {
                                 SaslConfigs.SASL_JAAS_CONFIG,
                                 scramJaasConfig(SANDBOX_KAFKA_USER, SANDBOX_KAFKA_PWD)));
         } else {
-            validateConnectionOptions();
             bootstrapServers = "%s:%d".formatted(connectionOptions.hostname.get(), connectionOptions.portNumber.get());
             commonProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-
-            connectionOptions.trustStorePath
-                .ifPresent(path -> {
-                    commonProps.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, path);
-                    connectionOptions.trustStorePassword
-                        .ifPresent(pwd -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, pwd));
-
-                    Optional.ofNullable(FileFormat.detect(path))
-                        .ifPresent(s -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, s.name()));
-                    if (connectionOptions.disableHostnameVerification) {
-                        commonProps.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
-                    }
-                });
+            if (connectionOptions.disableHostnameVerification) {
+                commonProps.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
+            }
 
             if (connectionOptions.credentials == null) {
                 if (connectionOptions.trustStorePath.isPresent()) {
@@ -190,23 +200,22 @@ public class NorthBoundApis {
 
     Future<ProtonBasedApplicationClient> createAmqpClient() {
 
+        validateConnectionOptions();
         final var clientConfig = new ClientConfigProperties();
         clientConfig.setReconnectAttempts(5);
+        clientConfig.setServerRole("Hono Messaging Infrastructure");
         connectionOptions.trustStorePath.ifPresent(path -> {
             clientConfig.setTrustStorePath(path);
             connectionOptions.trustStorePassword.ifPresent(clientConfig::setTrustStorePassword);
         });
         if (connectionOptions.useSandbox) {
             clientConfig.setHost(ConnectionOptions.SANDBOX_HOST_NAME);
-            clientConfig.setPort(connectionOptions.trustStorePath.map(s -> 15671).orElse(15672));
+            clientConfig.setPort(15671);
             clientConfig.setUsername(SANDBOX_AMQP_USER);
             clientConfig.setPassword(SANDBOX_AMQP_PWD);
         } else {
-            validateConnectionOptions();
             connectionOptions.hostname.ifPresent(clientConfig::setHost);
             connectionOptions.portNumber.ifPresent(clientConfig::setPort);
-            connectionOptions.trustStorePath.ifPresent(clientConfig::setTrustStorePath);
-            connectionOptions.trustStorePassword.ifPresent(clientConfig::setTrustStorePassword);
             clientConfig.setHostnameVerificationRequired(!connectionOptions.disableHostnameVerification);
             Optional.ofNullable(connectionOptions.credentials)
                 .ifPresent(creds -> {
