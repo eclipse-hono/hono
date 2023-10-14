@@ -4,7 +4,22 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.3.1 (not yet released)
+## 2.3.2 (not yet released)
+
+### Fixes & Enhancements
+
+* When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
+  being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
+  a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+
+## 2.3.1
+
+### Fixes & Enhancements
+
+* Using Maven 3.9.x for building Hono was not possible and resulted in an error. This has been fixed.
+* The Device Registry User Guide has been amended with information on how to configure the trust anchor of a tenant
+  using a PEM file.
+* The demo keys and certificates that come with Hono for testing purposes had expired and have been recreated.
 
 ## 2.3.0
 
