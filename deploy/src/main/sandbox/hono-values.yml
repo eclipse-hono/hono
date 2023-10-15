@@ -205,7 +205,19 @@ commandRouterService:
     limits:
       memory: "120Mi"
 
+# !!! Assuming that we are using the bitnami/kafka chart 21.4.16
+# with the following patch applied
+# templates/scripts-configmap.yaml:
+# L195
+# # the following line needs to be replaced in order to keep the cert chain
+# # contained in the original PEM file
+# # cat ${CERT_DIR}/xx00 > "$PEM_CERT_LOCATION"
+# cp "$PEM_CERT" "$PEM_CERT_LOCATION"
 kafka:
+  image:
+    # we need to make sure that the bitnami/kafka container image
+    # already contains the fix provided by https://github.com/bitnami/containers/commit/47d3f1f1dfd1a31217ce8ce0e775c9e122e1bad6
+    tag: "3.4.0-debian-11-r21"
   ## @param logFlushIntervalMessages The number of messages to accept before forcing a flush of data to disk
   ##
   logFlushIntervalMessages: _1000
@@ -242,13 +254,13 @@ kafka:
     create: false
   rbac:
     create: false
-  heapOpts: "-Xms650M -Xmx650M"
+#  heapOpts: "-Xms650M -Xmx650M"
   resources:
     requests:
       cpu: "50m"
-      memory: "800Mi"
+      memory: "1300Mi"
     limits:
-      memory: "800Mi"
+      memory: "1300Mi"
   zookeeper:
     heapSize: 300
     resources:
