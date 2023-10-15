@@ -59,6 +59,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLConnection;
+import io.vertx.ext.sql.SQLOperations;
 import io.vertx.ext.sql.UpdateResult;
 
 /**
@@ -328,14 +329,14 @@ public class TableManagementStore extends AbstractDeviceStore {
 
                     log.debug("createDevice - statement: {}", expanded);
 
-                    return getDeviceCount(key.getTenantId(), span.context(), this.countDevicesOfTenantStatement, null, null)
+                    return getDeviceCount(connection, key.getTenantId(), span.context(), this.countDevicesOfTenantStatement, null, null)
                             .compose(currentDeviceCount -> tenant.checkDeviceLimitReached(
                                     key.getTenantId(),
                                     currentDeviceCount,
                                     globalDevicesPerTenantLimit))
                             .compose(ok -> expanded
                                     .trace(this.tracer, context)
-                                    .update(this.client)
+                                    .update(connection)
                                     .recover(SQL::translateException))
 
                             .compose(x -> createGroups(connection, key, new HashSet<>(device.getMemberOf()), context));
@@ -649,6 +650,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Gets the number of devices that are registered for a tenant.
      *
+     * @param operations The SQL operations instance to use.
      * @param tenantId The tenant to count devices for.
      * @param spanContext The span to contribute to.
      * @param countStatement The count statement to use.
@@ -657,7 +659,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @return A future tracking the outcome of the operation.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public Future<Integer> getDeviceCount(final String tenantId, final SpanContext spanContext, final Statement countStatement, final String field, final String value) {
+    public Future<Integer> getDeviceCount(final SQLOperations operations, final String tenantId, final SpanContext spanContext, final Statement countStatement, final String field, final String value) {
 
         Objects.requireNonNull(tenantId);
 
@@ -675,7 +677,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
         return expanded
                 .trace(this.tracer, span.context())
-                .query(this.client)
+                .query(operations)
                 .map(r -> {
                     final var entries = r.getRows(true);
                     switch (entries.size()) {
@@ -1007,7 +1009,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        final Future<Integer> deviceCountFuture = getDeviceCount(tenantId, span.context(), countStatement, field, value);
+        final Future<Integer> deviceCountFuture = getDeviceCount(this.client, tenantId, span.context(), countStatement, field, value);
 
         return deviceCountFuture
                 .compose(count -> expanded.trace(this.tracer, span.context()).query(this.client))

@@ -220,7 +220,7 @@ public class ManagementStore extends AbstractTenantStore {
                     log.debug("create - statement: {}", expanded);
                     return expanded
                             .trace(this.tracer, span.context())
-                            .update(this.client)
+                            .update(connection)
                             .recover(SQL::translateException)
 
                             // insert all trust anchors
@@ -443,13 +443,13 @@ public class ManagementStore extends AbstractTenantStore {
         // execute update
         final var result = expanded
                 .trace(this.tracer, span.context())
-                .update(this.client);
+                .update(operations);
 
         // process result, check optimistic lock
         return checkOptimisticLock(
                 result, span,
                 resourceVersion,
-                checkSpan -> readTenantEntryById(this.client, tenantId, checkSpan.context()));
+                checkSpan -> readTenantEntryById(operations, tenantId, checkSpan.context()));
     }
 
     /**

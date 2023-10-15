@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -153,6 +153,8 @@ abstract class AbstractJdbcRegistryTest {
 
     private JdbcProperties resolveJdbcProperties() {
         final var jdbc = new JdbcProperties();
+        jdbc.setInitialPoolSize(0);
+        jdbc.setMinimumPoolSize(0);
         if (DATABASE_TYPE != DatabaseType.H2) {
             final JdbcDatabaseContainer<?> databaseContainer = getDatabaseContainer();
             jdbc.setDriverClass(databaseContainer.getDriverClassName());
