@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -109,19 +108,18 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buf
         this.consumerConfig = Objects.requireNonNull(consumerConfig);
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> stop() {
 
         return lifecycleStatus.runStopAttempt(() -> {
             // assemble futures for closing the command response consumers
-            final List<Future> stopConsumersTracker = commandResponseConsumers.values().stream()
+            final List<Future<Void>> stopConsumersTracker = commandResponseConsumers.values().stream()
                     .map(HonoKafkaConsumer::stop)
                     .collect(Collectors.toList());
             commandResponseConsumers.clear();
-            return CompositeFuture.join(
+            return Future.join(
                     stopProducer(),
-                    CompositeFuture.join(stopConsumersTracker))
+                    Future.join(stopConsumersTracker))
                 .mapEmpty();
         });
     }

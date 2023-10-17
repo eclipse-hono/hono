@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -265,7 +264,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     final Future<RegistrationResult> deviceInfoTracker = getRegistrationInformation(DeviceKey.from(tenantId, deviceId), span);
                     final Future<RegistrationResult> gatewayInfoTracker = getRegistrationInformation(DeviceKey.from(tenantId, gatewayId), span);
 
-                    return CompositeFuture
+                    return Future
                             .all(deviceInfoTracker, gatewayInfoTracker)
                             .compose(ok -> {
 

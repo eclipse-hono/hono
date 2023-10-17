@@ -57,7 +57,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -292,14 +291,14 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     currentSpan.context());
             final Future<TenantObject> tenantTracker = getAdapter().getTenantClient().get(tenantId, currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
-                    .compose(tenantObject -> CompositeFuture.all(
+                    .compose(tenantObject -> Future.all(
                             getAdapter().isAdapterEnabled(tenantObject),
                             getAdapter().checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
                             .map(tenantObject));
 
             // we only need to consider TTD if the device and tenant are enabled and the adapter
             // is enabled for the tenant
-            final Future<Integer> ttdTracker = CompositeFuture.all(tenantValidationTracker, tokenTracker)
+            final Future<Integer> ttdTracker = Future.all(tenantValidationTracker, tokenTracker)
                     .compose(ok -> {
                         final Integer ttdParam = context.getTimeUntilDisconnect();
                         return getAdapter().getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
@@ -346,7 +345,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 props,
                                 currentSpan.context());
                     }
-                    return CompositeFuture.all(sendResult, responseReady.future()).mapEmpty();
+                    return Future.all(sendResult, responseReady.future()).mapEmpty();
                 }).compose(proceed -> {
 
                     // downstream message sent and (if ttd was set) command was received or ttd has timed out

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,7 +55,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.micrometer.core.instrument.Timer;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -298,7 +297,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final Future<Void> cmd4Future = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord4);
 
         // THEN the messages are delegated in the original order
-        CompositeFuture.all(cmd1Future, cmd2Future, cmd3Future, cmd4Future)
+        Future.all(cmd1Future, cmd2Future, cmd3Future, cmd4Future)
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
@@ -357,7 +356,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final Future<Void> cmd4Future = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord4);
 
         // THEN the messages are delegated in the original order, with command 1 left out because it timed out
-        CompositeFuture.all(cmd2Future, cmd3Future, cmd4Future)
+        Future.all(cmd2Future, cmd3Future, cmd4Future)
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         assertThat(cmd1Future.failed()).isTrue();

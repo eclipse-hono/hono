@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -65,7 +64,6 @@ public class KafkaCommandProcessingQueueTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @SuppressWarnings("rawtypes")
     void testSendActionIsInvokedInOrder(final Vertx vertx, final VertxTestContext ctx) {
         final Context vertxContext = vertx.getOrCreateContext();
         vertxContext.runOnContext(v -> {
@@ -80,7 +78,7 @@ public class KafkaCommandProcessingQueueTest {
             // WHEN applying the sendAction on these commands in the reverse order
             final LinkedList<KafkaBasedCommandContext> sendActionInvoked = new LinkedList<>();
             final LinkedList<KafkaBasedCommandContext> applySendActionSucceeded = new LinkedList<>();
-            final List<Future> resultFutures = new LinkedList<>();
+            final List<Future<Void>> resultFutures = new LinkedList<>();
             commandContexts.descendingIterator().forEachRemaining(context -> {
                 resultFutures.add(kafkaCommandProcessingQueue
                         .applySendCommandAction(context, () -> {
@@ -90,7 +88,7 @@ public class KafkaCommandProcessingQueueTest {
                         .onSuccess(v2 -> applySendActionSucceeded.add(context)));
             });
 
-            CompositeFuture.all(resultFutures).onComplete(ctx.succeeding(ar -> {
+            Future.all(resultFutures).onComplete(ctx.succeeding(ar -> {
                 ctx.verify(() -> {
                     // THEN the commands got sent in the original order
                     assertThat(sendActionInvoked).isEqualTo(commandContexts);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -812,7 +811,7 @@ public interface AbstractRegistrationServiceTest {
         final Future<RegistrationResult> f2 = gatewayId
                 .map(id -> getRegistrationService().assertRegistration(tenant, deviceId, id))
                 .orElseGet(() -> getRegistrationService().assertRegistration(tenant, deviceId));
-        return CompositeFuture.all(
+        return Future.all(
                 f1.otherwise(t -> OperationResult.empty(ServiceInvocationException.extractStatusCode(t)))
                     .map(r -> {
                         managementAssertions.handle(r);

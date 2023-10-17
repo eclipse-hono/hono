@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -675,21 +674,19 @@ public class HonoKafkaConsumerIT {
     }
 
     private Future<Void> publishRecords(final int numTestRecordsPerTopic, final String keyPrefix, final Set<String> topics) {
-        @SuppressWarnings("rawtypes")
-        final List<Future> resultFutures = new ArrayList<>();
+        final List<Future<Void>> resultFutures = new ArrayList<>();
         topics.forEach(topic -> {
             resultFutures.add(publishRecords(numTestRecordsPerTopic, keyPrefix, topic));
         });
-        return CompositeFuture.all(resultFutures).map((Void) null);
+        return Future.all(resultFutures).map((Void) null);
     }
 
     private Future<Void> publishRecords(final int numRecords, final String keyPrefix, final String topic) {
-        @SuppressWarnings("rawtypes")
-        final List<Future> resultFutures = new ArrayList<>();
+        final List<Future<Void>> resultFutures = new ArrayList<>();
         IntStream.range(0, numRecords).forEach(i -> {
             resultFutures.add(publish(topic, keyPrefix + i, Buffer.buffer("testPayload")).mapEmpty());
         });
-        return CompositeFuture.all(resultFutures).map((Void) null);
+        return Future.all(resultFutures).map((Void) null);
     }
 
     private static Future<RecordMetadata> publish(final String topic, final String recordKey, final Buffer recordPayload) {

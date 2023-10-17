@@ -96,7 +96,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.smallrye.config.ConfigMapping;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -317,7 +316,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             })
             .onFailure(t -> LOG.error("failed to deploy notification receiver verticle(s)", t));
 
-        CompositeFuture.all(adapterTracker, notificationReceiverTracker)
+        Future.all(adapterTracker, notificationReceiverTracker)
             .map(deploymentResult)
             .onComplete(deploymentCheck);
     }

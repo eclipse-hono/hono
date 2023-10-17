@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -255,7 +254,7 @@ public class ManagementStore extends AbstractTenantStore {
             return Future.succeededFuture();
         }
 
-        return CompositeFuture
+        return Future
 
                 .all(tenant.getTrustedCertificateAuthorities().stream()
 

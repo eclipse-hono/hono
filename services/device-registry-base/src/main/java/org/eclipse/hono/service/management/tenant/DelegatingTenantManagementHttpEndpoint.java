@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -162,7 +161,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), true));
         final Future<Tenant> payload = fromPayload(ctx);
 
-        CompositeFuture.all(tenantId, payload)
+        Future.all(tenantId, payload)
             .compose(ok -> {
                 final Optional<String> tid = Optional.ofNullable(tenantId.result());
                 tid.ifPresent(s -> TracingHelper.TAG_TENANT_ID.set(span, s));
@@ -196,7 +195,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
         final Future<Tenant> payload = fromPayload(ctx);
 
-        CompositeFuture.all(tenantId, payload)
+        Future.all(tenantId, payload)
             .compose(tenant -> {
                 TracingHelper.TAG_TENANT_ID.set(span, tenantId.result());
                 logger.debug("updating tenant [{}]", tenantId.result());
@@ -252,7 +251,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         final Future<List<Sort>> sortOptions = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
 
-        CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
+        Future.all(pageSize, pageOffset, filters, sortOptions)
                 .compose(ok -> getService().searchTenants(
                         pageSize.result(),
                         pageOffset.result(),

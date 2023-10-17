@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -94,7 +93,7 @@ public class DeviceRegistryNotificationsIT {
         final Future<Void> receiverStopFuture = Optional.ofNullable(receiver)
                 .map(Lifecycle::stop)
                 .orElseGet(Future::succeededFuture);
-        CompositeFuture.join(receiverStopFuture, helper.disconnect())
+        Future.join(receiverStopFuture, helper.disconnect())
             .onComplete(ar -> helper.deleteObjects(ctx));
     }
 

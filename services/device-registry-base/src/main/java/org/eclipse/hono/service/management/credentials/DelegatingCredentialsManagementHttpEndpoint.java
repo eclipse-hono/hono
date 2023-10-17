@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -112,7 +111,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        CompositeFuture.all(tenantId, deviceId)
+        Future.all(tenantId, deviceId)
             .compose(ok -> {
                 TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("getting credentials [tenant: {}, device-id: {}]]",
@@ -154,7 +153,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
         final Future<List<CommonCredential>> updatedCredentials = fromPayload(ctx);
 
-        CompositeFuture.all(tenantId, deviceId, updatedCredentials)
+        Future.all(tenantId, deviceId, updatedCredentials)
             .compose(ok -> {
                 TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("updating {} credentials [tenant: {}, device-id: {}]",

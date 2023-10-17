@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -211,7 +210,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 this.insecureEndpoint = ep;
                             });
 
-                    return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
+                    return Future.any(insecureEndpointFuture, secureEndpointFuture)
                             .map(ok -> {
                                 this.server = newServer;
                                 return newServer;

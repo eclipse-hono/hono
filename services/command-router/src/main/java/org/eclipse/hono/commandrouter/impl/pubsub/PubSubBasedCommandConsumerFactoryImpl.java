@@ -47,7 +47,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -140,7 +139,7 @@ public class PubSubBasedCommandConsumerFactoryImpl implements CommandConsumerFac
     @Override
     public Future<Void> stop() {
         return lifecycleStatus.runStopAttempt(
-                () -> CompositeFuture.join(subscriberFactory.closeAllSubscribers(), commandHandler.stop()).mapEmpty());
+                () -> Future.join(subscriberFactory.closeAllSubscribers(), commandHandler.stop()).mapEmpty());
     }
 
     @Override

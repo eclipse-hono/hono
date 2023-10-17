@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,6 @@ import org.eclipse.hono.util.TenantObject;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.opentracing.SpanContext;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -367,15 +366,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private Future<Void> closeServiceClients() {
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> results = new ArrayList<>();
+        final List<Future<Void>> results = new ArrayList<>();
         results.add(tenantClient.stop());
         results.add(registrationClient.stop());
         results.add(credentialsClient.stop());
         results.add(commandConsumerFactory.stop());
         results.add(commandRouterClient.stop());
         results.add(messagingClientProviders.stop());
-        return CompositeFuture.all(results).mapEmpty();
+        return Future.all(results).mapEmpty();
     }
 
     /**
@@ -459,7 +457,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     }
                 });
 
-        return CompositeFuture.all(
+        return Future.all(
                 connectionLimitCheckResult,
                 checkConnectionDurationLimit(tenantConfig, spanContext),
                 messageLimitCheckResult).mapEmpty();
@@ -923,7 +921,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 context);
         final Future<TenantObject> tenantConfigTracker = getTenantConfiguration(tenant, context);
 
-        return CompositeFuture.all(tokenTracker, tenantConfigTracker).compose(ok -> {
+        return Future.all(tokenTracker, tenantConfigTracker).compose(ok -> {
             if (tenantConfigTracker.result().isAdapterEnabled(getTypeName())) {
                 final Map<String, Object> props = new HashMap<>();
                 props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());

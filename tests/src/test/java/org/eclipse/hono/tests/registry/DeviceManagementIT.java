@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -625,7 +625,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
 
             final int pageSize = 1;
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device()),
                     registry.registerDevice(tenantId, getHelper().getRandomDeviceId(tenantId), new Device()))
                 .compose(response -> registry.searchDevices(
@@ -677,7 +677,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final int pageOffset = 1;
             final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                 .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.of(pageOffset),
@@ -723,7 +723,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson2 = getFilterJson("/enabled", true, "eq");
             final String filterJson3 = getFilterJson("/enabled", false, "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                 .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
@@ -757,7 +757,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                 .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
@@ -807,7 +807,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                 .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
@@ -870,7 +870,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final Device device2 = new Device().setExtensions(Map.of("id", "bbb"));
             final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(
+            Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
                 .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
