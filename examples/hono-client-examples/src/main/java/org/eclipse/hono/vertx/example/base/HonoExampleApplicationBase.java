@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -189,7 +188,7 @@ public class HonoExampleApplicationBase {
         client.addOnClientReadyHandler(readyTracker);
         client.start()
                 .compose(ok -> readyTracker.future())
-                .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
+                .compose(v -> Future.all(createEventConsumer(), createTelemetryConsumer()))
                 .onSuccess(ok -> startup.complete(client))
                 .onFailure(startup::completeExceptionally);
 
@@ -206,8 +205,7 @@ public class HonoExampleApplicationBase {
 
         final CompletableFuture<ApplicationClient<? extends MessageContext>> shutDown = new CompletableFuture<>();
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> closeFutures = new ArrayList<>();
+        final List<Future<Void>> closeFutures = new ArrayList<>();
         Optional.ofNullable(eventConsumer)
             .map(MessageConsumer::close)
             .ifPresent(closeFutures::add);
@@ -218,7 +216,7 @@ public class HonoExampleApplicationBase {
             .map(Lifecycle::stop)
             .ifPresent(closeFutures::add);
 
-        CompositeFuture.join(closeFutures)
+        Future.join(closeFutures)
             .compose(ok -> vertx.close())
             .recover(t -> vertx.close())
             .onComplete(ar -> shutDown.complete(client));

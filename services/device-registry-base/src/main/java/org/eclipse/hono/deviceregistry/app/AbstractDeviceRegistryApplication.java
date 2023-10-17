@@ -23,7 +23,6 @@ import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
@@ -97,7 +96,7 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
             })
             .onFailure(t -> log.error("failed to deploy HTTP server verticle(s)", t));
 
-        CompositeFuture.all(
+        Future.all(
                 authServiceDeploymentTracker,
                 notificationSenderDeploymentTracker,
                 amqpServerDeploymentTracker,

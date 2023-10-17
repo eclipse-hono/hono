@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -69,7 +69,6 @@ import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -140,14 +139,13 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
      */
     @AfterEach
     void cleanupAfterTest(final VertxTestContext ctx) {
-        @SuppressWarnings("rawtypes")
-        final List<Future> stopFutures = componentsToStopAfterTest.stream()
+        final List<Future<Void>> stopFutures = componentsToStopAfterTest.stream()
             .map(component -> component.stop()
                     .onSuccess(ok -> LOG.info("stopped component of type {}", component.getClass().getName()))
                     .onFailure(t -> LOG.info("failed to stop component of type {}", component.getClass().getName(), t)))
             .collect(Collectors.toList());
         componentsToStopAfterTest.clear();
-        CompositeFuture.all(stopFutures)
+        Future.all(stopFutures)
                 .onComplete(ctx.succeedingThenComplete());
     }
 
@@ -175,7 +173,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         });
 
         topicsDeletedPromise.future()
-            .compose(ok -> CompositeFuture.all(adminClient.close(), kafkaProducer.close()))
+            .compose(ok -> Future.all(adminClient.close(), kafkaProducer.close()))
             .compose(ok -> vertx.close())
             .onComplete(ctx.succeedingThenComplete());
     }
@@ -229,7 +227,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
             final var consumerFactory = getKafkaBasedCommandConsumerFactory(
                     targetAdapterInstanceGetterCompletionFutureSupplier, tenantId);
             consumerFactory.addOnFactoryReadyHandler(factoryTracker);
-            CompositeFuture.all(
+            Future.all(
                     internalConsumer.start().compose(ok -> consumerTracker.future()),
                     consumerFactory.start().compose(ok -> factoryTracker.future()))
                 .compose(f -> createCommandConsumer(tenantId, consumerFactory))
@@ -340,7 +338,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                     firstConsumerGetAdapterInstanceSupplier, tenantId);
             consumerFactory1.addOnFactoryReadyHandler(factoryTracker);
             consumerFactory1Ref.set(consumerFactory1);
-            CompositeFuture.all(
+            Future.all(
                     internalConsumer.start().compose(ok -> consumerTracker.future()),
                     consumerFactory1.start().compose(ok -> factoryTracker.future()))
                 .compose(f -> createCommandConsumer(tenantId, consumerFactory1))
@@ -363,7 +361,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
 
         final AtomicInteger secondConsumerGetAdapterInstanceInvocations = new AtomicInteger();
         // wait for first record on internal topic to have been received ...
-        CompositeFuture.join(
+        Future.join(
                 firstConsumerAllGetAdapterInstanceInvocationsDone.future(),
                 firstRecordReceivedPromise.future())
             .compose(v -> {

@@ -41,7 +41,6 @@ import com.google.pubsub.v1.PubsubMessage;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -261,7 +260,7 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
 
     @Override
     public Future<Void> stop() {
-        return lifecycleStatus.runStopAttempt(() -> CompositeFuture.all(
+        return lifecycleStatus.runStopAttempt(() -> Future.all(
                 subscriberFactory.closeSubscriber(CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId),
                 vertx.executeBlocking(promise -> {
                     adminClientManager.closeAdminClients();

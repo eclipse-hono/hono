@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -90,7 +90,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -200,7 +199,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             return Future.succeededFuture();
         })
-        .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
+        .compose(success -> Future.all(bindSecureServer(), bindInsecureServer()))
         .map(ok -> (Void) null)
         .onComplete(startPromise);
     }
@@ -291,7 +290,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             log.trace("stop already called");
             return;
         }
-        CompositeFuture.all(stopSecureServer(), stopInsecureServer())
+        Future.all(stopSecureServer(), stopInsecureServer())
         .map(ok -> (Void) null)
         .onComplete(ar -> log.info("AMQP server(s) closed"))
         .onComplete(stopPromise);
@@ -487,8 +486,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private Future<Void> handleConnectionLossInternal(final ProtonConnection con, final Span span,
             final boolean sendDisconnectedEvent, final boolean closeCommandConsumers) {
         authenticatedDeviceConnections.remove(con);
-        @SuppressWarnings("rawtypes")
-        final List<Future> handlerResults;
+        final List<Future<Void>> handlerResults;
         if (closeCommandConsumers) {
             handlerResults = getCommandSubscriptions(con).stream()
                     .map(commandSubscription -> closeCommandConsumer(commandSubscription.getConsumer(),
@@ -498,7 +496,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             handlerResults = Collections.emptyList();
         }
         decrementConnectionCount(con, span.context(), sendDisconnectedEvent);
-        return CompositeFuture.join(handlerResults)
+        return Future.join(handlerResults)
                 .recover(thr -> {
                     Tags.ERROR.set(span, true);
                     return Future.failedFuture(thr);
@@ -578,10 +576,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 // the device/gateway exists and is enabled and
                 // that the connection limit for the tenant is not exceeded.
 
-                CompositeFuture.all(
+                Future.all(
                         checkDeviceRegistration(authenticatedDevice, span.context()),
                         getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
-                                .compose(tenantConfig -> CompositeFuture.all(
+                                .compose(tenantConfig -> Future.all(
                                         isAdapterEnabled(tenantConfig),
                                         checkConnectionLimit(tenantConfig, span.context()))))
                     .map(ok -> {
@@ -1284,12 +1282,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
                 currentSpan.context());
         final Future<TenantObject> tenantValidationTracker = tenantTracker
-                .compose(tenantObject -> CompositeFuture
+                .compose(tenantObject -> Future
                         .all(isAdapterEnabled(tenantObject),
                                 checkMessageLimit(tenantObject, context.getPayloadSize(), currentSpan.context()))
                         .map(success -> tenantObject));
 
-        return CompositeFuture.all(tenantValidationTracker, tokenFuture)
+        return Future.all(tenantValidationTracker, tokenFuture)
                 .compose(ok -> {
                     final Map<String, Object> props = getDownstreamMessageProperties(context);
 
@@ -1370,7 +1368,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
                 currentSpan.context());
 
-        return CompositeFuture.all(tenantTracker, responseTracker)
+        return Future.all(tenantTracker, responseTracker)
                 .compose(ok -> {
                     final CommandResponse commandResponse = responseTracker.result();
                     log.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
@@ -1388,13 +1386,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             resource.getResourceId(),
                             context.getAuthenticatedDevice(),
                             currentSpan.context());
-                    final Future<TenantObject> tenantValidationTracker = CompositeFuture
+                    final Future<TenantObject> tenantValidationTracker = Future
                             .all(isAdapterEnabled(tenantTracker.result()),
                                     checkMessageLimit(tenantTracker.result(), context.getPayloadSize(),
                                             currentSpan.context()))
                             .map(success -> tenantTracker.result());
 
-                    return CompositeFuture.all(tenantValidationTracker, tokenFuture)
+                    return Future.all(tenantValidationTracker, tokenFuture)
                             .compose(success -> sendCommandResponse(
                                     tenantTracker.result(),
                                     tokenFuture.result(),

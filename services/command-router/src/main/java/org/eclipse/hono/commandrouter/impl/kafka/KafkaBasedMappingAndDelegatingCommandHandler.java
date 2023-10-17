@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,6 @@ import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -82,7 +81,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      */
     @Override
     public Future<Void> start() {
-        return CompositeFuture.all(super.start(), kafkaBasedCommandResponseSender.start()).mapEmpty();
+        return Future.all(super.start(), kafkaBasedCommandResponseSender.start()).mapEmpty();
     }
 
     /**
@@ -93,7 +92,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      */
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.join(super.stop(), kafkaBasedCommandResponseSender.stop()).mapEmpty();
+        return Future.join(super.stop(), kafkaBasedCommandResponseSender.stop()).mapEmpty();
     }
 
     /**

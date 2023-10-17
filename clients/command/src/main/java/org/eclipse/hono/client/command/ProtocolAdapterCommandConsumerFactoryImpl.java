@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -166,14 +165,13 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
                             });
                     internalCommandConsumerSuppliers.clear();
                     readinessHandler = null;
-                    @SuppressWarnings("rawtypes")
-                    final List<Future> futures = internalCommandConsumers.stream()
+                    final List<Future<Void>> futures = internalCommandConsumers.stream()
                             .map(Lifecycle::start)
                             .collect(Collectors.toList());
                     if (futures.isEmpty()) {
                         return Future.failedFuture("no command consumer registered");
                     }
-                    return CompositeFuture.all(futures).mapEmpty();
+                    return Future.all(futures).mapEmpty();
                 })
                 .recover(thr -> {
                     startFailureMessage = thr.getMessage();
@@ -200,11 +198,10 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         if (!stopCalled.compareAndSet(false, true)) {
             return Future.succeededFuture();
         }
-        @SuppressWarnings("rawtypes")
-        final List<Future> futures = internalCommandConsumers.stream()
+        final List<Future<Void>> futures = internalCommandConsumers.stream()
                 .map(Lifecycle::stop)
                 .collect(Collectors.toList());
-        return CompositeFuture.all(futures).mapEmpty();
+        return Future.all(futures).mapEmpty();
     }
 
     @Override

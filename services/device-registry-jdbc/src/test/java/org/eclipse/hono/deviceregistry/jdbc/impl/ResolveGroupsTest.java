@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.junit5.VertxExtension;
@@ -159,7 +158,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
     @Test
     void testResolveGroups(final VertxTestContext context) {
 
-        CompositeFuture.all(Arrays.stream(testResolveGroups())
+        Future.all(Arrays.stream(testResolveGroups())
                 .map(test -> {
 
                     final var tenantId = UUID.randomUUID().toString();
@@ -168,7 +167,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
 
                             .flatMap(x -> this.tenantManagement.createTenant(Optional.of(tenantId), new Tenant(), SPAN))
 
-                            .flatMap(x -> CompositeFuture.all(
+                            .flatMap(x -> Future.all(
 
                                     test.devices.stream()
 

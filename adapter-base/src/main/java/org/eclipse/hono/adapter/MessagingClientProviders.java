@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,6 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
@@ -141,7 +140,7 @@ public final class MessagingClientProviders implements Lifecycle {
     @Override
     public Future<Void> start() {
 
-        return CompositeFuture.all(
+        return Future.all(
                 telemetrySenderProvider.start(),
                 eventSenderProvider.start(),
                 commandResponseSenderProvider.start()).mapEmpty();
@@ -149,7 +148,7 @@ public final class MessagingClientProviders implements Lifecycle {
 
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.all(
+        return Future.all(
                 telemetrySenderProvider.stop(),
                 eventSenderProvider.stop(),
                 commandResponseSenderProvider.stop()).mapEmpty();

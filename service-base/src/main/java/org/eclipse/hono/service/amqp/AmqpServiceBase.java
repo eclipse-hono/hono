@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -235,28 +234,26 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     private Future<Void> startEndpoints() {
 
-        @SuppressWarnings("rawtypes")
         final
-        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+        List<Future<Void>> endpointFutures = new ArrayList<>(endpoints.size());
         for (final AmqpEndpoint ep : endpoints.values()) {
             log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.start());
         }
-        return CompositeFuture.all(endpointFutures)
+        return Future.all(endpointFutures)
                 .map(ok -> (Void) null)
                 .recover(Future::failedFuture);
     }
 
     private Future<Void> stopEndpoints() {
 
-        @SuppressWarnings("rawtypes")
         final
-        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+        List<Future<Void>> endpointFutures = new ArrayList<>(endpoints.size());
         for (final AmqpEndpoint ep : endpoints.values()) {
             log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
-        return CompositeFuture.all(endpointFutures)
+        return Future.all(endpointFutures)
                 .map(ok -> (Void) null)
                 .recover(Future::failedFuture);
     }
@@ -368,7 +365,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     public final Future<Void> stopInternal() {
 
         return preShutdown()
-                .compose(s -> CompositeFuture.all(stopServer(), stopInsecureServer()))
+                .compose(s -> Future.all(stopServer(), stopInsecureServer()))
                 .compose(s -> stopEndpoints())
                 .compose(s -> postShutdown());
     }

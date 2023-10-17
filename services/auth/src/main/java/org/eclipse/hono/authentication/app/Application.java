@@ -32,7 +32,6 @@ import org.eclipse.hono.service.auth.JjwtBasedAuthTokenValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
@@ -84,7 +83,7 @@ public class Application extends AbstractServiceApplication {
             });
 
 
-        CompositeFuture.all(authServiceDeploymentTracker, amqpServerDeploymentTracker)
+        Future.all(authServiceDeploymentTracker, amqpServerDeploymentTracker)
             .map(deploymentResult)
             .onComplete(deploymentCheck);
     }

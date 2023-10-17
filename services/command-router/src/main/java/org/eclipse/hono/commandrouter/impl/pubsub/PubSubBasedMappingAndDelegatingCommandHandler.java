@@ -33,7 +33,6 @@ import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
@@ -83,7 +82,7 @@ public class PubSubBasedMappingAndDelegatingCommandHandler
      */
     @Override
     public Future<Void> start() {
-        return CompositeFuture.all(super.start(), pubSubBasedCommandResponseSender.start()).mapEmpty();
+        return Future.all(super.start(), pubSubBasedCommandResponseSender.start()).mapEmpty();
     }
 
     /**
@@ -94,7 +93,7 @@ public class PubSubBasedMappingAndDelegatingCommandHandler
      */
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.join(super.stop(), pubSubBasedCommandResponseSender.stop()).mapEmpty();
+        return Future.join(super.stop(), pubSubBasedCommandResponseSender.stop()).mapEmpty();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
@@ -65,7 +65,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         dao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
         service = new MongoDbBasedDeviceManagementService(vertx, dao, credentialsDao, config);
-        CompositeFuture.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
+        Future.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -85,7 +85,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        CompositeFuture.all(
+        Future.all(
                 dao.deleteAllFromCollection(),
                 credentialsDao.deleteAllFromCollection())
             .onComplete(testContext.succeedingThenComplete());
@@ -104,7 +104,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         final Promise<Void> credentialsCloseHandler = Promise.promise();
         credentialsDao.close(credentialsCloseHandler);
 
-        CompositeFuture.all(credentialsCloseHandler.future(), devicesCloseHandler.future())
+        Future.all(credentialsCloseHandler.future(), devicesCloseHandler.future())
             .compose(ok -> {
                 final Promise<Void> vertxCloseHandler = Promise.promise();
                 vertx.close(vertxCloseHandler);

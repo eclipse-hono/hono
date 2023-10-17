@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,7 +63,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -1206,7 +1205,7 @@ public abstract class HttpTestBase {
         logger.info("sent one-way command to device");
 
         // THEN both requests succeed
-        CompositeFuture.all(commandSent, firstRequest, secondRequest)
+        Future.all(commandSent, firstRequest, secondRequest)
         .onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // and the response to the second request contains a command

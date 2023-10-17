@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -80,7 +80,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.health.api.HealthRegistry;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
@@ -306,7 +305,7 @@ public class Application extends NotificationSupportingServiceApplication {
                         }))
                 .orElse(Future.succeededFuture());
 
-        CompositeFuture.all(
+        Future.all(
                 authServiceDeploymentTracker,
                 amqpServerDeploymentTracker,
                 notificationReceiverTracker,

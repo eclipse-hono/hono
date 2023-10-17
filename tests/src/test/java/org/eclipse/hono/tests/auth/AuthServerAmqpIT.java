@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -124,7 +124,7 @@ public class AuthServerAmqpIT {
 
         final var token = client.verifyPlain(null, "hono-client", "secret");
 
-        CompositeFuture.all(validationKey, token)
+        Future.all(validationKey, token)
             .onComplete(ctx.succeeding(ok -> {
                 final var user = token.result();
                 LOG.debug("retrieved token:{}{}", System.lineSeparator(), user.getToken());

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -236,13 +235,13 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         kafkaConsumer.setOnPartitionsLostHandler(
                 partitions -> commandQueue.setRevokedPartitions(Helper.to(partitions)));
 
-        CompositeFuture.all(
+        Future.all(
                 internalCommandSenderTracker.future(),
                 commandResponseSenderTracker.future(),
                 consumerTracker.future())
             .onSuccess(ok -> lifecycleStatus.setStarted());
 
-        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start()).mapEmpty();
+        return Future.all(commandHandler.start(), kafkaConsumer.start()).mapEmpty();
     }
 
     private void registerTenantCreationListener() {
@@ -270,7 +269,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     @Override
     public Future<Void> stop() {
 
-        return lifecycleStatus.runStopAttempt(() -> CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
+        return lifecycleStatus.runStopAttempt(() -> Future.join(kafkaConsumer.stop(), commandHandler.stop())
                 .mapEmpty());
     }
 
