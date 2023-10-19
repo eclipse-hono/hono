@@ -149,9 +149,9 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <skipTests>${skipDockerTests}</skipTests>
-          <systemProperties>
+          <systemPropertyVariables>
             <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
-          </systemProperties>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>
