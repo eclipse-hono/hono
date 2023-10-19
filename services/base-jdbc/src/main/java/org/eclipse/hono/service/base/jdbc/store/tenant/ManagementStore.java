@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.util.Versioned;
@@ -30,6 +29,7 @@ import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -238,9 +238,7 @@ public class ManagementStore extends AbstractTenantStore {
 
         return this.deleteAllTrustAnchorsStatement
 
-                .expand(params -> {
-                    params.put("tenant_id", tenantId);
-                })
+                .expand(params -> params.put("tenant_id", tenantId))
                 .trace(this.tracer, span.context())
                 .update(connection)
 
@@ -260,10 +258,11 @@ public class ManagementStore extends AbstractTenantStore {
 
                         .map(anchor -> {
                             final var json = JsonObject.mapFrom(anchor);
-                            final var subjectDn = json.remove(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                            final var subjectDn = json.remove(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
 
-                            if (!(subjectDn instanceof String) || ((String) subjectDn).isEmpty()) {
-                                return Future.failedFuture(new IllegalArgumentException(String.format("Missing field '%s' in trust anchor", TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)));
+                            if (!(subjectDn instanceof String subjectDnString) || subjectDnString.isEmpty()) {
+                                return Future.failedFuture(new IllegalArgumentException(
+                                        String.format("Missing field '%s' in trust anchor", RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN)));
                             }
 
                             return this.insertTrustAnchorStatement
@@ -277,7 +276,7 @@ public class ManagementStore extends AbstractTenantStore {
                                 .recover(SQL::translateException);
                             }
                         )
-                        .collect(Collectors.toList())
+                        .toList()
                 )
 
                 .mapEmpty();

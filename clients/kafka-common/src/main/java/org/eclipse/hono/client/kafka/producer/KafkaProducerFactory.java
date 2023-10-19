@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.client.kafka.producer;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -93,7 +93,7 @@ public interface KafkaProducerFactory<K, V> {
     Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(
             String producerName,
             KafkaProducerConfigProperties config,
-            Supplier<Boolean> keepTrying,
+            BooleanSupplier keepTrying,
             Duration retriesTimeout);
 
     /**

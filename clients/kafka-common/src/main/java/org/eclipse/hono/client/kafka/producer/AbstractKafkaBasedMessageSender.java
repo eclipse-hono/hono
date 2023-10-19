@@ -90,7 +90,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public AbstractKafkaBasedMessageSender(
+    protected AbstractKafkaBasedMessageSender(
             final KafkaProducerFactory<String, V> producerFactory,
             final String producerName,
             final KafkaProducerConfigProperties config,
@@ -133,11 +133,6 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         readinessHandler.register(
                 "%s-kafka-producer-creation-%s".formatted(producerName, UUID.randomUUID()),
                 status -> status.tryComplete(new Status().setOk(lifecycleStatus.isStarted())));
-    }
-
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
     }
 
     /**
@@ -259,14 +254,14 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         if (!lifecycleStatus.isStarted()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender not started"));
         }
-        final KafkaProducerRecord<String, V> record = KafkaProducerRecord.create(topic, deviceId, payload);
+        final KafkaProducerRecord<String, V> recordToSend = KafkaProducerRecord.create(topic, deviceId, payload);
 
         log.trace("sending message to Kafka [topic: {}, tenantId: {}, deviceId: {}]", topic, tenantId, deviceId);
-        record.addHeaders(headers);
-        KafkaTracingHelper.injectSpanContext(tracer, record, currentSpan.context());
-        logProducerRecord(currentSpan, record);
+        recordToSend.addHeaders(headers);
+        KafkaTracingHelper.injectSpanContext(tracer, recordToSend, currentSpan.context());
+        logProducerRecord(currentSpan, recordToSend);
 
-        return getOrCreateProducer().send(record)
+        return getOrCreateProducer().send(recordToSend)
                 .onSuccess(recordMetadata -> logRecordMetadata(currentSpan, deviceId, recordMetadata))
                 .otherwise(t -> {
                     logError(currentSpan, topic, tenantId, deviceId, t);
@@ -362,15 +357,16 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
                 .setTag(TracingHelper.TAG_DEVICE_ID.getKey(), deviceId);
     }
 
-    private void logProducerRecord(final Span span, final KafkaProducerRecord<String, V> record) {
-        final String headersAsString = record.headers()
+    private void logProducerRecord(final Span span, final KafkaProducerRecord<String, V> recordToSend) {
+        final String headersAsString = recordToSend.headers()
                 .stream()
                 .map(header -> header.key() + "=" + header.value())
                 .collect(Collectors.joining(",", "{", "}"));
 
-        log.trace("producing message [topic: {}, key: {}, partition: {}, timestamp: {}, headers: {}]",
-                record.topic(), record.key(), record.partition(), record.timestamp(), headersAsString);
-
+        if (log.isTraceEnabled()) {
+            log.trace("producing message [topic: {}, key: {}, partition: {}, timestamp: {}, headers: {}]",
+                    recordToSend.topic(), recordToSend.key(), recordToSend.partition(), recordToSend.timestamp(), headersAsString);
+        }
         span.log("producing message with headers: " + headersAsString);
     }
 

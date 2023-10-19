@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,9 +30,9 @@ import io.vertx.core.Future;
  */
 public class CommandHandlers {
 
-    protected static final Logger LOG = LoggerFactory.getLogger(CommandHandlers.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CommandHandlers.class);
 
-    private final Map<String, CommandHandlerWrapper> commandHandlers = new HashMap<>();
+    private final Map<String, CommandHandlerWrapper> handlers = new HashMap<>();
 
     /**
      * Adds a handler for commands targeted at a device that is connected either directly or via a gateway.
@@ -72,11 +72,11 @@ public class CommandHandlers {
         Objects.requireNonNull(commandHandlerWrapper);
 
         final String key = getDeviceKey(commandHandlerWrapper);
-        if (commandHandlers.containsKey(key)) {
+        if (handlers.containsKey(key)) {
             LOG.debug("replacing existing command handler [tenant-id: {}, device-id: {}]",
                     commandHandlerWrapper.getTenantId(), commandHandlerWrapper.getDeviceId());
         }
-        return commandHandlers.put(key, commandHandlerWrapper);
+        return handlers.put(key, commandHandlerWrapper);
     }
 
     /**
@@ -93,7 +93,7 @@ public class CommandHandlers {
     public CommandHandlerWrapper getCommandHandler(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        return commandHandlers.get(getDeviceKey(tenantId, deviceId));
+        return handlers.get(getDeviceKey(tenantId, deviceId));
     }
 
     /**
@@ -102,7 +102,7 @@ public class CommandHandlers {
      * @return The command handlers.
      */
     public Collection<CommandHandlerWrapper> getCommandHandlers() {
-        return commandHandlers.values();
+        return handlers.values();
     }
 
     /**
@@ -116,7 +116,7 @@ public class CommandHandlers {
     public boolean removeCommandHandler(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        final CommandHandlerWrapper removedHandler = commandHandlers.remove(getDeviceKey(tenantId, deviceId));
+        final CommandHandlerWrapper removedHandler = handlers.remove(getDeviceKey(tenantId, deviceId));
         LOG.trace("Removed handler for tenant {}, device {}: {}", tenantId, deviceId, removedHandler != null);
         return removedHandler != null;
     }
@@ -130,7 +130,7 @@ public class CommandHandlers {
      */
     public boolean removeCommandHandler(final CommandHandlerWrapper commandHandlerWrapper) {
         Objects.requireNonNull(commandHandlerWrapper);
-        final boolean removed = commandHandlers.remove(getDeviceKey(commandHandlerWrapper), commandHandlerWrapper);
+        final boolean removed = handlers.remove(getDeviceKey(commandHandlerWrapper), commandHandlerWrapper);
         LOG.trace("Removed {}: {}", commandHandlerWrapper, removed);
         return removed;
     }

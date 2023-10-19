@@ -23,6 +23,7 @@ import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -71,7 +72,7 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
 
         Objects.requireNonNull(authInfo);
         try {
-            final String tenantId = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
+            final String tenantId = authInfo.getString(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID);
             final String authId = authInfo.getString(CredentialsConstants.FIELD_AUTH_ID);
             final String jws = authInfo.getString(CredentialsConstants.FIELD_PASSWORD);
             if (tenantId == null || authId == null || jws == null) {
@@ -80,7 +81,7 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
                 final JsonObject clientContext = authInfo.copy();
                 // credentials object already contains tenant ID, client ID and the JWT from the password field, so
                 // remove them from the client context
-                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
+                clientContext.remove(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID);
                 clientContext.remove(CredentialsConstants.FIELD_AUTH_ID);
                 clientContext.remove(CredentialsConstants.FIELD_PASSWORD);
                 return JwtCredentials.create(tenantId, authId, jws, clientContext);

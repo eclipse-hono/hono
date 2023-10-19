@@ -29,6 +29,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,9 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractCredentialsService.class);
 
+    /**
+     * The service to use for retrieving information about tenants.
+     */
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
@@ -168,7 +172,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                                     return Future.succeededFuture(credentialsResult);
                                 } else {
                                     final String deviceId = credentialsResult.getPayload()
-                                            .getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+                                            .getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID);
                                     return deviceAndGatewayAutoProvisioner
                                             .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
                                             .map(ok -> credentialsResult);

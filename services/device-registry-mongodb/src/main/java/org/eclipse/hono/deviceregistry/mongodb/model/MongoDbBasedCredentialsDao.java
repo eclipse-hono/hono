@@ -24,9 +24,11 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +61,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
      * The projection document used for querying credentials by type and authentication identifier.
      */
     public static final JsonObject PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID = new JsonObject()
-            .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
+            .put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
             .put(String.format("%s.$", CredentialsDto.FIELD_CREDENTIALS), 1)
             .put("_id", 0);
 
@@ -109,13 +111,13 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
             // create unique index on tenant and device ID
             createIndex(
                     new JsonObject()
-                            .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                            .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
+                            .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
                     new IndexOptions().unique(true))
                 // create unique index on tenant, auth ID and type
                 .compose(ok -> createIndex(
                         new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                                .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1)
                                 .put(KEY_AUTH_ID, 1)
                                 .put(KEY_CREDENTIALS_TYPE, 1),
                         new IndexOptions()
@@ -365,7 +367,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("new document in DB:{}{}", System.lineSeparator(), result.encodePrettily());
                         }
-                        return Future.succeededFuture(result.getString(CredentialsDto.FIELD_VERSION));
+                        return Future.succeededFuture(result.getString(BaseDto.FIELD_VERSION));
                     }
                 })
                 .recover(error -> {

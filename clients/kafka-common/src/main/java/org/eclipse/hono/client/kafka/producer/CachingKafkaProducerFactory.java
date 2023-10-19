@@ -20,7 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -185,7 +185,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     public Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(
             final String producerName,
             final KafkaProducerConfigProperties config,
-            final Supplier<Boolean> keepTrying,
+            final BooleanSupplier keepTrying,
             final Duration retriesTimeout) {
 
         Objects.requireNonNull(producerName);

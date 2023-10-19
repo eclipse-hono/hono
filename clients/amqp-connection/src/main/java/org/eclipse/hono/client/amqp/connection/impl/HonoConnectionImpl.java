@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -86,6 +86,7 @@ import io.vertx.proton.sasl.SaslSystemException;
  */
 public final class HonoConnectionImpl implements HonoConnection {
 
+    private static final String MSG_NOT_CONNECTED = "not connected";
     private static final Logger LOG = LoggerFactory.getLogger(HonoConnectionImpl.class);
 
     private final ClientConfigProperties clientConfigProperties;
@@ -221,7 +222,7 @@ public final class HonoConnectionImpl implements HonoConnection {
 
         if (context == null) {
             // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, MSG_NOT_CONNECTED));
         } else {
             return Futures.executeOnContextWithSameRoot(context, codeToRun);
         }
@@ -248,7 +249,7 @@ public final class HonoConnectionImpl implements HonoConnection {
             resultHandler.handle(Future.succeededFuture());
         } else {
             resultHandler.handle(Future.failedFuture(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, MSG_NOT_CONNECTED)));
         }
     }
 
@@ -272,7 +273,7 @@ public final class HonoConnectionImpl implements HonoConnection {
             }
         } else {
             resultHandler.handle(Future.failedFuture(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, MSG_NOT_CONNECTED)));
         }
     }
 
@@ -515,32 +516,6 @@ public final class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    private ProtonSession createDefaultSession(final ProtonConnection connection) {
-
-        if (connection == null) {
-            throw new IllegalStateException("no connection to create session for");
-        } else {
-            LOG.debug("establishing AMQP session with server [{}:{}, role: {}]",
-                    connectionFactory.getHost(),
-                    connectionFactory.getPort(),
-                    connectionFactory.getServerRole());
-            final ProtonSession newSession = connection.createSession();
-            newSession.closeHandler(remoteClose -> {
-                final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
-                Optional.ofNullable(newSession.getRemoteCondition())
-                    .ifPresent(error -> {
-                        msgBuilder.append(String.format(" [condition: %s, description: %s]",
-                                error.getCondition(), error.getDescription()));
-                    });
-                newSession.close();
-                onRemoteClose(Future.failedFuture(msgBuilder.toString()));
-            });
-            newSession.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
-            newSession.open();
-            return newSession;
-        }
-    }
-
     /**
      * Creates a sender link.
      *
@@ -561,107 +536,105 @@ public final class HonoConnectionImpl implements HonoConnection {
 
         Objects.requireNonNull(qos);
 
-        return executeOnContext(result -> {
-            checkConnected().compose(v -> {
+        return executeOnContext(result -> checkConnected().compose(v -> {
 
-                if (targetAddress == null && !supportsCapability(AmqpUtils.CAP_ANONYMOUS_RELAY)) {
-                    // AnonTerm spec requires peer to offer ANONYMOUS-RELAY capability
-                    // before a client can use anonymous terminus
-                    return Future.failedFuture(new ServerErrorException(
-                            HttpURLConnection.HTTP_NOT_IMPLEMENTED,
-                            "server does not support anonymous terminus"));
-                }
+            if (targetAddress == null && !supportsCapability(AmqpUtils.CAP_ANONYMOUS_RELAY)) {
+                // AnonTerm spec requires peer to offer ANONYMOUS-RELAY capability
+                // before a client can use anonymous terminus
+                return Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_NOT_IMPLEMENTED,
+                        "server does not support anonymous terminus"));
+            }
 
-                final Promise<ProtonSender> senderPromise = Promise.promise();
-                final ProtonSender sender = session.createSender(targetAddress);
-                sender.setQoS(qos);
-                sender.setAutoSettle(true);
-                final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
-                    LOG.debug("opening sender [{}] failed: got disconnected", targetAddress);
-                    senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
-                };
-                oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
-                sender.openHandler(senderOpen -> {
+            final Promise<ProtonSender> senderPromise = Promise.promise();
+            final ProtonSender sender = session.createSender(targetAddress);
+            sender.setQoS(qos);
+            sender.setAutoSettle(true);
+            final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = con -> {
+                LOG.debug("opening sender [{}] failed: got disconnected", targetAddress);
+                senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, MSG_NOT_CONNECTED));
+            };
+            oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
+            sender.openHandler(senderOpen -> {
 
-                    oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
 
-                    // the result future may have already been completed here in case of a link establishment timeout
-                    if (senderPromise.future().isComplete()) {
-                        LOG.debug("ignoring server response for opening sender [{}]: sender creation already timed out", targetAddress);
-                    } else if (senderOpen.failed()) {
-                        // this means that we have received the peer's attach
-                        // and the subsequent detach frame in one TCP read
-                        final ErrorCondition error = sender.getRemoteCondition();
-                        if (error == null) {
-                            LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
-                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                    "cannot open sender", senderOpen.cause()));
-                        } else {
-                            LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                            senderPromise.tryFail(ErrorConverter.fromAttachError(error));
-                        }
-
-                    } else if (HonoProtonHelper.isLinkEstablished(sender)) {
-
-                        LOG.debug("sender open [target: {}, sendQueueFull: {}, remote max-message-size: {}]",
-                                targetAddress, sender.sendQueueFull(), sender.getRemoteMaxMessageSize());
-                        final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
-                                .map(UnsignedLong::longValue)
-                                .orElse(0L);
-                        if (remoteMaxMessageSize > 0 && remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
-                            // peer won't accept our (biggest) messages
-                            sender.close();
-                            final String msg = String.format(
-                                    "peer does not support minimum max-message-size [required: %d, supported: %d",
-                                    clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
-                            LOG.debug(msg);
-                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
-                        } else if (sender.getCredit() <= 0) {
-                            // wait on credits a little time, if not already given
-                            final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
-                                    timerID -> {
-                                        LOG.debug("sender [target: {}] has {} credits after grace period of {}ms",
-                                                targetAddress,
-                                                sender.getCredit(), clientConfigProperties.getFlowLatency());
-                                        sender.sendQueueDrainHandler(null);
-                                        senderPromise.tryComplete(sender);
-                                    });
-                            sender.sendQueueDrainHandler(replenishedSender -> {
-                                LOG.debug("sender [target: {}] has received {} initial credits",
-                                        targetAddress, replenishedSender.getCredit());
-                                if (vertx.cancelTimer(waitOnCreditsTimerId)) {
-                                    result.tryComplete(replenishedSender);
-                                    replenishedSender.sendQueueDrainHandler(null);
-                                } // otherwise the timer has already completed the future and cleaned up
-                                  // sendQueueDrainHandler
-                            });
-                        } else {
-                            senderPromise.tryComplete(sender);
-                        }
-
+                // the result future may have already been completed here in case of a link establishment timeout
+                if (senderPromise.future().isComplete()) {
+                    LOG.debug("ignoring server response for opening sender [{}]: sender creation already timed out", targetAddress);
+                } else if (senderOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
+                    final ErrorCondition error = sender.getRemoteCondition();
+                    if (error == null) {
+                        LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                        senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                "cannot open sender", senderOpen.cause()));
                     } else {
-                        // this means that the peer did not create a local terminus for the link
-                        // and will send a detach frame for closing the link very shortly
-                        // see AMQP 1.0 spec section 2.6.3
-                        LOG.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
-                        senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                        senderPromise.tryFail(ErrorConverter.fromAttachError(error));
                     }
-                });
-                HonoProtonHelper.setDetachHandler(sender,
-                        remoteDetached -> onRemoteDetach(sender, connection.getRemoteContainer(), false, closeHook));
-                HonoProtonHelper.setCloseHandler(sender,
-                        remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
-                sender.open();
-                vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> {
-                            final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
-                            if (notOpenedAndNotDisconnectedYet) {
-                                onLinkEstablishmentTimeout(sender, clientConfigProperties, senderPromise);
-                            }
+
+                } else if (HonoProtonHelper.isLinkEstablished(sender)) {
+
+                    LOG.debug("sender open [target: {}, sendQueueFull: {}, remote max-message-size: {}]",
+                            targetAddress, sender.sendQueueFull(), sender.getRemoteMaxMessageSize());
+                    final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
+                            .map(UnsignedLong::longValue)
+                            .orElse(0L);
+                    if (remoteMaxMessageSize > 0 && remoteMaxMessageSize < clientConfigProperties.getMinMaxMessageSize()) {
+                        // peer won't accept our (biggest) messages
+                        sender.close();
+                        final String msg = String.format(
+                                "peer does not support minimum max-message-size [required: %d, supported: %d",
+                                clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
+                        LOG.debug(msg);
+                        senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
+                    } else if (sender.getCredit() <= 0) {
+                        // wait on credits a little time, if not already given
+                        final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
+                                timerID -> {
+                                    LOG.debug("sender [target: {}] has {} credits after grace period of {}ms",
+                                            targetAddress,
+                                            sender.getCredit(), clientConfigProperties.getFlowLatency());
+                                    sender.sendQueueDrainHandler(null);
+                                    senderPromise.tryComplete(sender);
+                                });
+                        sender.sendQueueDrainHandler(replenishedSender -> {
+                            LOG.debug("sender [target: {}] has received {} initial credits",
+                                    targetAddress, replenishedSender.getCredit());
+                            if (vertx.cancelTimer(waitOnCreditsTimerId)) {
+                                result.tryComplete(replenishedSender);
+                                replenishedSender.sendQueueDrainHandler(null);
+                            } // otherwise the timer has already completed the future and cleaned up
+                              // sendQueueDrainHandler
                         });
-                return senderPromise.future();
-            }).onComplete(result);
-        });
+                    } else {
+                        senderPromise.tryComplete(sender);
+                    }
+
+                } else {
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    LOG.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
+                    senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
+            HonoProtonHelper.setDetachHandler(sender,
+                    remoteDetached -> onRemoteDetach(sender, connection.getRemoteContainer(), false, closeHook));
+            HonoProtonHelper.setCloseHandler(sender,
+                    remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
+            sender.open();
+            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
+                    tid -> {
+                        final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                        if (notOpenedAndNotDisconnectedYet) {
+                            onLinkEstablishmentTimeout(sender, clientConfigProperties, senderPromise);
+                        }
+                    });
+            return senderPromise.future();
+            }).onComplete(result));
     }
 
     @Override
@@ -699,81 +672,79 @@ public final class HonoConnectionImpl implements HonoConnection {
             throw new IllegalArgumentException("pre-fetch size must be >= 0");
         }
 
-        return executeOnContext(result -> {
-            checkConnected().compose(v -> {
-                final Promise<ProtonReceiver> receiverPromise = Promise.promise();
-                final ProtonReceiver receiver = session.createReceiver(sourceAddress);
-                if (clientConfigProperties.getMaxMessageSize() > ClientConfigProperties.MAX_MESSAGE_SIZE_UNLIMITED) {
-                    receiver.setMaxMessageSize(new UnsignedLong(clientConfigProperties.getMaxMessageSize()));
+        return executeOnContext(result -> checkConnected().compose(v -> {
+            final Promise<ProtonReceiver> receiverPromise = Promise.promise();
+            final ProtonReceiver receiver = session.createReceiver(sourceAddress);
+            if (clientConfigProperties.getMaxMessageSize() > ClientConfigProperties.MAX_MESSAGE_SIZE_UNLIMITED) {
+                receiver.setMaxMessageSize(new UnsignedLong(clientConfigProperties.getMaxMessageSize()));
+            }
+            receiver.setAutoAccept(autoAccept);
+            receiver.setQoS(qos);
+            receiver.setPrefetch(preFetchSize);
+            receiver.handler((delivery, message) -> {
+                HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery,
+                        d -> LOG.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
+                try {
+                    messageHandler.handle(delivery, message);
+                    if (LOG.isTraceEnabled()) {
+                        final int remainingCredits = receiver.getCredit() - receiver.getQueued();
+                        LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                                delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
+                    }
+                } catch (final Exception ex) {
+                    LOG.warn("error handling message", ex);
+                    ProtonHelper.released(delivery, true);
                 }
-                receiver.setAutoAccept(autoAccept);
-                receiver.setQoS(qos);
-                receiver.setPrefetch(preFetchSize);
-                receiver.handler((delivery, message) -> {
-                    HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery,
-                            d -> LOG.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
-                    try {
-                        messageHandler.handle(delivery, message);
-                        if (LOG.isTraceEnabled()) {
-                            final int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                            LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
-                                    delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
-                        }
-                    } catch (final Exception ex) {
-                        LOG.warn("error handling message", ex);
-                        ProtonHelper.released(delivery, true);
-                    }
-                });
-                final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
-                    LOG.debug("opening receiver [{}] failed: got disconnected", sourceAddress);
-                    receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
-                };
-                oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
-                receiver.openHandler(recvOpen -> {
+            });
+            final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = con -> {
+                LOG.debug("opening receiver [{}] failed: got disconnected", sourceAddress);
+                receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, MSG_NOT_CONNECTED));
+            };
+            oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
+            receiver.openHandler(recvOpen -> {
 
-                    oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
 
-                    // the result future may have already been completed here in case of a link establishment timeout
-                    if (receiverPromise.future().isComplete()) {
-                        LOG.debug("ignoring server response for opening receiver [{}]: receiver creation already timed out", sourceAddress);
-                    } else if (recvOpen.failed()) {
-                        // this means that we have received the peer's attach
-                        // and the subsequent detach frame in one TCP read
-                        final ErrorCondition error = receiver.getRemoteCondition();
-                        if (error == null) {
-                            LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
-                            receiverPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                    "cannot open receiver", recvOpen.cause()));
-                        } else {
-                            LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                            receiverPromise.tryFail(ErrorConverter.fromAttachError(error));
-                        }
-                    } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
-                        LOG.debug("receiver open [source: {}]", sourceAddress);
-                        receiverPromise.tryComplete(recvOpen.result());
+                // the result future may have already been completed here in case of a link establishment timeout
+                if (receiverPromise.future().isComplete()) {
+                    LOG.debug("ignoring server response for opening receiver [{}]: receiver creation already timed out", sourceAddress);
+                } else if (recvOpen.failed()) {
+                    // this means that we have received the peer's attach
+                    // and the subsequent detach frame in one TCP read
+                    final ErrorCondition error = receiver.getRemoteCondition();
+                    if (error == null) {
+                        LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
+                        receiverPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                "cannot open receiver", recvOpen.cause()));
                     } else {
-                        // this means that the peer did not create a local terminus for the link
-                        // and will send a detach frame for closing the link very shortly
-                        // see AMQP 1.0 spec section 2.6.3
-                        LOG.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
-                        receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
+                        receiverPromise.tryFail(ErrorConverter.fromAttachError(error));
                     }
-                });
-                HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver,
-                        connection.getRemoteContainer(), false, remoteCloseHook));
-                HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver,
-                        connection.getRemoteContainer(), true, remoteCloseHook));
-                receiver.open();
-                vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> {
-                            final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
-                            if (notOpenedAndNotDisconnectedYet) {
-                                onLinkEstablishmentTimeout(receiver, clientConfigProperties, receiverPromise);
-                            }
-                        });
-                return receiverPromise.future();
-            }).onComplete(result);
-        });
+                } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
+                    LOG.debug("receiver open [source: {}]", sourceAddress);
+                    receiverPromise.tryComplete(recvOpen.result());
+                } else {
+                    // this means that the peer did not create a local terminus for the link
+                    // and will send a detach frame for closing the link very shortly
+                    // see AMQP 1.0 spec section 2.6.3
+                    LOG.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
+                    receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                }
+            });
+            HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver,
+                    connection.getRemoteContainer(), false, remoteCloseHook));
+            HonoProtonHelper.setCloseHandler(receiver, remoteClosed -> onRemoteDetach(receiver,
+                    connection.getRemoteContainer(), true, remoteCloseHook));
+            receiver.open();
+            vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
+                    tid -> {
+                        final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                        if (notOpenedAndNotDisconnectedYet) {
+                            onLinkEstablishmentTimeout(receiver, clientConfigProperties, receiverPromise);
+                        }
+                    });
+            return receiverPromise.future();
+        }).onComplete(result));
     }
 
     private void onLinkEstablishmentTimeout(
@@ -1057,7 +1028,7 @@ public final class HonoConnectionImpl implements HonoConnection {
                     containerId,
                     HonoConnectionImpl.this::onRemoteClose,
                     HonoConnectionImpl.this::onRemoteDisconnect)
-                .onFailure(t -> reconnect(t))
+                .onFailure(this::reconnect)
                 .onSuccess(newConnection -> {
                     if (cancelled.get()) {
                         LOG.debug("attempt [#{}]: connected but will directly be closed because attempt got cancelled; server [{}:{}, role: {}]",
@@ -1082,6 +1053,31 @@ public final class HonoConnectionImpl implements HonoConnection {
                 });
         }
 
+        private ProtonSession createDefaultSession(final ProtonConnection connection) {
+
+            if (connection == null) {
+                throw new IllegalStateException("no connection to create session for");
+            } else {
+                LOG.debug("establishing AMQP session with server [{}:{}, role: {}]",
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
+                final ProtonSession newSession = connection.createSession();
+                newSession.closeHandler(remoteClose -> {
+                    final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
+                    Optional.ofNullable(newSession.getRemoteCondition())
+                        .ifPresent(error -> msgBuilder.append(String.format(
+                                " [condition: %s, description: %s]",
+                                error.getCondition(), error.getDescription())));
+                    newSession.close();
+                    onRemoteClose(Future.failedFuture(msgBuilder.toString()));
+                });
+                newSession.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
+                newSession.open();
+                return newSession;
+            }
+        }
+
         @SuppressFBWarnings(
                 value = "PREDICTABLE_RANDOM",
                 justification = """
@@ -1095,7 +1091,7 @@ public final class HonoConnectionImpl implements HonoConnection {
             if (connectionFailureCause != null) {
                 logConnectionError(connectionFailureCause);
             }
-            if (vertx instanceof VertxInternal && ((VertxInternal) vertx).closeFuture().isClosed()) {
+            if (vertx instanceof VertxInternal vertxInternal && vertxInternal.closeFuture().isClosed()) {
                 LOG.info("stopping attempts to re-connect to server [{}:{}, role: {}], vertx instance is closed",
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
@@ -1172,7 +1168,7 @@ public final class HonoConnectionImpl implements HonoConnection {
             return connectionFailureCause instanceof SSLException ||
                     connectionFailureCause instanceof AuthenticationException ||
                     connectionFailureCause instanceof MechanismMismatchException ||
-                    (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
+                    (connectionFailureCause instanceof SaslSystemException saslSystemEx && saslSystemEx.isPermanent());
         }
     }
 }

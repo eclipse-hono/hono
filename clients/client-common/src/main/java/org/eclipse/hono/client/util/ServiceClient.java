@@ -27,18 +27,26 @@ public interface ServiceClient {
      * <p>
      * An external systems management component can get the result of running these checks by means of doing a HTTP GET
      * /readiness.
+     * <p>
+     * This default implementation does nothing.
      *
      * @param readinessHandler The handler to register the checks with.
      */
-    void registerReadinessChecks(HealthCheckHandler readinessHandler);
+    default void registerReadinessChecks(HealthCheckHandler readinessHandler) {
+        // do not register anything by default
+    }
 
     /**
      * Registers checks to perform in order to determine whether this component is alive.
      * <p>
      * An external systems management component can get the result of running these checks by means of doing a HTTP GET
      * /liveness.
+     * <p>
+     * This default implementation does nothing.
      *
      * @param livenessHandler The handler to register the checks with.
      */
-    void registerLivenessChecks(HealthCheckHandler livenessHandler);
+    default void registerLivenessChecks(HealthCheckHandler livenessHandler) {
+        // do not register anything by default
+    }
 }

@@ -540,15 +540,6 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     /**
      * {@inheritDoc}
      * <p>
-     * Does nothing.
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
      * Registers a check for the Kafka consumer being ready to be used.
      */
     @Override
@@ -593,23 +584,23 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         final Promise<KafkaConsumer<String, V>> initResult = Promise.promise();
 
         Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
-        consumer.handler(record -> {
-            if (!initResult.future().isComplete()) {
+        consumer.handler(receivedRecord -> {
+            if (!initResult.future().isComplete() && LOG.isDebugEnabled()) {
                 LOG.debug("""
                         postponing record handling until consumer has been initialized \
                         [topic: {}, partition: {}, offset: {}]\
                         """,
-                        record.topic(), record.partition(), record.offset());
+                        receivedRecord.topic(), receivedRecord.partition(), receivedRecord.offset());
             }
             initResult.future().onSuccess(ok -> {
-                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
-                    onRecordHandlerSkippedForExpiredRecord(record);
+                if (respectTtl && KafkaRecordHelper.isTtlElapsed(receivedRecord.headers())) {
+                    onRecordHandlerSkippedForExpiredRecord(receivedRecord);
                 } else {
                     try {
-                        recordHandler.handle(record);
+                        recordHandler.handle(receivedRecord);
                     } catch (final Exception e) {
                         LOG.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
-                                record.topic(), record.partition(), record.offset(), record.headers(), e);
+                                receivedRecord.topic(), receivedRecord.partition(), receivedRecord.offset(), receivedRecord.headers(), e);
                     }
                 }
             });
@@ -812,7 +803,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                         outOfRangeOffsetPartitions.add(partition);
                     }
                 });
-                if (!outOfRangeOffsetPartitions.isEmpty()) {
+                if (!outOfRangeOffsetPartitions.isEmpty() && LOG.isInfoEnabled()) {
                     LOG.info("""
                             found out-of-range committed offsets, corresponding records having already been deleted; \
                             positions were reset to beginning offsets; partitions: [{}] [client-id: {}]\
