@@ -111,11 +111,11 @@ public class DelegatingAuthenticationService
                     }
                 });
             });
-        } else if (VertxInternal.class.isInstance(vertx)) {
+        } else if (vertx instanceof VertxInternal vertxInternal) {
             log.info("registering readiness check using vert.x Address Resolver");
             readinessHandler.register("authentication-service-availability", status -> {
                 log.trace("checking availability of Authentication service");
-                ((VertxInternal) vertx).resolveAddress(getConfig().getHost(), lookupAttempt -> {
+                vertxInternal.resolveAddress(getConfig().getHost(), lookupAttempt -> {
                     if (lookupAttempt.succeeded()) {
                         status.tryComplete(Status.OK());
                     } else {
@@ -140,7 +140,7 @@ public class DelegatingAuthenticationService
             if (log.isInfoEnabled()) {
                 final String saslMechanisms = getConfig().getSupportedSaslMechanisms().stream()
                         .collect(Collectors.joining(", "));
-                log.info("starting {} with support for SASL mechanisms: {}", toString(), saslMechanisms);
+                log.info("starting {} with support for SASL mechanisms: {}", this, saslMechanisms);
             }
             startFuture.complete();
         }

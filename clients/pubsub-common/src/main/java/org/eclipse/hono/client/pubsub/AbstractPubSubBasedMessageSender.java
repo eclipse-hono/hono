@@ -59,6 +59,9 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
      * The identifier of the Google Cloud Project that this sender is scoped to.
      */
     protected final String projectId;
+    /**
+     * This sender's current life cycle status.
+     */
     protected final LifecycleStatus lifecycleStatus = new LifecycleStatus();
     private final PubSubPublisherFactory publisherFactory;
     private final String topic;
@@ -116,11 +119,6 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         readinessHandler.register(
                 "%s-pub-sub-publisher-creation-%s".formatted(topic, UUID.randomUUID()),
                 status -> status.tryComplete(new Status().setOk(lifecycleStatus.isStarted())));
-    }
-
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
     }
 
     @Override

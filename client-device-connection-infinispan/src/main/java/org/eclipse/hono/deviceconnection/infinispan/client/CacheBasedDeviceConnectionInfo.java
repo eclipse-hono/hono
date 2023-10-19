@@ -610,30 +610,24 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                         adapterInstanceId, tenantId, deviceId);
                             }
                         })
-                        .onFailure(thr -> {
-                            LOG.debug(
-                                    "error calling listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
-                                    adapterInstanceId, tenantId, deviceId, thr);
-                        })
-                        .compose(s -> {
-                            return cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
-                                    .onSuccess(removed -> {
-                                        if (removed) {
-                                            LOG.debug(
-                                                    "removed entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
-                                                    adapterInstanceId, tenantId, deviceId);
-                                        }
-                                    })
-                                    .onFailure(thr -> {
+                        .onFailure(thr -> LOG.debug(
+                                "error calling listener for obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                adapterInstanceId, tenantId, deviceId, thr)
+                        )
+                        .compose(s -> cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
+                                .onSuccess(removed -> {
+                                    if (removed) {
                                         LOG.debug(
-                                                "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
-                                                adapterInstanceId, tenantId, deviceId, thr);
-                                    });
-                        })
-                        .recover(thr -> {
+                                                "removed entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                                adapterInstanceId, tenantId, deviceId);
+                                    }
+                                })
+                                .onFailure(thr -> LOG.debug(
+                                        "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                        adapterInstanceId, tenantId, deviceId, thr)))
+                        .recover(thr ->
                             // errors treated as not found adapter instance
-                            return Future.succeededFuture();
-                        })
+                            Future.succeededFuture())
                         .mapEmpty();
             } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
                 LOG.debug(
@@ -667,14 +661,9 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     }
 
     @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // nothing to register
-    }
-
-    @Override
     public Future<Void> start() {
-        if (cache instanceof Lifecycle) {
-            return ((Lifecycle) cache).start();
+        if (cache instanceof Lifecycle lifecycle) {
+            return lifecycle.start();
         } else {
             return Future.succeededFuture();
         }
@@ -682,8 +671,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Void> stop() {
-        if (cache instanceof Lifecycle) {
-            return ((Lifecycle) cache).stop();
+        if (cache instanceof Lifecycle lifecycle) {
+            return lifecycle.stop();
         } else {
             return Future.succeededFuture();
         }

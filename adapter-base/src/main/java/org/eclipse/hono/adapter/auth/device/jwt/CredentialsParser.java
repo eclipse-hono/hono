@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 import io.jsonwebtoken.Claims;
 import io.vertx.core.json.JsonObject;
@@ -43,7 +44,7 @@ public interface CredentialsParser {
 
         final var credentials = new JsonObject();
         credentials.put(
-                CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
+                RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID,
                 Optional.ofNullable(claims.getString(CredentialsConstants.CLAIM_TENANT_ID))
                         .orElseThrow(() -> new ClientErrorException(
                                 HttpURLConnection.HTTP_UNAUTHORIZED,

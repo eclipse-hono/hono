@@ -20,13 +20,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
@@ -36,6 +36,7 @@ import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +99,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA;
             // create unique index on tenant ID
             return createIndex(
-                    new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                    new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                     new IndexOptions().unique(true))
                 // create a unique partial index on tenant.alias
                 .compose(ok -> {
@@ -112,23 +113,21 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 })
                 // create a non-unique index on tenant ID, tenant.trust_anchor_group and tenant.trusted-ca.subject-dn
                 // this index is supposed to replace the previously used unique index on tenant.trusted-ca.subject-dn
-                .compose(ok -> {
-                    return createIndex(
-                        new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(TenantDto.FIELD_TENANT + "."
-                                        + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
-                                .put(trustedCaField + "." + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        new IndexOptions()
-                                .partialFilterExpression(new JsonObject().put(
-                                        trustedCaField,
-                                        new JsonObject().put("$exists", true))));
-                })
+                .compose(ok -> createIndex(
+                    new JsonObject()
+                            .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .put(TenantDto.FIELD_TENANT + "."
+                                    + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
+                            .put(trustedCaField + "." + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                    new IndexOptions()
+                            .partialFilterExpression(new JsonObject().put(
+                                    trustedCaField,
+                                    new JsonObject().put("$exists", true)))))
                 // in order to be able to use the same trust anchor for multiple tenants having the same
                 // trust anchor group value, the old unique index on tenant.trusted-ca.subject-dn needs to be dropped
                 .compose(ok -> dropIndex(
                         new JsonObject().put(trustedCaField + "."
-                                + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                                + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
                         new IndexOptions().unique(true)
                             .partialFilterExpression(new JsonObject().put(
                                     trustedCaField,
@@ -270,9 +269,9 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     }
                     return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
                             tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                            tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
-                            tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
-                            tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                            tenantJsonResult.getInstant(BaseDto.FIELD_CREATED),
+                            tenantJsonResult.getInstant(BaseDto.FIELD_UPDATED_ON),
+                            tenantJsonResult.getString(BaseDto.FIELD_VERSION));
                 }
             })
             .onFailure(t -> logError(span, "error retrieving tenant", t, tenantId, null))
@@ -300,7 +299,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 MongoDbDocumentBuilder.builder().withCa(dn).document(),
                 new FindOptions().setLimit(2))
             .map(matchingDocuments -> {
-                if (matchingDocuments.size() == 0) {
+                if (matchingDocuments.isEmpty()) {
                     LOG.debug("could not find tenant with matching trust anchor [subject DN: {}]", dn);
                     throw new ClientErrorException(
                             HttpURLConnection.HTTP_NOT_FOUND,
@@ -309,9 +308,9 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     final JsonObject tenantJsonResult = matchingDocuments.get(0);
                     return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
                             tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                            tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
-                            tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
-                            tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                            tenantJsonResult.getInstant(BaseDto.FIELD_CREATED),
+                            tenantJsonResult.getInstant(BaseDto.FIELD_UPDATED_ON),
+                            tenantJsonResult.getString(BaseDto.FIELD_VERSION));
                 } else {
                     LOG.debug("found multiple tenants with matching trust anchor [subject DN: {}]", dn);
                     throw new ClientErrorException(
@@ -361,7 +360,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     } else {
                         LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
                         span.log("successfully updated tenant");
-                        return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
+                        return Future.succeededFuture(updateResult.getString(BaseDto.FIELD_VERSION));
                     }
                 })
                 .recover(error -> {
@@ -491,7 +490,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                         .map(JsonObject.class::cast)
                         .map(json -> json.mapTo(TenantDto.class))
                         .map(tenantDto -> TenantWithId.from(tenantDto.getTenantId(), tenantDto.getData()))
-                        .collect(Collectors.toList()))
+                        .toList())
                 .orElseGet(ArrayList::new);
     }
 
@@ -560,7 +559,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 queryBuilder.document())
             .map(count -> {
                 if (count == 0) {
-                    return (Void) null;
+                    return null;
                 } else {
                     final String msg = "tenant cannot use same CA certificate as other tenant belonging to different trust anchor group";
                     LOG.debug("tenant [{}] cannot use same CA certificate as other tenant belonging to different trust anchor group",

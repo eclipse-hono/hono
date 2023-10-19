@@ -26,7 +26,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -123,7 +123,7 @@ public class AbstractKafkaBasedMessageSenderTest {
         when(factory.getOrCreateProducerWithRetries(
                 anyString(),
                 any(KafkaProducerConfigProperties.class),
-                any(Supplier.class),
+                any(BooleanSupplier.class),
                 any(Duration.class)))
             .thenReturn(producer.future());
         final var sender = newSender(factory);

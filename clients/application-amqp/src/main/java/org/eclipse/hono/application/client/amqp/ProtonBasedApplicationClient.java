@@ -305,8 +305,8 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                             LOG.debug("client provided message handler did not settle message, auto-accepting ...");
                             ProtonHelper.accepted(delivery, true);
                         }
-                    } catch (final Throwable t) {
-                        handleMessageHandlerError(t, delivery);
+                    } catch (final Exception e) {
+                        handleMessageHandlerError(e, delivery);
                     }
                 }, 
                 closeHandler);
@@ -319,7 +319,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
 
         // wrap the handler to ensure distinct objects are added to the consumerCloseHandlers list
         // preventing issues if the same closeHandler instance is used for multiple createConsumer() invocations
-        final Handler<Throwable> wrappedCloseHandler = closeHandler != null ? thr -> closeHandler.handle(thr) : null;
+        final Handler<Throwable> wrappedCloseHandler = closeHandler != null ? closeHandler::handle : null;
         return connection
                 .isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> GenericReceiverLink.create(
@@ -334,13 +334,10 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                             }
                         }))
                 .onSuccess(v -> Optional.ofNullable(wrappedCloseHandler).ifPresent(consumerCloseHandlers::add))
-                .map(receiverLink -> new MessageConsumer() {
-                    @Override
-                    public Future<Void> close() {
+                .map(receiverLink -> () -> {
                         Optional.ofNullable(wrappedCloseHandler).ifPresent(consumerCloseHandlers::remove);
                         return receiverLink.close();
-                    }
-                });
+                    });
     }
 
     private Future<MessageConsumer> createAsyncConsumer(
@@ -361,18 +358,20 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                                     }
                                 })
                                 .onFailure(t -> handleMessageHandlerError(t, delivery));
-                    } catch (final Throwable t) {
-                        handleMessageHandlerError(t, delivery);
+                    } catch (final Exception e) {
+                        handleMessageHandlerError(e, delivery);
                     }
                 },
                 closeHandler);
     }
 
     private void handleMessageHandlerError(final Throwable error, final ProtonDelivery delivery) {
-        LOG.debug("client provided message handler threw exception [local state: {}, settled: {}]",
-                Optional.ofNullable(delivery.getLocalState()).map(s -> s.getType().name()).orElse(null),
-                delivery.isSettled(),
-                error);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("client provided message handler threw exception [local state: {}, settled: {}]",
+                    Optional.ofNullable(delivery.getLocalState()).map(s -> s.getType().name()).orElse(null),
+                    delivery.isSettled(),
+                    error);
+        }
         if (!delivery.isSettled()) {
             // settle with outcome based on thrown exception
             final var localState = getDeliveryState(error);

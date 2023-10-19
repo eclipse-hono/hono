@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -105,7 +105,7 @@ public final class Futures {
         vertx.executeBlocking(promise -> {
             try {
                 promise.complete(blocking.run());
-            } catch (Throwable e) {
+            } catch (final Exception e) {
                 promise.fail(e);
             }
         }, result);

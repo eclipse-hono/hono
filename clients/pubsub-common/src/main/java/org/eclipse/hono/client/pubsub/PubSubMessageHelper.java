@@ -39,7 +39,9 @@ public final class PubSubMessageHelper {
      * The name of the Pub/Sub message property containing the identifier of the Google Cloud Project to connect to.
      */
     public static final String PUBSUB_PROPERTY_PROJECT_ID = "projectId";
-
+    /**
+     * The name of the Pub/Sub message property indicating whether a response to the message is expected/required.
+     */
     public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
 
     /**
@@ -190,7 +192,7 @@ public final class PubSubMessageHelper {
     }
 
     /**
-     * Gets the value of the {@value PUBSUB_PROPERTY_RESPONSE_REQUIRED} attribute.
+     * Gets the value of the {@value #PUBSUB_PROPERTY_RESPONSE_REQUIRED} attribute.
      *
      * @param attributesMap The attributes map to get the value from.
      * @return The attributes value.
@@ -222,7 +224,7 @@ public final class PubSubMessageHelper {
 
     /**
      * Gets the properties of the attributes which starts with the prefix
-     * {@value DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX}.
+     * {@value #DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX}.
      *
      * @param attributesMap The attributes map to get the value from.
      * @return The properties.

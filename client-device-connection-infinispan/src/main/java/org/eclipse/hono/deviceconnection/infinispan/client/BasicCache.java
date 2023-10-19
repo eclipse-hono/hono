@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,9 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(BasicCache.class);
 
+    /**
+     * The vert.x instance that this cache runs on.
+     */
     protected final Vertx vertx;
     private final BasicCacheContainer cacheManager;
     private final AtomicBoolean stopCalled = new AtomicBoolean();
@@ -158,7 +161,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
-        return withCache(aCache -> aCache.putAsync(key, value).thenApply(v -> (Void) null));
+        return withCache(aCache -> aCache.putAsync(key, value).thenApply(v -> null));
     }
 
     @Override
@@ -167,7 +170,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(value);
         Objects.requireNonNull(lifespanUnit);
 
-        return withCache(aCache -> aCache.putAsync(key, value, lifespan, lifespanUnit).thenApply(v -> (Void) null));
+        return withCache(aCache -> aCache.putAsync(key, value, lifespan, lifespanUnit).thenApply(v -> null));
     }
 
     @Override

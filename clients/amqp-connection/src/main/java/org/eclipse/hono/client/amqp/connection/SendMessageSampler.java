@@ -63,10 +63,12 @@ public interface SendMessageSampler {
 
             @Override
             public void completed(final String outcome) {
+                // nothing to do
             }
 
             @Override
             public void timeout() {
+                // nothing to do
             }
 
         };
@@ -80,18 +82,12 @@ public interface SendMessageSampler {
 
             @Override
             public void noCredit(final String tenantId) {
+                // nothing to do
             }
 
         };
 
-        private static final Factory FACTORY = new Factory() {
-
-            @Override
-            public SendMessageSampler create(final String messageType) {
-                return SAMPLER;
-            }
-
-        };
+        private static final Factory FACTORY = (String messageType) -> SAMPLER;
 
         private Noop() {
         }
