@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,22 +22,21 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.cli.util.CommandUtils;
 import org.eclipse.hono.cli.util.PropertiesVersionProvider;
 import org.eclipse.hono.util.Constants;
 
 import io.quarkus.runtime.Quarkus;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import picocli.CommandLine;
 import picocli.CommandLine.ScopeType;
 
@@ -104,8 +103,7 @@ public class TelemetryAndEvent implements Callable<Integer> {
             });
         };
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> consumerFutures = new ArrayList<>();
+        final List<Future<MessageConsumer>> consumerFutures = new ArrayList<>();
         if (supportedMessageTypes.contains(MESSAGE_TYPE_EVENT)) {
             consumerFutures.add(
                     client.createEventConsumer(
@@ -122,7 +120,7 @@ public class TelemetryAndEvent implements Callable<Integer> {
                             closeHandler));
         }
 
-        return CompositeFuture.all(consumerFutures)
+        return Future.all(consumerFutures)
                 .mapEmpty();
     }
 

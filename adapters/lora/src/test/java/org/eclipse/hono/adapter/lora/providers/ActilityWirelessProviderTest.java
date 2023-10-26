@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,8 +44,15 @@ public class ActilityWirelessProviderTest extends LoraProviderTestBase<ActilityW
         assertThat(data.getGatewayInfo().get(0).getGatewayId()).isEqualTo("18035559");
         assertThat(data.getGatewayInfo().get(0).getRssi()).isEqualTo(-48);
         assertThat(data.getGatewayInfo().get(0).getSnr()).isEqualTo(3.0);
+        assertThat(data.getGatewayInfo().get(0).getLocation().getLatitude()).isEqualTo(53.108805);
+        assertThat(data.getGatewayInfo().get(0).getLocation().getLongitude()).isEqualTo(9.193430);
         assertThat(data.getGatewayInfo().get(1).getGatewayId()).isEqualTo("18035560");
         assertThat(data.getGatewayInfo().get(1).getRssi()).isEqualTo(-49);
         assertThat(data.getGatewayInfo().get(1).getSnr()).isEqualTo(4.0);
+        assertThat(data.getGatewayInfo().get(1).getLocation()).isNull();
+
+        assertThat(data.getLocation().getLatitude()).isEqualTo(61.499146);
+        assertThat(data.getLocation().getLongitude()).isEqualTo(23.765516);
+        assertThat(data.getLocation().getAltitude()).isEqualTo(0.000001);
     }
 }

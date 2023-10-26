@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,6 @@
  */
 package org.eclipse.hono.adapter.mqtt.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
@@ -24,6 +21,8 @@ import org.eclipse.hono.adapter.mqtt.impl.HttpBasedMessageMapping;
 import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
 
 import io.vertx.ext.web.client.WebClient;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * The Hono MQTT adapter main application class.

@@ -19,6 +19,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -34,10 +36,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.CompositeFuture;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 
 /**
  * A Protocol Adapter factory for creating consumers of command messages.
@@ -51,31 +56,41 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
 
     private static final AtomicInteger ADAPTER_INSTANCE_ID_COUNTER = new AtomicInteger();
 
+    private final Vertx vertx;
+    private final int adapterInstanceIdCounterValue;
+    private final String adapterName;
+    private final CommandHandlers commandHandlers = new CommandHandlers();
+    private final CommandRouterClient commandRouterClient;
+    private final List<InternalCommandConsumer> internalCommandConsumers = new ArrayList<>();
+    private final AtomicBoolean stopCalled = new AtomicBoolean();
+
+    private int maxTenantIdsPerRequest = 100;
+    private KubernetesContainerInfoProvider kubernetesContainerInfoProvider = KubernetesContainerInfoProvider.getInstance();
+    private final List<BiFunction<String, CommandHandlers, InternalCommandConsumer>> internalCommandConsumerSuppliers = new ArrayList<>();
+    private HealthCheckHandler readinessHandler;
     /**
      * Identifier that has to be unique to this factory instance.
      * Will be used to represent the protocol adapter (verticle) instance that this factory instance is used in,
      * when registering command handlers with the command router service client.
      */
-    private final String adapterInstanceId;
-    private final CommandHandlers commandHandlers = new CommandHandlers();
-    private final CommandRouterClient commandRouterClient;
-    private final List<InternalCommandConsumer> internalCommandConsumers = new ArrayList<>();
-
-    private int maxTenantIdsPerRequest = 100;
+    private String adapterInstanceId;
+    private String startFailureMessage;
 
     /**
      * Creates a new factory.
      *
+     * @param vertx The Vert.x instance to use.
      * @param commandRouterClient The client to use for accessing the command router service.
      * @param adapterName The name of the protocol adapter.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtocolAdapterCommandConsumerFactoryImpl(final CommandRouterClient commandRouterClient, final String adapterName) {
+    public ProtocolAdapterCommandConsumerFactoryImpl(final Vertx vertx, final CommandRouterClient commandRouterClient,
+            final String adapterName) {
+        this.vertx = Objects.requireNonNull(vertx);
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
-        Objects.requireNonNull(adapterName);
+        this.adapterName = Objects.requireNonNull(adapterName);
 
-        this.adapterInstanceId = CommandRoutingUtil.getNewAdapterInstanceId(adapterName,
-                ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
+        this.adapterInstanceIdCounterValue = ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement();
         if (commandRouterClient instanceof ConnectionLifecycle<?>) {
             ((ConnectionLifecycle<?>) commandRouterClient).addReconnectListener(con -> reenableCommandRouting());
         }
@@ -83,6 +98,10 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
 
     void setMaxTenantIdsPerRequest(final int count) {
         this.maxTenantIdsPerRequest = count;
+    }
+
+    void setKubernetesContainerInfoProvider(final KubernetesContainerInfoProvider kubernetesContainerInfoProvider) {
+        this.kubernetesContainerInfoProvider = kubernetesContainerInfoProvider;
     }
 
     private void reenableCommandRouting() {
@@ -115,10 +134,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
      */
     public void registerInternalCommandConsumer(
             final BiFunction<String, CommandHandlers, InternalCommandConsumer> internalCommandConsumerSupplier) {
-        final InternalCommandConsumer consumer = internalCommandConsumerSupplier.apply(adapterInstanceId,
-                commandHandlers);
-        LOG.info("register internal command consumer {}", consumer.getClass().getSimpleName());
-        internalCommandConsumers.add(consumer);
+        this.internalCommandConsumerSuppliers.add(internalCommandConsumerSupplier);
     }
 
     /**
@@ -131,28 +147,85 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
      */
     @Override
     public Future<Void> start() {
-        @SuppressWarnings("rawtypes")
-        final List<Future> futures = internalCommandConsumers.stream()
-                .map(Lifecycle::start)
-                .collect(Collectors.toList());
-        if (futures.isEmpty()) {
-            return Future.failedFuture("no command consumer registered");
+        if (internalCommandConsumerSuppliers.isEmpty()) {
+            startFailureMessage = "no command consumer registered";
+            LOG.error("cannot start, {}", startFailureMessage);
+            return Future.failedFuture(startFailureMessage);
         }
-        return CompositeFuture.all(futures).mapEmpty();
+        return getK8sContainerId(1)
+                .compose(containerId -> {
+                    adapterInstanceId = CommandRoutingUtil.getNewAdapterInstanceId(adapterName, containerId,
+                            adapterInstanceIdCounterValue);
+                    internalCommandConsumerSuppliers.stream()
+                            .map(sup -> sup.apply(adapterInstanceId, commandHandlers))
+                            .forEach(consumer -> {
+                                LOG.info("created internal command consumer {}", consumer.getClass().getSimpleName());
+                                internalCommandConsumers.add(consumer);
+                                Optional.ofNullable(readinessHandler).ifPresent(consumer::registerReadinessChecks);
+                            });
+                    internalCommandConsumerSuppliers.clear();
+                    readinessHandler = null;
+                    final List<Future<Void>> futures = internalCommandConsumers.stream()
+                            .map(Lifecycle::start)
+                            .collect(Collectors.toList());
+                    if (futures.isEmpty()) {
+                        return Future.failedFuture("no command consumer registered");
+                    }
+                    return Future.all(futures).mapEmpty();
+                })
+                .recover(thr -> {
+                    startFailureMessage = thr.getMessage();
+                    return Future.failedFuture(thr);
+                }).mapEmpty();
+    }
+
+    private Future<String> getK8sContainerId(final int attempt) {
+        final Context context = vertx.getOrCreateContext();
+        return kubernetesContainerInfoProvider.getContainerId(context)
+                .recover(thr -> {
+                    if (thr instanceof IllegalStateException || stopCalled.get()) {
+                        return Future.failedFuture(thr);
+                    }
+                    LOG.info("attempt {} to get K8s container id failed, trying again...", attempt);
+                    final Promise<String> containerIdPromise = Promise.promise();
+                    context.runOnContext(action -> getK8sContainerId(attempt + 1).onComplete(containerIdPromise));
+                    return containerIdPromise.future();
+                });
     }
 
     @Override
     public Future<Void> stop() {
-        @SuppressWarnings("rawtypes")
-        final List<Future> futures = internalCommandConsumers.stream()
+        if (!stopCalled.compareAndSet(false, true)) {
+            return Future.succeededFuture();
+        }
+        final List<Future<Void>> futures = internalCommandConsumers.stream()
                 .map(Lifecycle::stop)
                 .collect(Collectors.toList());
-        return CompositeFuture.all(futures).mapEmpty();
+        return Future.all(futures).mapEmpty();
     }
 
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        internalCommandConsumers.forEach(consumer -> consumer.registerReadinessChecks(readinessHandler));
+        if (!internalCommandConsumers.isEmpty()) {
+            LOG.warn("registerReadinessChecks expected to be called before start()");
+            internalCommandConsumers.forEach(consumer -> consumer.registerReadinessChecks(readinessHandler));
+            return;
+        }
+        this.readinessHandler = readinessHandler;
+        readinessHandler.register("command-consumer-factory", 1000, this::checkIfInternalCommandConsumersCreated);
+    }
+
+    private void checkIfInternalCommandConsumersCreated(final Promise<Status> status) {
+        if (internalCommandConsumers.isEmpty() || startFailureMessage != null) {
+            final JsonObject data = new JsonObject();
+            if (startFailureMessage != null) {
+                LOG.error("failed to start command consumer factory: {}", startFailureMessage);
+                data.put("status", "startup of command consumer factory failed, check logs for details");
+            }
+            status.tryComplete(Status.KO(data));
+        } else {
+            status.tryComplete(Status.OK());
+        }
     }
 
     @Override public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
@@ -201,6 +274,9 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
             final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
+        if (adapterInstanceId == null) {
+            return Future.failedFuture("not started yet");
+        }
         // lifespan greater than what can be expressed in nanoseconds (i.e. 292 years) is considered unlimited,
         // preventing ArithmeticExceptions down the road
         final Duration sanitizedLifespan = lifespan == null || lifespan.isNegative()
@@ -247,6 +323,9 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
             final Instant lifespanStart,
             final SpanContext onCloseSpanContext) {
 
+        if (adapterInstanceId == null) {
+            return Future.failedFuture("not started yet");
+        }
         final String tenantId = commandHandlerWrapper.getTenantId();
         final String deviceId = commandHandlerWrapper.getDeviceId();
 

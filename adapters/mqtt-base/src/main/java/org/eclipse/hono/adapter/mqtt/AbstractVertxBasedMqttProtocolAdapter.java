@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -93,7 +93,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -375,7 +374,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         setConnectionLimitManager(connectionLimitManager);
 
         checkPortConfiguration()
-            .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))
+            .compose(ok -> Future.all(bindSecureMqttServer(), bindInsecureMqttServer()))
             .compose(ok -> {
                 if (authHandler == null) {
                     authHandler = createAuthHandler();
@@ -460,7 +459,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             insecureServerTracker.complete();
         }
 
-        CompositeFuture.all(serverTracker.future(), insecureServerTracker.future())
+        Future.all(serverTracker.future(), insecureServerTracker.future())
             .map(ok -> (Void) null)
             .onComplete(ar -> log.info("MQTT server(s) closed"))
             .onComplete(stopPromise);
@@ -626,9 +625,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Future<DeviceUser> authAttempt = authHandler.authenticateDevice(context);
         return authAttempt
-                .compose(authenticatedDevice -> CompositeFuture.all(
+                .compose(authenticatedDevice -> Future.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                                .compose(tenantObj -> CompositeFuture.all(
+                                .compose(tenantObj -> Future.all(
                                         isAdapterEnabled(tenantObj),
                                         checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
@@ -855,18 +854,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final int payloadSize = ctx.payload().length();
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenantId, ctx.getTracingContext());
 
-        return CompositeFuture.all(tenantTracker, commandResponseTracker)
+        return Future.all(tenantTracker, commandResponseTracker)
                 .compose(success -> {
                     final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
                             tenantId,
                             deviceId,
                             ctx.authenticatedDevice(),
                             currentSpan.context());
-                    final Future<Void> tenantValidationTracker = CompositeFuture.all(
+                    final Future<Void> tenantValidationTracker = Future.all(
                             isAdapterEnabled(tenantTracker.result()),
                             checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
                             .mapEmpty();
-                    return CompositeFuture.all(deviceRegistrationTracker, tenantValidationTracker)
+                    return Future.all(deviceRegistrationTracker, tenantValidationTracker)
                             .compose(ok -> sendCommandResponse(
                                     tenantTracker.result(),
                                     deviceRegistrationTracker.result(),
@@ -930,12 +929,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 deviceId,
                 ctx.authenticatedDevice(),
                 currentSpan.context());
-        final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
+        final Future<TenantObject> tenantValidationTracker = Future.all(
                 isAdapterEnabled(tenantObject),
                 checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
             .map(tenantObject);
 
-        return CompositeFuture.all(tokenTracker, tenantValidationTracker).compose(ok -> {
+        return Future.all(tokenTracker, tenantValidationTracker).compose(ok -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
             Optional.ofNullable(ctx.getRequestedQos())
@@ -1413,7 +1412,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             });
 
             // wait for all futures to complete before sending SUBACK
-            CompositeFuture.join(new ArrayList<>(subscriptionOutcomes)).onComplete(v -> {
+            Future.join(new ArrayList<>(subscriptionOutcomes)).onComplete(v -> {
 
                 if (endpoint.isConnected()) {
                     // return a status code for each topic filter contained in the SUBSCRIBE packet
@@ -1786,8 +1785,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
             final Span span = newSpan("UNSUBSCRIBE");
 
-            @SuppressWarnings("rawtypes")
-            final List<Future> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
+            final List<Future<Void>> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
             unsubscribeMsg.topics().forEach(topic -> {
 
                 final AtomicReference<Subscription> removedSubscription = new AtomicReference<>();
@@ -1820,7 +1818,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             if (endpoint.isConnected()) {
                 endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
             }
-            CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
+            Future.join(removalDoneFutures).onComplete(r -> span.finish());
         }
 
         private Future<Void> closeCommandConsumer(
@@ -1895,7 +1893,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final boolean closeCommandConsumers) {
             AbstractVertxBasedMqttProtocolAdapter.this.onBeforeEndpointClose(this);
             AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
-            final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span, sendDisconnectedEvent, closeCommandConsumers);
+            final Future<Void> removalDoneFuture = removeAllCommandSubscriptions(span, sendDisconnectedEvent, closeCommandConsumers);
             if (sendDisconnectedEvent) {
                 sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
             }
@@ -1932,10 +1930,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             return removalDoneFuture.mapEmpty();
         }
 
-        private CompositeFuture removeAllCommandSubscriptions(final Span span, final boolean sendDisconnectedEvent,
+        private Future<Void> removeAllCommandSubscriptions(final Span span, final boolean sendDisconnectedEvent,
                 final boolean closeCommandConsumers) {
-            @SuppressWarnings("rawtypes")
-            final List<Future> removalFutures = new ArrayList<>(commandSubscriptions.size());
+            final List<Future<Void>> removalFutures = new ArrayList<>(commandSubscriptions.size());
             for (final var iter = commandSubscriptions.values().iterator(); iter.hasNext();) {
                 final Pair<CommandSubscription, ProtocolAdapterCommandConsumer> pair = iter.next();
                 pair.one().logUnsubscribe(span);
@@ -1946,7 +1943,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }
                 iter.remove();
             }
-            return CompositeFuture.join(removalFutures);
+            return Future.join(removalFutures).mapEmpty();
         }
 
         private Span newSpan(final String operationName) {

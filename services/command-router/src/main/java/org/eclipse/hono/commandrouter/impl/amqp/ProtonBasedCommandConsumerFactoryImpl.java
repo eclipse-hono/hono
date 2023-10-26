@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,6 @@ import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.CommandConstants;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -110,7 +109,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     @Override
     public Future<Void> start() {
         registerCloseConsumerLinkHandler();
-        return CompositeFuture.all(connectOnStart(), mappingAndDelegatingCommandHandler.start())
+        return Future.all(connectOnStart(), mappingAndDelegatingCommandHandler.start())
                 .map((Void) null)
                 .onSuccess(v -> {
                     connection.addReconnectListener(c -> recreateConsumers());
@@ -121,7 +120,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.join(disconnectOnStop(), mappingAndDelegatingCommandHandler.stop())
+        return Future.join(disconnectOnStop(), mappingAndDelegatingCommandHandler.stop())
                 .map((Void) null);
     }
 
@@ -215,14 +214,13 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
             log.debug("recreate command consumer links");
             connection.isConnected(getDefaultConnectionCheckTimeout())
                     .compose(res -> {
-                        @SuppressWarnings("rawtypes")
-                        final List<Future> consumerCreationFutures = new ArrayList<>();
+                        final List<Future<CommandConsumer>> consumerCreationFutures = new ArrayList<>();
                         // recreate mappingAndDelegatingCommandConsumers
                         consumerLinkTenants.forEach(tenantId -> {
                             log.debug("recreate command consumer link for tenant {}", tenantId);
                             consumerCreationFutures.add(getOrCreateMappingAndDelegatingCommandConsumer(tenantId));
                         });
-                        return CompositeFuture.join(consumerCreationFutures);
+                        return Future.join(consumerCreationFutures);
                     }).onComplete(ar -> {
                         recreatingConsumers.set(false);
                         if (tryAgainRecreatingConsumers.compareAndSet(true, false) || ar.failed()) {

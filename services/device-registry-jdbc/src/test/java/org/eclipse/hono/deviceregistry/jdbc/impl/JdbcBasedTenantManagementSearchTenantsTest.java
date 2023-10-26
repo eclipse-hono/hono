@@ -30,7 +30,6 @@ import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
@@ -44,8 +43,7 @@ class JdbcBasedTenantManagementSearchTenantsTest extends AbstractJdbcRegistryTes
      */
     private Future<Void> createTenants(final Map<String, Tenant> tenantsToCreate) {
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> creationResult = tenantsToCreate.entrySet().stream()
+        final List<Future<Object>> creationResult = tenantsToCreate.entrySet().stream()
                 .map(entry -> getTenantManagementService().createTenant(
                         Optional.of(entry.getKey()),
                         entry.getValue(),
@@ -55,7 +53,7 @@ class JdbcBasedTenantManagementSearchTenantsTest extends AbstractJdbcRegistryTes
                         return null;
                     }))
                 .collect(Collectors.toList());
-        return CompositeFuture.all(creationResult).mapEmpty();
+        return Future.all(creationResult).mapEmpty();
     }
 
     /**

@@ -54,7 +54,6 @@ import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -188,7 +187,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     System.setProperty(HttpUtils.SYSTEM_PROPERTY_ROUTER_SETUP_LENIENT, "true");
 
                     addRoutes(router);
-                    return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
+                    return Future.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
             })
             .compose(ok -> {
@@ -473,7 +472,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             insecureServerStopTracker.complete();
         }
 
-        CompositeFuture.all(serverStopTracker.future(), insecureServerStopTracker.future())
+        Future.all(serverStopTracker.future(), insecureServerStopTracker.future())
         .compose(v -> postShutdown())
         .onComplete(stopPromise);
     }
@@ -617,14 +616,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .orElse(0);
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context());
         final Future<TenantObject> tenantValidationTracker = tenantTracker
-                .compose(tenantObject -> CompositeFuture
+                .compose(tenantObject -> Future
                         .all(isAdapterEnabled(tenantObject),
                                 checkMessageLimit(tenantObject, payloadSize, currentSpan.context()))
                         .map(success -> tenantObject));
 
         // we only need to consider TTD if the device and tenant are enabled and the adapter
         // is enabled for the tenant
-        final Future<Integer> ttdTracker = CompositeFuture.all(tenantValidationTracker, tokenTracker)
+        final Future<Integer> ttdTracker = Future.all(tenantValidationTracker, tokenTracker)
                 .compose(ok -> {
                     final Integer ttdParam = getTimeUntilDisconnectFromRequest(ctx);
                     return getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
@@ -656,7 +655,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (EndpointType.EVENT.equals(endpoint)) {
                 ctx.getTimeToLive()
                     .ifPresent(ttl -> props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, ttl.toSeconds()));
-                return CompositeFuture.all(
+                return Future.all(
                         getEventSender(tenantValidationTracker.result()).sendEvent(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
@@ -668,7 +667,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .map(s -> (Void) null);
             } else {
                 // unsettled
-                return CompositeFuture.all(
+                return Future.all(
                         getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
                                 tenantTracker.result(),
                                 tokenTracker.result(),
@@ -1244,19 +1243,19 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandRequestId, responseStatus)));
 
         final int payloadSize = Optional.ofNullable(payload).map(Buffer::length).orElse(0);
-        CompositeFuture.all(tenantTracker, commandResponseTracker)
+        Future.all(tenantTracker, commandResponseTracker)
                 .compose(commandResponse -> {
                     final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
                             tenant,
                             deviceId,
                             authenticatedDevice,
                             currentSpan.context());
-                    final Future<Void> tenantValidationTracker = CompositeFuture
+                    final Future<Void> tenantValidationTracker = Future
                             .all(isAdapterEnabled(tenantTracker.result()),
                                     checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
                             .map(ok -> null);
 
-                    return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
+                    return Future.all(tenantValidationTracker, deviceRegistrationTracker)
                             .compose(ok -> sendCommandResponse(
                                     tenantTracker.result(),
                                     deviceRegistrationTracker.result(),

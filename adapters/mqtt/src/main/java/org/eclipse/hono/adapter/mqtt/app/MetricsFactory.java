@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,6 @@
  */
 package org.eclipse.hono.adapter.mqtt.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterOptions;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
@@ -25,6 +21,9 @@ import org.eclipse.hono.util.Constants;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
 
 /**
  * A factory class that creates protocol adapter specific metrics.

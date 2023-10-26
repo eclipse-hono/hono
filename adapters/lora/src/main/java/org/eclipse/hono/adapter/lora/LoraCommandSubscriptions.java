@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,6 @@ import org.eclipse.hono.util.TriTuple;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -105,7 +104,6 @@ public class LoraCommandSubscriptions {
         });
     }
 
-    @SuppressWarnings("rawtypes")
     private void closeConsumersForTenant(final String tenantId) {
         if (!commandSubscriptions.entrySet().stream().anyMatch(e -> e.getKey().getTenant().equals(tenantId))) {
             return;
@@ -120,7 +118,7 @@ public class LoraCommandSubscriptions {
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .start();
         TracingHelper.setDeviceTags(span, tenantId, null);
-        final List<Future> consumerCloseFutures = Collections.synchronizedList(new ArrayList<>());
+        final List<Future<Void>> consumerCloseFutures = Collections.synchronizedList(new ArrayList<>());
         final var iter = commandSubscriptions.entrySet().iterator();
         while (iter.hasNext()) {
             final var subscription = iter.next();
@@ -138,7 +136,7 @@ public class LoraCommandSubscriptions {
             iter.remove();
         }
 
-        CompositeFuture.join(consumerCloseFutures).onComplete(x -> {
+        Future.join(consumerCloseFutures).onComplete(x -> {
             currentCtx.runOnContext(s -> span.finish());
         });
     }

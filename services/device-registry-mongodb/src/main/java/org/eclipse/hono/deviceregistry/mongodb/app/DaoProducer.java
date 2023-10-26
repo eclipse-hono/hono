@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,11 +18,6 @@ import java.io.FileInputStream;
 import java.util.Base64;
 import java.util.Optional;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigOptions;
@@ -37,6 +32,7 @@ import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
 import org.eclipse.hono.deviceregistry.util.CryptVaultBasedFieldLevelEncryption;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.HealthCheckServer;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -48,6 +44,10 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
 import io.vertx.ext.mongo.MongoClient;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of Data Access Objects for registry data.
@@ -154,7 +154,7 @@ public class DaoProducer {
                     """)
     private FieldLevelEncryption fieldLevelEncryption(final String path) {
         try (FileInputStream in = new FileInputStream(path)) {
-            final Yaml yaml = new Yaml(new Constructor(CryptVaultConfigurationProperties.class));
+            final Yaml yaml = new Yaml(new Constructor(CryptVaultConfigurationProperties.class, new LoaderOptions()));
             final CryptVaultConfigurationProperties config = yaml.load(in);
             final CryptVault cryptVault = new CryptVault();
             for (CryptVaultAutoConfiguration.Key key : config.getKeys()) {

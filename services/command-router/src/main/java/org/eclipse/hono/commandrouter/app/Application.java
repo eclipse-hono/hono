@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,9 +15,6 @@ package org.eclipse.hono.commandrouter.app;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.ClientOptions;
@@ -83,13 +80,14 @@ import com.github.benmanes.caffeine.cache.Cache;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.health.api.HealthRegistry;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * The Quarkus based Command Router main application class.
@@ -307,7 +305,7 @@ public class Application extends NotificationSupportingServiceApplication {
                         }))
                 .orElse(Future.succeededFuture());
 
-        CompositeFuture.all(
+        Future.all(
                 authServiceDeploymentTracker,
                 amqpServerDeploymentTracker,
                 notificationReceiverTracker,

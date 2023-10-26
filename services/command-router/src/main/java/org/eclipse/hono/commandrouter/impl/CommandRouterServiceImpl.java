@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -169,8 +168,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         LOG.info("stopping command router");
 
         if (running.compareAndSet(true, false)) {
-            @SuppressWarnings("rawtypes")
-            final List<Future> results = new ArrayList<>();
+            final List<Future<Void>> results = new ArrayList<>();
             results.add(registrationClient.stop());
             results.add(tenantClient.stop());
             if (deviceConnectionInfo instanceof Lifecycle) {
@@ -180,7 +178,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             results.add(commandConsumerFactoryProvider.stop());
             results.add(adapterInstanceStatusService.stop());
             tenantsToEnable.clear();
-            return CompositeFuture.join(results)
+            return Future.join(results)
                     .onFailure(t -> {
                         LOG.info("error while stopping command router", t);
                     })
@@ -227,7 +225,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         final Future<Void> amqpConsumerFuture = commandConsumerFactoryProvider
                                 .getClient(MessagingType.amqp)
                                 .createCommandConsumer(tenantId, span.context());
-                        return CompositeFuture.join(primaryConsumerFuture, amqpConsumerFuture)
+                        return Future.join(primaryConsumerFuture, amqpConsumerFuture)
                                 .map(v -> (Void) null)
                                 .recover(thr -> {
                                     if (amqpConsumerFuture.failed()) {

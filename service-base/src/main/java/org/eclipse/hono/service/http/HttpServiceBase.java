@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
@@ -151,7 +150,7 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
                 .compose(s -> checkPortConfiguration())
                 .compose(s -> startEndpoints())
                 .compose(router -> {
-                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
+                     return Future.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }).compose(s -> onStartupSuccess());
     }
 
@@ -369,14 +368,13 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
         } else {
             addEndpointRoutes(router);
             addCustomRoutes(router);
-            @SuppressWarnings("rawtypes")
             final
-            List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+            List<Future<Void>> endpointFutures = new ArrayList<>(endpoints.size());
             for (final HttpEndpoint ep : endpoints()) {
                 log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
                 endpointFutures.add(ep.start());
             }
-            CompositeFuture.all(endpointFutures).onComplete(startup -> {
+            Future.all(endpointFutures).onComplete(startup -> {
                 if (startup.succeeded()) {
                     startPromise.complete(router);
                 } else {
@@ -390,14 +388,13 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
     private Future<Void> stopEndpoints() {
 
         final Promise<Void> stopPromise = Promise.promise();
-        @SuppressWarnings("rawtypes")
         final
-        List<Future> endpointFutures = new ArrayList<>(endpoints.size());
+        List<Future<Void>> endpointFutures = new ArrayList<>(endpoints.size());
         for (final HttpEndpoint ep : endpoints()) {
             log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
-        CompositeFuture.all(endpointFutures).onComplete(shutdown -> {
+        Future.all(endpointFutures).onComplete(shutdown -> {
             if (shutdown.succeeded()) {
                 stopPromise.complete();
             } else {
@@ -412,7 +409,7 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
     protected final Future<Void> stopInternal() {
 
         return preShutdown()
-                .compose(s -> CompositeFuture.all(stopServer(), stopInsecureServer()))
+                .compose(s -> Future.all(stopServer(), stopInsecureServer()))
                 .compose(s -> stopEndpoints())
                 .compose(v -> postShutdown());
     }

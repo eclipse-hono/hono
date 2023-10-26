@@ -19,8 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 
-import javax.inject.Inject;
-
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;
@@ -98,12 +96,12 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.smallrye.config.ConfigMapping;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import jakarta.inject.Inject;
 
 /**
  * A Quarkus main application base class for Hono protocol adapters.
@@ -318,7 +316,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             })
             .onFailure(t -> LOG.error("failed to deploy notification receiver verticle(s)", t));
 
-        CompositeFuture.all(adapterTracker, notificationReceiverTracker)
+        Future.all(adapterTracker, notificationReceiverTracker)
             .map(deploymentResult)
             .onComplete(deploymentCheck);
     }
@@ -606,7 +604,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 ProtocolAdapterCommandConsumerFactoryImpl.class.getName());
-        return new ProtocolAdapterCommandConsumerFactoryImpl(commandRouterClient, getComponentName());
+        return new ProtocolAdapterCommandConsumerFactoryImpl(vertx, commandRouterClient, getComponentName());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {

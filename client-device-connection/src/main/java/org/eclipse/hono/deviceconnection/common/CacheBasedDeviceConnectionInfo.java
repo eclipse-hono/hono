@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -565,8 +564,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private Future<Map<String, String>> checkAdapterInstanceIds(final String tenantId,
             final Map<String, String> deviceToInstanceIdMap, final Span span) {
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> mappingFutures = new ArrayList<>();
+        final List<Future<String>> mappingFutures = new ArrayList<>();
         final Map<String, String> deviceToInstanceIdMapResult = new HashMap<>();
         deviceToInstanceIdMap.entrySet().forEach(entry -> {
             final Future<String> mappingFuture = checkAdapterInstanceId(entry.getValue(), tenantId, entry.getKey(), span)
@@ -579,7 +577,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             mappingFutures.add(mappingFuture);
         });
 
-        return CompositeFuture.join(mappingFutures).map(deviceToInstanceIdMapResult);
+        return Future.join(mappingFutures).map(deviceToInstanceIdMapResult);
     }
 
     private Future<String> checkAdapterInstanceId(

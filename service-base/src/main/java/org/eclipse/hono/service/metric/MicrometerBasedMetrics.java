@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -294,7 +294,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         // record payload size
         DistributionSummary.builder(METER_TELEMETRY_PAYLOAD)
             .baseUnit("bytes")
-            .minimumExpectedValue(0.0)
+            .minimumExpectedValue(0.01)
             .tags(tags)
             .register(this.registry)
             .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
@@ -329,7 +329,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         // record payload size
         DistributionSummary.builder(METER_COMMAND_PAYLOAD)
             .baseUnit("bytes")
-            .minimumExpectedValue(0.0)
+            .minimumExpectedValue(0.01)
             .tags(tags)
             .register(this.registry)
             .record((double) ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));

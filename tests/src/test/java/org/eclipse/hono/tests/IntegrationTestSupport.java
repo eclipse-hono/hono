@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,7 +92,6 @@ import io.opentelemetry.opentracingshim.OpenTracingShim;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -928,7 +927,7 @@ public final class IntegrationTestSupport {
         if (!devicesToDelete.isEmpty()) {
             LOGGER.debug("deleting {} temporary devices ...", devicesToDelete.size());
         }
-        final var deleteDevices = CompositeFuture
+        final var deleteDevices = Future
                 .join(devicesToDelete.entrySet()
                         .stream().flatMap(entry ->
                                 entry.getValue().stream()
@@ -946,7 +945,7 @@ public final class IntegrationTestSupport {
                     if (!tenantsToDelete.isEmpty()) {
                         LOGGER.debug("deleting {} temporary tenants ...", tenantsToDelete.size());
                     }
-                    return CompositeFuture.join(tenantsToDelete.stream()
+                    return Future.join(tenantsToDelete.stream()
                                     .map(tenantId -> registry.removeTenant(tenantId, true))
                                     .collect(Collectors.toList()));
                 })
@@ -1234,7 +1233,7 @@ public final class IntegrationTestSupport {
                     timeOutTracker.tryComplete();
                 });
 
-        return CompositeFuture.all(sendCommandTracker, timeOutTracker.future())
+        return Future.all(sendCommandTracker, timeOutTracker.future())
                 .recover(error -> {
                     LOGGER.debug("got error sending command: {}", error.getMessage());
                     return Future.failedFuture(error);
@@ -1309,7 +1308,7 @@ public final class IntegrationTestSupport {
                     }
                 });
 
-        return CompositeFuture.all(sendOneWayCommandTracker, timeOutTracker.future())
+        return Future.all(sendOneWayCommandTracker, timeOutTracker.future())
                 .mapEmpty();
     }
 
@@ -1541,7 +1540,7 @@ public final class IntegrationTestSupport {
 
         final Promise<Void> provisioningMessageReceived = Promise.promise();
         final Promise<Void> telemetryMessageReceived = Promise.promise();
-        CompositeFuture.all(provisioningMessageReceived.future(), telemetryMessageReceived.future())
+        Future.all(provisioningMessageReceived.future(), telemetryMessageReceived.future())
             .onSuccess(ok -> resultHandler.complete())
             .onFailure(t -> resultHandler.fail(t));
 

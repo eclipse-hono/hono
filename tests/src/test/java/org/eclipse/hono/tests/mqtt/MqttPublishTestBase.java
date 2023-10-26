@@ -49,7 +49,6 @@ import org.junit.jupiter.api.Test;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -609,7 +608,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     // WHEN a device publishes a message with a payload exceeding the max size
                     final Future<Integer> sendFuture = send(tenantId, deviceId, Buffer.buffer(payloadBytes), false,
                             true, null);
-                    return CompositeFuture.join(clientClosedPromise.future(), sendFuture)
+                    return Future.join(clientClosedPromise.future(), sendFuture)
                             .onComplete(ar -> {
                                 // THEN publishing the message fails (if QoS 1)
                                 if (getQos() == MqttQoS.AT_LEAST_ONCE) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,7 +53,6 @@ import org.slf4j.LoggerFactory;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -905,7 +904,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         }
         // init kafkaConsumerWorker; it has to be retrieved after the first "subscribe" invocation
         kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
-        return CompositeFuture.all(subscribeDonePromise.future(), partitionAssignmentDone.future()).mapEmpty();
+        return Future.all(subscribeDonePromise.future(), partitionAssignmentDone.future()).mapEmpty();
     }
 
     /**

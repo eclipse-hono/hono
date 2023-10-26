@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,14 +13,13 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-
 import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
 import org.eclipse.hono.service.http.HttpServiceConfigOptions;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 
 import io.smallrye.config.ConfigMapping;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * A factory for creating Device Registry Management API endpoints.

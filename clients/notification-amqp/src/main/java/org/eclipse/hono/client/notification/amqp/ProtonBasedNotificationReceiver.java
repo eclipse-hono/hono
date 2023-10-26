@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,6 @@ import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.notification.NotificationType;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -121,10 +120,9 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
             log.debug("recreate notification consumer links");
             connection.isConnected(getDefaultConnectionCheckTimeout())
                     .compose(res -> {
-                        @SuppressWarnings("rawtypes")
-                        final List<Future> consumerCreationFutures = new ArrayList<>();
+                        final List<Future<ProtonReceiver>> consumerCreationFutures = new ArrayList<>();
                         addresses.forEach(address -> consumerCreationFutures.add(createNotificationConsumerIfNeeded(address)));
-                        return CompositeFuture.join(consumerCreationFutures);
+                        return Future.join(consumerCreationFutures);
                     }).onComplete(ar -> {
                         recreatingConsumers.set(false);
                         if (tryAgainRecreatingConsumers.compareAndSet(true, false) || ar.failed()) {

@@ -11,9 +11,9 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 quarkus:
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: INFO
     min-level: TRACE
     category:

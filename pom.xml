@@ -73,14 +73,6 @@
 
   <developers>
     <developer>
-      <id>hkonsyk</id>
-      <name>Henryk Konsek</name>
-      <email>hekonsek@gmail.com</email>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
       <id>khudalla</id>
       <name>Kai Hudalla</name>
       <email>kai.hudalla@bosch.io</email>
@@ -98,55 +90,6 @@
       <email>dejan@sensatic.net</email>
       <roles>
         <role>Lead</role>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>dguggemos</id>
-      <name>Dominik Guggemos</name>
-      <email>dominik.guggemos@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>ppatierno</id>
-      <name>Paolo Patierno</name>
-      <email>ppatierno@live.com</email>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>kfrank</id>
-      <name>Karsten Frank</name>
-      <email>karsten.frank@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>mpellmann</id>
-      <name>Marc Pellmann</name>
-      <email>marc.pellmann@bosch-si.com</email>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>ctron</id>
-      <name>Jens Reimann</name>
-      <email>ctron@dentrassi.de</email>
-      <url>https://dentrassi.de</url>
-      <organization>Red Hat Inc</organization>
-      <organizationUrl>https://redhat.com</organizationUrl>
-      <roles>
         <role>Committer</role>
       </roles>
     </developer>
@@ -259,7 +202,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.42.1</version>
+          <version>0.43.4</version>
           <executions>
             <execution>
               <id>build_images</id>
@@ -392,7 +335,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.2.2</version>
+          <version>3.3.0</version>
           <dependencies>
             <dependency>
               <groupId>org.eclipse.hono</groupId>
@@ -423,7 +366,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
-          <version>1.1.0</version>
+          <version>1.2.0</version>
         </plugin>
         <plugin>
           <groupId>com.internetitem</groupId>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,13 +16,12 @@ package org.eclipse.hono.adapter.lora.providers;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.enterprise.context.ApplicationScoped;
-
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * A LoRaWAN provider with API for Actility Wireless.
@@ -58,6 +57,11 @@ public class ActilityWirelessProvider extends ActilityBaseProvider {
         LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_CHANNEL, String.class)
             .map(this::getFrequency)
             .ifPresent(data::setFrequency);
+        Optional.ofNullable(LoraUtils.newLocationFromString(
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_LONGITUDE, String.class),
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_LATITUDE, String.class),
+                LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_DEV_ALTITUDE, String.class)))
+                    .ifPresent(data::setLocation);
 
         LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRRS, JsonObject.class)
             .map(lrrs -> lrrs.getValue(FIELD_ACTILITY_LRR))
@@ -74,8 +78,8 @@ public class ActilityWirelessProvider extends ActilityBaseProvider {
                             .ifPresent(s -> gwId.ifPresent(id -> {
                                 if (id.equals(s)) {
                                     Optional.ofNullable(LoraUtils.newLocationFromString(
-                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LONGITUDE, String.class),
-                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LATITUTDE, String.class),
+                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRR_LONGITUDE, String.class),
+                                            LoraUtils.getChildObject(rootObject, FIELD_ACTILITY_LRR_LATITUDE, String.class),
                                             Optional.empty()))
                                         .ifPresent(gateway::setLocation);
                                 }

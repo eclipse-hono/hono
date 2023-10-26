@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -151,7 +150,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        CompositeFuture.all(tenantId, deviceId)
+        Future.all(tenantId, deviceId)
             .compose(ok -> {
                 TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("retrieving device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
@@ -187,7 +186,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Future<List<Sort>> sortOptions = decodeJsonFromRequestParameter(ctx,
                 RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
 
-        CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
+        Future.all(pageSize, pageOffset, filters, sortOptions)
                 .onSuccess(ok -> TracingHelper.TAG_TENANT_ID.set(span, tenantId))
                 .compose(ok -> getService().searchDevices(
                         tenantId,
@@ -214,7 +213,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), true));
         final Future<Device> device = fromPayload(ctx);
 
-        CompositeFuture.all(tenantId, deviceId, device)
+        Future.all(tenantId, deviceId, device)
             .compose(ok -> {
                 final Optional<String> did = Optional.ofNullable(deviceId.result());
                 TracingHelper.TAG_TENANT_ID.set(span, tenantId.result());
@@ -246,7 +245,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
         final Future<Device> device = fromPayload(ctx);
 
-        CompositeFuture.all(tenantId, deviceId, device)
+        Future.all(tenantId, deviceId, device)
             .compose(ok -> {
                 TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("updating device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
@@ -270,7 +269,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
         final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        CompositeFuture.all(tenantId, deviceId)
+        Future.all(tenantId, deviceId)
             .compose(ok -> {
                 TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("removing device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());

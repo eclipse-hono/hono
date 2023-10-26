@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -175,12 +174,11 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
         }
         requireClientsConfigured();
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> futures = clientImplementations.values()
+        final List<Future<Void>> futures = clientImplementations.values()
                 .stream()
                 .map(Lifecycle::start)
                 .collect(Collectors.toList());
-        return CompositeFuture.all(futures).mapEmpty();
+        return Future.all(futures).mapEmpty();
     }
 
     @Override
@@ -188,11 +186,10 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
         if (!stopCalled.compareAndSet(false, true)) {
             return Future.succeededFuture();
         }
-        @SuppressWarnings("rawtypes")
-        final List<Future> futures = clientImplementations.values()
+        final List<Future<Void>> futures = clientImplementations.values()
                 .stream()
                 .map(Lifecycle::stop)
                 .collect(Collectors.toList());
-        return CompositeFuture.all(futures).mapEmpty();
+        return Future.all(futures).mapEmpty();
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,11 +16,6 @@ package org.eclipse.hono.deviceregistry.jdbc.app;
 
 import java.io.IOException;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import org.eclipse.hono.deviceregistry.jdbc.config.SchemaCreator;
 import org.eclipse.hono.deviceregistry.jdbc.impl.ClasspathSchemaCreator;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -35,6 +30,10 @@ import org.eclipse.hono.service.base.jdbc.store.tenant.Stores;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 /**
  * A producer of data store objects for registry data.

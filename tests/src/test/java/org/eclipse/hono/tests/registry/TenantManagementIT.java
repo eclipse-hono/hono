@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
@@ -850,7 +849,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
 
             final int pageSize = 1;
 
-            CompositeFuture.all(
+            Future.all(
                     getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant()),
                     getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant()))
                     .compose(response -> getHelper().registry.searchTenants(
@@ -973,7 +972,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final String filterJson2 = getFilterJson("/enabled", true, "eq");
             final String filterJson3 = getFilterJson("/enabled", false, "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     getHelper().registry.addTenant(tenantId1, tenant1),
                     getHelper().registry.addTenant(tenantId2, tenant2))
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
@@ -1008,7 +1007,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id*", "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     getHelper().registry.addTenant(tenantId1, tenant1),
                     getHelper().registry.addTenant(tenantId2, tenant2))
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
@@ -1058,7 +1057,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final String filterJson1 = getFilterJson("/enabled", true, "eq");
             final String filterJson2 = getFilterJson("/ext/id", "$id?2", "eq");
 
-            CompositeFuture.all(
+            Future.all(
                     getHelper().registry.addTenant(tenantId1, tenant1),
                     getHelper().registry.addTenant(tenantId2, tenant2))
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
@@ -1121,7 +1120,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final Tenant tenant2 = new Tenant().setExtensions(Map.of("id", "bbb"));
             final String sortJson = getSortJson("/ext/id", "desc");
 
-            CompositeFuture.all(
+            Future.all(
                     getHelper().registry.addTenant(tenantId1, tenant1),
                     getHelper().registry.addTenant(tenantId2, tenant2))
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(), List.of(),
@@ -1148,15 +1147,14 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
          */
         private Future<Void> createTenants(final Map<String, Tenant> tenantsToCreate) {
 
-            @SuppressWarnings("rawtypes")
-            final List<Future> creationResult = tenantsToCreate.entrySet().stream()
+            final List<Future<Object>> creationResult = tenantsToCreate.entrySet().stream()
                     .map(entry -> getHelper().registry.addTenant(entry.getKey(), entry.getValue())
                         .map(response -> {
                             assertThat(response.statusCode()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                             return null;
                         }))
                     .collect(Collectors.toList());
-            return CompositeFuture.all(creationResult).mapEmpty();
+            return Future.all(creationResult).mapEmpty();
         }
 
         private <T> String getFilterJson(final String field, final T value, final String operator) {

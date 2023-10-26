@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,6 @@ import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProper
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -108,16 +107,15 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         addOnKafkaProducerReadyHandler(handler);
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> stop() {
         // stop created consumers
-        final List<Future> closeKafkaClientsTracker = consumersToCloseOnStop.stream()
+        final List<Future<Void>> closeKafkaClientsTracker = consumersToCloseOnStop.stream()
                 .map(MessageConsumer::close)
                 .collect(Collectors.toList());
         // add command sender related clients
         closeKafkaClientsTracker.add(super.stop());
-        return CompositeFuture.join(closeKafkaClientsTracker)
+        return Future.join(closeKafkaClientsTracker)
                 .mapEmpty();
     }
 

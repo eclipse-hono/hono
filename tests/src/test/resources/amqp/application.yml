@@ -100,14 +100,13 @@ hono:
         delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
 
 quarkus:
-  opentelemetry:
-    tracer:
-      exporter:
-        otlp:
-          endpoint: "${otel-collector.endpoint}"
+  otel:
+    exporter:
+      otlp:
+        endpoint: "${otel-collector.endpoint}"
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: INFO
     min-level: TRACE
     category:

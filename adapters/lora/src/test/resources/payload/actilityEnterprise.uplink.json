@@ -17,6 +17,9 @@
     "DevLrrCnt": 1,
     "Lrrid": "10000001",
     "Late": 0,
+    "DevLAT": 61.499146,
+    "DevLON": 23.765516,
+    "DevAlt": 0.000001,
     "LrrLAT": 27.831039,
     "LrrLON": -97.534576,
     "Lrrs": {

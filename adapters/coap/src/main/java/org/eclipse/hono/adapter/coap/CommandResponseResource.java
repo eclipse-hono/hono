@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -170,8 +169,8 @@ public class CommandResponseResource extends AbstractHonoResource {
                         String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                                 commandRequestId, responseStatus))));
 
-        return CompositeFuture.all(tenantTracker, commandResponseTracker, deviceRegistrationTracker)
-                .compose(ok -> CompositeFuture.all(
+        return Future.all(tenantTracker, commandResponseTracker, deviceRegistrationTracker)
+                .compose(ok -> Future.all(
                             getAdapter().isAdapterEnabled(tenantTracker.result()),
                             getAdapter().checkMessageLimit(tenantTracker.result(), payload.length(), currentSpan.context()))
                             .mapEmpty())

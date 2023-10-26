@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,7 +52,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -362,7 +361,7 @@ public class TableManagementStore extends AbstractDeviceStore {
             final Set<String> memberOf,
             final SpanContext context) {
 
-        return CompositeFuture.all(memberOf.stream()
+        return Future.all(memberOf.stream()
                         .map(groupId -> {
 
                             final var expanded = this.createMemberOfStatement.expand(params -> {
@@ -774,7 +773,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                         // then create new entries
                                         .compose(updatedCredentials -> {
                                             updatedCredentials.createMissingSecretIds();
-                                            return CompositeFuture.all(updatedCredentials.getData().stream()
+                                            return Future.all(updatedCredentials.getData().stream()
                                                             .map(JsonObject::mapFrom)
                                                             .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
                                                             .map(c -> this.insertCredentialEntryStatement
