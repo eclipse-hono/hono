@@ -11,6 +11,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
   a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+* When using Pub/Sub messaging, there were potentially issues concerning the AMQP connection between protocol adapter
+  and command router, leading for example to timeouts when MQTT devices subscribed/unsubscribed to the command topic.
+  This has been fixed.
 
 ## 2.4.0
 

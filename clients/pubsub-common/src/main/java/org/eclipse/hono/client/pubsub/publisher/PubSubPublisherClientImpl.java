@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -118,18 +119,22 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException}
      *         indicating the reason for the failure.
      */
+    @Override
     public Future<String> publish(final PubsubMessage pubsubMessage) {
         final Promise<String> result = Promise.promise();
+        final Context context = vertx.getOrCreateContext();
         final ApiFuture<String> messageIdFuture = publisher.publish(pubsubMessage);
         ApiFutures.addCallback(messageIdFuture, new ApiFutureCallback<>() {
 
+            @Override
             public void onSuccess(final String messageId) {
-                // handle result on vert.x event loop instead of Publisher's Thread pool
-                vertx.runOnContext(ok -> result.complete(messageId));
+                // handle result on original vert.x context instead of Publisher's Thread pool
+                context.runOnContext(ok -> result.complete(messageId));
             }
 
+            @Override
             public void onFailure(final Throwable t) {
-                vertx.runOnContext(ok -> {
+                context.runOnContext(ok -> {
                     LOG.debug("error publishing messages to Pub/Sub", t);
                     result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
                 });
