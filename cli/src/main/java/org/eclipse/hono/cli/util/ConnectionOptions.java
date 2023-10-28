@@ -59,7 +59,7 @@ public class ConnectionOptions {
             names = { "--ca-file" },
             description = {
                 "Absolute path to a file containing trusted CA certificates to enable encrypted communication.",
-                "If not set explicitly, the platform's default trust store will be used."
+                "This option is required for connecting to endpoints using TLS."
                 },
             order = 4)
     public Optional<String> trustStorePath;

@@ -41,6 +41,7 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
 import org.eclipse.hono.util.QoS;
 import org.fusesource.jansi.AnsiConsole;
+import org.jline.builtins.ConfigurationPath;
 import org.jline.console.SystemRegistry;
 import org.jline.console.impl.Builtins;
 import org.jline.console.impl.SystemRegistryImpl;
@@ -252,7 +253,7 @@ public class AmqpAdapter implements Callable<Integer> {
         try {
             final Supplier<Path> workDir = () -> Paths.get(System.getProperty("user.dir"));
             // set up JLine built-in commands
-            final var builtins = new Builtins(workDir, null, null);
+            final var builtins = new Builtins(workDir, new ConfigurationPath(null, null), null);
             builtins.rename(Builtins.Command.TTOP, "top");
             builtins.alias("zle", "widget");
             builtins.alias("bindkey", "keymap");
