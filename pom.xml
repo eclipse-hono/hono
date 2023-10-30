@@ -113,6 +113,16 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>mattkaem</id>
+      <name>Matthias Kämmer</name>
+      <email>m.kaemmer@sotec.eu</email>
+      <organization>SOTEC GmbH &amp; Co KG</organization>
+      <organizationUrl>https://www.sotec.eu</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
