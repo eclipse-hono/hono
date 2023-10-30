@@ -32,10 +32,6 @@ import io.vertx.ext.jdbc.JDBCClient;
 public class JdbcProperties {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcProperties.class);
-    private static final Integer MAXIMUM_POOL_SIZE_DEFAULT = 15;
-    private static final Integer MINIMUM_POOL_SIZE_DEFAULT = 3;
-    private static final Integer INITIAL_POOL_SIZE_DEFAULT = 3;
-    private static final Integer MAXIMUM_IDLE_TIME_DEFAULT = 3600;
 
     private String url;
     private String driverClass;
@@ -63,10 +59,10 @@ public class JdbcProperties {
     public JdbcProperties(final JdbcOptions options) {
         Objects.requireNonNull(options);
         setDriverClass(options.driverClass());
-        options.maximumPoolSize().ifPresentOrElse(this::setMaximumPoolSize, () -> setMaximumPoolSize(MAXIMUM_POOL_SIZE_DEFAULT));
-        options.minimumPoolSize().ifPresentOrElse(this::setMinimumPoolSize, () -> setMinimumPoolSize(MINIMUM_POOL_SIZE_DEFAULT));
-        options.initialPoolSize().ifPresentOrElse(this::setInitialPoolSize, () -> setInitialPoolSize(INITIAL_POOL_SIZE_DEFAULT));
-        options.maximumIdleTime().ifPresentOrElse(this::setMaximumIdleTime, () -> setMaximumIdleTime(MAXIMUM_IDLE_TIME_DEFAULT));
+        setMaximumPoolSize(options.maximumPoolSize());
+        setMinimumPoolSize(options.minimumPoolSize());
+        setInitialPoolSize(options.initialPoolSize());
+        setMaximumIdleTime(options.maximumIdleTime());
         options.password().ifPresent(this::setPassword);
         options.tableName().ifPresent(this::setTableName);
         setUrl(options.url());

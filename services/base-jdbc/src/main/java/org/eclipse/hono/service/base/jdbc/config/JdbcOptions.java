@@ -14,10 +14,10 @@
 package org.eclipse.hono.service.base.jdbc.config;
 
 import java.util.Optional;
-import java.util.OptionalInt;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
+import io.smallrye.config.WithDefault;
 
 /**
  * Configuration properties for a JDBC service.
@@ -58,28 +58,32 @@ public interface JdbcOptions {
      *
      * @return The maximum number of connections in the pool.
      */
-    OptionalInt maximumPoolSize();
+    @WithDefault("15")
+    int maximumPoolSize();
 
     /**
      * Gets the minimum size of the DB connection pool.
      *
      * @return The minimum number of connections in the pool.
      */
-    OptionalInt minimumPoolSize();
+    @WithDefault("3")
+    int minimumPoolSize();
 
     /**
      * Gets the initial size of the DB connection pool.
      *
      * @return The initial number of connections in the pool.
      */
-    OptionalInt initialPoolSize();
+    @WithDefault("3")
+    int initialPoolSize();
 
     /**
      * Gets the maximum idle time of connections in the DB connection pool.
      *
      * @return The maximum idle time of connections in the pool.
      */
-    OptionalInt maximumIdleTime();
+    @WithDefault("3600")
+    int maximumIdleTime();
 
     /**
      * Gets the name of the table that contains the data.
