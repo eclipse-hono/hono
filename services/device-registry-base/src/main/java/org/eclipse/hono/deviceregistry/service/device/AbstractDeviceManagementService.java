@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -225,7 +225,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *                   retrieve the whole result set page by page.
      * @param filters A list of filters. The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options. The sortOptions specify properties to sort the result set by.
-     * @param isGateway Optional filter for searching all gateways or only devices.
+     * @param isGateway Optional filter for searching only gateways or only devices.
+     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @param span The active OpenTracing span to use for tracking this operation.
      *             <p>
      *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
