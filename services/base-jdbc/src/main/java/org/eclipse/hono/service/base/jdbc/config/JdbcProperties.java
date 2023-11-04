@@ -31,13 +31,20 @@ import io.vertx.ext.jdbc.JDBCClient;
 @JsonInclude(value = Include.NON_NULL)
 public class JdbcProperties {
 
+    public static final int DEFAULT_MAXIMUM_POOL_SIZE = 15;
+    public static final int DEFAULT_MINIMUM_POOL_SIZE = 3;
+    public static final int DEFAULT_INITIAL_POOL_SIZE = 3;
+    public static final int DEFAULT_MAXIMUM_IDLE_TIME = 3600;
     private static final Logger log = LoggerFactory.getLogger(JdbcProperties.class);
 
     private String url;
     private String driverClass;
     private String username;
     private String password;
-    private Integer maximumPoolSize;
+    private int maximumPoolSize = DEFAULT_MAXIMUM_POOL_SIZE;
+    private int minimumPoolSize = DEFAULT_MINIMUM_POOL_SIZE;
+    private int initialPoolSize = DEFAULT_INITIAL_POOL_SIZE;
+    private int maximumIdleTime = DEFAULT_MAXIMUM_IDLE_TIME;
     private String tableName;
 
     /**
@@ -56,7 +63,10 @@ public class JdbcProperties {
     public JdbcProperties(final JdbcOptions options) {
         Objects.requireNonNull(options);
         setDriverClass(options.driverClass());
-        options.maximumPoolSize().ifPresent(this::setMaximumPoolSize);
+        setMaximumPoolSize(options.maximumPoolSize());
+        setMinimumPoolSize(options.minimumPoolSize());
+        setInitialPoolSize(options.initialPoolSize());
+        setMaximumIdleTime(options.maximumIdleTime());
         options.password().ifPresent(this::setPassword);
         options.tableName().ifPresent(this::setTableName);
         setUrl(options.url());
@@ -91,11 +101,32 @@ public class JdbcProperties {
         return password;
     }
 
-    public void setMaximumPoolSize(final Integer maximumPoolSize) {
+    public void setMaximumPoolSize(final int maximumPoolSize) {
         this.maximumPoolSize = maximumPoolSize;
     }
-    public Integer getMaximumPoolSize() {
+    public int getMaximumPoolSize() {
         return maximumPoolSize;
+    }
+
+    public void setMinimumPoolSize(final int minimumPoolSize) {
+        this.minimumPoolSize = minimumPoolSize;
+    }
+    public int getMinimumPoolSize() {
+        return minimumPoolSize;
+    }
+
+    public void setInitialPoolSize(final int initialPoolSize) {
+        this.initialPoolSize = initialPoolSize;
+    }
+    public int getInitialPoolSize() {
+        return initialPoolSize;
+    }
+
+    public void setMaximumIdleTime(final int maximumIdleTime) {
+        this.maximumIdleTime = maximumIdleTime;
+    }
+    public int getMaximumIdleTime() {
+        return maximumIdleTime;
     }
 
     public String getTableName() {
@@ -123,9 +154,17 @@ public class JdbcProperties {
         if (dataSourceProperties.getDriverClass() != null) {
             config.put("driver_class", dataSourceProperties.getDriverClass());
         }
-        if (dataSourceProperties.getMaximumPoolSize() != null) {
-            config.put("max_pool_size", dataSourceProperties.getMaximumPoolSize());
-        }
+
+        final String minSizeLabel = "min_pool_size";
+        final String maxSizeLabel = "max_pool_size";
+        final String initSizeLabel = "initial_pool_size";
+
+        putValidValueIntoConfig(config, "max_idle_time", dataSourceProperties.getMaximumIdleTime(), 0, true);
+        putValidValueIntoConfig(config, minSizeLabel, dataSourceProperties.getMinimumPoolSize(), 0, true);
+        putValidValueIntoConfig(config, maxSizeLabel, dataSourceProperties.getMaximumPoolSize(), Math.max(1, config.getInteger(minSizeLabel)), true);
+        // check that initial pool size is between min and max pool size
+        putValidValueIntoConfig(config, initSizeLabel, dataSourceProperties.getInitialPoolSize(), config.getInteger(minSizeLabel), true);
+        putValidValueIntoConfig(config, initSizeLabel, config.getInteger(initSizeLabel), config.getInteger(maxSizeLabel), false);
 
         log.info("Creating new SQL client: {} - table: {}", config, dataSourceProperties.getTableName());
 
@@ -138,6 +177,18 @@ public class JdbcProperties {
 
         return JDBCClient.create(vertx, config);
 
+    }
+
+    private static void putValidValueIntoConfig(final JsonObject config, final String label, final int value, final int limit, final boolean checkLowerLimit) {
+        if (checkLowerLimit && value < limit) {
+            log.warn("JDBC property {} has an illegal value. Value ({}) must not be smaller than {}. Value will be set to {}", label, value, limit, limit);
+            config.put(label, limit);
+        } else if (!checkLowerLimit && value > limit) {
+            log.warn("JDBC property {} has an illegal value. Value ({}) must not be bigger than {}. Value will be set to {}", label, value, limit, limit);
+            config.put(label, limit);
+        } else {
+            config.put(label, value);
+        }
     }
 
 }
