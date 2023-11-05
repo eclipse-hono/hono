@@ -617,7 +617,7 @@
         <hono.amqp-adapter.max-mem>70000000</hono.amqp-adapter.max-mem>
 
         <hono.coap-adapter.image>hono-adapter-coap-native</hono.coap-adapter.image>
-        <hono.coap-adapter.max-mem>90000000</hono.coap-adapter.max-mem>
+        <hono.coap-adapter.max-mem>120000000</hono.coap-adapter.max-mem>
 
         <hono.http-adapter.image>hono-adapter-http-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>70000000</hono.http-adapter.max-mem>
