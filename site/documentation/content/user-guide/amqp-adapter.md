@@ -156,7 +156,7 @@ hono-cli/amqp-device>
 
 A list of available commands can be displayed using the `help` command, `exit` will close the client.
 
-{% notice info %}
+{{% notice info %}}
 The example command above uses the default path to a Linux based system's trusted CA certificates.
 The path may need to be adapted when running on a different type of operating system.
 {{% /notice %}}
