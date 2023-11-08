@@ -11,6 +11,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
   a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+* The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
+  the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
 
 ## 2.3.1
 
