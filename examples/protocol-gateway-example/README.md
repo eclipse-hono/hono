@@ -17,8 +17,8 @@ However, it can also be configured to connect to a local instance.
 
 By default, the gateway listens on port `6666` on the loopback device (`127.0.0.1`). This can be changed in the
 `application.yml` file or by means of corresponding command line arguments. In the same way the connection to the AMQP
-adapter can be configured. By default, the gateway connects to the Hono Sandbox' AMQP adapter using `gw@DEFAULT_TENANT`
-as the username.
+adapter can be configured. By default, the gateway connects to the AMQP adapter of the Hono Sandbox using 
+`gw@DEFAULT_TENANT` as the username.
 
 ## Starting the Gateway
 
