@@ -4,7 +4,8 @@ gateway:
    insecurePortBindAddress: "127.0.0.1"
   amqp:
     host: hono.eclipseprojects.io
-    port: 5672
+    port: 5671
+    tlsEnabled: true
     username: gw@DEFAULT_TENANT
     password: gw-secret
     serverRole: AMQP adapter
