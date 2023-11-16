@@ -4,10 +4,12 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.4.1 (not yet released)
+## 2.4.1
 
 ### Fixes & Enhancements
 
+* A device connected to the MQTT adapter would not get disconnected when sending a message after the device's credentials
+  had already expired. This has been fixed.
 * When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
   a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
