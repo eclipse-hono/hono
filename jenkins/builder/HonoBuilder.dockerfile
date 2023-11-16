@@ -1,4 +1,4 @@
-# Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+# Copyright (c) 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -18,7 +18,7 @@
 
 FROM debian:bullseye-slim
 
-ARG MANDREL_VERSION=22.3.3.1-Final
+ARG MANDREL_VERSION=22.3.4.0-Final
 # either java11 or java17
 ARG JDK_VERSION=java17
 ARG MVN_VERSION=3.8.8
