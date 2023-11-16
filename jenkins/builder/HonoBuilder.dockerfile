@@ -18,7 +18,7 @@
 
 FROM debian:bullseye-slim
 
-ARG MANDREL_VERSION=22.3.2.1-Final
+ARG MANDREL_VERSION=22.3.4.0-Final
 # either java11 or java17
 ARG JDK_VERSION=java17
 ARG MVN_VERSION=3.8.8
