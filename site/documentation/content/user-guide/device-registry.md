@@ -57,7 +57,6 @@ The tenants in the registry can be managed using the Device Registry Management 
 [tenant related resources]({{< relref "/api/management#tenants" >}}).
 
 {{% notice info %}}
-
 The JDBC based registry implementation does not support the following features:
 
 * Tenants can be retrieved using the [search tenants]({{< relref "/api/management#tenants/searchTenants" >}})
@@ -65,7 +64,7 @@ The JDBC based registry implementation does not support the following features:
   (currently) being ignored. The result set will always be sorted by the tenant Id in ascending order.
 * The *alias* and *trust-anchor-group* properties defined on a tenant are being ignored by the registry. Consequently,
   multiple tenants can not be configured to use the same trust anchor(s).
-* {{% /notice %}}
+{{% /notice %}}
 
 #### Registering a Certificate Authority
 
@@ -139,18 +138,19 @@ The devices in the registry can be managed using the Device Registry Management 
 [device related resources]({{< relref "/api/management#devices" >}}).
 
 {{% notice info %}}
-
 The JDBC based registry implementation does not support the following features:
 
-* By [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
-  Registry Management API, the *filterJson* query parameter currently only allows one filter expression per request and
+* Registration information can be retrieved using the
+  [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
+  Registry Management API. The  *filterJson* query parameter currently only allows one filter expression per request,
   the *sortJson* query parameter is (currently) being ignored.
   The result set will always be sorted by the device Id in ascending order.
 
 The Mongo DB based registry implementation does not support the following features:
 
-* By [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
-  Registry Management API, the  *isGateway* query parameter is (currently) being ignored.
+* Registration information can be retrieved using the
+  [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
+  Registry Management API. The *isGateway* query parameter is (currently) being ignored.
 {{% /notice %}}
 
 ### Managing Credentials

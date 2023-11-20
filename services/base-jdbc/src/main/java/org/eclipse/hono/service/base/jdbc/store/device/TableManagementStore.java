@@ -944,7 +944,7 @@ public class TableManagementStore extends AbstractDeviceStore {
         final var entries = result.getRows(true);
 
         return entries.stream()
-                .map(o -> o.getString("data"))
+                .map(o -> o.getString(DATA))
                 .map(s -> Json.decodeValue(s, CommonCredential.class))
                 .collect(Collectors.toList());
 
@@ -957,7 +957,8 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param pageSize The page size.
      * @param pageOffset The page offset.
      * @param filters The list of filters (currently only the first value of the list is used).
-     * @param isGateway Optional search gateway or only devices filter.
+     * @param isGateway Optional filter for searching only gateways or only devices.
+     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @param spanContext The span to contribute to.
      * @return A future containing devices.
      */

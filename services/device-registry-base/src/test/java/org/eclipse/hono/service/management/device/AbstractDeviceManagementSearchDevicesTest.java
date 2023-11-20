@@ -126,11 +126,11 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                 "testDevice1", new Device().setEnabled(true).setVia(List.of("gw-1")),
                 "testDevice2", new Device().setEnabled(false)))
                         .compose(ok -> getDeviceManagementService()
-                                .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
-                                        List.of(), Optional.empty(), NoopSpan.INSTANCE))
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                        .searchDevices(tenantId, pageSize, pageOffset, List.of(filter1, filter2, filter3),
+                                List.of(), Optional.empty(), NoopSpan.INSTANCE))
+                        .onComplete(ctx.succeeding(s -> {
+                            ctx.verify(() -> {
+                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
                     final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(1);
