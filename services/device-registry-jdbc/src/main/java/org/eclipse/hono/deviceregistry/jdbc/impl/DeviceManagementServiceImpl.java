@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -156,12 +156,13 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions,
+            final Optional<Boolean> isGateway,
             final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
-        return store.findDevices(tenantId, pageSize, pageOffset, filters, span.context())
+        return store.findDevices(tenantId, pageSize, pageOffset, filters, isGateway, span.context())
                 .map(result -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         result,

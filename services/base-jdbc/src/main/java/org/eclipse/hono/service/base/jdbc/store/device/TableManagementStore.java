@@ -97,9 +97,13 @@ public class TableManagementStore extends AbstractDeviceStore {
     private final Statement updateDeviceVersionStatement;
 
     private final Statement countDevicesOfTenantStatement;
-    private final Statement countDevicesWithFilter;
+    private final Statement countDevicesWithFilterStatement;
+    private final Statement countGatewaysOfTenantStatement;
+    private final Statement countOnlyDevicesOfTenantStatement;
 
-    private final Statement findDevicesStatement;
+    private final Statement findDevicesOfTenantStatement;
+    private final Statement findGatewaysOfTenantStatement;
+    private final Statement findOnlyDevicesOfTenantStatement;
     private final Statement findDevicesOfTenantWithFilterStatement;
 
     /**
@@ -204,17 +208,45 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .validateParameters(
                         TENANT_ID);
 
-        this.countDevicesWithFilter = cfg
+        this.countGatewaysOfTenantStatement = cfg
+                .getRequiredStatement("countGatewaysOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        DEVICE_ID);
+
+        this.countOnlyDevicesOfTenantStatement = cfg
+                .getRequiredStatement("countOnlyDevicesOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        DEVICE_ID);
+
+        this.countDevicesWithFilterStatement = cfg
                 .getRequiredStatement("countDevicesOfTenantWithFilter")
                 .validateParameters(
                         TENANT_ID,
                         FIELD,
                         VALUE);
 
-        this.findDevicesStatement = cfg
+        this.findDevicesOfTenantStatement = cfg
                 .getRequiredStatement("findDevicesOfTenant")
                 .validateParameters(
                         TENANT_ID,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
+
+        this.findOnlyDevicesOfTenantStatement = cfg
+                .getRequiredStatement("findOnlyDevicesOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        DEVICE_ID,
+                        PAGE_SIZE,
+                        PAGE_OFFSET);
+
+        this.findGatewaysOfTenantStatement = cfg
+                .getRequiredStatement("findGatewaysOfTenant")
+                .validateParameters(
+                        TENANT_ID,
+                        DEVICE_ID,
                         PAGE_SIZE,
                         PAGE_OFFSET);
 
@@ -226,46 +258,6 @@ public class TableManagementStore extends AbstractDeviceStore {
                         VALUE,
                         PAGE_SIZE,
                         PAGE_OFFSET);
-    }
-
-    private static Future<Object> checkUpdateOutcome(final UpdateResult updateResult) {
-
-        if (updateResult.getUpdated() < 0) {
-            // conflict
-            log.debug("Optimistic lock broke");
-            return Future.failedFuture(new OptimisticLockingException());
-        }
-
-        return Future.succeededFuture();
-
-    }
-
-    private static Future<String> extractVersionForUpdate(final ResultSet device, final Optional<String> resourceVersion) {
-        final Optional<String> version = device.getRows(true).stream().map(o -> o.getString(VERSION)).findAny();
-
-        if (version.isEmpty()) {
-            log.debug("No version or no row found -> entity not found");
-            return Future.failedFuture(new EntityNotFoundException());
-        }
-
-        final var currentVersion = version.get();
-
-        return resourceVersion
-                // if we expect a certain version
-                .<Future<String>>map(expected -> {
-                            // check ...
-                            if (expected.equals(currentVersion)) {
-                                // version matches, continue with current version
-                                return Future.succeededFuture(currentVersion);
-                            } else {
-                                // version does not match, abort
-                                return Future.failedFuture(new OptimisticLockingException());
-                            }
-                        }
-                )
-                // if we don't expect a version, continue with the current
-                .orElseGet(() -> Future.succeededFuture(currentVersion));
-
     }
 
     /**
@@ -850,6 +842,46 @@ public class TableManagementStore extends AbstractDeviceStore {
         }
     }
 
+    private static Future<Object> checkUpdateOutcome(final UpdateResult updateResult) {
+
+        if (updateResult.getUpdated() < 0) {
+            // conflict
+            log.debug("Optimistic lock broke");
+            return Future.failedFuture(new OptimisticLockingException());
+        }
+
+        return Future.succeededFuture();
+
+    }
+
+    private static Future<String> extractVersionForUpdate(final ResultSet device, final Optional<String> resourceVersion) {
+        final Optional<String> version = device.getRows(true).stream().map(o -> o.getString("version")).findAny();
+
+        if (version.isEmpty()) {
+            log.debug("No version or no row found -> entity not found");
+            return Future.failedFuture(new EntityNotFoundException());
+        }
+
+        final var currentVersion = version.get();
+
+        return resourceVersion
+                // if we expect a certain version
+                .<Future<String>>map(expected -> {
+                            // check ...
+                            if (expected.equals(currentVersion)) {
+                                // version matches, continue with current version
+                                return Future.succeededFuture(currentVersion);
+                            } else {
+                                // version does not match, abort
+                                return Future.failedFuture(new OptimisticLockingException());
+                            }
+                        }
+                )
+                // if we don't expect a version, continue with the current
+                .orElseGet(() -> Future.succeededFuture(currentVersion));
+
+    }
+
     /**
      * Get all credentials for a device.
      * <p>
@@ -925,25 +957,43 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param pageSize The page size.
      * @param pageOffset The page offset.
      * @param filters The list of filters (currently only the first value of the list is used).
+     *                Will be ignored if parameter isGateway is being used.
+     * @param isGateway Optional filter for searching only gateways or only devices.
+     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @param spanContext The span to contribute to.
      * @return A future containing devices.
      */
-    public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset, final List<Filter> filters,
+    public Future<SearchResult<DeviceWithId>> findDevices(final String tenantId, final int pageSize, final int pageOffset, final List<Filter> filters, final Optional<Boolean> isGateway,
                                                           final SpanContext spanContext) {
 
 
-        final var filter = filters.stream().findFirst();
+        final Statement findDeviceSqlStatement;
+        final Statement countStatement;
+        final String field;
+        final String value;
 
-        final String field = filter.map(filter1 -> filter1.getField().toString().replace("/", "")).orElse("");
-        final var value = filter.map(filter1 ->
-                filter1.getValue().toString()
-                        .replace("/", "")
-                        .replace("*", "%")
-                        .replace("?", "_")
-        ).orElse("");
+        if (isGateway.isPresent()) {
+            field = "";
+            value = "";
 
-        final Statement findDeviceSqlStatement = (filter.isPresent()) ? findDevicesOfTenantWithFilterStatement : this.findDevicesStatement;
-        final Statement countStatement = (filter.isPresent()) ? countDevicesWithFilter : this.countDevicesOfTenantStatement;
+            findDeviceSqlStatement = isGateway.get() ? this.findGatewaysOfTenantStatement : this.findOnlyDevicesOfTenantStatement;
+            countStatement = isGateway.get() ? this.countGatewaysOfTenantStatement : this.countOnlyDevicesOfTenantStatement;
+        } else {
+            final var filter = filters.stream().findFirst();
+
+            field = filter.map(filter1 -> filter1.getField().toString().replace("/", "")).orElse("");
+            value = filter.map(filter1 ->
+                    filter1.getValue().toString()
+                            .replace("/", "")
+                            .replace("*", "%")
+                            .replace("?", "_")
+            ).orElse("");
+
+
+            findDeviceSqlStatement = (filter.isPresent()) ? findDevicesOfTenantWithFilterStatement : this.findDevicesOfTenantStatement;
+            countStatement = (filter.isPresent()) ? countDevicesWithFilterStatement : this.countDevicesOfTenantStatement;
+        }
+
 
         final var expanded = findDeviceSqlStatement.expand(map -> {
             map.put(TENANT_ID, tenantId);
@@ -985,5 +1035,3 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .onComplete(x -> span.finish());
     }
 }
-
-

@@ -1,23 +1,67 @@
-
 countDevicesOfTenantWithFilter: |
-   SELECT COUNT(*) AS deviceCount FROM %1$s    
-   WHERE 
+   SELECT COUNT(*) AS deviceCount FROM %1$s
+   WHERE
       tenant_id=:tenant_id
    AND
       LOCATE(CONCAT_WS(':', :field, REPLACE(:value, '"')), REPLACE(data, '"'))
    OR
       REPLACE(data, '"') LIKE  CONCAT('%%', :field, ':', REPLACE(:value, '"'))
 
+countGatewaysOfTenant: |
+   SELECT COUNT(*)  AS deviceCount
+   FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      LOCATE(CONCAT(device_id, '|'),
+         (SELECT CONCAT(REPLACE(group_concat(DISTINCT ids separator '|'), ',', '|'), '|') FROM
+            (SELECT DISTINCT REGEXP_REPLACE(REGEXP_SUBSTR(DATA, '"via":\[.*?\]' ), '"via":\[|\]|"', '') as ids FROM %1$s WHERE tenant_id=:tenant_id ))) > 0
+
+countOnlyDevicesOfTenant: |
+   SELECT COUNT(*) AS deviceCount
+    FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      LOCATE(CONCAT(device_id, '|'),
+      (SELECT CONCAT(REPLACE(group_concat(DISTINCT ids separator '|'), ',', '|'), '|') FROM
+      (SELECT DISTINCT REGEXP_REPLACE(REGEXP_SUBSTR(DATA, '"via":\[.*?\]' ), '"via":\[|\]|"', '') as ids FROM %1$s WHERE tenant_id=:tenant_id ))) = 0
 
 findDevicesOfTenantWithFilter: |
-   SELECT * 
-   FROM %s 
-   WHERE 
+   SELECT *
+   FROM %1$s
+   WHERE
       tenant_id=:tenant_id
    AND
       LOCATE(CONCAT_WS(':', :field, REPLACE(:value, '"')), REPLACE(data, '"'))
    OR
       REPLACE(data, '"') LIKE  CONCAT('%%', :field, ':', REPLACE(:value, '"'))
+   ORDER BY device_id ASC
+   LIMIT :page_size
+   OFFSET :page_offset
+
+findGatewaysOfTenant: |
+   SELECT *
+   FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      LOCATE(CONCAT(device_id, '|'),
+      (SELECT CONCAT(REPLACE(group_concat(DISTINCT ids separator '|'), ',', '|'), '|') FROM
+      (SELECT DISTINCT REPLACE(REGEXP_REPLACE(REGEXP_SUBSTR(DATA, '"via":\[.*?\]' ), '"via":\[|\]|"', ''), '\') as ids FROM %1$s WHERE tenant_id=:tenant_id ))) > 0
+   ORDER BY device_id ASC
+   LIMIT :page_size
+   OFFSET :page_offset
+
+findOnlyDevicesOfTenant: |
+   SELECT *
+   FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      LOCATE(CONCAT(device_id, '|'),
+      (SELECT CONCAT(REPLACE(group_concat(DISTINCT ids separator '|'), ',', '|'), '|') FROM
+      (SELECT DISTINCT REGEXP_REPLACE(REGEXP_SUBSTR(DATA, '"via":\[.*?\]' ), '"via":\[|\]|"', '') as ids FROM %1$s WHERE tenant_id=:tenant_id ))) = 0
    ORDER BY device_id ASC
    LIMIT :page_size
    OFFSET :page_offset

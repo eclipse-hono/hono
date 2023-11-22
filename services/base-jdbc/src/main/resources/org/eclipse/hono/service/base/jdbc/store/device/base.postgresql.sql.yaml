@@ -55,21 +55,73 @@ resolveGroups: |
       group_id in (select unnest((string_to_array(:group_ids,','))::varchar[]))
 
 countDevicesOfTenantWithFilter: |
-   SELECT COUNT(*) AS deviceCount FROM %1$s    
-   WHERE 
+   SELECT COUNT(*) AS deviceCount FROM %1$s
+   WHERE
       tenant_id=:tenant_id
    AND
      data->>:field LIKE CAST(:value AS VARCHAR) OR
      jsonb_extract_path(data,'ext')->>:field LIKE CAST(:value as varchar)
 
+countGatewaysOfTenant: |
+   SELECT COUNT(*) AS deviceCount FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id IN (
+         SELECT replace(dr.device_id::text, '"', '') FROM (
+            SELECT jsonb_array_elements(data -> 'via') AS device_id FROM device_registrations 
+                  WHERE tenant_id=:tenant_id AND data ->> 'via' != '') 
+         as dr) 
+
+countOnlyDevicesOfTenant: |
+   SELECT COUNT(*) AS deviceCount FROM %1$s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id NOT IN (
+         SELECT replace(dr.device_id::text, '"', '') FROM (
+            SELECT jsonb_array_elements(data -> 'via') AS device_id FROM device_registrations 
+                   WHERE tenant_id=:tenant_id AND data ->> 'via' != '') 
+         as dr) 
+
 findDevicesOfTenantWithFilter: |
-   SELECT * 
-   FROM %s 
-   WHERE 
+   SELECT *
+   FROM %s
+   WHERE
       tenant_id=:tenant_id
    AND
      data->>:field LIKE CAST(:value AS VARCHAR) OR
    jsonb_extract_path(data,'ext')->>:field LIKE CAST(:value as varchar)
+   ORDER BY device_id ASC
+   LIMIT :page_size
+   OFFSET :page_offset
+
+findGatewaysOfTenant: |
+   SELECT *
+   FROM %s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id IN (
+         SELECT replace(dr.device_id::text, '"', '') FROM (
+            SELECT jsonb_array_elements(data -> 'via') AS device_id FROM device_registrations 
+                  WHERE tenant_id=:tenant_id AND data ->> 'via' != '') 
+         as dr) 
+   ORDER BY device_id ASC
+   LIMIT :page_size
+   OFFSET :page_offset
+
+findOnlyDevicesOfTenant: |
+   SELECT *
+   FROM %s
+   WHERE
+      tenant_id=:tenant_id
+   AND
+      device_id NOT IN (
+         SELECT replace(dr.device_id::text, '"', '') FROM (
+            SELECT jsonb_array_elements(data -> 'via') AS device_id FROM device_registrations 
+                  WHERE tenant_id=:tenant_id AND data ->> 'via' != '') 
+         as dr) 
    ORDER BY device_id ASC
    LIMIT :page_size
    OFFSET :page_offset

@@ -370,6 +370,7 @@ paths:
             - $ref: '#/components/parameters/pageOffset'
             - $ref: '#/components/parameters/filterJson'
             - $ref: '#/components/parameters/sortJson'
+            - $ref: '#/components/parameters/isGateway'
          responses:
             200:
                description: operation successful
@@ -1688,8 +1689,8 @@ components:
         name: filterJson
         in: query
         description: |
-          A predicate that objects in the result set must match. If this parameter is specified multiple
-          times, objects in the result set must match all predicates.
+          A predicate that objects in the result set must match (will be ignored if parameter isGateway is being used).
+          If this parameter is specified multiple times, objects in the result set must match all predicates.
           The predicate is specified as a string representing a JSON object complying with the following schema
             
           ```
@@ -1772,6 +1773,21 @@ components:
             value: "{\"field\":\"/ext/brand\"}"
           sort descending:
             value: "{\"field\":\"/status/created\",\"direction\":\"desc\"}"
+      isGateway:
+        name: isGateway
+        in: query
+        description: |
+           Optional boolean filter parameter for searching only gateways or only devices.
+           If not used then result will contain both gateways and devices.
+        required: false
+        schema:
+          type: boolean
+        examples:
+          search only devices:
+            value: "isGateway=false"
+          search only gateways:
+            value: "isGateway=true"
+
 
    responses:
 
