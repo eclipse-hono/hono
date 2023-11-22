@@ -1689,8 +1689,8 @@ components:
         name: filterJson
         in: query
         description: |
-          A predicate that objects in the result set must match. If this parameter is specified multiple
-          times, objects in the result set must match all predicates.
+          A predicate that objects in the result set must match (will be ignored if parameter isGateway is being used).
+          If this parameter is specified multiple times, objects in the result set must match all predicates.
           The predicate is specified as a string representing a JSON object complying with the following schema
             
           ```

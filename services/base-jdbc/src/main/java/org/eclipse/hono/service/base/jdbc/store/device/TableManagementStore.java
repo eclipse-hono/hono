@@ -957,6 +957,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param pageSize The page size.
      * @param pageOffset The page offset.
      * @param filters The list of filters (currently only the first value of the list is used).
+     *                Will be ignored if parameter isGateway is being used.
      * @param isGateway Optional filter for searching only gateways or only devices.
      *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @param spanContext The span to contribute to.
