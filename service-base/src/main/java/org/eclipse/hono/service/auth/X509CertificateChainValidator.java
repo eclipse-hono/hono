@@ -32,12 +32,15 @@ public interface X509CertificateChainValidator {
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
      * @param trustAnchor The trust anchor to use for validating the chain.
+     * @param revocationEnabled Enable revocation checking. If this flag is true, the default revocation checking
+     *                          mechanism of the underlying PKIX service provider will be used. If this flag is false,
+     *                          the revocation checking mechanism will be disabled.
      * @return A completed future if the path is valid (according to the implemented tests).
      *         Otherwise, the future will be failed with a {@link java.security.cert.CertificateException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain is empty.
      */
-    Future<Void> validate(List<X509Certificate> chain, TrustAnchor trustAnchor);
+    Future<Void> validate(List<X509Certificate> chain, TrustAnchor trustAnchor, boolean revocationEnabled);
 
     /**
      * Validates a certificate path based on a list of trust anchors.
@@ -45,10 +48,13 @@ public interface X509CertificateChainValidator {
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
      * @param trustAnchors The list of trust anchors to use for validating the chain.
+     * @param revocationEnabled Enable revocation checking. If this flag is true, the default revocation checking
+     *                          mechanism of the underlying PKIX service provider will be used. If this flag is false,
+     *                          the revocation checking mechanism will be disabled.
      * @return A completed future if the path is valid (according to the implemented tests).
      *         Otherwise, the future will be failed with a {@link java.security.cert.CertificateException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain or trust anchor list are empty.
      */
-    Future<Void> validate(List<X509Certificate> chain, Set<TrustAnchor> trustAnchors);
+    Future<Void> validate(List<X509Certificate> chain, Set<TrustAnchor> trustAnchors, boolean revocationEnabled);
 }

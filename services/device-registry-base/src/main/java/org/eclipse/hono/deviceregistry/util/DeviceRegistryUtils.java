@@ -106,6 +106,7 @@ public final class DeviceRegistryUtils {
         final TenantObject target = TenantObject.from(tenantId, source.isEnabled());
         target.setResourceLimits(source.getResourceLimits());
         target.setTracingConfig(source.getTracing());
+        target.setRevocationEnabled(source.isRevocationEnabled());
 
         Optional.ofNullable(source.getMinimumMessageSize())
             .ifPresent(size -> target.setMinimumMessageSize(size));

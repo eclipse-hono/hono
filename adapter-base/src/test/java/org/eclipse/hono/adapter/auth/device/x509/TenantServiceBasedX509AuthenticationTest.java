@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.auth.device.x509;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -75,7 +76,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         tenantClient = mock(TenantClient.class);
         final var validator = mock(X509CertificateChainValidator.class);
-        when(validator.validate(any(List.class), any(Set.class))).thenReturn(Future.succeededFuture());
+        when(validator.validate(any(List.class), any(Set.class), anyBoolean())).thenReturn(Future.succeededFuture());
 
         underTest = new TenantServiceBasedX509Authentication(
                 tenantClient,
@@ -92,7 +93,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a tenant that cannot be looked up via trust anchor subject DN
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false);
+                .addTrustAnchor(null, cert.getPublicKey(), cert.getSubjectX500Principal(), false);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any()))
             .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         when(tenantClient.get(anyString(), any())).thenReturn(Future.succeededFuture(tenant));
@@ -120,7 +121,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a tenant that cannot be looked up via trust anchor subject DN
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false);
+                .addTrustAnchor(null, cert.getPublicKey(), cert.getSubjectX500Principal(), false);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any()))
             .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         when(tenantClient.get(anyString(), any())).thenReturn(Future.succeededFuture(tenant));
@@ -151,7 +152,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a trust anchor that is enabled for auto-provisioning
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), true);
+                .addTrustAnchor(null, cert.getPublicKey(), cert.getSubjectX500Principal(), true);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate
@@ -172,7 +173,7 @@ class TenantServiceBasedX509AuthenticationTest {
 
         // GIVEN a trust anchor that is disabled for auto-provisioning
         final TenantObject tenant = TenantObject.from("tenant", true)
-                .addTrustAnchor(cert.getPublicKey(), cert.getSubjectX500Principal(), false);
+                .addTrustAnchor(null, cert.getPublicKey(), cert.getSubjectX500Principal(), false);
         when(tenantClient.get(eq(cert.getIssuerX500Principal()), any())).thenReturn(Future.succeededFuture(tenant));
 
         // WHEN validating the client certificate

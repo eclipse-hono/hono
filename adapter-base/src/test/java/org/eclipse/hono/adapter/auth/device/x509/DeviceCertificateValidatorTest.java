@@ -59,7 +59,7 @@ class DeviceCertificateValidatorTest {
         VertxTools.getCertificate(vertx, deviceCert.certificatePath())
             .compose(cert -> {
                 final TrustAnchor ca = new TrustAnchor(cert.getSubjectX500Principal(), cert.getPublicKey(), null);
-                return validator.validate(List.of(cert), ca);
+                return validator.validate(List.of(cert), ca, false);
             })
             .onComplete(ctx.succeedingThenComplete());
     }

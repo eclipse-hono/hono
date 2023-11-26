@@ -199,7 +199,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                                         log.trace(b.toString());
                                     }
                                     final List<X509Certificate> chainToValidate = List.of(deviceCert);
-                                    return certPathValidator.validate(chainToValidate, trustAnchors)
+                                    return certPathValidator.validate(chainToValidate, trustAnchors, tenant.isRevocationEnabled())
                                             .recover(t -> Future.failedFuture(new ClientErrorException(
                                                     tenant.getTenantId(),
                                                     HttpURLConnection.HTTP_UNAUTHORIZED,

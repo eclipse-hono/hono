@@ -244,7 +244,7 @@ public class TenantObjectTest {
     public void testGetTrustAnchorsUsesPublicKey() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
+                .setTrustAnchor(null, trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
 
         assertThat(obj.getTrustAnchors()).isNotEmpty();
         final TrustAnchor trustAnchor = obj.getTrustAnchors().iterator().next();
@@ -267,9 +267,9 @@ public class TenantObjectTest {
         final X509Certificate caCert2 = createCaCertificate(caName2);
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
-                .addTrustAnchor(caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true)
-                .addTrustAnchor(caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false);
+                .setTrustAnchor(null, trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
+                .addTrustAnchor(null, caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true)
+                .addTrustAnchor(null, caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false);
 
         assertThat(obj.getTrustAnchors()).hasSize(3);
 
@@ -463,8 +463,8 @@ public class TenantObjectTest {
         final X509Certificate caCert = createCaCertificate(caName);
 
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
-                .addTrustAnchor(caCert.getPublicKey(), caCert.getSubjectX500Principal(), null);
+                .setTrustAnchor(null, trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
+                .addTrustAnchor(null, caCert.getPublicKey(), caCert.getSubjectX500Principal(), null);
 
         assertThat(tenantObject.isAutoProvisioningEnabled(caCert.getSubjectX500Principal().getName())).isFalse();
 
@@ -481,9 +481,9 @@ public class TenantObjectTest {
         final X509Certificate caCert = createCaCertificate("12345,OU=Hono,O=Eclipse");
         final String subjectDN = caCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .addTrustAnchor(caCert.getPublicKey().getEncoded(), caCert.getPublicKey().getAlgorithm(),
+                .addTrustAnchor(null, caCert.getPublicKey().getEncoded(), caCert.getPublicKey().getAlgorithm(),
                         caCert.getSubjectX500Principal(), authIdTemplate, false)
-                .addTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal(), false);
+                .addTrustAnchor(null, trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal(), false);
         final Optional<String> result = tenantObject.getAuthIdTemplate(subjectDN);
 
         assertThat(result.isPresent()).isTrue();

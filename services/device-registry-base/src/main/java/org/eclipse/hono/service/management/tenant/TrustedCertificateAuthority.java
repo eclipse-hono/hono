@@ -16,6 +16,7 @@ package org.eclipse.hono.service.management.tenant;
 import java.io.ByteArrayInputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -206,10 +207,20 @@ public class TrustedCertificateAuthority {
      */
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
     public final TrustedCertificateAuthority setCertificate(final byte[] certificate) throws CertificateException {
-
         final CertificateFactory factory = CertificateFactory.getInstance("X.509");
         cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certificate));
         return this;
+    }
+
+    /**
+     * Gets the trusted certificate.
+     *
+     * @return The certificate in encoded form.
+     * @throws CertificateEncodingException if certificate cannot be encoded.
+     */
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
+    public final byte[] getCertificate() throws CertificateEncodingException {
+        return cert == null ? null : cert.getEncoded();
     }
 
     /**
@@ -373,5 +384,4 @@ public class TrustedCertificateAuthority {
         this.authIdTemplate = template;
         return this;
     }
-
 }

@@ -13,10 +13,15 @@
 
 package org.eclipse.hono.util;
 
+import java.io.ByteArrayInputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.TrustAnchor;
+import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +63,8 @@ public final class TenantObject extends JsonBackedValueObject {
     private TenantTracingConfig tracingConfig;
     @JsonIgnore
     private Set<TrustAnchor> trustAnchors;
+    @JsonIgnore
+    private boolean revocationEnabled;
 
     /**
      * Creates a new tenant.
@@ -116,25 +123,28 @@ public final class TenantObject extends JsonBackedValueObject {
      * <p>
      * This method removes all existing trust anchors.
      *
+     * @param certificate The CA's certificate. This attribute is optional.
      * @param publicKey The CA's public key.
      * @param subjectDn The CA's subject DN.
      * @return This tenant for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see #addTrustAnchor(PublicKey, X500Principal, Boolean)
+     * @see #addTrustAnchor(X509Certificate, PublicKey, X500Principal, Boolean)
      */
     @JsonIgnore
-    public TenantObject setTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn) {
+    public TenantObject setTrustAnchor(final X509Certificate certificate, final PublicKey publicKey,
+                                       final X500Principal subjectDn) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
 
         setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
-        return addTrustAnchor(publicKey, subjectDn, false);
+        return addTrustAnchor(certificate, publicKey, subjectDn, false);
     }
 
     /**
      * Adds a trusted certificate authority to use for authenticating devices of this tenant.
      *
+     * @param certificate The CA's certificate. This attribute is optional.
      * @param publicKey The CA's public key.
      * @param subjectDn The CA's subject DN.
      * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
@@ -142,20 +152,25 @@ public final class TenantObject extends JsonBackedValueObject {
      * @throws NullPointerException if the public key or subjectDN parameters is {@code null}.
      */
     @JsonIgnore
-    public TenantObject addTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn,
-            final Boolean autoProvisioningEnabled) {
+    public TenantObject addTrustAnchor(final X509Certificate certificate, final PublicKey publicKey,
+                                       final X500Principal subjectDn, final Boolean autoProvisioningEnabled) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
-
-        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, null,
+        byte[] certificateData;
+        try {
+            certificateData = certificate == null ? null : certificate.getEncoded();
+        } catch (CertificateEncodingException e) {
+            certificateData = null;
+        }
+        return addTrustAnchor(certificateData, publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, null,
                 autoProvisioningEnabled);
-
     }
 
     /**
      * Adds a trusted certificate authority to use for authenticating devices of this tenant.
      *
+     * @param certificate The CA's certificate in encoded form. This attribute is optional.
      * @param publicKey The CA's public key in encoded form.
      * @param publicKeyAlgorithm The algorithm of the public key.
      * @param subjectDn The CA's subject DN.
@@ -165,7 +180,8 @@ public final class TenantObject extends JsonBackedValueObject {
      * @throws NullPointerException if the public key, algorithm or subjectDN parameters is {@code null}.
      */
     @JsonIgnore
-    public TenantObject addTrustAnchor(final byte[] publicKey,
+    public TenantObject addTrustAnchor(final byte[] certificate,
+                                       final byte[] publicKey,
                                        final String publicKeyAlgorithm,
                                        final X500Principal subjectDn,
                                        final String authIdTemplate,
@@ -178,6 +194,9 @@ public final class TenantObject extends JsonBackedValueObject {
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
+        if (certificate != null) {
+            trustedCa.put(TenantConstants.FIELD_PAYLOAD_CERT, certificate);
+        }
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKeyAlgorithm);
         trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
         Optional.ofNullable(authIdTemplate)
@@ -225,6 +244,19 @@ public final class TenantObject extends JsonBackedValueObject {
 
         if (keyProps == null) {
             return null;
+        }
+        final byte[] encodedCertificate = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_CERT, byte[].class);
+        if (encodedCertificate != null) {
+            final X509Certificate certificate;
+            final CertificateFactory certificateFactory;
+            try {
+                certificateFactory = CertificateFactory.getInstance("X.509");
+                certificate = (X509Certificate) certificateFactory.generateCertificate(
+                        new ByteArrayInputStream(encodedCertificate));
+                return new TrustAnchor(certificate, null);
+            } catch (CertificateException e) {
+                return null;
+            }
         } else {
             final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
             if (subjectDn == null) {
@@ -560,6 +592,28 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonProperty(value = TenantConstants.FIELD_TRACING)
     public TenantObject setTracingConfig(final TenantTracingConfig tracing) {
         this.tracingConfig = tracing;
+        return this;
+    }
+
+    /**
+     * Checks whether the certificate revocation check is enabled.
+     *
+     * @return True if certificate revocation check is enabled.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_REVOCATION_ENABLED)
+    public Boolean isRevocationEnabled() {
+        return revocationEnabled;
+    }
+
+    /**
+     * Enable or disable certificate revocation check.
+     *
+     * @param revocationEnabled {@code true} if certificate revocation check shall be enabled.
+     * @return This instance, to allow chained invocations.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_REVOCATION_ENABLED)
+    public TenantObject setRevocationEnabled(final boolean revocationEnabled) {
+        this.revocationEnabled = revocationEnabled;
         return this;
     }
 }

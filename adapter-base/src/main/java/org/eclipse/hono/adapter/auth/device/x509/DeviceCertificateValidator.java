@@ -45,19 +45,21 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> validate(final List<X509Certificate> chain, final TrustAnchor trustAnchor) {
+    public Future<Void> validate(final List<X509Certificate> chain, final TrustAnchor trustAnchor,
+                                 final boolean revocationEnabled) {
 
         Objects.requireNonNull(chain);
         Objects.requireNonNull(trustAnchor);
 
-        return validate(chain, Set.of(trustAnchor));
+        return validate(chain, Set.of(trustAnchor), revocationEnabled);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> validate(final List<X509Certificate> chain, final Set<TrustAnchor> trustAnchors) {
+    public Future<Void> validate(final List<X509Certificate> chain, final Set<TrustAnchor> trustAnchors,
+                                 final boolean revocationEnabled) {
 
         Objects.requireNonNull(chain);
         Objects.requireNonNull(trustAnchors);
@@ -72,8 +74,7 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
 
         try {
             final PKIXParameters params = new PKIXParameters(trustAnchors);
-            // TODO do we need to check for revocation?
-            params.setRevocationEnabled(false);
+            params.setRevocationEnabled(revocationEnabled);
             final CertificateFactory factory = CertificateFactory.getInstance("X.509");
             final CertPath path = factory.generateCertPath(chain);
             final CertPathValidator validator = CertPathValidator.getInstance("PKIX");

@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -100,6 +101,10 @@ public class Tenant {
     @JsonProperty(RegistryManagementConstants.FIELD_REGISTRATION_LIMITS)
     @JsonInclude(Include.NON_DEFAULT)
     private RegistrationLimits registrationLimits;
+
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_REVOCATION_ENABLED)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean revocationEnabled;
 
     /**
      * Creates a new Tenant instance.
@@ -465,6 +470,26 @@ public class Tenant {
         if (trustedCertificateAuthorities != null) {
             this.trustedCertificateAuthorities = List.copyOf(trustedCertificateAuthorities);
         }
+        return this;
+    }
+
+    /**
+     * Checks whether the certificate revocation check is enabled.
+     *
+     * @return True if certificate revocation check is enabled.
+     */
+    public final Boolean isRevocationEnabled() {
+        return revocationEnabled;
+    }
+
+    /**
+     * Enable or disable certificate revocation check.
+     *
+     * @param revocationEnabled {@code true} if certificate revocation check shall be enabled.
+     * @return This instance, to allow chained invocations.
+     */
+    public final Tenant setRevocationEnabled(final boolean revocationEnabled) {
+        this.revocationEnabled = revocationEnabled;
         return this;
     }
 
