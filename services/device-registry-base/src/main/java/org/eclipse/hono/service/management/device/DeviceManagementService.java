@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -102,6 +102,8 @@ public interface DeviceManagementService {
      *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
      *             methods. However,implementations may log (error) events on this span, set tags and use this span
      *             as the parent for additional spans created as part of this method's execution.
+     * @param isGateway Optional filter for searching only gateways or only devices.
+     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the matching devices. Otherwise, the future will
@@ -118,6 +120,7 @@ public interface DeviceManagementService {
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions,
+            final Optional<Boolean> isGateway,
             final Span span) {
 
         return Future.failedFuture(new ServerErrorException(

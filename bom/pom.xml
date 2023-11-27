@@ -36,22 +36,21 @@
     <guava.version>32.1.2-jre</guava.version>
     <infinispan.version>14.0.11.Final</infinispan.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0.12.Final</infinispan-image.name>
-    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.45</jaeger.image.name>
+    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.51</jaeger.image.name>
     <javax.transaction-api.version>1.3</javax.transaction-api.version>
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
-    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.3.5</kafka.image.name>
+    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
     <logback.version>1.4.11</logback.version>
     <mongodb-image.name>docker.io/library/mongo:6.0</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.10.0</qpid-jms.version>
-    <quarkus.platform.version>3.2.6.Final</quarkus.platform.version>
+    <quarkus.platform.version>3.2.8.Final</quarkus.platform.version>
     <slf4j.version>2.0.6</slf4j.version>
     <spring-security-crypto.version>6.1.4</spring-security-crypto.version>
     <truth.version>1.1.3</truth.version>
-    <zookeeper.image.name>docker.io/confluentinc/cp-zookeeper:7.3.5</zookeeper.image.name>
 
     <!-- The port at which the health check server should expose its resources -->
     <health.check.port>8088</health.check.port>

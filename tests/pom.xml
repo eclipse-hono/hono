@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -617,7 +617,7 @@
         <hono.amqp-adapter.max-mem>70000000</hono.amqp-adapter.max-mem>
 
         <hono.coap-adapter.image>hono-adapter-coap-native</hono.coap-adapter.image>
-        <hono.coap-adapter.max-mem>90000000</hono.coap-adapter.max-mem>
+        <hono.coap-adapter.max-mem>120000000</hono.coap-adapter.max-mem>
 
         <hono.http-adapter.image>hono-adapter-http-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>70000000</hono.http-adapter.max-mem>
@@ -630,7 +630,7 @@
         <hono.mqtt-adapter.max-mem>70000000</hono.mqtt-adapter.max-mem>
 
         <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
-        <hono.auth-server.max-mem>40000000</hono.auth-server.max-mem>
+        <hono.auth-server.max-mem>60000000</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
         <hono.command-router.image>hono-service-command-router-native</hono.command-router.image>
         <hono.command-router.max-mem>100000000</hono.command-router.max-mem>
@@ -1212,34 +1212,6 @@
                     </env>
                   </run>
                 </image>
-                <!-- ##### Zookeeper ##### -->
-                <image>
-                  <name>${zookeeper.image.name}</name>
-                  <alias>hono-zookeeper-test</alias>
-                  <run>
-                    <skip>${hono.kafka-messaging.disabled}</skip>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>zookeeper</alias>
-                    </network>
-                    <memorySwap>400000000</memorySwap>
-                    <memory>400000000</memory>
-                    <log>
-                      <prefix>Zookeeper</prefix>
-                      <color>${log.color.kafka}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <log>.*(binding to port).*</log>
-                    </wait>
-                    <env>
-                      <KAFKA_HEAP_OPTS>-Xms240M -Xmx240M</KAFKA_HEAP_OPTS>
-                      <ZOOKEEPER_CLIENT_PORT>2181</ZOOKEEPER_CLIENT_PORT>
-                      <ZOOKEEPER_TICK_TIME>2000</ZOOKEEPER_TICK_TIME>
-                    </env>
-                  </run>
-                </image>
                 <!-- ##### Kafka ##### -->
                 <image>
                   <name>${kafka.image.name}</name>
@@ -1262,25 +1234,28 @@
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*(\[KafkaServer id=1\] started).*</log>
+                      <log>.*(Kafka startTimeMs:).*</log>
                     </wait>
                     <env>
+                      <CLUSTER_ID>q1Sh-9_ISia_zwGINzRvyQ</CLUSTER_ID>
                       <KAFKA_ADVERTISED_LISTENERS>DOCKER_INTERNAL://kafka:9092,DOCKER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
-                      <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
+                      <KAFKA_CONTROLLER_LISTENER_NAMES>CONTROLLER</KAFKA_CONTROLLER_LISTENER_NAMES>
+                      <KAFKA_CONTROLLER_QUORUM_VOTERS>1@127.0.0.1:9093</KAFKA_CONTROLLER_QUORUM_VOTERS>
+                      <KAFKA_NODE_ID>1</KAFKA_NODE_ID>
                       <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
-                      <KAFKA_HEAP_OPTS>-Xms1024m -Xmx1024m</KAFKA_HEAP_OPTS>
                       <KAFKA_INTER_BROKER_LISTENER_NAME>DOCKER_INTERNAL</KAFKA_INTER_BROKER_LISTENER_NAME>
-                      <KAFKA_JVM_PERFORMANCE_OPTS>-server -XX:+UseG1GC -XX:MaxGCPauseMillis=40 -XX:InitiatingHeapOccupancyPercent=35 -XX:+DisableExplicitGC -Djava.awt.headless=true</KAFKA_JVM_PERFORMANCE_OPTS>
-                      <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
-                      <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>DOCKER_INTERNAL:PLAINTEXT,DOCKER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
+                      <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
+                      <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>CONTROLLER:PLAINTEXT,DOCKER_INTERNAL:PLAINTEXT,DOCKER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
                       <!-- increase log cleaner check frequency (default is 5min) for test where records shall be removed -->
-                      <KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>1100</KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>
-                      <!-- log level for kafka.server.KafkaServer needs to stay on INFO so that docker-maven-plugin can wait for container startup -->
-                      <KAFKA_LOG4J_LOGGERS>kafka.cluster=${hono.kafka.log-level},kafka.controller=${hono.kafka.log-level},kafka.coordinator=${hono.kafka.log-level},kafka.log=${hono.kafka.log-level},kafka.authorizer=${hono.kafka.log-level},kafka.zk=${hono.kafka.log-level},state.change.logger=${hono.kafka.log-level},kafka.server=${hono.kafka.log-level},kafka.server.KafkaServer=INFO</KAFKA_LOG4J_LOGGERS>
+                      <KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>1000</KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>
+                      <KAFKA_LOG_SEGMENT_DELETE_DELAY_MS>0</KAFKA_LOG_SEGMENT_DELETE_DELAY_MS>
+                      <!-- log level for AppInfoParser needs to be pinned to INFO so that docker-maven-plugin can wait for container startup -->
+                      <KAFKA_LOG4J_LOGGERS>kafka=${hono.kafka.log-level},org.apache.kafka=${hono.kafka.log-level},state.change.logger=${hono.kafka.log-level},org.apache.kafka.common.utils.AppInfoParser=INFO</KAFKA_LOG4J_LOGGERS>
                       <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
+                      <KAFKA_PROCESS_ROLES>broker,controller</KAFKA_PROCESS_ROLES>
+                      <KAFKA_REST_BOOTSTRAP_SERVERS>127.0.0.1:9092</KAFKA_REST_BOOTSTRAP_SERVERS>
                       <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
                       <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
-                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
                     </env>
                   </run>
                 </image>

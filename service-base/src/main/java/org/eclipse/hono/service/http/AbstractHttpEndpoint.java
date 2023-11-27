@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -81,6 +81,15 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         } catch (final NumberFormatException e) {
             throw new IllegalArgumentException("value is not an integer");
         }
+    };
+
+    /**
+     * A function that tries to parse a string into an Optional boolean.
+     * It takes a valid boolean string value (e.g "true", "false") and returns an Optional of boolean type,
+     * if input string can be parsed as boolean else Optional.empty.
+     */
+    protected static final Function<String, Optional<Boolean>> CONVERTER_BOOLEAN =  s -> {
+        return Strings.isNullOrEmpty(s) ? Optional.empty() : Optional.of(Boolean.valueOf(s));
     };
 
     /**

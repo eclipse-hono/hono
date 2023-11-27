@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -213,7 +213,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     /**
      * Finds devices for search criteria.
      * <p>
-     * This method is invoked by {@link #searchDevices(String, int, int, List, List, Span)} after all parameter checks
+     * This method is invoked by {@link #searchDevices(String, int, int, List, List, Optional, Span)} after all parameter checks
      * have succeeded.
      * <p>
      * This default implementation returns a future failed with a {@link org.eclipse.hono.client.ServerErrorException}
@@ -225,6 +225,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *                   retrieve the whole result set page by page.
      * @param filters A list of filters. The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options. The sortOptions specify properties to sort the result set by.
+     * @param isGateway Optional filter for searching only gateways or only devices.
+     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
      * @param span The active OpenTracing span to use for tracking this operation.
      *             <p>
      *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
@@ -242,6 +244,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions,
+            final Optional<Boolean> isGateway,
             final Span span) {
 
         return Future.failedFuture(new ServerErrorException(
@@ -408,6 +411,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions,
+            final Optional<Boolean> isGateway,
             final Span span) {
 
         Objects.requireNonNull(tenantId);
@@ -429,7 +433,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 tenantId,
                                 result.getStatus(),
                                 "tenant does not exist"))
-                        : processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span))
+                        : processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, isGateway, span))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 }

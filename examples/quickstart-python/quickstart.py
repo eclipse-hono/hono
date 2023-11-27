@@ -17,117 +17,124 @@ import threading
 import time
 
 import requests
+
+from kafka import KafkaConsumer
 from paho.mqtt.publish import single
-from proton.handlers import MessagingHandler
-from proton.reactor import Container
 from requests.auth import HTTPBasicAuth
 
-registryIp = "hono.eclipseprojects.io"
-httpAdapterIp = "hono.eclipseprojects.io"
-mqttAdapterIp = "hono.eclipseprojects.io"
-amqpNetworkIp = "hono.eclipseprojects.io"
+HONO_SANDBOX_HOSTNAME = "hono.eclipseprojects.io"
+CA_FILE = "/etc/ssl/certs/ca-certificates.crt"
+DEVICE_PASSWORD = "my-secret-password"
+
+registry_base_url = f"https://{HONO_SANDBOX_HOSTNAME}:28443/v1"
+http_adapter_ip = HONO_SANDBOX_HOSTNAME
+mqtt_adapter_ip = HONO_SANDBOX_HOSTNAME
+amqp_network_ip = HONO_SANDBOX_HOSTNAME
 
 # Register Tenant
-tenant = requests.post(f'http://{registryIp}:28080/v1/tenants',
-                       headers={"content-type": "application/json"},
-                       data=json.dumps({"ext": { "messaging-type": "amqp" }})).json()
-tenantId = tenant["id"]
+tenant = requests.post(
+    url=f"{registry_base_url}/tenants",
+    headers={"content-type": "application/json"},
+    data=json.dumps({"ext": { "messaging-type": "kafka" }})).json()
+tenant_id = tenant["id"]
 
-print(f'Registered tenant {tenantId}')
+print(f"Registered tenant {tenant_id}")
 
 # Add Device to Tenant
-device = requests.post(f'http://{registryIp}:28080/v1/devices/{tenantId}').json()
-deviceId = device["id"]
+device = requests.post(f"{registry_base_url}/devices/{tenant_id}").json()
+device_id = device["id"]
 
-print(f'Registered device {deviceId}')
+print(f'Registered device {device_id}')
 
 # Set Device Password
-devicePassword = "my-secret-password"
-
-code = requests.put(f'http://{registryIp}:28080/v1/credentials/{tenantId}/{deviceId}',
-                    headers={'content-type': 'application/json'},
-                    data=json.dumps(
-                        [{"type": "hashed-password", "auth-id": deviceId, "secrets": [{"pwd-plain": devicePassword}]}]))
+code = requests.put(
+    url=f"{registry_base_url}/credentials/{tenant_id}/{device_id}",
+    headers={"content-type": "application/json"},
+    data=json.dumps(
+        [{"type": "hashed-password", "auth-id": device_id, "secrets": [{"pwd-plain": DEVICE_PASSWORD}]}]))
 
 if code.status_code == 204:
     print("Password is set!")
 else:
-    print("Unnable to set Password")
+    print("Unable to set Password")
 
 # Now we can start the client application
 print("You could now start the Hono Command Line Client in another terminal to consume messages from devices:")
 print()
-cmd = f'java -jar hono-cli-2.*-exec.jar app --sandbox --amqp consume --tenant={tenantId}'
+cmd = f"java -jar hono-cli-2.*-exec.jar app --sandbox --ca-file {CA_FILE} consume --tenant={tenant_id}"
 print(cmd)
 print()
 
 
 # input("Press Enter to continue...")
 
-class AmqpHandler(MessagingHandler):
-    """
-    Handler for "northbound side" where Messages are received
-    via AMQP.
-    """
-    def __init__(self, server, address):
-        super(AmqpHandler, self).__init__()
-        self.server = server
-        self.address = address
+class DownstreamApp(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.stop_event = threading.Event()
+        self._topic_name = f"hono.telemetry.{tenant_id}"
 
-    def on_start(self, event):
-        # the password used below is the Sandbox server's password for the default consumer
-        # as documented on the Hono website
-        conn = event.container.connect(self.server, user="consumer@HONO", password="verysecret") # nosec hardcoded_password_funcarg
-        event.container.create_receiver(conn, self.address)
+    def stop(self):
+        self.stop_event.set()
 
-    def on_connection_error(self, event):
-        print("Connection Error")
+    def run(self):
 
-    def on_link_error(self, event):
-        print("Link Error")
+        consumer = KafkaConsumer(
+            self._topic_name,
+            bootstrap_servers=f"{HONO_SANDBOX_HOSTNAME}:9094",
+            group_id="foo",
+            max_poll_records=10,
+            ssl_cafile=CA_FILE,
+            security_protocol="SASL_SSL",
+            sasl_mechanism="SCRAM-SHA-512",
+            sasl_plain_username="hono",
+            sasl_plain_password="hono-secret",
+            consumer_timeout_ms=5000)
 
-    def on_message(self, event):
-        print("Got a message:")
-        print(event.message.body)
+        print("created Kafka consumer ...")
 
+        print("waiting for Kafka messages")
+        # msg_count = 0
+        for message in consumer:
+            print(f"received message: {message.value.decode()}")
+            # msg_count += 1
+            if self.stop_event.is_set():
+                break
 
-# Prepare the container
-uri = f'amqp://{amqpNetworkIp}:15672'
-address = f'telemetry/{tenantId}'
-print("Using source: " + uri)
-print("Using address: " + address)
-container = Container(AmqpHandler(uri, address))
+        consumer.close()
 
-# run container in separate thread
-print("Starting (north bound) AMQP Connection...")
-thread = threading.Thread(target=lambda: container.run(), daemon=True)
-thread.start()
+task = DownstreamApp()
+task.start()
+# wait for topic to be created
+time.sleep(3)
 
-# Give it some time to link
-time.sleep(2)
+def send_message_via_http_adapter():
+    # nosemgrep: no-auth-over-http
+    return requests.post(
+        url=f"https://{http_adapter_ip}:8443/telemetry",
+        headers={"content-type": "application/json"},
+        data=json.dumps({"temp": 5, "transport": "http"}),
+        auth=HTTPBasicAuth(f"{device_id}@{tenant_id}", DEVICE_PASSWORD))
+
 
 # Send HTTP Message
-print("Send Telemetry Message via HTTP")
-# nosemgrep: no-auth-over-http
-response = requests.post(f'http://{httpAdapterIp}:8080/telemetry', headers={"content-type": "application/json"},
-                         data=json.dumps({"temp": 5, "transport": "http"}),
-                         auth=HTTPBasicAuth(f'{deviceId}@{tenantId}', f'{devicePassword}'))
-
-if response.status_code == 202:
-    print("HTTP sent successful")
-else:
-    print("HTTP message not sent")
+print("Sending Telemetry message via HTTP adapter")
+response = send_message_via_http_adapter()
+while response.status_code != 202:
+    print(f"failed to send message via HTTP adapter, status code: {response.status_code}")
+    time.sleep(2)
+    print("trying again ...")
+    response = send_message_via_http_adapter()
 
 # Send Message via MQTT
-print("Send Telemetry Message via MQTT")
-single("telemetry", payload=json.dumps({"temp": 17, "transport": "mqtt"}),
-       hostname=mqttAdapterIp,
-       auth={"username": f'{deviceId}@{tenantId}', "password": devicePassword})
+print("Sending Telemetry message via MQTT adapter")
+single(
+    topic="telemetry",
+    payload=json.dumps({"temp": 17, "transport": "mqtt"}),
+    hostname=mqtt_adapter_ip,
+    port=8883,
+    auth={"username": f"{device_id}@{tenant_id}", "password": DEVICE_PASSWORD},
+    tls={"ca_certs": CA_FILE})
 
-# Wait a bit for the MQTT Message to arrive
-time.sleep(2)
-
-# Stop container
-print("Stopping (north bound) AMQP Connection...")
-container.stop()
-thread.join(timeout=5)
+task.stop()
+task.join(timeout=5)

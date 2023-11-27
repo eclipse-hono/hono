@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,10 +25,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -80,6 +81,15 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
 public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
 
     /**
+     * The threshold value for the consumer's {@value ConsumerConfig#METADATA_MAX_AGE_CONFIG} configuration property
+     * which determines the consumer's strategy for getting assigned partitions of dynamically created topics.
+     * <p>
+     * The consumer enforces a rebalance to get assigned partitions if the property is set and its value is greater
+     * than the threshold. Otherwise, the consumer will wait for the metadata to become stale and be refreshed.
+     */
+    public static final int THRESHOLD_METADATA_MAX_AGE_MS = 500;
+
+    /**
      * The default timeout to use when polling the broker for messages.
      */
     public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
@@ -114,10 +124,11 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     private final AtomicBoolean subscriptionUpdateTriggered = new AtomicBoolean();
     /**
      * Map with the topics, used in {@link #ensureTopicIsAmongSubscribedTopicPatternTopics(String)} method invocations,
-     * that are not in the list of subscribed topics yet. The map value is the promise to complete that method's
+     * that are not in the list of subscribed topics yet. The map value is the tracker to use for completing that method's
      * result future when the subscription got updated.
      */
-    private final Map<String, Promise<Void>> subscriptionUpdateTrackersForToBeAddedTopics = new ConcurrentHashMap<>();
+    private final Map<String, SubscriptionUpdateTracker> subscriptionUpdateTrackersForToBeAddedTopics = new HashMap<>();
+    private final Optional<Integer> metadataMaxAge;
 
     private final AtomicBoolean pollingPaused = new AtomicBoolean();
     private final AtomicBoolean recordFetchingPaused = new AtomicBoolean();
@@ -220,6 +231,14 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         this.topicPattern = topicPattern;
         this.topics = Optional.ofNullable(topics).map(HashSet::new).orElse(null);
         this.consumerConfig = Objects.requireNonNull(consumerConfig);
+        this.metadataMaxAge = Optional.ofNullable(consumerConfig.get(ConsumerConfig.METADATA_MAX_AGE_CONFIG))
+                .map(s -> {
+                    try {
+                        return Integer.parseInt(s);
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                });
 
         if (!consumerConfig.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
             if ("true".equals(consumerConfig.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG))) {
@@ -719,7 +738,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 }
                 onPartitionsAssignedBlocking(partitionsSet);
                 final Set<TopicPartition> allAssignedPartitions = Optional.ofNullable(onRebalanceDoneHandler)
-                        .map(h -> Helper.from(getKafkaConsumer().asStream().unwrap().assignment()))
+                        .map(h -> Helper.from(getUnderlyingConsumer().assignment()))
                         .orElse(null);
                 context.runOnContext(v -> {
                     HonoKafkaConsumer.this.onPartitionsAssigned(partitionsSet);
@@ -838,27 +857,42 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         if (topicPattern != null) {
             final Set<String> oldSubscribedTopicPatternTopics = subscribedTopicPatternTopics;
             try {
+                // Determine the set of subscribed topics as seen by this consumer. This set
+                // might have changed due to the latest rebalancing.
                 subscribedTopicPatternTopics = new HashSet<>(getUnderlyingConsumer().subscription());
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("subscribed topics: {}", String.join(", ", subscribedTopicPatternTopics));
+                }
             } catch (final Exception e) {
                 LOG.warn("error getting subscription", e);
             }
-            if (!subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
-                final List<Handler<Void>> trackerCompletionHandlers = new ArrayList<>();
-                for (final var iter = subscriptionUpdateTrackersForToBeAddedTopics.entrySet().iterator(); iter.hasNext();) {
-                    final var entry = iter.next();
-                    if (subscribedTopicPatternTopics.contains(entry.getKey())) {
-                        LOG.trace("ensureTopicIsAmongSubscribedTopics: topic now in subscribed topics list [{}]", entry.getKey());
-                        trackerCompletionHandlers.add(v -> entry.getValue().tryComplete());
-                        iter.remove();
-                    } else {
-                        LOG.debug("ensureTopicIsAmongSubscribedTopics: have to wait for another rebalance for topic [{}]", entry.getKey());
-                    }
-                }
-                if (!trackerCompletionHandlers.isEmpty()) {
-                    runOnContext(v -> trackerCompletionHandlers.forEach(h -> h.handle(null)));
-                }
+            synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
                 if (!subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
-                    triggerTopicPatternSubscriptionUpdate();
+                    final List<Handler<Void>> trackerCompletionHandlers = new ArrayList<>();
+                    // determine all pending futures for topic names which this consumer now has a
+                    // subscription for
+                    for (final var iter = subscriptionUpdateTrackersForToBeAddedTopics.values().iterator(); iter.hasNext();) {
+                        final var tracker = iter.next();
+                        if (tracker.isContainedInSubscribedTopicsAfterRebalance(subscribedTopicPatternTopics)) {
+                            LOG.trace("topic [{}] is now in subscribed topics list", tracker.getTopicName());
+                            trackerCompletionHandlers.add(v -> tracker.complete());
+                            iter.remove();
+                        } else if (tracker.hasRebalancesLeft()) {
+                            LOG.debug("topic [{}] is not in subscribed topics list, will wait for another rebalance", tracker.getTopicName());
+                        } else {
+                            LOG.info("topic [{}] is still not in subscribed topics list, not waiting for additional rebalance anymore", tracker.getTopicName());
+                            trackerCompletionHandlers.add(v -> tracker.fail());
+                            iter.remove();
+                        }
+                    }
+                    if (!trackerCompletionHandlers.isEmpty()) {
+                        // complete the futures on the Vert.x event loop so that client code does
+                        // not block the Kafka Consumer's worker thread
+                        trackerCompletionHandlers.forEach(handler -> runOnContext(v -> handler.handle(null)));
+                    }
+                    if (!subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
+                        triggerTopicPatternSubscriptionUpdate();
+                    }
                 }
             }
             // check for deleted topics in order to remove corresponding metrics
@@ -887,6 +921,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
 
         final Promise<Void> subscribeDonePromise = Promise.promise();
         if (topicPattern != null) {
+            LOG.debug("subscribing to topics matching pattern: {}", topicPattern.pattern());
             kafkaConsumer.subscribe(topicPattern, subscribeDonePromise);
         } else {
             // Trigger retrieval of metadata for each of the subscription topics if not already available locally;
@@ -994,6 +1029,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
 
             return Optional.ofNullable(kafkaConsumer)
                 .map(consumer -> consumer.close()
+                        .onSuccess(ok -> LOG.info("Kafka consumer stopped successfully"))
                         .onComplete(ar -> {
                             Optional.ofNullable(metricsSupport)
                                 .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
@@ -1123,15 +1159,18 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             return Future.succeededFuture();
         }
 
-        final Promise<Void> topicTracker = Promise.promise();
-        return Optional.ofNullable(subscriptionUpdateTrackersForToBeAddedTopics.putIfAbsent(topic, topicTracker))
-                .map(previousTopicTracker -> {
-                    LOG.debug("ensureTopicIsAmongSubscribedTopics: will wait for ongoing invocation to complete [{}]", topic);
-                    return previousTopicTracker.future();
-                }).orElseGet(() -> {
-                    triggerTopicPatternSubscriptionUpdate();
-                    return topicTracker.future();
-                });
+        synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
+            final var tracker = new SubscriptionUpdateTracker(topic);
+
+            return Optional.ofNullable(subscriptionUpdateTrackersForToBeAddedTopics.putIfAbsent(topic, tracker))
+                    .map(previousTopicTracker -> {
+                        LOG.debug("ensureTopicIsAmongSubscribedTopics: will wait for ongoing invocation to complete [{}]", topic);
+                        return previousTopicTracker.outcome();
+                    }).orElseGet(() -> {
+                        triggerTopicPatternSubscriptionUpdate();
+                        return tracker.outcome();
+                    });
+        }
     }
 
     private void triggerTopicPatternSubscriptionUpdate() {
@@ -1141,51 +1180,58 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         }
         runOnKafkaWorkerThread(v -> {
             subscriptionUpdateTriggered.set(false);
-            if (subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
-                return;
-            }
-            // check topics that we want to be in the subscribed-topics list after the rebalance
-            for (final var iter = subscriptionUpdateTrackersForToBeAddedTopics.entrySet().iterator(); iter.hasNext();) {
-                final var entry = iter.next();
-                final String topic = entry.getKey();
-                LOG.trace("ensureTopicIsAmongSubscribedTopics: check for topic [{}]", topic);
-                Exception failure = null;
-                try {
-                    // check whether topic exists, if not, potentially auto-creating it here implicitly (provided "auto.create.topics.enable" is true)
-                    if (getUnderlyingConsumer().partitionsFor(topic).isEmpty()) {
-                        LOG.warn("ensureTopicIsAmongSubscribedTopics: topic doesn't exist and didn't get auto-created: {}", topic);
-                        failure = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                "topic doesn't exist and didn't get auto-created");
-                    }
-                } catch (final Exception e) {
-                    LOG.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, e);
-                    failure = e;
+            synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
+                if (subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
+                    return;
                 }
-                Optional.ofNullable(failure).ifPresent(ex -> {
-                    iter.remove();
-                    runOnContext(v2 -> entry.getValue().tryFail(ex));
-                });
-            }
-            if (!subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
-                LOG.trace("ensureTopicIsAmongSubscribedTopics: subscribe");
-                try {
-                    // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
-                    // therefore enforce a refresh here by again subscribing to the topic pattern
-                    getUnderlyingConsumer().subscribe(topicPattern, rebalanceListener);
-                } catch (final Exception e) {
-                    LOG.warn("ensureTopicIsAmongSubscribedTopics: error updating subscription", e);
-                    failAllSubscriptionUpdateTrackers(e);
+                // check topics that we want to be in the subscribed-topics list after the rebalance
+                for (final var iter = subscriptionUpdateTrackersForToBeAddedTopics.values().iterator(); iter.hasNext();) {
+                    final var tracker = iter.next();
+                    LOG.trace("triggerTopicPatternSubscriptionUpdate: check for topic [{}]", tracker.getTopicName());
+                    try {
+                        // check whether topic exists, if not, potentially auto-creating it here implicitly
+                        // (provided that the broker's "auto.create.topics.enable" config property is true)
+                        if (getUnderlyingConsumer().partitionsFor(tracker.getTopicName()).isEmpty()) {
+                            LOG.debug("triggerTopicPatternSubscriptionUpdate: topic doesn't exist yet: {}", tracker.getTopicName());
+                        }
+                    } catch (final Exception e) {
+                        LOG.warn("triggerTopicPatternSubscriptionUpdate: error getting partitions for topic [{}]", tracker.getTopicName(), e);
+                        iter.remove();
+                        runOnContext(v2 -> tracker.fail(e));
+                    }
+                }
+                if (!subscriptionUpdateTrackersForToBeAddedTopics.isEmpty()) {
+                    LOG.trace("triggerTopicPatternSubscriptionUpdate: subscribe");
+                    try {
+                        LOG.info("triggering refresh of subscribed topic list ...");
+                        getUnderlyingConsumer().subscribe(topicPattern, rebalanceListener);
+                        if (!metadataMaxAge.isPresent() || metadataMaxAge.get() > THRESHOLD_METADATA_MAX_AGE_MS) {
+                            // Partitions of newly created topics are being assigned by means of
+                            // a rebalance. We make sure the rebalancing happens during the next poll()
+                            // operation in order to not having to wait for the metadata to become stale
+                            // which, by default, takes 5 minutes (if not overridden by the consumer's
+                            // "metadata.max.age.ms" config property)
+                            LOG.info("enforcing rebalance on next poll()");
+                            getUnderlyingConsumer().enforceRebalance("trigger assignment of new topic partitions");
+                        }
+                    } catch (final Exception e) {
+                        LOG.warn("triggerTopicPatternSubscriptionUpdate: error updating subscription", e);
+                        failAllSubscriptionUpdateTrackers(e);
+                    }
                 }
             }
         });
     }
 
     private void failAllSubscriptionUpdateTrackers(final Exception failure) {
-        final List<Promise<Void>> toBeFailedPromises = new ArrayList<>();
-        subscriptionUpdateTrackersForToBeAddedTopics.values().iterator()
-                .forEachRemaining(toBeFailedPromises::add);
-        subscriptionUpdateTrackersForToBeAddedTopics.clear();
-        runOnContext(v -> toBeFailedPromises.forEach(promise -> promise.tryFail(failure)));
+        final List<SubscriptionUpdateTracker> toBeFailedTrackers = new ArrayList<>();
+        synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
+            toBeFailedTrackers.addAll(subscriptionUpdateTrackersForToBeAddedTopics.values());
+            subscriptionUpdateTrackersForToBeAddedTopics.clear();
+        }
+        toBeFailedTrackers.forEach(tracker -> {
+            runOnContext(v -> tracker.fail(failure));
+        });
     }
 
     private void removeMetricsForDeletedTopics(final Stream<String> deletedTopics) {
@@ -1259,5 +1305,49 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             throw new IllegalStateException("worker not set");
         }
         return worker;
+    }
+
+    private final class SubscriptionUpdateTracker {
+        private final Promise<Void> outcome = Promise.promise();
+        private final String topicName;
+        private final AtomicInteger rebalancesLeft = new AtomicInteger(10);
+
+        /**
+         * Creates a new tracker for a topic name.
+         */
+        SubscriptionUpdateTracker(final String topicName) {
+            this.topicName = Objects.requireNonNull(topicName);
+        }
+
+        Future<Void> outcome() {
+            return this.outcome.future();
+        }
+
+        String getTopicName() {
+            return topicName;
+        }
+
+        boolean isContainedInSubscribedTopicsAfterRebalance(final Set<String> topics) {
+            rebalancesLeft.decrementAndGet();
+            return topics.contains(topicName);
+        }
+
+        boolean hasRebalancesLeft() {
+            return rebalancesLeft.get() > 0;
+        }
+
+        void complete() {
+            this.outcome.tryComplete();
+        }
+
+        void fail() {
+            this.fail(new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE,
+                    "could not create topic %s".formatted(topicName)));
+        }
+
+        void fail(final Throwable cause) {
+            this.outcome.tryFail(cause);
+        }
     }
 }

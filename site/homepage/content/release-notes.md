@@ -11,6 +11,14 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
   a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+* When using Pub/Sub messaging, there were potentially issues concerning the AMQP connection between protocol adapter
+  and command router, leading for example to timeouts when MQTT devices subscribed/unsubscribed to the command topic.
+  This has been fixed.
+* The integration tests now use Apache Kafka 3.5.0 in Raft mode which no longer requires running a separate Apache Zookeeper
+  instance and thus simplifies test setup and configuration.
+* The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
+  the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
+* Updated to Quarkus 3.2.6.Final
 
 ### Deprecations
 
@@ -19,6 +27,21 @@ description = "Information about changes in recent Hono releases. Includes new f
   Until that date the MongoDB based Device Registry will be tested with MongoDB 4.4, 5.0, 6.0 and 7.0 in the CI workflows.
   However, support for MongoDB 4.4 in Hono has been deprecated and will be removed in a future version altogether.
   Users are encouraged to migrate to MongoDB 6.0 or later.
+
+## 2.4.1
+
+### Fixes & Enhancements
+
+* A device connected to the MQTT adapter would not get disconnected when sending a message after the device's credentials
+  had already expired. This has been fixed.
+* When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
+  being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
+  a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+* When using Pub/Sub messaging, there were potentially issues concerning the AMQP connection between protocol adapter
+  and command router, leading for example to timeouts when MQTT devices subscribed/unsubscribed to the command topic.
+  This has been fixed.
+* The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
+  the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
 
 ## 2.4.0
 
@@ -44,6 +67,18 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MQTT adapter failed to close a connection with a client after the JWT used by the client for authentication had expired.
   This has been fixed.
 * Hono could not be built using Maven 3.9.0 and newer. This has been fixed.
+
+## 2.3.2
+
+### Fixes & Enhancements
+
+* A device connected to the MQTT adapter would not get disconnected when sending a message after the device's credentials
+  had already expired. This has been fixed.
+* When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
+  being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
+  a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+* The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
+  the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
 
 ## 2.3.1
 

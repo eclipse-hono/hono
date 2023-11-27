@@ -1,0 +1,70 @@
+BEGIN:VCALENDAR
+PRODID:-//zoom.us//iCalendar Event//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+CLASS:PUBLIC
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+LAST-MODIFIED:20230407T050750Z
+TZURL:https://www.tzurl.org/zoneinfo-outlook/Europe/Berlin
+X-LIC-LOCATION:Europe/Berlin
+BEGIN:DAYLIGHT
+TZNAME:CEST
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZNAME:CET
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTAMP:20231106T125941Z
+DTSTART;TZID=Europe/Berlin:20231108T160000
+DTEND;TZID=Europe/Berlin:20231108T170000
+SUMMARY:Eclipse Hono Open Hour
+RRULE:FREQ=WEEKLY;WKST=SU;UNTIL=20240731T150000;INTERVAL=2;BYDAY=WE
+UID:ZOOM84218184168
+TZID:Europe/Berlin
+DESCRIPTION:IoT Meeting lädt Sie zu einem geplanten Zoom-Meeting ein.\n\n
+ Beitreten Zoom Meeting\nhttps://eclipse.zoom.us/j/84218184168?pwd=g9Ovd0
+ qijwha8ObVLhUUMo6b8MvZRv.1\n\nMeeting-ID: 842 1818 4168\nKenncode: 72557
+ 0\n\n---\n\nSchnelleinwahl mobil\n+496938079883\,\,84218184168# Deutschl
+ and\n+496938079884\,\,84218184168# Deutschland\n\n---\n\nEinwahl nach ak
+ tuellem Standort\n• +49 69 3807 9883 Deutschland\n• +49 69 3807 9884 Deu
+ tschland\n• +49 69 5050 0951 Deutschland\n• +49 69 5050 0952 Deutschland
+ \n• +49 695 050 2596 Deutschland\n• +49 69 7104 9922 Deutschland\n• +33 
+ 1 7095 0103 Frankreich\n• +33 1 7095 0350 Frankreich\n• +33 1 8699 5831 
+ Frankreich\n• +33 1 7037 2246 Frankreich\n• +33 1 7037 9729 Frankreich\n
+ • +1 564 217 2000 Vereinigte Staaten\n• +1 646 876 9923 Vereinigte Staat
+ en (New York)\n• +1 646 931 3860 Vereinigte Staaten\n• +1 669 444 9171 V
+ ereinigte Staaten\n• +1 669 900 6833 Vereinigte Staaten (San Jose)\n• +1
+  689 278 1000 Vereinigte Staaten\n• +1 719 359 4580 Vereinigte Staaten\n
+ • +1 253 205 0468 Vereinigte Staaten\n• +1 253 215 8782 Vereinigte Staat
+ en (Tacoma)\n• +1 301 715 8592 Vereinigte Staaten (Washington DC)\n• +1 
+ 305 224 1968 Vereinigte Staaten\n• +1 309 205 3325 Vereinigte Staaten\n•
+  +1 312 626 6799 Vereinigte Staaten (Chicago)\n• +1 346 248 7799 Vereini
+ gte Staaten (Houston)\n• +1 360 209 5623 Vereinigte Staaten\n• +1 386 34
+ 7 5053 Vereinigte Staaten\n• +1 507 473 4847 Vereinigte Staaten\n• +1 43
+ 8 809 7799 Kanada\n• +1 587 328 1099 Kanada\n• +1 647 374 4685 Kanada\n•
+  +1 647 558 0588 Kanada\n• +1 778 907 2071 Kanada\n• +1 780 666 0144 Kan
+ ada\n• +1 204 272 7920 Kanada\n• +41 22 591 00 05 Schweiz\n• +41 22 591 
+ 01 56 Schweiz\n• +41 31 528 09 88 Schweiz\n• +41 43 210 70 42 Schweiz\n•
+  +41 43 210 71 08 Schweiz\n• +41 44 529 92 72 Schweiz\n\nMeeting-ID: 842
+  1818 4168\n\nOrtseinwahl suchen: https://eclipse.zoom.us/u/kyW8Zflrx\n\
+ n
+LOCATION:https://eclipse.zoom.us/j/84218184168?pwd=g9Ovd0qijwha8ObVLhUUMo
+ 6b8MvZRv.1
+BEGIN:VALARM
+TRIGGER:-PT10M
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+END:VALARM
+END:VEVENT
+END:VCALENDAR

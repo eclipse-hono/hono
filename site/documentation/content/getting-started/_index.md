@@ -85,7 +85,7 @@ tab below that matches your chosen type of messaging infrastructure and follow t
 {{< tabs groupId="hono-instance" >}}
 {{% tab name="Sandbox" %}}
 
-Hono consists of a set of micro services which are deployed as Docker containers. The diagram below provides
+Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides
 an overview of the containers that are part of the Hono Sandbox deployment.
 
 {{< figure src="Hono_instance_kafka.svg" title="Components of the Hono Sandbox deployment"
@@ -105,7 +105,7 @@ alt="The Docker containers representing the services of the example Hono Sandbox
   * An *Apache Zookeeper* instance that is required by the Kafka cluster.
 * Monitoring Infrastructure
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
-  * A *Grafana* instance providing a dash board visualizing the collected metrics data.
+  * A *Grafana* instance providing a dashboard visualizing the collected metrics data.
 
 In the example scenario used in the remainder of this guide, the devices will connect to the HTTP and MQTT adapters in
 order to publish telemetry data and events. The devices will be authenticated using information stored in the Device
@@ -120,7 +120,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 EOS
@@ -136,7 +136,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="-H hono.eclipseprojects.io -P 9094 --ca-file /etc/ssl/certs/ca-certificates.crt -u hono -p hono-secret"
+export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 ~~~
@@ -154,7 +154,7 @@ follow these steps:
 1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md)
    of Hono's Helm chart in order to install Hono with a single-node Kafka instance to your local Minikube cluster.
 
-Hono consists of a set of micro services which are deployed as Docker containers. The diagram below provides an overview
+Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides an overview
 of the containers that are part of the example deployment of Hono on the local Minikube cluster.
 
 {{< figure src="Hono_instance_kafka.svg" title="Components of the example Hono deployment using Kafka"
@@ -174,7 +174,7 @@ alt="The Docker containers representing the services of the example Hono deploym
   * An *Apache Zookeeper* instance that is required by the Kafka cluster.
 * Monitoring Infrastructure
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
-  * A *Grafana* instance providing a dash board visualizing the collected metrics data.
+  * A *Grafana* instance providing a dashboard visualizing the collected metrics data.
 
 In the example scenario used in the remainder of this guide, the devices will connect to the HTTP and MQTT adapters in
 order to publish telemetry data and events. The devices will be authenticated using information stored in the Device
@@ -189,10 +189,10 @@ echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --o
 echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 TRUSTSTORE_PATH=/tmp/truststore.pem
-kubectl get secrets eclipse-hono-kafka-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${TRUSTSTORE_PATH}
+kubectl get configmaps eclipse-hono-example-trust-store --template="{{index .data \"ca.crt\"}}" -n hono > ${TRUSTSTORE_PATH}
 echo "export APP_OPTIONS='-H ${KAFKA_IP} -P 9094 -u hono -p hono-secret --ca-file ${TRUSTSTORE_PATH} --disable-hostname-verification'" >> hono.env
-echo "export CURL_OPTIONS='--cacert ${TRUSTSTORE_PATH}'" >> hono.env
-echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH}'" >> hono.env
+echo "export CURL_OPTIONS='--insecure'" >> hono.env
+echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH} --insecure'" >> hono.env
 ~~~
 
 Verify that the `hono.env` file has been created in your current working directory:
@@ -205,8 +205,8 @@ export REGISTRY_IP=(host name/IP address)
 export HTTP_ADAPTER_IP=(host name/IP address)
 export MQTT_ADAPTER_IP=(host name/IP address)
 export APP_OPTIONS='-H (host name/IP address) -P 9094 -u hono -p hono-secret --ca-file /tmp/truststore.pem --disable-hostname-verification'
-export CURL_OPTIONS='--cacert /tmp/truststore.pem'
-export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem'
+export CURL_OPTIONS='--insecure'
+export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem --insecure'
 ~~~
 
 {{% /tab %}}
@@ -223,7 +223,7 @@ follow these steps:
    of Hono's Helm chart in order to install Hono with a single-node Qpid Dispatch Router instance to your local Minikube
    cluster.
 
-Hono consists of a set of micro services which are deployed as Docker containers. The diagram below provides an overview
+Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides an overview
 of the containers that are part of the example deployment of Hono on the local Minikube cluster.
 
 {{< figure src="Hono_instance_amqp.svg" title="Components of the example Hono deployment using AMQP 1.0"
@@ -243,7 +243,7 @@ alt="The Docker containers representing the services of the example Hono deploym
   * An *Apache ActiveMQ Artemis* instance serving as the persistence store for events.
 * Monitoring Infrastructure
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
-  * A *Grafana* instance providing a dash board visualizing the collected metrics data.
+  * A *Grafana* instance providing a dashboard visualizing the collected metrics data.
 
 In the example scenario used in the remainder of this guide, the devices will connect to the HTTP and MQTT adapters in
 order to publish telemetry data and events. The devices will be authenticated using information stored in the Device
@@ -256,13 +256,12 @@ be used during the remainder of this guide to set and refresh some environment v
 echo "export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" > hono.env
 echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
-KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 TRUSTSTORE_PATH=/tmp/truststore.pem
-kubectl get secrets eclipse-hono-dispatch-router-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${TRUSTSTORE_PATH}
+kubectl get configmaps eclipse-hono-example-trust-store --template="{{index .data \"ca.crt\"}}" -n hono > ${TRUSTSTORE_PATH}
 AMQP_NETWORK_IP=$(kubectl get service eclipse-hono-dispatch-router-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
-echo "export APP_OPTIONS='--amqp -H ${AMQP_NETWORK_IP} -P 15671 -u consumer@HONO -p verysecret --ca-file ${TRUSTSTORE_PATH}' --disable-hostname-verification" >> hono.env
-echo "export CURL_OPTIONS='--cacert ${TRUSTSTORE_PATH}'" >> hono.env
-echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH}'" >> hono.env
+echo "export APP_OPTIONS='--amqp -H ${AMQP_NETWORK_IP} -P 15671 -u consumer@HONO -p verysecret --ca-file ${TRUSTSTORE_PATH} --disable-hostname-verification'" >> hono.env
+echo "export CURL_OPTIONS='--insecure'" >> hono.env
+echo "export MOSQUITTO_OPTIONS='--cafile ${TRUSTSTORE_PATH} --insecure'" >> hono.env
 ~~~
 
 Verify that the `hono.env` file has been created in your current working directory:
@@ -275,8 +274,8 @@ export REGISTRY_IP=(host name/IP address)
 export HTTP_ADAPTER_IP=(host name/IP address)
 export MQTT_ADAPTER_IP=(host name/IP address)
 export APP_OPTIONS='--amqp -H (host name/IP address) -P 15671 -u consumer@HONO -p verysecret --ca-file /tmp/truststore.pem --disable-hostname-verification'
-export CURL_OPTIONS='--cacert /tmp/truststore.pem'
-export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem'
+export CURL_OPTIONS='--insecure'
+export MOSQUITTO_OPTIONS='--cafile /tmp/truststore.pem --insecure'
 ~~~
 
 {{% /tab %}}

@@ -59,7 +59,8 @@ public class ConnectionOptions {
             names = { "--ca-file" },
             description = {
                 "Absolute path to a file containing trusted CA certificates to enable encrypted communication.",
-                "If not set explicitly, the platform's default trust store will be used."
+                "Needs to be set if connecting to an endpoint using TLS.",
+                "In particular, this needs to be set when connecting to the Hono Sandbox."
                 },
             order = 4)
     public Optional<String> trustStorePath;

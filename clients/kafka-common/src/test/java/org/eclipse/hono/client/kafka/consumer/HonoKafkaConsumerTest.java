@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -44,12 +45,15 @@ import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
+import org.eclipse.hono.test.JUnitTests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,12 +287,20 @@ public class HonoKafkaConsumerTest {
      * Verifies that invoking <em>ensureTopicIsAmongSubscribedTopicPatternTopics</em> succeeds for
      * a topic that matches the topic pattern but has been created after the consumer started.
      *
+     * @param metadataMaxAgeMs The {@value ConsumerConfig#METADATA_MAX_AGE_CONFIG} value to set on the consumer.
+     * @param requiresExplicitRebalancing {@code true} if the max age value should result in the consumer enforcing a rebalance.
      * @param ctx The vert.x test context.
      */
-    @Test
-    public void testEnsureTopicIsAmongSubscribedTopicsSucceedsForAddedTopic(final VertxTestContext ctx) {
+    @ParameterizedTest(name = JUnitTests.PARAMETERIZED_TEST_NAME_PATTERN)
+    @CsvSource(value = { ",true", "700,true", "300,false" })
+    public void testEnsureTopicIsAmongSubscribedTopicsSucceedsForAddedTopic(
+            final String metadataMaxAgeMs,
+            final boolean requiresExplicitRebalancing,
+            final VertxTestContext ctx) {
         final var consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        Optional.ofNullable(metadataMaxAgeMs)
+            .ifPresent(s -> consumerConfig.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, s));
         final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
@@ -316,6 +328,7 @@ public class HonoKafkaConsumerTest {
             })
             .onComplete(ctx.succeeding(ok -> {
                     ctx.verify(() -> {
+                        assertThat(mockConsumer.shouldRebalance()).isEqualTo(requiresExplicitRebalancing);
                         assertThat(consumer.getSubscribedTopicPatternTopics()).containsExactly(TOPIC, TOPIC2, TOPIC3);
                     });
                     ctx.completeNow();
@@ -415,8 +428,17 @@ public class HonoKafkaConsumerTest {
         final byte[] timestamp2SecondsAgo = Json.encode(Instant.now().minusSeconds(2).toEpochMilli()).getBytes();
         final RecordHeader creationTime = new RecordHeader("creation-time", timestamp2SecondsAgo);
 
-        return new ConsumerRecord<>(TOPIC, PARTITION, 0, ConsumerRecord.NO_TIMESTAMP, TimestampType.NO_TIMESTAMP_TYPE,
-                (long) ConsumerRecord.NULL_CHECKSUM, ConsumerRecord.NULL_SIZE, ConsumerRecord.NULL_SIZE, "key_0",
-                Buffer.buffer(), new RecordHeaders(new Header[] { ttl, creationTime }));
+        return new ConsumerRecord<>(
+                TOPIC,
+                PARTITION,
+                0,
+                ConsumerRecord.NO_TIMESTAMP,
+                TimestampType.NO_TIMESTAMP_TYPE,
+                ConsumerRecord.NULL_SIZE,
+                ConsumerRecord.NULL_SIZE,
+                "key_0",
+                Buffer.buffer(),
+                new RecordHeaders(new Header[] { ttl, creationTime }),
+                Optional.empty());
     }
 }
