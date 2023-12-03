@@ -186,16 +186,8 @@ public class AmqpAdapter implements Callable<Integer> {
     }
 
     private void validateConnectionOptions() {
-        if (connectionOptions.useSandbox) {
-            if (!connectionOptions.trustStorePath.isPresent()) {
-                throw new ParameterException(
-                        spec.commandLine(),
-                        """
-                        Missing required option: '--ca-file=<path>' needs to be specified \
-                        when using '--sandbox'.
-                        """);
-            }
-        } else if (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty()) {
+        if (!connectionOptions.useSandbox
+                && (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty())) {
             throw new ParameterException(
                     spec.commandLine(),
                     """
@@ -227,6 +219,7 @@ public class AmqpAdapter implements Callable<Integer> {
         if (connectionOptions.useSandbox) {
             clientConfig.setHost(ConnectionOptions.SANDBOX_HOST_NAME);
             clientConfig.setPort(5671);
+            clientConfig.setTlsEnabled(true);
             Optional.ofNullable(connectionOptions.credentials).ifPresentOrElse(
                     creds -> {
                         clientConfig.setUsername(creds.username);

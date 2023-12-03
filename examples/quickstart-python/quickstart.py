@@ -35,7 +35,7 @@ amqp_network_ip = HONO_SANDBOX_HOSTNAME
 tenant = requests.post(
     url=f"{registry_base_url}/tenants",
     headers={"content-type": "application/json"},
-    data=json.dumps({"ext": { "messaging-type": "kafka" }})).json()
+    data=json.dumps({"ext": {"messaging-type": "kafka"}})).json()
 tenant_id = tenant["id"]
 
 print(f"Registered tenant {tenant_id}")
@@ -61,7 +61,7 @@ else:
 # Now we can start the client application
 print("You could now start the Hono Command Line Client in another terminal to consume messages from devices:")
 print()
-cmd = f"java -jar hono-cli-2.*-exec.jar app --sandbox --ca-file {CA_FILE} consume --tenant={tenant_id}"
+cmd = f"java -jar hono-cli-2.*-exec.jar app --sandbox consume --tenant={tenant_id}"
 print(cmd)
 print()
 
@@ -103,10 +103,12 @@ class DownstreamApp(threading.Thread):
 
         consumer.close()
 
+
 task = DownstreamApp()
 task.start()
 # wait for topic to be created
 time.sleep(3)
+
 
 def send_message_via_http_adapter():
     # nosemgrep: no-auth-over-http

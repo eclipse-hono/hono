@@ -99,16 +99,8 @@ public class NorthBoundApis {
     ApplicationClient<? extends MessageContext> client;
 
     private void validateConnectionOptions() {
-        if (connectionOptions.useSandbox) {
-            if (!connectionOptions.trustStorePath.isPresent()) {
-                throw new ParameterException(
-                        spec.commandLine(),
-                        """
-                        Missing required option: '--ca-file=<path>' needs to be specified \
-                        when using '--sandbox'.
-                        """);
-            }
-        } else if (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty()) {
+        if (!connectionOptions.useSandbox
+                && (connectionOptions.hostname.isEmpty() || connectionOptions.portNumber.isEmpty())) {
             throw new ParameterException(
                     spec.commandLine(),
                     """
@@ -211,6 +203,7 @@ public class NorthBoundApis {
         if (connectionOptions.useSandbox) {
             clientConfig.setHost(ConnectionOptions.SANDBOX_HOST_NAME);
             clientConfig.setPort(15671);
+            clientConfig.setTlsEnabled(true);
             clientConfig.setUsername(SANDBOX_AMQP_USER);
             clientConfig.setPassword(SANDBOX_AMQP_PWD);
         } else {
