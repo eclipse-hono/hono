@@ -17,6 +17,10 @@ hono:
       supportedSaslMechanisms: "PLAIN"
 
 quarkus:
+  otel:
+    exporter:
+      otlp:
+        endpoint: "${otel-collector.endpoint}"
   console:
     color: true
   log:
