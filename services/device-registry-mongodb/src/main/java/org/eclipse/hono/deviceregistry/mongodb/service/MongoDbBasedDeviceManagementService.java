@@ -145,10 +145,11 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(filters);
         Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(isGateway);
         Objects.requireNonNull(span);
 
         return tenantInformationService.getTenant(tenantId, span)
-                .compose(ok -> deviceDao.find(tenantId, pageSize, pageOffset, filters, sortOptions, span.context()))
+                .compose(ok -> deviceDao.find(tenantId, pageSize, pageOffset, filters, sortOptions, isGateway, span.context()))
                 .map(result -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         result,

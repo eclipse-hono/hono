@@ -783,6 +783,8 @@ public final class DeviceRegistryHttpClient {
      * @param pageOffset The offset into the result set from which to include objects in the response.
      * @param filters The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options.
+     * @param isGateway A filter for restricting the search to gateway ({@code True}) or edge ({@code False} devices only.
+     *                  If <em>empty</em>, the search will not be restricted.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will contain the response if the
      *         response contained the expected status code. Otherwise the future will fail.
@@ -794,6 +796,7 @@ public final class DeviceRegistryHttpClient {
             final Optional<Integer> pageOffset,
             final List<String> filters,
             final List<String> sortOptions,
+            final Optional<Boolean> isGateway,
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
@@ -811,6 +814,7 @@ public final class DeviceRegistryHttpClient {
                 pOffset -> queryParams.add(RegistryManagementConstants.PARAM_PAGE_OFFSET, String.valueOf(pOffset)));
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
+        isGateway.ifPresent(b -> queryParams.add(RegistryManagementConstants.PARAM_IS_GATEWAY, b.toString()));
 
         return httpClient.get(requestUri, getRequestHeaders(), queryParams, ResponsePredicate.status(expectedStatusCode));
     }

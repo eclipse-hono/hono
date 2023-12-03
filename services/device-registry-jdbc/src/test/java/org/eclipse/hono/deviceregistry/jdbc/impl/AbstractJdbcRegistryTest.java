@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,7 +54,10 @@ import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.h2.tools.RunScript;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -75,6 +78,7 @@ abstract class AbstractJdbcRegistryTest {
     }
     protected static final Span SPAN = NoopSpan.INSTANCE;
 
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractJdbcRegistryTest.class);
     private static final DatabaseType DEFAULT_DATABASE_TYPE = DatabaseType.H2;
     private static final DatabaseType DATABASE_TYPE = DatabaseType.valueOf(System.getProperty(AbstractJdbcRegistryTest.class.getSimpleName()
             + ".databaseType", DEFAULT_DATABASE_TYPE.name()).toUpperCase());
@@ -98,6 +102,16 @@ abstract class AbstractJdbcRegistryTest {
     protected TenantManagementService tenantManagement;
     protected DeviceServiceOptions properties;
     protected TenantInformationService tenantInformationService;
+
+    /**
+     * Prints the test name.
+     *
+     * @param testInfo Test case meta information.
+     */
+    @BeforeEach
+    public void setup(final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
+    }
 
     @BeforeEach
     void startDevices(final Vertx vertx) throws IOException, SQLException {

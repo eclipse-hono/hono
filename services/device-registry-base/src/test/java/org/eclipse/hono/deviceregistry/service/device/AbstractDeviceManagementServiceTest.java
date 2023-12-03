@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.deviceregistry.service.device;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.notification.NotificationEventBusSupport;
@@ -65,6 +68,31 @@ public class AbstractDeviceManagementServiceTest {
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         deviceManagementService = new TestDeviceManagementService(vertx);
+    }
+
+    /**
+     * Verifies that the search devices operation verifies that all required parameters
+     * are non {@code null}.
+     */
+    @Test
+    public void testSearchDevicesRejectsNullParameters() {
+        assertAll(
+                () -> assertThrows(
+                            NullPointerException.class,
+                            () -> deviceManagementService.searchDevices(
+                                    DEFAULT_TENANT_ID, 10, 0, null, List.of(), Optional.empty(), SPAN)
+                            ),
+                () -> assertThrows(
+                            NullPointerException.class,
+                            () -> deviceManagementService.searchDevices(
+                                    DEFAULT_TENANT_ID, 10, 0, List.of(), null, Optional.empty(), SPAN)
+                            ),
+                () -> assertThrows(
+                            NullPointerException.class,
+                            () -> deviceManagementService.searchDevices(
+                                    DEFAULT_TENANT_ID, 10, 0, List.of(), List.of(), null, SPAN)
+                            )
+                );
     }
 
     /**

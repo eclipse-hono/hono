@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,6 +37,22 @@ import io.vertx.core.json.pointer.JsonPointer;
  */
 public final class MongoDbDocumentBuilder {
 
+    /**
+     * The path to a Device's {@value RegistryManagementConstants#FIELD_VIA} property.
+     */
+    public static final String DEVICE_VIA_PATH = String.format(
+            "%s.%s",
+            DeviceDto.FIELD_DEVICE,
+            RegistryManagementConstants.FIELD_VIA);
+    /**
+     * The path to a Device's {@value RegistryManagementConstants#FIELD_MEMBER_OF} property.
+     */
+    public static final String DEVICE_MEMBEROF_PATH = String.format(
+            "%s.%s",
+            DeviceDto.FIELD_DEVICE,
+            RegistryManagementConstants.FIELD_MEMBER_OF);
+
+    private static final JsonArray EMPTY_ARRAY = new JsonArray();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String TENANT_ALIAS_PATH = String.format(
             "%s.%s",
@@ -58,8 +74,10 @@ public final class MongoDbDocumentBuilder {
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
     private static final String MONGODB_OPERATOR_EXISTS = "$exists";
     private static final String MONGODB_OPERATOR_IN = "$in";
+    private static final String MONGODB_OPERATOR_NOT = "$not";
     private static final String MONGODB_OPERATOR_NOT_EQUALS = "$ne";
     private static final String MONGODB_OPERATOR_OR = "$or";
+    private static final String MONGODB_OPERATOR_REGEX = "$regex";
 
     private final JsonObject document;
 
@@ -93,6 +111,33 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withTenantId(final String tenantId) {
         document.put(BaseDto.FIELD_TENANT_ID, tenantId);
+        return this;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a list of gateway devices.
+     *
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withGatewayDevices() {
+        document.put(
+                DEVICE_VIA_PATH,
+                new JsonObject().put(MONGODB_OPERATOR_EXISTS, true));
+        return this;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a non-empty list of gateway groups
+     * that the device is a member of.
+     *
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withMemberOfAnyGatewayGroup() {
+        document.put(
+                DEVICE_MEMBEROF_PATH,
+                new JsonObject()
+                    .put(MONGODB_OPERATOR_EXISTS, true)
+                    .put(MONGODB_OPERATOR_NOT_EQUALS, EMPTY_ARRAY));
         return this;
     }
 
@@ -275,14 +320,40 @@ public final class MongoDbDocumentBuilder {
         return this;
     }
 
+    private void applyEqFilter(final Filter filter, final Function<JsonPointer, String> fieldMapper) {
+        if (filter.getValue() instanceof String stringValue) {
+            document.put(fieldMapper.apply(filter.getField()), new JsonObject().put(MONGODB_OPERATOR_REGEX,
+                    DeviceRegistryUtils.getRegexExpressionForSearchOperation(stringValue)));
+        } else {
+            document.put(fieldMapper.apply(filter.getField()), filter.getValue());
+        }
+    }
+
+    private void applyInFilter(final Filter filter, final Function<JsonPointer, String> fieldMapper) {
+        if (filter.getValue() instanceof JsonArray valueList) {
+            final var expr = new JsonObject().put(MONGODB_OPERATOR_IN, valueList);
+            switch (filter.getOperator()) {
+            case in:
+                document.put(fieldMapper.apply(filter.getField()), expr);
+                break;
+            case not_in:
+                document.put(fieldMapper.apply(filter.getField()), new JsonObject().put(MONGODB_OPERATOR_NOT, expr));
+                break;
+            default:
+                // we can only handle $in operator
+            }
+        }
+    }
+
     private void applySearchFilters(final List<Filter> filters, final Function<JsonPointer, String> fieldMapper) {
         filters.forEach(filter -> {
-            if (filter.getValue() instanceof String) {
-                final String value = (String) filter.getValue();
-                document.put(fieldMapper.apply(filter.getField()), new JsonObject().put("$regex",
-                        DeviceRegistryUtils.getRegexExpressionForSearchOperation(value)));
-            } else {
-                document.put(fieldMapper.apply(filter.getField()), filter.getValue());
+            switch (filter.getOperator()) {
+            case eq:
+                applyEqFilter(filter, fieldMapper);
+                break;
+            case in, not_in:
+                applyInFilter(filter, fieldMapper);
+                break;
             }
         });
     }

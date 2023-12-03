@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -594,8 +594,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson = getFilterJson("/enabled", true, "eq");
 
             registry.registerDevice(tenantId, deviceId, device)
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                        List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(filterJson),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_NOT_FOUND))
                 .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -609,8 +615,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final int invalidPageSize = -100;
 
             registry.registerDevice(tenantId, deviceId)
-                .compose(ok -> registry.searchDevices(tenantId, Optional.of(invalidPageSize), Optional.empty(),
-                        List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.of(invalidPageSize),
+                        Optional.empty(),
+                        List.of(),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_BAD_REQUEST))
                 .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -634,6 +646,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                         Optional.empty(),
                         List.of(),
                         List.of(),
+                        Optional.empty(),
                         HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
@@ -656,8 +669,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final int invalidPageOffset = -100;
 
             registry.registerDevice(tenantId, deviceId)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.of(invalidPageOffset),
-                            List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .compose(ok -> registry.searchDevices(
+                            tenantId,
+                            Optional.empty(),
+                            Optional.of(invalidPageOffset),
+                            List.of(),
+                            List.of(),
+                            Optional.empty(),
+                            HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -680,8 +699,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.of(pageSize), Optional.of(pageOffset),
-                        List.of(), List.of(sortJson), HttpURLConnection.HTTP_OK))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.of(pageSize),
+                        Optional.of(pageOffset),
+                        List.of(),
+                        List.of(sortJson),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
                         final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
@@ -703,8 +728,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         public void testSearchDevicesWithInvalidFilterJsonFails(final VertxTestContext ctx) {
 
             registry.registerDevice(tenantId, deviceId)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .compose(ok -> registry.searchDevices(
+                            tenantId,
+                            Optional.empty(),
+                            Optional.empty(),
+                            List.of("Invalid filterJson"),
+                            List.of(),
+                            Optional.empty(),
+                            HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -726,10 +757,22 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                        List.of(filterJson1, filterJson3), List.of(), HttpURLConnection.HTTP_OK))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(filterJson1, filterJson2),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_NOT_FOUND))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(filterJson1, filterJson3),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
                         final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
@@ -760,8 +803,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(filterJson1, filterJson2),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
                         final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
@@ -769,6 +818,45 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                         assertThat(searchDevicesResult.getTotal()).isEqualTo(1);
                         assertThat(searchDevicesResult.getResult()).hasSize(1);
                         assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId2);
+                    });
+                    ctx.completeNow();
+                }));
+        }
+
+        /**
+         * Verifies that a request to search gateway devices succeeds and matching devices are found.
+         *
+         * @param ctx The vert.x test context.
+         */
+        @Test
+        public void testSearchGatewayDevicesSucceeds(final VertxTestContext ctx) {
+            final String deviceId1 = "1_" + getHelper().getRandomDeviceId(tenantId);
+            final String deviceId2 = "2_" + getHelper().getRandomDeviceId(tenantId);
+            final String deviceId3 = "3_" + getHelper().getRandomDeviceId(tenantId);
+            final Device device1 = new Device().setMemberOf(List.of("gwGroup1"));
+            final Device device2 = new Device().setVia(List.of(deviceId3));
+            final Device device3 = new Device();
+
+            Future.all(
+                    registry.registerDevice(tenantId, deviceId1, device1),
+                    registry.registerDevice(tenantId, deviceId2, device2),
+                    registry.registerDevice(tenantId, deviceId3, device3))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(),
+                        List.of(),
+                        Optional.of(true),
+                        HttpURLConnection.HTTP_OK))
+                .onComplete(ctx.succeeding(httpResponse -> {
+                    ctx.verify(() -> {
+                        final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
+                                .decodeValue(httpResponse.body(), new TypeReference<>() { });
+                        assertThat(searchDevicesResult.getTotal()).isEqualTo(2);
+                        assertThat(searchDevicesResult.getResult()).hasSize(2);
+                        assertThat(searchDevicesResult.getResult().get(0).getId()).isEqualTo(deviceId1);
+                        assertThat(searchDevicesResult.getResult().get(1).getId()).isEqualTo(deviceId3);
                     });
                     ctx.completeNow();
                 }));
@@ -787,8 +875,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson = getFilterJson("/ext/id", "*id*2", "eq");
 
             registry.registerDevice(tenantId, deviceId, device)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .compose(ok -> registry.searchDevices(
+                            tenantId,
+                            Optional.empty(),
+                            Optional.empty(),
+                            List.of(filterJson),
+                            List.of(),
+                            Optional.empty(),
+                            HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -810,8 +904,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                        List.of(filterJson1, filterJson2), List.of(), HttpURLConnection.HTTP_OK))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(filterJson1, filterJson2),
+                        List.of(),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
                         final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec
@@ -837,8 +937,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             final String filterJson = getFilterJson("/ext/id", "$id:?2", "eq");
 
             registry.registerDevice(tenantId, deviceId, device)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
-                            List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
+                    .compose(ok -> registry.searchDevices(
+                            tenantId,
+                            Optional.empty(),
+                            Optional.empty(),
+                            List.of(filterJson),
+                            List.of(),
+                            Optional.empty(),
+                            HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -851,8 +957,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         public void testSearchDevicesWithInvalidSortJsonFails(final VertxTestContext ctx) {
 
             registry.registerDevice(tenantId, deviceId)
-                    .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
-                            List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
+                    .compose(ok -> registry.searchDevices(
+                            tenantId,
+                            Optional.empty(),
+                            Optional.empty(),
+                            List.of(),
+                            List.of("Invalid sortJson"),
+                            Optional.empty(),
+                            HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
         }
 
@@ -873,8 +985,14 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             Future.all(
                     registry.registerDevice(tenantId, deviceId1, device1),
                     registry.registerDevice(tenantId, deviceId2, device2))
-                .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
-                        List.of(sortJson), HttpURLConnection.HTTP_OK))
+                .compose(ok -> registry.searchDevices(
+                        tenantId,
+                        Optional.empty(),
+                        Optional.empty(),
+                        List.of(),
+                        List.of(sortJson),
+                        Optional.empty(),
+                        HttpURLConnection.HTTP_OK))
                 .onComplete(ctx.succeeding(httpResponse -> {
                     ctx.verify(() -> {
                         final SearchResult<DeviceWithId> searchDevicesResult = JacksonCodec

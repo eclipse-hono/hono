@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -102,14 +102,14 @@ public interface DeviceManagementService {
      *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
      *             methods. However,implementations may log (error) events on this span, set tags and use this span
      *             as the parent for additional spans created as part of this method's execution.
-     * @param isGateway Optional filter for searching only gateways or only devices.
-     *                  If given parameter is Optional.empty() result will contain both gateways and devices.
+     * @param isGateway A filter for restricting the search to gateway ({@code True}) or edge ({@code False} devices only.
+     *                  If <em>empty</em>, the search will not be restricted.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the matching devices. Otherwise, the future will
      *         be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code
      *         as specified in the Device Registry Management API.
-     * @throws NullPointerException if any of filters, sort options or tracing span are {@code null}.
+     * @throws NullPointerException if any of filters, sort options, gateway filter or tracing span are {@code null}.
      * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
      *      Management API - Search Devices</a>
