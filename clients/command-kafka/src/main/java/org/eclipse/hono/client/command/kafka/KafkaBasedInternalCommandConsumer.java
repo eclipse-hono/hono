@@ -318,11 +318,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 });
     }
 
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
-    }
-
     @SuppressWarnings("FutureReturnValueIgnored")
     private Future<Void> createTopic() {
         final Promise<Void> promise = Promise.promise();
@@ -332,11 +327,9 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         final NewTopic newTopic = new NewTopic(topicName, Optional.of(NUM_PARTITIONS), Optional.empty());
         adminClient.createTopics(List.of(newTopic))
                 .all()
-                .whenComplete((v, ex) -> {
-                    context.runOnContext(v1 -> Optional.ofNullable(ex)
-                            .filter(e -> !(e instanceof TopicExistsException))
-                            .ifPresentOrElse(promise::fail, promise::complete));
-                });
+                .whenComplete((v, ex) -> context.runOnContext(v1 -> Optional.ofNullable(ex)
+                        .filter(e -> !(e instanceof TopicExistsException))
+                        .ifPresentOrElse(promise::fail, promise::complete)));
         return promise.future()
                 .onSuccess(v -> LOG.debug("created topic [{}]", topicName))
                 .onFailure(thr -> LOG.error("error creating topic [{}]", topicName, thr));
@@ -404,12 +397,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 .orElseGet(Future::succeededFuture);
     }
 
-    Future<Void> handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
+    Future<Void> handleCommandMessage(final KafkaConsumerRecord<String, Buffer> receivedRecord) {
 
         // get partition/offset of the command record - related to the tenant-based topic the command was originally received in
-        final Integer commandPartition = KafkaRecordHelper.getOriginalPartitionHeader(record.headers())
+        final Integer commandPartition = KafkaRecordHelper.getOriginalPartitionHeader(receivedRecord.headers())
                 .orElse(null);
-        final Long commandOffset = KafkaRecordHelper.getOriginalOffsetHeader(record.headers())
+        final Long commandOffset = KafkaRecordHelper.getOriginalOffsetHeader(receivedRecord.headers())
                 .orElse(null);
         if (commandPartition == null || commandOffset == null) {
             LOG.warn("command record is invalid - missing required original partition/offset headers");
@@ -418,15 +411,15 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
 
         final KafkaBasedCommand command;
         try {
-            command = KafkaBasedCommand.fromRoutedCommandRecord(record);
+            command = KafkaBasedCommand.fromRoutedCommandRecord(receivedRecord);
         } catch (final IllegalArgumentException e) {
             LOG.warn("command record is invalid [tenant-id: {}, device-id: {}]",
-                    KafkaRecordHelper.getTenantId(record.headers()).orElse(null),
-                    KafkaRecordHelper.getDeviceId(record.headers()).orElse(null),
+                    KafkaRecordHelper.getTenantId(receivedRecord.headers()).orElse(null),
+                    KafkaRecordHelper.getDeviceId(receivedRecord.headers()).orElse(null),
                     e);
             return Future.failedFuture("command record is invalid");
         }
-        // check whether command has already been received and handled;
+        // check whether command has already been received and handled
         // partition index and offset here are related to the *tenant-based* topic the command was originally received in
         // therefore they are stored in a map with the tenant as key
         final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
@@ -449,14 +442,14 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 command.setGatewayId(commandHandler.getGatewayId());
             }
 
-            final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, record);
+            final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, receivedRecord);
             final SpanContext followsFromSpanContext = commandHandler != null
                     ? commandHandler.getConsumerCreationSpanContext()
                     : null;
             final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext,
                     getClass().getSimpleName());
             TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
-            KafkaTracingHelper.TAG_OFFSET.set(currentSpan, record.offset());
+            KafkaTracingHelper.TAG_OFFSET.set(currentSpan, receivedRecord.offset());
 
             final var commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);
 

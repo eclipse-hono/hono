@@ -26,6 +26,7 @@ import org.eclipse.hono.adapter.auth.device.jwt.JwtCredentials;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.MalformedJwtException;
@@ -159,7 +160,7 @@ public final class JwtAuthHandler extends HTTPAuthorizationHandler<Authenticatio
         final var tenant = uriSplit[2];
         final var authId = uriSplit[3];
         return new JsonObject()
-                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant)
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, tenant)
                 .put(CredentialsConstants.FIELD_AUTH_ID, authId)
                 .put(Claims.ISSUER, authId);
     }

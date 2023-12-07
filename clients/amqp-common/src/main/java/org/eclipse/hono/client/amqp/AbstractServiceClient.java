@@ -253,16 +253,9 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         // verify that client is connected
         readinessHandler.register(
                 String.format("connection-to-%s-%s", connection.getConfig().getServerRole(), UUID.randomUUID()),
-                status -> {
-                    connection.isConnected()
-                        .onSuccess(ok -> status.tryComplete(Status.OK()))
-                        .onFailure(t -> status.tryComplete(Status.KO()));
-                });
-    }
-
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
+                status -> connection.isConnected()
+                    .onSuccess(ok -> status.tryComplete(Status.OK()))
+                    .onFailure(t -> status.tryComplete(Status.KO())));
     }
 
     /**

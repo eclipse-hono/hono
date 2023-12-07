@@ -80,8 +80,8 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
                     } else {
                         r.fail(new IllegalStateException("cache [" + cacheName + "] is not configured"));
                     }
-                } catch (final Throwable t) {
-                    r.fail(t);
+                } catch (final Exception e) {
+                    r.fail(e);
                 }
             }, attempt -> {
                 if (attempt.succeeded()) {

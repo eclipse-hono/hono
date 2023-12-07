@@ -28,6 +28,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,11 +92,10 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
                     return Future.failedFuture(ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND
                             ? new DeviceDisabledOrNotRegisteredException(tenantId, HttpURLConnection.HTTP_NOT_FOUND)
                             : t);
-                }).compose(viaGateways -> {
-                    return deviceConnectionInfo
-                            .getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span)
-                            .compose(resultJson -> determineTargetInstanceJson(resultJson, deviceId, viaGateways, span));
-                }).onFailure(t -> {
+                }).compose(viaGateways -> deviceConnectionInfo
+                        .getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span)
+                        .compose(resultJson -> determineTargetInstanceJson(resultJson, deviceId, viaGateways, span)))
+                .onFailure(t -> {
                     LOG.debug("Error getting target gateway and adapter instance", t);
                     TracingHelper.logError(span, t);
                     Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
@@ -120,7 +120,7 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
         } catch (final ClassCastException e) {
             return createAndLogInternalServerErrorFuture(span, "Invalid result JSON: " + e);
         }
-        final String targetDevice = targetInstanceObject.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
+        final String targetDevice = targetInstanceObject.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID);
         final String targetAdapterInstance = targetInstanceObject.getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
         if (targetDevice == null || targetAdapterInstance == null) {
             return createAndLogInternalServerErrorFuture(span, "Invalid result JSON, missing target device and/or adapter instance");

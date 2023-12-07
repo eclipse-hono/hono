@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.util;
 
 import java.time.Duration;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -23,8 +22,8 @@ import java.util.regex.Pattern;
  */
 public final class CacheDirective {
 
-    private static final Pattern PATTERN_MAX_AGE = Pattern.compile("^\\s*max-age\\s*=\\s*(\\d*)\\s*$");
-    private static final Pattern PATTERN_NO_CACHE = Pattern.compile("^\\s*no-cache\\s*$");
+    private static final Pattern PATTERN_MAX_AGE = Pattern.compile("^max-age\\s*=\\s*(\\d*)$");
+    private static final String NO_CACHE = "no-cache";
 
     private static final CacheDirective NO_CACHE_DIRECTIVE = new CacheDirective(true, 0L);
 
@@ -58,8 +57,7 @@ public final class CacheDirective {
      * @throws IllegalArgumentException if the given value is less or equal to zero seconds.
      */
     public static CacheDirective maxAgeDirective(final Duration maxAge) {
-        // TODO: switch to maxAge.toSeconds() once we can use Java 9+
-        return maxAgeDirective(maxAge.toMillis() / 1000);
+        return maxAgeDirective(maxAge.toSeconds());
     }
 
     /**
@@ -82,16 +80,14 @@ public final class CacheDirective {
         if (directive == null) {
             return null;
         } else {
-            Matcher matcher = PATTERN_MAX_AGE.matcher(directive);
+            final var strippedDirective = directive.strip().toLowerCase();
+            final var matcher = PATTERN_MAX_AGE.matcher(strippedDirective);
             if (matcher.matches()) {
                 return maxAgeDirective(Long.parseLong(matcher.group(1)));
-            } else {
-                matcher = PATTERN_NO_CACHE.matcher(directive);
-                if (matcher.matches()) {
+            } else if (NO_CACHE.equals(strippedDirective)) {
                     return noCacheDirective();
-                } else {
-                    return null;
-                }
+            } else {
+                return null;
             }
         }
     }
@@ -128,7 +124,7 @@ public final class CacheDirective {
     @Override
     public String toString() {
         if (noCache) {
-            return "no-cache";
+            return NO_CACHE;
         } else {
             return String.format("max-age = %d", maxAge);
         }

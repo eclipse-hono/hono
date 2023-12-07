@@ -58,7 +58,7 @@ public abstract class AbstractKafkaConfigProperties {
         if (System.getenv("KUBERNETES_SERVICE_HOST") != null) {
             // running in Kubernetes: use HOSTNAME env var containing the pod name
             final String podName = System.getenv("HOSTNAME");
-            final String random = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 12);
+            final String random = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
             return String.format("%s_%s", podName, random);
         }
         return null;

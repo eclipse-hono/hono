@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.KafkaException;
@@ -52,8 +52,6 @@ public class KafkaClientFactory {
     public static final int CLIENT_CREATION_RETRY_DELAY_MILLIS = 1000;
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaClientFactory.class);
-
-    private static final Pattern COMMA_WITH_WHITESPACE = Pattern.compile("\\s*,\\s*");
 
     private final Vertx vertx;
     private Clock clock = Clock.systemUTC();
@@ -86,7 +84,7 @@ public class KafkaClientFactory {
     /**
      * Creates a new Kafka client.
      * <p>
-     * Simply invokes {@link #createClientWithRetries(Supplier, Supplier, String, Duration)} with a keep retrying
+     * Simply invokes {@link #createClientWithRetries(Supplier, BooleanSupplier, String, Duration)} with a keep retrying
      * condition that always returns {@code true}.
      *
      * @param <T> The type of client.
@@ -126,7 +124,7 @@ public class KafkaClientFactory {
      */
     public <T> Future<T> createClientWithRetries(
             final Supplier<T> clientSupplier,
-            final Supplier<Boolean> keepTrying,
+            final BooleanSupplier keepTrying,
             final String bootstrapServersConfig,
             final Duration retriesTimeout) {
         Objects.requireNonNull(clientSupplier);
@@ -160,7 +158,7 @@ public class KafkaClientFactory {
      */
     public Future<KafkaAdminClient> createKafkaAdminClientWithRetries(
             final Map<String, String> clientConfig,
-            final Supplier<Boolean> keepTrying,
+            final BooleanSupplier keepTrying,
             final Duration retriesTimeout) {
         Objects.requireNonNull(clientConfig);
         Objects.requireNonNull(keepTrying);
@@ -186,12 +184,12 @@ public class KafkaClientFactory {
 
     private <T> void createClientWithRetries(
             final Supplier<T> clientSupplier,
-            final Supplier<Boolean> keepTrying,
+            final BooleanSupplier keepTrying,
             final Instant retriesTimeLimit,
-            final Supplier<Boolean> serverEntriesValid,
+            final BooleanSupplier serverEntriesValid,
             final Promise<T> resultPromise) {
 
-        if (!keepTrying.get()) {
+        if (!keepTrying.getAsBoolean()) {
             resultPromise.fail("client code has canceled further attempts to create Kafka client");
             return;
         }
@@ -205,9 +203,9 @@ public class KafkaClientFactory {
             // bootstrap.servers")
             // (see org.apache.kafka.clients.ClientUtils#parseAndValidateAddresses)
             if (!retriesTimeLimit.equals(Instant.MIN) && e instanceof KafkaException
-                    && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.get()) {
+                    && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.getAsBoolean()) {
 
-                if (!keepTrying.get()) {
+                if (!keepTrying.getAsBoolean()) {
                     // client code has canceled further attempts
                     LOG.debug("client code has canceled further attempts to create Kafka client");
                     resultPromise.fail(e);
@@ -236,7 +234,7 @@ public class KafkaClientFactory {
     /**
      * Checks if the given client creation error is the kind of error for which the client creation methods of this
      * factory would perform a retry, i.e. whether the error is due to the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG}
-     * config property containing a (non-empty) list of URLs that are not (yet) resolvable,
+     * configuration property containing a (non-empty) list of URLs that are not (yet) resolvable,
      *
      * @param exception The error to check.
      * @param bootstrapServersConfig The {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property value.
@@ -256,19 +254,21 @@ public class KafkaClientFactory {
 
     private static boolean containsValidServerEntries(final String bootstrapServersConfig) {
         final List<String> urlList = Optional.ofNullable(bootstrapServersConfig)
+                .map(String::trim)
                 .map(serversString -> {
-                    final String trimmed = serversString.trim();
-                    if (trimmed.isEmpty()) {
+                    if (serversString.isEmpty()) {
                         return List.<String> of();
+                    } else {
+                        return Arrays.asList(serversString.split(","));
                     }
-                    return Arrays.asList(COMMA_WITH_WHITESPACE.split(trimmed, -1));
                 }).orElseGet(List::of);
         return !urlList.isEmpty() && urlList.stream().allMatch(KafkaClientFactory::containsHostAndPort);
     }
 
     private static boolean containsHostAndPort(final String url) {
         try {
-            return Utils.getHost(url) != null && Utils.getPort(url) != null;
+            final var trimmedUrl = url.trim();
+            return Utils.getHost(trimmedUrl) != null && Utils.getPort(trimmedUrl) != null;
         } catch (final IllegalArgumentException e) {
             return false;
         }

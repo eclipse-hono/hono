@@ -26,14 +26,15 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,7 +101,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         if (creatingIndices.compareAndSet(false, true)) {
             // create unique index on device ID
             return createIndex(
-                    new JsonObject().put(DeviceDto.FIELD_TENANT_ID, 1).put(DeviceDto.FIELD_DEVICE_ID, 1),
+                    new JsonObject().put(BaseDto.FIELD_TENANT_ID, 1).put(DeviceDto.FIELD_DEVICE_ID, 1),
                     new IndexOptions().unique(true))
             .onSuccess(ok -> indicesCreated.set(true))
             .onComplete(r -> {
@@ -252,7 +253,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .put(PROPERTY_DEVICE_MEMBER_OF, deviceMemberOfSpec);
         // retrieve only the deviceId instead of the whole document.
         final FindOptions findOptions = new FindOptions()
-                .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
+                .setFields(new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
 
         return mongoClient.findWithOptions(
                 collectionName,
@@ -264,7 +265,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                     } else {
                         span.log("successfully resolved " + documents.size() + " group members");
                         return documents.stream()
-                                .map(json -> json.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID))
+                                .map(json -> json.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID))
                                 .collect(Collectors.toSet());
                     }
                 })
@@ -330,7 +331,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         })
                         .map(json -> json.mapTo(DeviceDto.class))
                         .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getData()))
-                        .collect(Collectors.toList()))
+                        .toList())
                 .orElseGet(List::of);
     }
 
@@ -378,7 +379,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId(), span));
                     } else {
                         span.log("successfully updated device");
-                        return Future.succeededFuture(result.getString(DeviceDto.FIELD_VERSION));
+                        return Future.succeededFuture(result.getString(BaseDto.FIELD_VERSION));
                     }
                 })
                 .onFailure(t -> logError(span, "error updating device", t, deviceConfig.getTenantId(),
@@ -408,8 +409,10 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        LOG.trace("deleting device [tenant-id: {}, device-id: {}, version: {}]",
-                tenantId, deviceId, resourceVersion.orElse(null));
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("deleting device [tenant-id: {}, device-id: {}, version: {}]",
+                    tenantId, deviceId, resourceVersion.orElse(null));
+        }
 
         final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)

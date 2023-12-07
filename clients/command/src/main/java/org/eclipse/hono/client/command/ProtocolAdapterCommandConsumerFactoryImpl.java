@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -108,7 +107,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         final List<String> tenantIds = commandHandlers.getCommandHandlers().stream()
                 .map(CommandHandlerWrapper::getTenantId)
                 .distinct()
-                .collect(Collectors.toList());
+                .toList();
 
         int idx = 0;
         // re-enable routing of commands in chunks of tenant IDs
@@ -167,7 +166,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
                     readinessHandler = null;
                     final List<Future<Void>> futures = internalCommandConsumers.stream()
                             .map(Lifecycle::start)
-                            .collect(Collectors.toList());
+                            .toList();
                     if (futures.isEmpty()) {
                         return Future.failedFuture("no command consumer registered");
                     }
@@ -200,7 +199,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         }
         final List<Future<Void>> futures = internalCommandConsumers.stream()
                 .map(Lifecycle::stop)
-                .collect(Collectors.toList());
+                .toList();
         return Future.all(futures).mapEmpty();
     }
 
@@ -226,10 +225,6 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
         } else {
             status.tryComplete(Status.OK());
         }
-    }
-
-    @Override public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
     }
 
     @Override
@@ -359,7 +354,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl implements ProtocolAdapte
                                     tenantId, deviceId);
                             return Future.succeededFuture();
                         } else {
-                            // entry wasn't actually removed and entry hasn't expired (yet);
+                            // entry wasn't actually removed and entry hasn't expired (yet)
                             // This case happens when 2 consecutive command subscription requests from the same device
                             // (with no intermittent disconnect/unsubscribe - possibly because of a broken connection in between)
                             // have reached *different* protocol adapter instances/verticles. Now calling 'unregisterCommandConsumer'

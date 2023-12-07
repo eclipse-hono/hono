@@ -33,6 +33,7 @@ import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,12 @@ public abstract class AbstractRegistrationService implements RegistrationService
     public static final int DEFAULT_MAX_AGE_SECONDS = 300;
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractRegistrationService.class);
+    private static final String MSG_DEVICE_NOT_ENABLED = "device not enabled";
+    private static final String MSG_NO_SUCH_DEVICE = "no such device";
 
+    /**
+     * The service to use for retrieving information about tenants.
+     */
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     private EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner;
@@ -221,16 +227,16 @@ public abstract class AbstractRegistrationService implements RegistrationService
                         return getRegistrationInformation(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
                                 .compose(result -> {
                                     if (result.isNotFound()) {
-                                        LOG.debug("no such device");
-                                        TracingHelper.logError(span, "no such device");
+                                        LOG.debug(MSG_NO_SUCH_DEVICE);
+                                        TracingHelper.logError(span, MSG_NO_SUCH_DEVICE);
                                         return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
                                     } else if (isDeviceEnabled(result)) {
                                         final JsonObject deviceData = result.getPayload()
                                                 .getJsonObject(RegistrationConstants.FIELD_DATA);
                                         return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                     } else {
-                                        LOG.debug("device not enabled");
-                                        TracingHelper.logError(span, "device not enabled");
+                                        LOG.debug(MSG_DEVICE_NOT_ENABLED);
+                                        TracingHelper.logError(span, MSG_DEVICE_NOT_ENABLED);
                                         return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                     }
                                 });
@@ -287,7 +293,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     Optional.ofNullable(memberOf).ifPresent(array -> device.setViaGroups(array.stream()
                                         .filter(String.class::isInstance)
                                         .map(String.class::cast)
-                                        .collect(Collectors.toList())));
+                                        .toList()));
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
                                     return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId, 
@@ -300,11 +306,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                             .recover(this::convertToRegistrationResult);
                                 } else if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
-                                        LOG.debug("no such device");
-                                        TracingHelper.logError(span, "no such device");
+                                        LOG.debug(MSG_NO_SUCH_DEVICE);
+                                        TracingHelper.logError(span, MSG_NO_SUCH_DEVICE);
                                     } else {
-                                        LOG.debug("device not enabled");
-                                        TracingHelper.logError(span, "device not enabled");
+                                        LOG.debug(MSG_DEVICE_NOT_ENABLED);
+                                        TracingHelper.logError(span, MSG_DEVICE_NOT_ENABLED);
                                     }
                                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                 } else if (!isDeviceEnabled(gatewayResult)) {
@@ -401,8 +407,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
     private JsonArray convertObjectToJsonArray(final Object object) {
         final JsonArray array;
-        if (object instanceof JsonArray) {
-            array = (JsonArray) object;
+        if (object instanceof JsonArray jsonarray) {
+            array = jsonarray;
         } else {
             array = new JsonArray();
             if (object instanceof String) {
@@ -469,7 +475,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
         return getSupportedGatewaysForDevice(tenantId, deviceId, registrationInfo, span)
                 .compose(via -> {
                     final JsonObject result = new JsonObject()
-                            .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+                            .put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
                     if (!via.isEmpty()) {
                         result.put(RegistrationConstants.FIELD_VIA, via);
                     }
@@ -479,8 +485,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     Optional.ofNullable(registrationInfo.getString(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER))
                             .ifPresent(value -> result.put(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER, value));
 
-                    Optional.ofNullable(registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS))
-                            .ifPresent(value -> result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, value));
+                    Optional.ofNullable(registrationInfo.getJsonObject(RequestResponseApiConstants.FIELD_PAYLOAD_DEFAULTS))
+                            .ifPresent(value -> result.put(RequestResponseApiConstants.FIELD_PAYLOAD_DEFAULTS, value));
 
                     Optional.ofNullable(registrationInfo.getJsonObject(RegistrationConstants.FIELD_COMMAND_ENDPOINT))
                             .ifPresent(value -> result.put(RegistrationConstants.FIELD_COMMAND_ENDPOINT, value));
@@ -510,10 +516,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
         final Object viaObj = registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA);
         final Object viaGroups = registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA_GROUPS);
 
-        return (viaObj instanceof String && !((String) viaObj).isEmpty())
-                || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty())
-                || (viaGroups instanceof String && !((String) viaGroups).isEmpty())
-                || (viaGroups instanceof JsonArray && !((JsonArray) viaGroups).isEmpty());
+        return (viaObj instanceof String objString && !objString.isEmpty())
+                || (viaObj instanceof JsonArray jsonarray && !jsonarray.isEmpty())
+                || (viaGroups instanceof String groupsString && !groupsString.isEmpty())
+                || (viaGroups instanceof JsonArray jsonarray && !jsonarray.isEmpty());
     }
 
     private boolean isDeviceEnabled(final RegistrationResult registrationResult) {
@@ -522,7 +528,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     private boolean isDeviceEnabled(final JsonObject registrationData) {
-        return registrationData.getBoolean(RegistrationConstants.FIELD_ENABLED, Boolean.TRUE);
+        return registrationData.getBoolean(RequestResponseApiConstants.FIELD_ENABLED, Boolean.TRUE);
     }
 
     private boolean hasAuthorityForAutoRegistration(final RegistrationResult registrationResult) {

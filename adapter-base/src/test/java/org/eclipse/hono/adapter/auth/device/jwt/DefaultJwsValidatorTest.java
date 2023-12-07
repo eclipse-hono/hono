@@ -121,41 +121,47 @@ class DefaultJwsValidatorTest {
         final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
         jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
         final KeyPair keyPair1 = generateKeyPair(alg, 256);
-        final byte[] publicKey1 = keyPair1.getPublic().getEncoded();
-
         final KeyPair keyPair2 = generateKeyPair(alg, 256);
-        final byte[] publicKey2 = keyPair2.getPublic().getEncoded();
+
+        final JsonObject secondSecret = CredentialsObject.emptySecret(
+                instantNow.minusSeconds(1500),
+                instantNow.plusSeconds(5000))
+            .put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, CredentialsConstants.EC_ALG)
+            .put(CredentialsConstants.FIELD_SECRETS_KEY, keyPair2.getPublic().getEncoded());
 
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
                 CredentialsConstants.EC_ALG,
-                publicKey1,
+                keyPair1.getPublic().getEncoded(),
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
-        final JsonObject secret = CredentialsObject.emptySecret(
-                instantNow.minusSeconds(1500),
-                instantNow.plusSeconds(5000));
-        secret.put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, CredentialsConstants.EC_ALG);
-        secret.put(CredentialsConstants.FIELD_SECRETS_KEY, publicKey2);
-        creds.addSecret(secret);
+        creds.addSecret(secondSecret);
 
         final String jwt1 = generateJws(
                 jwtHeader,
                 generateJwtClaims(null, null, instantNow, instantPlus24Hours),
                 alg,
                 keyPair1.getPrivate());
+        final String jwt2 = generateJws(
+                jwtHeader,
+                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
+                alg,
+                keyPair2.getPrivate());
 
         authTokenValidator.expand(jwt1, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .compose(jws1 -> {
-                final String jwt2 = generateJws(
-                        jwtHeader,
-                        generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                        alg,
-                        keyPair2.getPrivate());
+                ctx.verify(() -> {
+                    assertThat(jws1.getBody().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
+                });
                 return authTokenValidator.expand(jwt2, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW);
             })
-            .onComplete(ctx.succeedingThenComplete());
+            .onComplete(ctx.succeeding(jws2 -> {
+                ctx.verify(() -> {
+                    assertThat(jws2.getBody().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
