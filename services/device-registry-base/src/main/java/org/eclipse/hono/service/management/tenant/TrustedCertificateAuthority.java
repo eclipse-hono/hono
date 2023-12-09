@@ -81,6 +81,26 @@ public class TrustedCertificateAuthority {
     @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID_TEMPLATE)
     private String authIdTemplate;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean ocspRevocationEnabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_RESPONDER_URI)
+    @JsonInclude(Include.NON_NULL)
+    private String ocspResponderUri;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT)
+    @JsonInclude(Include.NON_NULL)
+    private byte[] ocspResponderCert;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean ocspNonceEnabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_CHECK_END_ENTITY_ONLY)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean checkEndEntityOnly;
+
     /**
      * Checks if this object contains all required data.
      *
@@ -382,6 +402,113 @@ public class TrustedCertificateAuthority {
     public final TrustedCertificateAuthority setAuthIdTemplate(final String template) {
         IdentityTemplate.checkValidity(template);
         this.authIdTemplate = template;
+        return this;
+    }
+
+    /**
+     * Gets whether OCSP revocation check is enabled. It is disabled by default.
+     *
+     * @return True if OCSP revocation is enabled.
+     */
+    public boolean isOcspRevocationEnabled() {
+        return ocspRevocationEnabled;
+    }
+
+    /**
+     * Sets whether OCSP revocation check is enabled. It is disabled by default.
+     *
+     * @param ocspRevocationEnabled True if OCSP revocation check should be enabled.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspRevocationEnabled(final boolean ocspRevocationEnabled) {
+        this.ocspRevocationEnabled = ocspRevocationEnabled;
+        return this;
+    }
+
+    /**
+     * Gets OCSP responder uri which will be used for OCSP revocation check of this trust anchor. If URI is null then
+     * certificate AIA extension value should be used to obtain the values instead.
+     *
+     * @return OCSP responder URI or null.
+     */
+    public String getOcspResponderUri() {
+        return ocspResponderUri;
+    }
+
+    /**
+     * Sets OCSP responder uri which will be used for OCSP revocation check of this trust anchor. If URI is null then
+     * certificate AIA extension value should be used to obtain the values instead.
+     *
+     * @param ocspResponderUri OCSP responder URI or null to use certificate AIA extension instead.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspResponderUri(final String ocspResponderUri) {
+        this.ocspResponderUri = ocspResponderUri;
+        return this;
+    }
+
+    /**
+     * Gets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
+     * set then issuing CA of client certificate is used to verify the signature.
+     *
+     * @return The DER encoded X.509 CA certificate certificate used for OCSP signature verifications.
+     */
+    public byte[] getOcspResponderCert() {
+        return ocspResponderCert;
+    }
+
+    /**
+     * Sets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
+     * set then issuing CA of client certificate is used to verify the signature.
+     *
+     * @param ocspResponderCert The Custom DER encoded X.509 CA certificate used for verification of OCSP response
+     *                          signature or null to use client certificate issuing CA instead.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspResponderCert(final byte[] ocspResponderCert) {
+        this.ocspResponderCert = ocspResponderCert;
+        return this;
+    }
+
+    /**
+     * Gets whether nonce extension should be sent in OCSP request. Nonce is important to avoid replay attacks but can
+     * increase resource usage. It is disabled by default.
+     *
+     * @return True if nonce extension is enabled.
+     */
+    public boolean isOcspNonceEnabled() {
+        return ocspNonceEnabled;
+    }
+
+    /**
+     * Sets whether nonce extension should be sent in OCSP request. Nonce is important to avoid replay attacks but can
+     * increase resource usage. It is disabled by default.
+     *
+     * @param ocspNonceEnabled True to enable nonce extension in OCSP requests.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspNonceEnabled(final boolean ocspNonceEnabled) {
+        this.ocspNonceEnabled = ocspNonceEnabled;
+        return this;
+    }
+
+    /**
+     * Gets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
+     *
+     * @return True if only end (leaf) certificate revocation should be checked.
+     */
+    public boolean isCheckEndEntityOnly() {
+        return checkEndEntityOnly;
+    }
+
+    /**
+     * Sets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
+     *
+     * @param checkEndEntityOnly True if only end (leaf) certificate revocation should be checked.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setCheckEndEntityOnly(final boolean checkEndEntityOnly) {
+        this.checkEndEntityOnly = checkEndEntityOnly;
         return this;
     }
 }

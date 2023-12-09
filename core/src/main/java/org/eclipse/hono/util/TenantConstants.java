@@ -65,7 +65,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * automatically provision new devices. 
      */
     public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
-
+    public static final String FIELD_CHECK_END_ENTITY_ONLY = "check-end-entity-only";
     /**
      * The name of the property that contains the configuration options to limit 
      * the device connection duration of tenants.
@@ -125,6 +125,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * downstream command response messages that protocol adapters should use for a tenant.
      */
     public static final String FIELD_MAX_TTL_COMMAND_RESPONSE = "max-ttl-command-response";
+    public static final String FIELD_OCSP_NONCE_ENABLED = "ocsp-nonce-enabled";
+    public static final String FIELD_OCSP_RESPONDER_CERT = "ocsp-responder-cert";
+    public static final String FIELD_OCSP_RESPONDER_URI = "ocsp-responder-uri";
+    public static final String FIELD_OCSP_REVOCATION_ENABLED = "ocsp-revocation-enabled";
     /**
      * The name of the property that contains the algorithm used for a public key.
      */
