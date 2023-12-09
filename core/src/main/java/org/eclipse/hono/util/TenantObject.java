@@ -232,7 +232,7 @@ public final class TenantObject extends JsonBackedValueObject {
                 .stream()
                 .filter(obj -> obj instanceof JsonObject)
                 .map(JsonObject.class::cast)
-                .map(this::getTrustAnchorForPublicKey)
+                .map(this::getTrustAnchorForTrustedCA)
                 .filter(anchor -> anchor != null)
                 .collect(Collectors.toSet());
         }
@@ -240,23 +240,13 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     @JsonIgnore
-    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) {
-
+    private TrustAnchor getTrustAnchorForTrustedCA(final JsonObject keyProps) {
         if (keyProps == null) {
             return null;
         }
         final byte[] encodedCertificate = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_CERT, byte[].class);
         if (encodedCertificate != null) {
-            final X509Certificate certificate;
-            final CertificateFactory certificateFactory;
-            try {
-                certificateFactory = CertificateFactory.getInstance("X.509");
-                certificate = (X509Certificate) certificateFactory.generateCertificate(
-                        new ByteArrayInputStream(encodedCertificate));
-                return new TrustAnchor(certificate, null);
-            } catch (CertificateException e) {
-                return null;
-            }
+            return getTrustAnchorForCertificate(encodedCertificate);
         } else {
             final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
             if (subjectDn == null) {
@@ -284,6 +274,19 @@ public final class TenantObject extends JsonBackedValueObject {
                 LOG.debug("failed to instantiate trust anchor's public key", e);
                 return null;
             }
+        }
+    }
+
+    private TrustAnchor getTrustAnchorForCertificate(final byte[] encodedCertificate) {
+        final X509Certificate certificate;
+        final CertificateFactory certificateFactory;
+        try {
+            certificateFactory = CertificateFactory.getInstance("X.509");
+            certificate = (X509Certificate) certificateFactory.generateCertificate(
+                    new ByteArrayInputStream(encodedCertificate));
+            return new TrustAnchor(certificate, null);
+        } catch (CertificateException e) {
+            return null;
         }
     }
 
