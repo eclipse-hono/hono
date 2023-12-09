@@ -327,7 +327,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the date on which the data volume limit came into effect.
      */
     public static final String FIELD_EFFECTIVE_SINCE = "effective-since";
-
     /**
      * The name of the property that defines the messaging type to be used for a tenant.
      */

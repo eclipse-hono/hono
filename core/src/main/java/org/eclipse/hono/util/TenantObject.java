@@ -128,8 +128,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @see #addTrustAnchor(PublicKey, X500Principal, Boolean)
      */
     @JsonIgnore
-    public TenantObject setTrustAnchor(final PublicKey publicKey,
-                                       final X500Principal subjectDn) {
+    public TenantObject setTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
@@ -148,8 +147,8 @@ public final class TenantObject extends JsonBackedValueObject {
      * @throws NullPointerException if the public key or subjectDN parameters is {@code null}.
      */
     @JsonIgnore
-    public TenantObject addTrustAnchor(final PublicKey publicKey,
-                                       final X500Principal subjectDn, final Boolean autoProvisioningEnabled) {
+    public TenantObject addTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn,
+            final Boolean autoProvisioningEnabled) {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
@@ -227,6 +226,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
     private TrustAnchor getTrustAnchorForTrustedCA(final JsonObject keyProps) {
+
         if (keyProps == null) {
             return null;
         }

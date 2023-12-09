@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 
+
 /**
  * Validates a device's certificate chain using a {@link CertPathValidator}.
  *
