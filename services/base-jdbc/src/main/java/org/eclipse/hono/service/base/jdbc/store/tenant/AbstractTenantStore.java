@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.service.base.jdbc.store.AbstractStore;
-import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.Statement.ExpandedStatement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
@@ -33,10 +32,12 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
+import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.sql.SQLOperations;
 
 /**
@@ -106,12 +107,23 @@ public abstract class AbstractTenantStore extends AbstractStore {
             map.put("tenant_id", id);
         });
 
-        return SQL.runTransactionally(
-                this.client,
-                this.tracer,
-                span.context(),
-                (connection, context) -> readTenantBy(connection, expanded, context))
-                .onComplete(x -> span.finish());
+        final Promise<SQLConnection> connection = Promise.promise();
+        this.client.getConnection(connection);
+                return connection.future().compose(con -> {
+                    return readTenantBy(con, expanded, span.context());
+                })
+                .onComplete(ar -> {
+                    if (connection.future().succeeded()) {
+                        connection.future().result().close();
+                    }
+                    span.finish();
+                });
+//        return SQL.runTransactionally(
+//                this.client,
+//                this.tracer,
+//                span.context(),
+//                (connection, context) -> readTenantBy(connection, expanded, context))
+//                .onComplete(x -> span.finish());
 
     }
 
