@@ -18,7 +18,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   instance and thus simplifies test setup and configuration.
 * The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
   the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
-* All components now use Quarkus 3.2.6.Final.
+* All components now use Quarkus 3.2.9.Final.
 * A more generic format for storing the OpenTelemetry trace context information in an AMQP 1.0 message can now be
   configured, writing the corresponding properties in the message application properties. This is for example relevant 
   when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto. 
