@@ -30,7 +30,6 @@ import io.agroal.api.security.NamePrincipal;
 import io.agroal.api.security.SimplePassword;
 import io.agroal.pool.DataSource;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 
 /**
@@ -46,6 +45,7 @@ public class JdbcProperties {
     public static final int DEFAULT_MAXIMUM_CONNECTION_TIME = 30;
     public static final int DEFAULT_VALIDATION_TIME = 30;
     public static final int DEFAULT_LEAK_TIME = 60;
+
     private static final Logger log = LoggerFactory.getLogger(JdbcProperties.class);
 
     private String url;
@@ -180,48 +180,12 @@ public class JdbcProperties {
      * @param vertx The vertx instance to use.
      * @param dataSourceProperties The properties.
      * @return The client.
+     * @throws IllegalArgumentException if any of the properties are invalid.
      */
     public static JDBCClient dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
 
-        final JsonObject config = new JsonObject()
-                .put("url", dataSourceProperties.getUrl())
-                .put("user", dataSourceProperties.getUsername());
+        log.info("Creating new SQL client for table: {}", dataSourceProperties.getTableName());
 
-        // password is added later, after logging
-
-        if (dataSourceProperties.getDriverClass() != null) {
-            config.put("driver_class", dataSourceProperties.getDriverClass());
-        }
-
-        final String maxIdleLabel = "max_idle_time";
-        final String maxConnectionLabel = "max_connection_time";
-        final String validationLabel = "validation_time";
-        final String leakLabel = "leak_time";
-        final String minSizeLabel = "min_pool_size";
-        final String maxSizeLabel = "max_pool_size";
-        final String initSizeLabel = "initial_pool_size";
-
-        putValidValueIntoConfig(config, maxIdleLabel, dataSourceProperties.getMaximumIdleTime(), 0, true);
-        putValidValueIntoConfig(config, maxConnectionLabel, dataSourceProperties.getMaximumConnectionTime(), 0, true);
-        putValidValueIntoConfig(config, validationLabel, dataSourceProperties.getValidationTime(), 0, true);
-        putValidValueIntoConfig(config, leakLabel, dataSourceProperties.getLeakTime(), 0, true);
-        putValidValueIntoConfig(config, minSizeLabel, dataSourceProperties.getMinimumPoolSize(), 0, true);
-        putValidValueIntoConfig(config, maxSizeLabel, dataSourceProperties.getMaximumPoolSize(), Math.max(1, config.getInteger(minSizeLabel)), true);
-        // check that initial pool size is between min and max pool size
-        putValidValueIntoConfig(config, initSizeLabel, dataSourceProperties.getInitialPoolSize(), config.getInteger(minSizeLabel), true);
-        putValidValueIntoConfig(config, initSizeLabel, config.getInteger(initSizeLabel), config.getInteger(maxSizeLabel), false);
-
-        log.info("Creating new SQL client: {} - table: {}", config, dataSourceProperties.getTableName());
-
-        // create new client
-
-        final int minSize = config.getInteger(minSizeLabel);
-        final int maxSize = config.getInteger(maxSizeLabel);
-        final int initSize = config.getInteger(initSizeLabel);
-        final Duration idleTime = Duration.ofSeconds(config.getInteger(maxIdleLabel));
-        final Duration connectionTime = Duration.ofSeconds(config.getInteger(maxConnectionLabel));
-        final Duration validationTime = Duration.ofSeconds(config.getInteger(validationLabel));
-        final Duration leakTime = Duration.ofSeconds(config.getInteger(leakLabel));
         final NamePrincipal username = Optional
                 .ofNullable(dataSourceProperties.getUsername())
                 .map(NamePrincipal::new)
@@ -235,13 +199,13 @@ public class JdbcProperties {
                 .metricsEnabled(false)
                 .dataSourceImplementation(DataSourceImplementation.AGROAL)
                 .connectionPoolConfiguration(poolConfig -> poolConfig
-                        .minSize(minSize)
-                        .maxSize(maxSize)
-                        .initialSize(initSize)
-                        .acquisitionTimeout(connectionTime)
-                        .validationTimeout(validationTime)
-                        .leakTimeout(leakTime)
-                        .reapTimeout(idleTime)
+                        .minSize(dataSourceProperties.getMinimumPoolSize())
+                        .maxSize(dataSourceProperties.getMaximumPoolSize())
+                        .initialSize(dataSourceProperties.getInitialPoolSize())
+                        .acquisitionTimeout(Duration.ofSeconds(dataSourceProperties.getMaximumConnectionTime()))
+                        .validationTimeout(Duration.ofSeconds(dataSourceProperties.getValidationTime()))
+                        .leakTimeout(Duration.ofSeconds(dataSourceProperties.getLeakTime()))
+                        .reapTimeout(Duration.ofSeconds(dataSourceProperties.getMaximumIdleTime()))
                         .connectionValidator(ConnectionValidator.defaultValidator())
                         .connectionFactoryConfiguration(connConfig -> connConfig
                                 .jdbcUrl(dataSourceProperties.getUrl())
@@ -250,19 +214,5 @@ public class JdbcProperties {
                                 .credential(password)));
 
         return JDBCClient.create(vertx, new DataSource(configuration.get()));
-
     }
-
-    private static void putValidValueIntoConfig(final JsonObject config, final String label, final int value, final int limit, final boolean checkLowerLimit) {
-        if (checkLowerLimit && value < limit) {
-            log.warn("JDBC property {} has an illegal value. Value ({}) must not be smaller than {}. Value will be set to {}", label, value, limit, limit);
-            config.put(label, limit);
-        } else if (!checkLowerLimit && value > limit) {
-            log.warn("JDBC property {} has an illegal value. Value ({}) must not be bigger than {}. Value will be set to {}", label, value, limit, limit);
-            config.put(label, limit);
-        } else {
-            config.put(label, value);
-        }
-    }
-
 }

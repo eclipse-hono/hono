@@ -52,7 +52,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
-import org.h2.Driver;
 import org.h2.tools.RunScript;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -165,7 +164,7 @@ abstract class AbstractJdbcRegistryTest {
         switch (DATABASE_TYPE) {
             case H2:
                 final var dbFolderName = UUID.randomUUID().toString();
-                jdbc.setDriverClass(Driver.class.getName());
+                jdbc.setDriverClass(org.h2.Driver.class.getName());
                 jdbc.setUrl("jdbc:h2:" + BASE_DIR.resolve(dbFolderName).resolve("data").toAbsolutePath());
                 break;
             case POSTGRESQL:
