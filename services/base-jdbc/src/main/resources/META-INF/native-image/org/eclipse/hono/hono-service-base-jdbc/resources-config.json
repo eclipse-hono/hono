@@ -1,0 +1,8 @@
+{
+  "resources": {
+    "includes": [
+      { "pattern":  "org\\/eclipse\\/hono\\/service\\/base\\/jdbc\\/store\\/.*\\.yaml$" },
+      { "pattern":  "sql\\/.*\\.sql$" }
+    ]
+  }
+}
