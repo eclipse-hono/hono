@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -124,7 +124,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
 
         return expanded
                 .trace(this.tracer, spanContext)
-                .query(this.client);
+                .query(operations);
 
     }
 

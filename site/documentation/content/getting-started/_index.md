@@ -48,6 +48,10 @@ The command line client is available in two variants:
 The former variant works on all platforms where Java is available and will be used during the remainder of this guide.
 The latter variant should work on modern Linux distributions and can be used by replacing `java -jar hono-cli-*-exec.jar`
 with just the name of the executable file.
+
+Note that when using the native executable, the root CA certificates included in the executable will be used. To use the
+(possibly more up to date) local CA certificates instead, add the `--ca-file` CLI parameter with the path of the
+certificates (e.g. `--ca-file /etc/ssl/certs/ca-certificates.crt`).
 {{% /notice %}}
 
 #### Hono Instance
@@ -120,7 +124,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
+export APP_OPTIONS="--sandbox"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 EOS
@@ -136,7 +140,7 @@ export REGISTRY_IP=hono.eclipseprojects.io
 export HTTP_ADAPTER_IP=hono.eclipseprojects.io
 export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 export KAFKA_IP=hono.eclipseprojects.io
-export APP_OPTIONS="--sandbox --ca-file /etc/ssl/certs/ca-certificates.crt"
+export APP_OPTIONS="--sandbox"
 export CURL_OPTIONS=
 export MOSQUITTO_OPTIONS='--cafile /etc/ssl/certs/ca-certificates.crt'
 ~~~

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -84,6 +84,30 @@ public interface JdbcOptions {
      */
     @WithDefault("3600")
     int maximumIdleTime();
+
+    /**
+     * Gets the maximum connection time for acquiring a connection from the DB connection pool.
+     *
+     * @return The maximum connection time for acquiring a connection from the pool.
+     */
+    @WithDefault("30")
+    int maximumConnectionTime();
+
+    /**
+     * Gets the connection validation time interval in the DB connection pool.
+     *
+     * @return The connection validation time interval in the pool.
+     */
+    @WithDefault("30")
+    int validationTime();
+
+    /**
+     * Gets the connection leak time limit from the DB connection pool.
+     *
+     * @return The connection leak time limit from the pool.
+     */
+    @WithDefault("60")
+    int leakTime();
 
     /**
      * Gets the name of the table that contains the data.
