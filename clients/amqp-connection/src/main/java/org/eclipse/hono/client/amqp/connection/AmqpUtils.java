@@ -34,7 +34,8 @@ import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
-import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
+import org.eclipse.hono.client.amqp.tracing.AmqpMessageExtractAdapter;
+import org.eclipse.hono.client.amqp.tracing.AmqpMessageInjectAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
@@ -45,6 +46,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -117,7 +119,7 @@ public final class AmqpUtils {
         }
     };
 
-    private static final String AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
+    private static final String LEGACY_AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
 
     private AmqpUtils() {
         // prevent instantiation
@@ -170,28 +172,34 @@ public final class AmqpUtils {
     /**
      * Injects a {@code SpanContext} into an AMQP {@code Message}.
      * <p>
-     * The span context will be written to the message annotations of the given message.
+     * The span context will be written either to the message annotations (if {@code useLegacyTraceContextFormat} is
+     * {@code true}) or the application properties of the given message.
      *
      * @param tracer The Tracer to use for injecting the context.
      * @param spanContext The context to inject or {@code null} if no context is available.
      * @param message The AMQP {@code Message} object to inject the context into.
+     * @param useLegacyTraceContextFormat If {@code true}, the legacy trace context format will be used (writing to
+     *                                    a map in the message annotation properties).
      * @throws NullPointerException if tracer or message is {@code null}.
      */
-    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final Message message) {
+    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final Message message,
+            final boolean useLegacyTraceContextFormat) {
 
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(message);
 
         if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
-            tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
-                    new MessageAnnotationsInjectAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+            final TextMap injectAdapter = useLegacyTraceContextFormat
+                    ? new MessageAnnotationsInjectAdapter(message, LEGACY_AMQP_ANNOTATION_NAME_TRACE_CONTEXT)
+                    : new AmqpMessageInjectAdapter(message);
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, injectAdapter);
         }
     }
 
     /**
      * Extracts a {@code SpanContext} from an AMQP {@code Message}.
      * <p>
-     * The span context will be read from the message annotations of the given message.
+     * The span context will be read from the message annotations or the application properties of the given message.
      *
      * @param tracer The Tracer to use for extracting the context.
      * @param message The AMQP {@code Message} to extract the context from.
@@ -204,7 +212,7 @@ public final class AmqpUtils {
         Objects.requireNonNull(message);
 
         return tracer.extract(Format.Builtin.TEXT_MAP,
-                new MessageAnnotationsExtractAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+                new AmqpMessageExtractAdapter(message, LEGACY_AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
     }
 
     /**

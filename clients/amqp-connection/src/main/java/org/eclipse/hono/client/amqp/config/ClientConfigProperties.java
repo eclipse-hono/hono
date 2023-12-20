@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -90,6 +90,10 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * size.
      */
     public static final long MIN_MAX_MESSAGE_SIZE_NONE = 0;
+    /**
+     * The default value for deciding whether to use the legacy trace context format.
+     */
+    public static final boolean DEFAULT_USE_LEGACY_TRACE_CONTEXT_FORMAT = true;
 
     private Pattern addressRewritePattern;
     private String addressRewriteReplacement;
@@ -111,6 +115,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     private long reconnectDelayIncrement = DEFAULT_RECONNECT_DELAY_INCREMENT;
     private long requestTimeout = DEFAULT_REQUEST_TIMEOUT;
     private long sendMessageTimeout = DEFAULT_SEND_MESSAGE_TIMEOUT;
+    private boolean useLegacyTraceContextFormat = DEFAULT_USE_LEGACY_TRACE_CONTEXT_FORMAT;
 
     /**
      * Creates new properties using default values.
@@ -147,6 +152,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         this.reconnectDelayIncrement = otherProperties.reconnectDelayIncrement;
         this.requestTimeout = otherProperties.requestTimeout;
         this.sendMessageTimeout = otherProperties.sendMessageTimeout;
+        this.useLegacyTraceContextFormat = otherProperties.useLegacyTraceContextFormat;
     }
 
     /**
@@ -174,6 +180,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         setReconnectDelayIncrement(options.reconnectDelayIncrement());
         setRequestTimeout(options.requestTimeout());
         setSendMessageTimeout(options.sendMessageTimeout());
+        setUseLegacyTraceContextFormat(options.useLegacyTraceContextFormat());
     }
 
     /**
@@ -801,5 +808,25 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         } else {
             return 0;
         }
+    }
+
+    /**
+     * Checks whether the legacy trace context format shall be used, writing to the message annotations instead of the
+     * application properties.
+     *
+     * @return {@code true} if the legacy format shall be used.
+     */
+    public final boolean isUseLegacyTraceContextFormat() {
+        return useLegacyTraceContextFormat;
+    }
+
+    /**
+     * Sets whether the legacy trace context format shall be used, writing to the message annotations instead of the
+     * application properties.
+     *
+     * @param useLegacyTraceContextFormat {@code true} if the legacy format shall be used.
+     */
+    public final void setUseLegacyTraceContextFormat(final boolean useLegacyTraceContextFormat) {
+        this.useLegacyTraceContextFormat = useLegacyTraceContextFormat;
     }
 }

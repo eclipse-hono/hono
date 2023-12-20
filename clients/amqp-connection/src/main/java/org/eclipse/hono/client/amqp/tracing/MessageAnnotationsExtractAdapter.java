@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,9 @@ import io.opentracing.propagation.TextMap;
 /**
  * An adapter for extracting properties from an AMQP 1.0 message's message annotations.
  *
+ * @deprecated Use {@link AmqpMessageExtractAdapter} instead.
  */
+@Deprecated
 public class MessageAnnotationsExtractAdapter implements TextMap {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageAnnotationsExtractAdapter.class);
@@ -54,7 +56,7 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
     @Override
     public Iterator<Entry<String, String>> iterator() {
 
-        final Map<?, ?> propertiesMap = getPropertiesMap();
+        final Map<?, ?> propertiesMap = getMessageAnnotationsPropertiesMap();
         if (propertiesMap.isEmpty()) {
             return Collections.emptyIterator();
         }
@@ -80,7 +82,13 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
         throw new UnsupportedOperationException();
     }
 
-    private Map<?, ?> getPropertiesMap() {
+    /**
+     * Gets the properties map stored in a message annotation entry named according to the
+     * <code>propertiesMapName</code> constructor parameter.
+     *
+     * @return The properties map or an empty map, if no corresponding message annotations map entry was found.
+     */
+    Map<?, ?> getMessageAnnotationsPropertiesMap() {
         final MessageAnnotations messageAnnotations = message.getMessageAnnotations();
         if (messageAnnotations == null || messageAnnotations.getValue() == null) {
             return Collections.emptyMap();
