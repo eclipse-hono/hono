@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -217,4 +217,13 @@ public interface ClientOptions {
      */
     @WithDefault("-1")
     int maxSessionFrames();
+
+    /**
+     * Checks whether the legacy trace context format shall be used, writing to the message annotations instead of the
+     * application properties.
+     *
+     * @return {@code true} if the legacy format shall be used.
+     */
+    @WithDefault("true")
+    boolean useLegacyTraceContextFormat();
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -340,7 +340,8 @@ public class GenericSenderLink extends AbstractHonoClient {
         TracingHelper.TAG_QOS.set(currentSpan, sender.getQoS().toString());
         Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_PRODUCER);
         TracingHelper.setDeviceTags(currentSpan, tenantId, AmqpUtils.getDeviceId(message));
-        AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), message);
+        AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), message,
+                connection.getConfig().isUseLegacyTraceContextFormat());
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
