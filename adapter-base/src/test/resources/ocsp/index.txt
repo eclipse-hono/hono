@@ -1,0 +1,2 @@
+V	251115184254Z		00	unknown	/CN=ocsp-valid
+R	251115184254Z	231115184255Z	01	unknown	/CN=ocsp-revoked
