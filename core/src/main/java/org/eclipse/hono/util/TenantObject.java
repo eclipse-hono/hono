@@ -13,15 +13,10 @@
 
 package org.eclipse.hono.util;
 
-import java.io.ByteArrayInputStream;
-import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.TrustAnchor;
-import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
@@ -155,6 +150,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
         return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, null,
                 autoProvisioningEnabled);
+
     }
 
     /**
@@ -217,7 +213,7 @@ public final class TenantObject extends JsonBackedValueObject {
                 .stream()
                 .filter(obj -> obj instanceof JsonObject)
                 .map(JsonObject.class::cast)
-                .map(this::getTrustAnchorForTrustedCA)
+                .map(this::getTrustAnchorForPublicKey)
                 .filter(anchor -> anchor != null)
                 .collect(Collectors.toSet());
         }
@@ -225,14 +221,10 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     @JsonIgnore
-    private TrustAnchor getTrustAnchorForTrustedCA(final JsonObject keyProps) {
+    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) {
 
         if (keyProps == null) {
             return null;
-        }
-
-        if (getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_CERT, byte[].class) != null) {
-            return getTrustAnchorForCertificate(keyProps);
         } else {
             final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
             if (subjectDn == null) {
@@ -255,61 +247,12 @@ public final class TenantObject extends JsonBackedValueObject {
                 final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
                 final KeyFactory factory = KeyFactory.getInstance(type);
                 final PublicKey publicKey = factory.generatePublic(keySpec);
-                final RevocableTrustAnchor trustAnchor = new RevocableTrustAnchor(subjectDn, publicKey, null);
-                if (isRevocable(keyProps)) {
-                    setRevocationProperties(trustAnchor, keyProps);
-                }
-                return trustAnchor;
+                return new RevocableTrustAnchor(subjectDn, publicKey, null, keyProps);
             } catch (final GeneralSecurityException e) {
                 LOG.debug("failed to instantiate trust anchor's public key", e);
                 return null;
             }
         }
-    }
-
-    private TrustAnchor getTrustAnchorForCertificate(final JsonObject keyProps) {
-        final X509Certificate certificate;
-        final CertificateFactory certificateFactory;
-        final byte[] encodedCertificate = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_CERT, byte[].class);
-        try {
-            certificateFactory = CertificateFactory.getInstance("X.509");
-            certificate = (X509Certificate) certificateFactory.generateCertificate(
-                    new ByteArrayInputStream(encodedCertificate));
-            final RevocableTrustAnchor trustAnchor = new RevocableTrustAnchor(certificate, null);
-            if (isRevocable(keyProps)) {
-                setRevocationProperties(trustAnchor, keyProps);
-            }
-            return trustAnchor;
-        } catch (CertificateException e) {
-            LOG.error("failed to parse Trusted CA", e);
-            return null;
-        }
-    }
-
-    private boolean isRevocable(final JsonObject keyProps) {
-        return getProperty(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false);
-    }
-
-    private void setRevocationProperties(final RevocableTrustAnchor trustAnchor, final JsonObject keyProps) {
-        trustAnchor.setOcspEnabled(getProperty(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false));
-        final String ocspResponderUriString = getProperty(keyProps, TenantConstants.FIELD_OCSP_RESPONDER_URI, String.class);
-        if (ocspResponderUriString != null) {
-            final URI ocspResponderUri = URI.create(ocspResponderUriString);
-            trustAnchor.setOcspResponderUri(ocspResponderUri);
-        }
-        final byte[] ocspResponderCertData = getProperty(keyProps, TenantConstants.FIELD_OCSP_RESPONDER_CERT, byte[].class);
-        if (ocspResponderCertData != null) {
-            try {
-                final CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-                final X509Certificate ocspResponderCert = (X509Certificate) certificateFactory.generateCertificate(
-                        new ByteArrayInputStream(ocspResponderCertData));
-                trustAnchor.setOcspResponderCert(ocspResponderCert);
-            } catch (CertificateException e) {
-                LOG.error("failed to parse OCSP responder certificate", e);
-            }
-        }
-        trustAnchor.setOcspNonceEnabled(getProperty(keyProps, TenantConstants.FIELD_OCSP_NONCE_ENABLED, Boolean.class, false));
-        trustAnchor.setCheckEndEntityOnly(getProperty(keyProps, TenantConstants.FIELD_CHECK_END_ENTITY_ONLY, Boolean.class, false));
     }
 
     /**

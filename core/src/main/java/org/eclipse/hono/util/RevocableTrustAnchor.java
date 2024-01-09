@@ -12,10 +12,20 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.security.PublicKey;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+
+import javax.security.auth.x500.X500Principal;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * This call enhances {@link TrustAnchor} class to additional revocation properties. It defines properties for
@@ -23,6 +33,9 @@ import java.security.cert.X509Certificate;
  * Currently only OCSP revocation is supported.
  */
 public class RevocableTrustAnchor extends TrustAnchor {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RevocableTrustAnchor.class);
+
     private boolean ocspEnabled;
     private URI ocspResponderUri;
     private X509Certificate ocspResponderCert;
@@ -32,11 +45,12 @@ public class RevocableTrustAnchor extends TrustAnchor {
     /**
      * See {@link TrustAnchor}.
      *
-     * @param trustedCert See {@link TrustAnchor}.
+     * @param caPrincipal See {@link TrustAnchor}.
+     * @param pubKey See {@link TrustAnchor}.
      * @param nameConstraints See {@link TrustAnchor}.
      */
-    public RevocableTrustAnchor(final X509Certificate trustedCert, final byte[] nameConstraints) {
-        super(trustedCert, nameConstraints);
+    public RevocableTrustAnchor(final X500Principal caPrincipal, final PublicKey pubKey, final byte[] nameConstraints) {
+        super(caPrincipal, pubKey, nameConstraints);
     }
 
     /**
@@ -45,9 +59,34 @@ public class RevocableTrustAnchor extends TrustAnchor {
      * @param caName See {@link TrustAnchor}.
      * @param pubKey See {@link TrustAnchor}.
      * @param nameConstraints See {@link TrustAnchor}.
+     * @param trustedCAProps {@link JsonObject} containing revocation properties of trusted
+     *                       certification authority.
      */
-    public RevocableTrustAnchor(final String caName, final PublicKey pubKey, final byte[] nameConstraints) {
+    public RevocableTrustAnchor(final String caName, final PublicKey pubKey, final byte[] nameConstraints,
+        final JsonObject trustedCAProps) {
         super(caName, pubKey, nameConstraints);
+        setRevocationProperties(trustedCAProps);
+    }
+
+    private void setRevocationProperties(final JsonObject keyProps) {
+        ocspEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false);
+        ocspNonceEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false);
+        final String ocspResponderUriString = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_RESPONDER_URI, String.class, null);
+        if (ocspResponderUriString != null) {
+            ocspResponderUri = URI.create(ocspResponderUriString);
+        }
+        final byte[] ocspResponderCertData = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_RESPONDER_CERT, byte[].class, null);
+        if (ocspResponderCertData != null) {
+            try {
+                final CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+                ocspResponderCert = (X509Certificate) certificateFactory.generateCertificate(
+                        new ByteArrayInputStream(ocspResponderCertData));
+            } catch (CertificateException e) {
+                LOG.error("failed to parse OCSP responder certificate", e);
+            }
+        }
+        ocspNonceEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_NONCE_ENABLED, Boolean.class, false);
+        checkEndEntityOnly = JsonHelper.getValue(keyProps, TenantConstants.FIELD_CHECK_END_ENTITY_ONLY, Boolean.class, false);
     }
 
     /**

@@ -89,6 +89,8 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
                 lastException = e;
                 if (e.getReason() == BasicReason.REVOKED || e.getReason() == BasicReason.UNDETERMINED_REVOCATION_STATUS) {
                     // Certificate trusted but revoked, exit now
+                    LOG.warn("Certificate [subject DN: {}] revocation check failed.",
+                            chain.get(0).getSubjectX500Principal().getName(), e);
                     break;
                 }
             } catch (GeneralSecurityException e) {

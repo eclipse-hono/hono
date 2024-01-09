@@ -918,6 +918,38 @@ components:
                   template string with their corresponding *Common Name (CN)*, *Organizational Unit Name (OU)* and
                   *Organization Name (O)* from the client certificate's subject DN. The *Subject DN* is formatted
                   according to the rules defined in [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
+            "ocsp-revocation-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether OCSP revocation check is enabled. It is disabled by default. If OCSP is
+                  enabled then `cert` or `ocsp-responder-cert` must be explicitly set.
+            "ocsp-responder-uri":
+               type: string
+               description: |
+                  Specifies the OCSP responder uri which will be used for OCSP revocation check of this trust
+                  anchor. If URI is not set then certificate AIA extension value is used to obtain the values
+                  instead.
+            "ocsp-responder-cert":
+               type: string
+               format: byte
+               description: |
+                  The Base64 encoded binary DER encoding of the certificate which is used to verify OCSP
+                  response signature. If custom certificate is not set then issuing CA of client certificate is
+                  used instead. Either `cert` or `ocsp-responder-cert` must be explicitly set if OCSP revocation
+                  check is enabled.
+            "ocsp-nonce-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether nonce extension should be sent in OCSP request. Nonce is important to avoid
+                  replay attacks but can increase resource usage.
+            "check-end-entity-only":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether only end (leaf) certificate revocation should be checked. It is set to false
+                  by default.
 
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"

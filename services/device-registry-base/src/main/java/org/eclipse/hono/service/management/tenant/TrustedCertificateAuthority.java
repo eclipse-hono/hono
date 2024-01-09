@@ -16,7 +16,6 @@ package org.eclipse.hono.service.management.tenant;
 import java.io.ByteArrayInputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -108,7 +107,10 @@ public class TrustedCertificateAuthority {
      */
     @JsonIgnore
     public final boolean isValid() {
-        if (cert != null) {
+        if (ocspRevocationEnabled && cert == null && ocspResponderCert == null) {
+            // No certificate for OCSP response verification
+            return false;
+        } else if (cert != null) {
             return true;
         } else if (subjectDn == null || publicKey == null || notBefore == null || notAfter == null) {
             return false;
@@ -230,17 +232,6 @@ public class TrustedCertificateAuthority {
         final CertificateFactory factory = CertificateFactory.getInstance("X.509");
         cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certificate));
         return this;
-    }
-
-    /**
-     * Gets the trusted certificate.
-     *
-     * @return The certificate in encoded form.
-     * @throws CertificateEncodingException if certificate cannot be encoded.
-     */
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
-    public final byte[] getCertificate() throws CertificateEncodingException {
-        return cert == null ? null : cert.getEncoded();
     }
 
     /**
@@ -415,7 +406,8 @@ public class TrustedCertificateAuthority {
     }
 
     /**
-     * Sets whether OCSP revocation check is enabled. It is disabled by default.
+     * Sets whether OCSP revocation check is enabled. It is disabled by default. If OCSP is enabled then trusted CA
+     * certificate or OCSP responder certificate must be explicitly set.
      *
      * @param ocspRevocationEnabled True if OCSP revocation check should be enabled.
      * @return A reference to this for fluent use.
@@ -449,17 +441,24 @@ public class TrustedCertificateAuthority {
 
     /**
      * Gets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
-     * set then issuing CA of client certificate is used to verify the signature.
+     * set then issuing CA of client certificate is used instead.
      *
-     * @return The DER encoded X.509 CA certificate certificate used for OCSP signature verifications.
+     * @return The DER encoded X.509 CA certificate used for OCSP signature verifications.
+     * @throws CertificateException if the certificate cannot be deserialized into a byte array.
      */
-    public byte[] getOcspResponderCert() {
-        return ocspResponderCert;
+    public byte[] getOcspResponderCert() throws CertificateException {
+        if (ocspResponderCert != null) {
+            return ocspResponderCert;
+        } else if (ocspRevocationEnabled && cert != null) {
+            return cert.getEncoded();
+        } else {
+            return null;
+        }
     }
 
     /**
      * Sets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
-     * set then issuing CA of client certificate is used to verify the signature.
+     * set then issuing CA of client certificate is used instead.
      *
      * @param ocspResponderCert The Custom DER encoded X.509 CA certificate used for verification of OCSP response
      *                          signature or null to use client certificate issuing CA instead.
