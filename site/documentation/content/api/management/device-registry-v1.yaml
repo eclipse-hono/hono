@@ -816,6 +816,17 @@ components:
                   property is ignored.
                   Otherwise, if the `public-key` property is
                   used, this property is mandatory.
+            "subject-dn-bytes":
+               type: string
+               format: byte
+               description: |
+                  The subject DN of the trusted root certificate encoded in
+                  the ASN.1 DER format which matches subject DN field in original
+                  X.509 certificate. If the `cert` property is used to provide
+                  an X.509 certificate then the subject DN is determined from
+                  the certificate and this property is ignored.
+                  Otherwise this property is optional, but may be needed to
+                  make OCSP revocation check work correctly.
             "public-key":
                type: string
                format: byte

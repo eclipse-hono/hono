@@ -56,15 +56,15 @@ public class RevocableTrustAnchor extends TrustAnchor {
     /**
      * See {@link TrustAnchor}.
      *
-     * @param caName See {@link TrustAnchor}.
+     * @param caPrincipal See {@link TrustAnchor}.
      * @param pubKey See {@link TrustAnchor}.
      * @param nameConstraints See {@link TrustAnchor}.
      * @param trustedCAProps {@link JsonObject} containing revocation properties of trusted
      *                       certification authority.
      */
-    public RevocableTrustAnchor(final String caName, final PublicKey pubKey, final byte[] nameConstraints,
+    public RevocableTrustAnchor(final X500Principal caPrincipal, final PublicKey pubKey, final byte[] nameConstraints,
         final JsonObject trustedCAProps) {
-        super(caName, pubKey, nameConstraints);
+        super(caPrincipal, pubKey, nameConstraints);
         setRevocationProperties(trustedCAProps);
     }
 

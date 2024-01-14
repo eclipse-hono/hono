@@ -25,7 +25,6 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Set;
 
-import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.RevocableTrustAnchor;
 import org.junit.jupiter.api.BeforeEach;
@@ -220,7 +219,7 @@ class OCSPIntegrationTest {
             final CertificateFactory fact = CertificateFactory.getInstance("X.509");
             final X509Certificate cert = (X509Certificate) fact.generateCertificate(certificateStream);
             // When principal is loaded from certificate it is encoded as DER PrintableString but when it is created
-            // from string it is encoded as UTF8String internally, this causes inconsisten issuerNameHash in OCSP
+            // from string it is encoded as UTF8String internally, this causes inconsistent issuerNameHash in OCSP
             // request, which cannot be handled by OpenSSL responder.
             return new RevocableTrustAnchor(cert.getSubjectX500Principal(), cert.getPublicKey(), null);
         }

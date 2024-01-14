@@ -19,8 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 
-import javax.security.auth.x500.X500Principal;
-
 import org.eclipse.hono.test.VertxTools;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,8 +55,8 @@ class RevocableTrustAnchorTest {
                         .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT, getEncodedCertificate(cert))
                         .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, true)
                         .put(RegistryManagementConstants.FIELD_CHECK_END_ENTITY_ONLY, true);
-                final RevocableTrustAnchor anchor = new RevocableTrustAnchor(cert.getSubjectX500Principal()
-                        .getName(X500Principal.RFC2253), cert.getPublicKey(), null, trustedCAProps);
+                final RevocableTrustAnchor anchor = new RevocableTrustAnchor(cert.getSubjectX500Principal(),
+                        cert.getPublicKey(), null, trustedCAProps);
                 ctx.verify(() -> {
                         assertTrue(anchor.isOcspEnabled());
                         assertEquals("example.com", anchor.getOcspResponderUri().getHost());

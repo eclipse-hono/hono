@@ -54,6 +54,8 @@ public class TrustedCertificateAuthority {
 
     private X500Principal subjectDn;
 
+    private byte[] subjectDnBytes;
+
     private byte[] publicKey;
 
     private X509Certificate cert;
@@ -193,6 +195,31 @@ public class TrustedCertificateAuthority {
                 .orElseGet(() -> Optional.ofNullable(subjectDn)
                     .map(s -> s.getName(X500Principal.RFC2253))
                     .orElse(null));
+    }
+
+    /**
+     * Sets the subject of the trusted authority in binary format.
+     *
+     * @param subjectDnBytes The subject distinguished name encoded in ASN.1 DER format.
+     * @return A reference to this for fluent use.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES)
+    public final TrustedCertificateAuthority setSubjectDnBytes(final byte[] subjectDnBytes) {
+        this.subjectDnBytes = subjectDnBytes;
+        return this;
+    }
+
+    /**
+     * Gets the subject of this trusted authority in binary form encoded in ASN.1 DER format.
+     *
+     * @return The subject distinguished name.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES)
+    @JsonInclude(Include.NON_NULL)
+    public final byte[] getSubjectDnBytes() {
+        return Optional.ofNullable(cert)
+                .map(c -> c.getSubjectX500Principal().getEncoded())
+                .orElse(subjectDnBytes);
     }
 
     /**

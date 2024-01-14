@@ -226,11 +226,19 @@ public final class TenantObject extends JsonBackedValueObject {
         if (keyProps == null) {
             return null;
         } else {
-            final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-            if (subjectDn == null) {
-                LOG.debug("trust anchor definition does not contain required property {}",
-                        RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
-                return null;
+            final X500Principal principal;
+            // Prefer DER encoded form if available to avoid inconsistencies in formatting with original certificate
+            final byte[] subjectDnBytes = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES, byte[].class);
+            if (subjectDnBytes != null) {
+                principal = new X500Principal(subjectDnBytes);
+            } else {
+                final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+                if (subjectDn == null) {
+                    LOG.debug("trust anchor definition does not contain required property {}",
+                            RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                    return null;
+                }
+                principal = new X500Principal(subjectDn);
             }
             final byte[] encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, byte[].class);
             if (encodedKey == null) {
@@ -247,7 +255,7 @@ public final class TenantObject extends JsonBackedValueObject {
                 final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
                 final KeyFactory factory = KeyFactory.getInstance(type);
                 final PublicKey publicKey = factory.generatePublic(keySpec);
-                return new RevocableTrustAnchor(subjectDn, publicKey, null, keyProps);
+                return new RevocableTrustAnchor(principal, publicKey, null, keyProps);
             } catch (final GeneralSecurityException e) {
                 LOG.debug("failed to instantiate trust anchor's public key", e);
                 return null;

@@ -71,6 +71,7 @@ class TrustedCertificateAuthorityTest {
 
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, certificate.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES, certificate.getSubjectX500Principal().getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
@@ -211,6 +212,7 @@ class TrustedCertificateAuthorityTest {
     private void assertAuthority(final TrustedCertificateAuthority authority) {
         assertThat(authority.isValid()).isTrue();
         assertThat(authority.getSubjectDn()).isEqualTo(certificate.getSubjectX500Principal());
+        assertThat(authority.getSubjectDnBytes()).isEqualTo(certificate.getSubjectX500Principal().getEncoded());
         assertThat(authority.getPublicKey()).isEqualTo(certificate.getPublicKey().getEncoded());
         assertThat(authority.getKeyAlgorithm()).isEqualTo(certificate.getPublicKey().getAlgorithm());
         assertThat(authority.getNotBefore()).isEqualTo(certificate.getNotBefore().toInstant());
