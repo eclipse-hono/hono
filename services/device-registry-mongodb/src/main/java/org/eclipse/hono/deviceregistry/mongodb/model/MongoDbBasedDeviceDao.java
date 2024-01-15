@@ -15,6 +15,8 @@
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,6 +63,11 @@ import io.vertx.ext.mongo.UpdateOptions;
  */
 public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao, HealthCheckProvider {
 
+    /**
+     * The name of the index on tenant ID, device ID of devices that are a member of a gateway group.
+     */
+    public static final String IDX_TENANT_ID_DEVICE_ID_MEMBER_OF_EXISTS = "tenant_id.members_of_gateway_groups";
+
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDeviceDao.class);
     /**
      * The property that contains the group IDs that a (gateway) device is a member of.
@@ -102,12 +109,34 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
             // create unique index on device ID
             return createIndex(
                     new JsonObject().put(BaseDto.FIELD_TENANT_ID, 1).put(DeviceDto.FIELD_DEVICE_ID, 1),
-                    new IndexOptions().unique(true))
-            .onSuccess(ok -> indicesCreated.set(true))
-            .onComplete(r -> {
-                creatingIndices.set(false);
-                result.handle(r);
-            });
+                    new IndexOptions()
+                        .unique(true))
+                .compose(ok -> createIndex(
+                        new JsonObject().put(BaseDto.FIELD_TENANT_ID, 1).put(MongoDbDocumentBuilder.DEVICE_VIA_PATH, 1),
+                        new IndexOptions()
+                            .name("tenant_id.via_exists")
+                            .partialFilterExpression(MongoDbDocumentBuilder.builder()
+                                .withGatewayDevices()
+                                .document())))
+                .compose(ok -> createIndex(
+                        new JsonObject()
+                            .put(BaseDto.FIELD_TENANT_ID, 1)
+                            .put(DeviceDto.FIELD_DEVICE_ID, 1)
+                            // the created field is only included in the index so that Mongo 4.4
+                            // does not complain about an index on tenant and device already existing
+                            // with different options
+                            .put(DeviceDto.FIELD_CREATED, 1),
+                        new IndexOptions()
+                            .name(IDX_TENANT_ID_DEVICE_ID_MEMBER_OF_EXISTS)
+                            .partialFilterExpression(
+                                new JsonObject().put(
+                                        MongoDbDocumentBuilder.DEVICE_MEMBEROF_PATH,
+                                        new JsonObject().put("$exists", true)))))
+                .onSuccess(ok -> indicesCreated.set(true))
+                .onComplete(r -> {
+                    creatingIndices.set(false);
+                    result.handle(r);
+                });
         } else {
             LOG.debug("already trying to create indices");
         }
@@ -284,11 +313,13 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
             final int pageOffset,
             final List<Filter> filters,
             final List<Sort> sortOptions,
+            final Optional<Boolean> isGateway,
             final SpanContext tracingContext) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(filters);
         Objects.requireNonNull(sortOptions);
+        Objects.requireNonNull(isGateway);
 
         if (pageSize <= 0) {
             throw new IllegalArgumentException("page size must be a positive integer");
@@ -301,22 +332,40 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .addReference(References.CHILD_OF, tracingContext)
                 .start();
 
-        final JsonObject filterDocument = MongoDbDocumentBuilder.builder()
-                .withTenantId(tenantId)
-                .withDeviceFilters(filters)
-                .document();
+        final Promise<List<Filter>> filtersPromise = Promise.promise();
+        if (isGateway.isPresent()) {
+            getIdsOfGatewayDevices(tenantId, span)
+                .map(gatewayIds -> {
+                    final List<Filter> effectiveFilters = new ArrayList<>(filters);
+                    if (isGateway.get()) {
+                        effectiveFilters.add(Filter.inFilter("/id", gatewayIds));
+                    } else {
+                        effectiveFilters.add(Filter.notInFilter("/id", gatewayIds));
+                    }
+                    return effectiveFilters;
+                })
+                .andThen(filtersPromise);
+        } else {
+            filtersPromise.complete(filters);
+        }
+
         final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
                 .withDeviceSortOptions(sortOptions)
                 .document();
 
-        return processSearchResource(
-                pageSize,
-                pageOffset,
-                filterDocument,
-                sortDocument,
-                MongoDbBasedDeviceDao::getDevicesWithId)
-            .onFailure(t -> TracingHelper.logError(span, "error finding devices", t))
-            .onComplete(r -> span.finish());
+        return filtersPromise.future()
+                .map(effectiveFilters -> MongoDbDocumentBuilder.builder()
+                    .withTenantId(tenantId)
+                    .withDeviceFilters(effectiveFilters)
+                    .document())
+                .compose(filterDocument -> processSearchResource(
+                    pageSize,
+                    pageOffset,
+                    filterDocument,
+                    sortDocument,
+                    MongoDbBasedDeviceDao::getDevicesWithId))
+                .onFailure(t -> TracingHelper.logError(span, "error finding devices", t))
+                .onComplete(r -> span.finish());
     }
 
     private static List<DeviceWithId> getDevicesWithId(final JsonObject searchResult) {
@@ -483,5 +532,56 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
             .onFailure(t -> logError(span, "error counting devices", t, tenantId, null))
             .recover(this::mapError)
             .onComplete(r -> span.finish());
+    }
+
+    private Future<JsonArray> getIdsOfGatewayDevices(final String tenantId, final Span span) {
+
+        final var viaQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .withGatewayDevices()
+                .document();
+
+        final var viaElements = mongoClient.distinctWithQuery(
+                collectionName,
+                MongoDbDocumentBuilder.DEVICE_VIA_PATH,
+                String.class.getName(),
+                viaQuery)
+                .map(array -> array.stream()
+                        .filter(String.class::isInstance)
+                        .map(String.class::cast)
+                        .collect(Collectors.toSet()));
+
+        final var gatewayGroupQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .withMemberOfAnyGatewayGroup()
+                .document();
+
+        final var gwGroupMembers = mongoClient.distinctWithQuery(
+                collectionName,
+                DeviceDto.FIELD_DEVICE_ID,
+                String.class.getName(),
+                gatewayGroupQuery)
+                .map(array -> array.stream()
+                        .filter(String.class::isInstance)
+                        .map(String.class::cast)
+                        .collect(Collectors.toSet()));
+
+        return Future.all(viaElements, gwGroupMembers)
+                .map(ok -> {
+                    final Set<String> result = new HashSet<>(viaElements.result());
+                    result.addAll(gwGroupMembers.result());
+                    return new JsonArray(new ArrayList<>(result));
+                })
+                .onFailure(t -> {
+                    LOG.debug("error retrieving gateway device IDs for tenant {}", tenantId, t);
+                    TracingHelper.logError(span, "failed to retrieve tenant's gateway device IDs", t);
+                })
+                .onSuccess(idList -> {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("found gateway device IDs for tenant {}: {}",
+                                tenantId, idList.encodePrettily());
+                    }
+                })
+                .recover(this::mapError);
     }
 }

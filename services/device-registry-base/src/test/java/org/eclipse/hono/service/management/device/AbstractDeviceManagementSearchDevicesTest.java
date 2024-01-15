@@ -25,6 +25,8 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
@@ -103,6 +105,53 @@ public interface AbstractDeviceManagementSearchDevicesTest {
                     final SearchResult<DeviceWithId> searchResult = s.getPayload();
                     assertThat(searchResult.getTotal()).isEqualTo(1);
                     assertThat(searchResult.getResult().get(0).getId()).isEqualTo("testDevice1");
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to search gateway devices succeeds and matching devices are found.
+     *
+     * @param isGateway {@code true} if only gateways should be searched for.
+     * @param expectedFirstDeviceId The identifier that the first device in the result set is expected to have.
+     * @param expectedSecondDeviceId The identifier that the second device in the result set is expected to have.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest
+    @CsvSource(value = { "true, testDevice2, testDevice3", "false, testDevice0, testDevice1" })
+    default void testSearchGatewayDevicesWithFilterSucceeds(
+            final boolean isGateway,
+            final String expectedFirstDeviceId,
+            final String expectedSecondDeviceId,
+            final VertxTestContext ctx) {
+        final String tenantId = DeviceRegistryUtils.getUniqueIdentifier();
+        final int pageSize = 10;
+        final int pageOffset = 0;
+        final var filter = List.of(new Filter("/enabled", false));
+        final var sortOptions = List.of(new Sort("/id"));
+
+        createDevices(tenantId, Map.of(
+                "testDevice0", new Device().setEnabled(false).setMemberOf(List.of()),
+                "testDevice1", new Device().setEnabled(false).setVia(List.of("testDevice2")),
+                "testDevice2", new Device().setEnabled(false),
+                "testDevice3", new Device().setEnabled(false).setMemberOf(List.of("gwGroup"))))
+            .compose(ok -> getDeviceManagementService().searchDevices(
+                    tenantId,
+                    pageSize,
+                    pageOffset,
+                    filter,
+                    sortOptions,
+                    Optional.of(isGateway),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+
+                    final SearchResult<DeviceWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(expectedFirstDeviceId);
+                    assertThat(searchResult.getResult().get(1).getId()).isEqualTo(expectedSecondDeviceId);
                 });
                 ctx.completeNow();
             }));

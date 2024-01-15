@@ -8,9 +8,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* When running in a Kubernetes cluster with nodes using cgroups v2, the 'hono.command_internal.*' Kafka topics were not
+* When running in a Kubernetes cluster with nodes using cgroups v2, the `hono.command_internal.*` Kafka topics were not
   being cleaned up. This has been fixed. Note that the solution requires the Hono protocol adapter pods to have
-  a service account with an assigned RBAC role that allows to perform "get" on the "pods" resource.
+  a service account with an assigned RBAC role that allows to perform `get` on the `pods` resource.
 * When using Pub/Sub messaging, there were potentially issues concerning the AMQP connection between protocol adapter
   and command router, leading for example to timeouts when MQTT devices subscribed/unsubscribed to the command topic.
   This has been fixed.
@@ -18,13 +18,17 @@ description = "Information about changes in recent Hono releases. Includes new f
   instance and thus simplifies test setup and configuration.
 * The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
   the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
-* Updated to Quarkus 3.2.6.Final
+* All components now use Quarkus 3.2.6.Final.
 * A more generic format for storing the OpenTelemetry trace context information in an AMQP 1.0 message can now be
   configured, writing the corresponding properties in the message application properties. This is for example relevant 
   when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto. 
   Please refer to the `${prefix}.useLegacyTraceContextFormat` connection property documentation in the
   [Hono Client Configuration Guide]({{% doclink "/admin-guide/hono-client-configuration/#connection-properties" %}})
   for additional information. 
+* The JDBC based Device Registry implementation now has limited support for filter criteria when searching devices.
+  Please refer to the Device Registry User Guide for details.
+* The Device Registry Management API's *search Devices* operation now supports restricting the result set to gateway or
+  edge devices only using the newly added `isGateway` query parameter.
 
 ### Deprecations
 
