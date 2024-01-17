@@ -4,7 +4,20 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.5.0 (not released yet)
+## 2.5.0
+
+### New Features
+
+* A more generic format for storing the OpenTelemetry trace context information in an AMQP 1.0 message can now be
+  configured, writing the corresponding properties in the message application properties. This is for example relevant 
+  when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto. 
+  Please refer to the `${prefix}.useLegacyTraceContextFormat` connection property documentation in the
+  [Hono Client Configuration Guide]({{% doclink "/admin-guide/hono-client-configuration/#connection-properties" %}})
+  for additional information. 
+* The JDBC based Device Registry implementation now has limited support for filter criteria when searching devices.
+  Please refer to the Device Registry User Guide for details.
+* The Device Registry Management API's *search Devices* operation now supports restricting the result set to gateway or
+  edge devices only using the newly added `isGateway` query parameter.
 
 ### Fixes & Enhancements
 
@@ -19,16 +32,6 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
   the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
 * All components now use Quarkus 3.2.9.Final.
-* A more generic format for storing the OpenTelemetry trace context information in an AMQP 1.0 message can now be
-  configured, writing the corresponding properties in the message application properties. This is for example relevant 
-  when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto. 
-  Please refer to the `${prefix}.useLegacyTraceContextFormat` connection property documentation in the
-  [Hono Client Configuration Guide]({{% doclink "/admin-guide/hono-client-configuration/#connection-properties" %}})
-  for additional information. 
-* The JDBC based Device Registry implementation now has limited support for filter criteria when searching devices.
-  Please refer to the Device Registry User Guide for details.
-* The Device Registry Management API's *search Devices* operation now supports restricting the result set to gateway or
-  edge devices only using the newly added `isGateway` query parameter.
 
 ### Deprecations
 
