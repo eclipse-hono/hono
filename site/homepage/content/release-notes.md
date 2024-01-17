@@ -32,6 +32,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The command line client was still trying to connect to the insecure ports of the Sandbox. This has been changed so that
   the client now uses the TLS endpoints and requires the user to specify a trust store for validating the server certificate.
 * All components now use Quarkus 3.2.9.Final.
+* The CoAP adapter now uses Californium 3.10.0.
 
 ### Deprecations
 

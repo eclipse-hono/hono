@@ -287,10 +287,10 @@ maven/mavencentral/org.apache.logging.log4j/log4j-api/2.20.0, Apache-2.0, approv
 maven/mavencentral/org.apache.qpid/proton-j/0.34.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apiguardian/apiguardian-api/1.1.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.conscrypt/conscrypt-openjdk-uber/2.5.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.eclipse.californium/californium-core/3.9.1, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/californium-legal/3.9.1, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/element-connector/3.9.1, , approved, science.californium
-maven/mavencentral/org.eclipse.californium/scandium/3.9.1, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/californium-core/3.10.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/californium-legal/3.10.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/element-connector/3.10.0, , approved, science.californium
+maven/mavencentral/org.eclipse.californium/scandium/3.10.0, , approved, science.californium
 maven/mavencentral/org.eclipse.microprofile.config/microprofile-config-api/3.0.3, Apache-2.0, approved, technology.microprofile
 maven/mavencentral/org.eclipse.microprofile.context-propagation/microprofile-context-propagation-api/1.3, Apache-2.0, approved, technology.microprofile
 maven/mavencentral/org.eclipse.microprofile.health/microprofile-health-api/4.0.1, Apache-2.0, approved, technology.microprofile
