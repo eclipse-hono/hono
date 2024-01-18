@@ -35,6 +35,7 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-adapter-sigfox-native \
         hono-service-auth-native \
         hono-service-command-router-native \
+        hono-service-device-registry-jdbc-native \
         hono-service-device-registry-mongodb-native"
 
 ME=$(basename "$0")
