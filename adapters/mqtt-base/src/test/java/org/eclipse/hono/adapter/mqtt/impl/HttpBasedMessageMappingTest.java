@@ -34,6 +34,7 @@ import java.util.Map;
 import org.eclipse.hono.adapter.MapperEndpoint;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -379,8 +380,8 @@ public class HttpBasedMessageMappingTest {
         messageMapping.mapUpstreamMessage(assertion, command)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ServerErrorException.class);
-                    assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat((((ClientErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();
             }));
