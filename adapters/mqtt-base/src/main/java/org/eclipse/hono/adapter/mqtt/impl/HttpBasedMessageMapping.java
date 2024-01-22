@@ -26,7 +26,6 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -284,7 +283,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
             });
     }
 
-    private Throwable mapException(AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult) {
+    private Throwable mapException(final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult) {
         final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
         final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
         if (statusCode >= 400 && statusCode < 500) {
@@ -293,7 +292,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         return new ServerErrorException(statusCode, httpResponseAsyncResult.cause());
     }
 
-    private Throwable mapException(AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult, String message) {
+    private Throwable mapException(final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult, final String message) {
         final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
         final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
         if (statusCode >= 400 && statusCode < 500) {
