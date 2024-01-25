@@ -27,6 +27,7 @@ import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.Strings;
@@ -191,16 +192,17 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
 
         final Promise<Buffer> result = Promise.promise();
 
-        webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
+        final var x = webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
             .putHeaders(headers)
-            .ssl(mapperEndpoint.isTlsEnabled())
+            .ssl(mapperEndpoint.isTlsEnabled());
+        x
             .sendBuffer(command.getPayload(), httpResponseAsyncResult -> {
                 if (httpResponseAsyncResult.failed()) {
                     LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
                         command.getDeviceId(),
                         mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                         httpResponseAsyncResult.cause());
-                    final Throwable exception = mapException(httpResponseAsyncResult);
+                    final Throwable exception = mapException(command.getTenant(), httpResponseAsyncResult, null);
                     result.fail(exception);
                 } else {
                     final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
@@ -210,7 +212,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                         LOG.debug("mapping service [host: {}, port: {}, URI: {}] returned unexpected status code: {}",
                             mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                             httpResponse.statusCode());
-                        final Throwable exception = mapException(httpResponseAsyncResult,
+                        final Throwable exception = mapException(command.getTenant(), httpResponseAsyncResult,
                             "could not invoke configured mapping service");
                         result.fail(exception);
                     }
@@ -283,21 +285,16 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
             });
     }
 
-    private Throwable mapException(final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult) {
+    private Throwable mapException(final String tenantId, final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult, final String message) {
+        final String detailMessage = Optional.ofNullable(message)
+                .orElse(Optional.ofNullable(httpResponseAsyncResult.cause()).map(Throwable::getMessage).orElse(null));
         final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
         final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
-        if (statusCode >= 400 && statusCode < 500) {
-            return new ClientErrorException(statusCode, httpResponseAsyncResult.cause());
-        }
-        return new ServerErrorException(statusCode, httpResponseAsyncResult.cause());
-    }
-
-    private Throwable mapException(final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult, final String message) {
-        final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
-        final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
-        if (statusCode >= 400 && statusCode < 500) {
-            return new ClientErrorException(statusCode, message);
-        }
-        return new ServerErrorException(statusCode, message);
+        return StatusCodeMapper.from(
+            tenantId,
+            statusCode,
+            detailMessage,
+            httpResponseAsyncResult.cause()
+        );
     }
 }
