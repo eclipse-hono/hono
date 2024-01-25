@@ -192,10 +192,9 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
 
         final Promise<Buffer> result = Promise.promise();
 
-        final var x = webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
+        webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
             .putHeaders(headers)
-            .ssl(mapperEndpoint.isTlsEnabled());
-        x
+            .ssl(mapperEndpoint.isTlsEnabled())
             .sendBuffer(command.getPayload(), httpResponseAsyncResult -> {
                 if (httpResponseAsyncResult.failed()) {
                     LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
