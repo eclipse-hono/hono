@@ -24,7 +24,6 @@ import org.eclipse.hono.adapter.mqtt.MappedMessage;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.util.StatusCodeMapper;
