@@ -288,7 +288,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         final String detailMessage = Optional.ofNullable(message)
                 .orElse(Optional.ofNullable(httpResponseAsyncResult.cause()).map(Throwable::getMessage).orElse(null));
         final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
-        final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_INTERNAL_ERROR);
+        final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_UNAVAILABLE);
         return StatusCodeMapper.from(
             tenantId,
             statusCode,

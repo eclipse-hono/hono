@@ -393,13 +393,13 @@ public class HttpBasedMessageMappingTest {
 
     /**
      * Verifies that the upstream mapper returns a failed future with a ServerErrorException if the upstream mapper has been configured
-     * for an adapter but the remote service fails unexpectedly.
+     * for an adapter but the remote service cannot be reached should return a 503.
      *
      * @param ctx   The Vert.x test context.
      */
     @Test
     @SuppressWarnings("unchecked")
-    public void testMappingCommandFailsForWhenPayloadCannotMapped2(final VertxTestContext ctx) {
+    public void testMappingCommandFailsForWhenMapperCannotBeReached(final VertxTestContext ctx) {
 
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
         final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
@@ -416,7 +416,7 @@ public class HttpBasedMessageMappingTest {
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(ServerErrorException.class);
-                        assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                        assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     });
                     ctx.completeNow();
                 }));
