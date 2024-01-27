@@ -34,6 +34,7 @@ import java.util.Map;
 import org.eclipse.hono.adapter.MapperEndpoint;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -353,7 +354,7 @@ public class HttpBasedMessageMappingTest {
     }
 
     /**
-     * Verifies that the upstream mapper returns a failed future with a ServerErrorException if the upstream mapper has been configured
+     * Verifies that the upstream mapper returns a failed future with a ClientErrorException if the upstream mapper has been configured
      * for an adapter but the remote service returns a 403 status code indicating that the device payload cannot be mapped.
      *
      * @param ctx   The Vert.x test context.
@@ -379,8 +380,8 @@ public class HttpBasedMessageMappingTest {
         messageMapping.mapUpstreamMessage(assertion, command)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(ServerErrorException.class);
-                    assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat((((ClientErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();
             }));
@@ -388,5 +389,40 @@ public class HttpBasedMessageMappingTest {
         final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
         handleCaptor.getValue().handle(Future.succeededFuture(httpResponse));
+    }
+
+    /**
+     * Verifies that the upstream mapper returns a failed future with a ServerErrorException if the upstream mapper has been configured
+     * for an adapter but the remote service cannot be reached should return a 503.
+     *
+     * @param ctx   The Vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testMappingCommandFailsForWhenMapperCannotBeReached(final VertxTestContext ctx) {
+
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
+
+        final Buffer payload = Buffer.buffer("payload");
+
+        when(mapperWebClient.post(anyInt(), anyString(), anyString())).thenReturn(httpRequest);
+
+        final Command command = mock(Command.class);
+        when(command.getPayload()).thenReturn(payload);
+
+        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setUpstreamMessageMapper("mapper");
+        messageMapping.mapUpstreamMessage(assertion, command)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat((((ServerErrorException) t).getErrorCode())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    });
+                    ctx.completeNow();
+                }));
+
+        final ArgumentCaptor<Handler<AsyncResult<HttpResponse<Buffer>>>> handleCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(httpRequest).sendBuffer(any(Buffer.class), handleCaptor.capture());
+        handleCaptor.getValue().handle(Future.failedFuture(new RuntimeException("something went wrong")));
     }
 }

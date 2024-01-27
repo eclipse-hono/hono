@@ -26,6 +26,7 @@ import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.Strings;
@@ -199,7 +200,8 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                         command.getDeviceId(),
                         mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                         httpResponseAsyncResult.cause());
-                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, httpResponseAsyncResult.cause()));
+                    final Throwable exception = mapException(command.getTenant(), httpResponseAsyncResult, null);
+                    result.fail(exception);
                 } else {
                     final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
                     if (httpResponse.statusCode() == HttpURLConnection.HTTP_OK) {
@@ -208,8 +210,9 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                         LOG.debug("mapping service [host: {}, port: {}, URI: {}] returned unexpected status code: {}",
                             mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                             httpResponse.statusCode());
-                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "could not invoke configured mapping service"));
+                        final Throwable exception = mapException(command.getTenant(), httpResponseAsyncResult,
+                            "could not invoke configured mapping service");
+                        result.fail(exception);
                     }
                 }
                 resultHandler.handle(result.future());
@@ -278,5 +281,18 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                 }
                 resultHandler.handle(result.future());
             });
+    }
+
+    private Throwable mapException(final String tenantId, final AsyncResult<HttpResponse<Buffer>> httpResponseAsyncResult, final String message) {
+        final String detailMessage = Optional.ofNullable(message)
+                .orElse(Optional.ofNullable(httpResponseAsyncResult.cause()).map(Throwable::getMessage).orElse(null));
+        final Optional<HttpResponse<Buffer>> httpResponse = Optional.ofNullable(httpResponseAsyncResult.result());
+        final int statusCode = httpResponse.map(HttpResponse::statusCode).orElse(HttpURLConnection.HTTP_UNAVAILABLE);
+        return StatusCodeMapper.from(
+            tenantId,
+            statusCode,
+            detailMessage,
+            httpResponseAsyncResult.cause()
+        );
     }
 }
