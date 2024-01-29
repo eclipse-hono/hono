@@ -262,7 +262,7 @@ The example above assumes that the HTTP adapter is
       * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_HTTP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+*HONO_HTTP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
