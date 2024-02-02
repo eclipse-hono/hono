@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,6 +47,7 @@ public final class PubSubBasedCommand implements Command {
     private final String contentType;
     private final String requestId;
     private final boolean responseRequired;
+    private final boolean ackRequired;
 
     private String gatewayId;
 
@@ -58,7 +59,8 @@ public final class PubSubBasedCommand implements Command {
             final String correlationId,
             final String subject,
             final String contentType,
-            final boolean responseRequired) {
+            final boolean responseRequired,
+            final boolean ackRequired) {
 
         this.validationError = validationError;
         this.pubsubMessage = pubsubMessage;
@@ -68,6 +70,7 @@ public final class PubSubBasedCommand implements Command {
         this.subject = subject;
         this.contentType = contentType;
         this.responseRequired = responseRequired;
+        this.ackRequired = ackRequired;
         this.requestId = Commands.encodeRequestIdParameters(correlationId, MessagingType.pubsub);
     }
 
@@ -134,10 +137,11 @@ public final class PubSubBasedCommand implements Command {
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         final boolean responseRequired = PubSubMessageHelper.isResponseRequired(attributes);
+        final boolean ackRequired = PubSubMessageHelper.isAckRequired(attributes);
         final String correlationId = PubSubMessageHelper.getCorrelationId(attributes)
                 .filter(id -> !id.isEmpty())
                 .orElseGet(() -> {
-                    if (responseRequired) {
+                    if (responseRequired || ackRequired) {
                         validationErrorJoiner.add("correlation-id is not set");
                     }
                     return null;
@@ -157,7 +161,8 @@ public final class PubSubBasedCommand implements Command {
                 correlationId,
                 subject,
                 contentType,
-                responseRequired);
+                responseRequired,
+                ackRequired);
     }
 
     /**
@@ -167,6 +172,11 @@ public final class PubSubBasedCommand implements Command {
      */
     public PubsubMessage getPubsubMessage() {
         return pubsubMessage;
+    }
+
+    @Override
+    public boolean isAckRequired() {
+        return !responseRequired && ackRequired;
     }
 
     @Override
