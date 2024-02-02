@@ -63,16 +63,23 @@ project and `${tenant_id}` is the ID of the tenant that the client wants to send
 Metadata MUST be set as Pub/Sub attributes on a message. The following table provides an overview of the attributes the
 *Business Application* needs to set on a one-way command message.
 
-| Name           | Mandatory | Type     | Description                                                   |
-|:---------------|:---------:|:---------|:--------------------------------------------------------------|
-| *device_id*    |    yes    | *string* | The identifier of the device that the command is targeted at. |
-| *subject*      |    yes    | *string* | The name of the command to be executed by the device.         |
-| *content-type* |    no     | *string* | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
+| Name             | Mandatory | Type      | Description                                                                                                                                                                                                                                                                                                                                                                                           |
+|:-----------------|:---------:|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *device_id*      |    yes    | *string*  | The identifier of the device that the command is targeted at.                                                                                                                                                                                                                                                                                                                                         |
+| *subject*        |    yes    | *string*  | The name of the command to be executed by the device.                                                                                                                                                                                                                                                                                                                                                 |
+| *content-type*   |    no     | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
+| *ack-required*   |    no     | *boolean* | If set to `true` a command acknowledgement message will be sent on the command-response topic once the device acknowledges the command. Currently this only works with MQTT devices which have a QoS 1 subscription on the command topic.                                                                                                                                                             |
+| *correlation-id* |    no     | *string*  | MUST be set if *ack-required* is set to `true`. The identifier used to correlate a response message to the original request. It is used as the *correlation-id* attribute in the response.                                                                                                                                                                                                            |
 
 The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the
 message's *subject* attribute may provide a hint to the device regarding the format, encoding and semantics of the
-payload
-data.
+payload data.
+
+{{% notice info %}}
+Currently the acknowledgement mechanism only works with devices connected via the MQTT protocol which have a
+subscription on the command topic with a QoS level of 1. Getting an acknowledgement indicates that the device has
+successfully received the command. However, it does not confirm whether the device has successfully processed the command. 
+{{% /notice %}}
 
 ## Send a (Request/Response) Command
 
