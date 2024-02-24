@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,6 @@ public class RevocableTrustAnchor extends TrustAnchor {
     private URI ocspResponderUri;
     private X509Certificate ocspResponderCert;
     private boolean ocspNonceEnabled;
-    private boolean checkEndEntityOnly;
 
     /**
      * See {@link TrustAnchor}.
@@ -86,7 +85,6 @@ public class RevocableTrustAnchor extends TrustAnchor {
             }
         }
         ocspNonceEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_NONCE_ENABLED, Boolean.class, false);
-        checkEndEntityOnly = JsonHelper.getValue(keyProps, TenantConstants.FIELD_CHECK_END_ENTITY_ONLY, Boolean.class, false);
     }
 
     /**
@@ -166,23 +164,5 @@ public class RevocableTrustAnchor extends TrustAnchor {
      */
     public void setOcspNonceEnabled(final boolean ocspNonceEnabled) {
         this.ocspNonceEnabled = ocspNonceEnabled;
-    }
-
-    /**
-     * Gets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
-     *
-     * @return True if only end (leaf) certificate revocation should be checked.
-     */
-    public boolean isCheckEndEntityOnly() {
-        return checkEndEntityOnly;
-    }
-
-    /**
-     * Sets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
-     *
-     * @param checkEndEntityOnly True if only end (leaf) certificate revocation should be checked.
-     */
-    public void setCheckEndEntityOnly(final boolean checkEndEntityOnly) {
-        this.checkEndEntityOnly = checkEndEntityOnly;
     }
 }

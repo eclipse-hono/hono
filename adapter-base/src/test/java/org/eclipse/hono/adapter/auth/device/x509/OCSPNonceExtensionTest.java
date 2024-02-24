@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.adapter.auth.device.x509;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -50,7 +49,7 @@ class OCSPNonceExtensionTest {
     @Test
     void testGetId() {
         final String id = nonceExtension.getId();
-        assertEquals(NONCE_EXTENSION_ID, id);
+        assertThat(id).isEqualTo(NONCE_EXTENSION_ID);
     }
 
     /**
@@ -64,13 +63,14 @@ class OCSPNonceExtensionTest {
             try (ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray())) {
                 final ASN1InputStream asnInputStream = new ASN1InputStream(in);
                 final ASN1Primitive asn1 = asnInputStream.readObject();
-                assertInstanceOf(DLSequence.class, asn1);
-                assertEquals(2, ((DLSequence) asn1).size());
+                assertThat(asn1).isInstanceOf(DLSequence.class);
+                assertThat(((DLSequence) asn1).size()).isEqualTo(2);
                 final ASN1Encodable firstElement = ((DLSequence) asn1).getObjectAt(0);
-                assertInstanceOf(ASN1ObjectIdentifier.class, firstElement);
-                assertEquals(NONCE_EXTENSION_ID, ((ASN1ObjectIdentifier) firstElement).getId());
+                assertThat(firstElement).isInstanceOf(ASN1ObjectIdentifier.class);
+                assertThat(((ASN1ObjectIdentifier) firstElement).getId()).isEqualTo(NONCE_EXTENSION_ID);
                 final ASN1Encodable secondElement = ((DLSequence) asn1).getObjectAt(1);
-                assertInstanceOf(DEROctetString.class, secondElement);
+                assertThat(secondElement).isInstanceOf(DEROctetString.class);
+                assertThat(((DEROctetString) secondElement).getOctets()).isEqualTo(nonceExtension.getValue());
             }
         }
     }

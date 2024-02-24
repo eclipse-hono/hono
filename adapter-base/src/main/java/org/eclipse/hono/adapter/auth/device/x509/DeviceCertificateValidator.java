@@ -135,9 +135,8 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
                 if (revocableTrustAnchor.getOcspResponderCert() != null) {
                     revocationChecker.setOcspResponderCert(revocableTrustAnchor.getOcspResponderCert());
                 }
-                if (revocableTrustAnchor.isCheckEndEntityOnly()) {
-                    options.add(Option.ONLY_END_ENTITY);
-                }
+                // We always check end entities only for revocation in current implementation
+                options.add(Option.ONLY_END_ENTITY);
                 if (revocableTrustAnchor.isOcspNonceEnabled()) {
                     try {
                         // With default Java implementation, nonce can be enabled only by global java system property

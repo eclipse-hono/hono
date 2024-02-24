@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ import org.bouncycastle.asn1.x509.Extension;
  * Implementation of OCSP nonce extension (RFC 8954) which is used to avoid replay attacks to OCSP requests.
  * We need custom implementation, because the Java implementation if from legacy sun package.
  */
-public class OCSPNonceExtension implements java.security.cert.Extension {
+public final class OCSPNonceExtension implements java.security.cert.Extension {
     /**
      * According to RFC 8954 must be from 1 to 32.
      */
@@ -34,7 +34,7 @@ public class OCSPNonceExtension implements java.security.cert.Extension {
     private final Extension extension;
 
     /**
-     * Crete new instance.
+     * Creates a new instance of OCSP nonce extension.
      *
      * @throws IOException on failure when encoding nonce value.
      */

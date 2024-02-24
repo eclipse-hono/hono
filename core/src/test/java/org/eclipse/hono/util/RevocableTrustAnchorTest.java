@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -53,18 +52,16 @@ class RevocableTrustAnchorTest {
                         .put(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED, true)
                         .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_URI, "http://example.com:8080/")
                         .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT, getEncodedCertificate(cert))
-                        .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, true)
-                        .put(RegistryManagementConstants.FIELD_CHECK_END_ENTITY_ONLY, true);
+                        .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, true);
                 final RevocableTrustAnchor anchor = new RevocableTrustAnchor(cert.getSubjectX500Principal(),
                         cert.getPublicKey(), null, trustedCAProps);
                 ctx.verify(() -> {
-                        assertTrue(anchor.isOcspEnabled());
-                        assertEquals("example.com", anchor.getOcspResponderUri().getHost());
-                        assertEquals("http", anchor.getOcspResponderUri().getScheme());
-                        assertEquals(8080, anchor.getOcspResponderUri().getPort());
-                        assertEquals(cert, anchor.getOcspResponderCert());
-                        assertTrue(anchor.isOcspNonceEnabled());
-                        assertTrue(anchor.isCheckEndEntityOnly());
+                        assertThat(anchor.isOcspEnabled()).isTrue();
+                        assertThat(anchor.getOcspResponderUri().getHost()).isEqualTo("example.com");
+                        assertThat(anchor.getOcspResponderUri().getScheme()).isEqualTo("http");
+                        assertThat(anchor.getOcspResponderUri().getPort()).isEqualTo(8080);
+                        assertThat(anchor.getOcspResponderCert()).isEqualTo(cert);
+                        assertThat(anchor.isOcspNonceEnabled()).isTrue();
                         ctx.completeNow();
                 });
             });

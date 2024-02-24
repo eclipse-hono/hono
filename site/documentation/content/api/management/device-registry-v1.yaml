@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.12.2
+   version: 1.13.0
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -955,12 +955,6 @@ components:
                description: |
                   Indicates whether nonce extension should be sent in OCSP request. Nonce is important to avoid
                   replay attacks but can increase resource usage.
-            "check-end-entity-only":
-               type: boolean
-               default: false
-               description: |
-                  Indicates whether only end (leaf) certificate revocation should be checked. It is set to false
-                  by default.
 
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"

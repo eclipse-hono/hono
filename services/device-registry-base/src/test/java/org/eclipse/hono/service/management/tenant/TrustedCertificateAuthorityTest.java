@@ -166,8 +166,7 @@ class TrustedCertificateAuthorityTest {
                 .put(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED, true)
                 .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_URI, "http://example.com:8080/")
                 .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT, certificate.getEncoded())
-                .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, false)
-                .put(RegistryManagementConstants.FIELD_CHECK_END_ENTITY_ONLY, true);
+                .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, false);
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
 
@@ -175,7 +174,6 @@ class TrustedCertificateAuthorityTest {
         assertThat(authority.getOcspResponderUri()).isEqualTo("http://example.com:8080/");
         assertThat(authority.getOcspResponderCert()).isEqualTo(certificate.getEncoded());
         assertThat(authority.isOcspNonceEnabled()).isFalse();
-        assertThat(authority.isCheckEndEntityOnly()).isTrue();
     }
 
     /**

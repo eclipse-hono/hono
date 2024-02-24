@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.auth.device.x509;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -174,7 +174,7 @@ class OCSPIntegrationTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testValidateSucceedsForTrustAnchorBasedOnPublicKey(final Vertx vertx, final VertxTestContext ctx) throws CertificateException, IOException {
+    void testValidateFailsForUntrustedCertificateWithOCSP(final Vertx vertx, final VertxTestContext ctx) throws CertificateException, IOException {
         final RevocableTrustAnchor anchor = createTrustAnchor();
         final X509Certificate caCert = loadCertificate("ocsp/cacert.pem");
         anchor.setOcspEnabled(true);
@@ -207,7 +207,7 @@ class OCSPIntegrationTest {
         final X509Certificate validCert = loadCertificate("ocsp/ocsp-revoked.pem");
 
         validator.validate(List.of(validCert), anchor).onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertInstanceOf(CertificateException.class, t));
+            ctx.verify(() -> assertThat(t).isInstanceOf(CertificateException.class));
             ctx.completeNow();
         }));
     }

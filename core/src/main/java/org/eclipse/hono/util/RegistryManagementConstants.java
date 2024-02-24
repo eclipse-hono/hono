@@ -307,10 +307,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
     /**
-     * The name of the property that indicates if revocation should be performed on end entity (leaf) certificate only.
-     */
-    public static final String FIELD_CHECK_END_ENTITY_ONLY = "check-end-entity-only";
-    /**
      * The name of the property that contains the configuration options to limit 
      * the device connection duration of tenants.
      */

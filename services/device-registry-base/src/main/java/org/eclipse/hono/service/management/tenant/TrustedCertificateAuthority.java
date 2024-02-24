@@ -98,10 +98,6 @@ public class TrustedCertificateAuthority {
     @JsonInclude(Include.NON_DEFAULT)
     private boolean ocspNonceEnabled;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_CHECK_END_ENTITY_ONLY)
-    @JsonInclude(Include.NON_DEFAULT)
-    private boolean checkEndEntityOnly;
-
     /**
      * Checks if this object contains all required data.
      *
@@ -515,26 +511,6 @@ public class TrustedCertificateAuthority {
      */
     public TrustedCertificateAuthority setOcspNonceEnabled(final boolean ocspNonceEnabled) {
         this.ocspNonceEnabled = ocspNonceEnabled;
-        return this;
-    }
-
-    /**
-     * Gets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
-     *
-     * @return True if only end (leaf) certificate revocation should be checked.
-     */
-    public boolean isCheckEndEntityOnly() {
-        return checkEndEntityOnly;
-    }
-
-    /**
-     * Sets whether only end (leaf) certificate revocation should be checked. It is set to false by default.
-     *
-     * @param checkEndEntityOnly True if only end (leaf) certificate revocation should be checked.
-     * @return A reference to this for fluent use.
-     */
-    public TrustedCertificateAuthority setCheckEndEntityOnly(final boolean checkEndEntityOnly) {
-        this.checkEndEntityOnly = checkEndEntityOnly;
         return this;
     }
 }
