@@ -29,6 +29,8 @@ import java.util.Set;
 
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.RevocableTrustAnchor;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,40 +58,60 @@ import io.vertx.junit5.VertxTestContext;
 class OCSPIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(OCSPIntegrationTest.class);
 
-    private static final X509Certificate VALID_CERTIFICATE = loadCertificate("target/certs/device-4711-cert.pem");
-
-    private static final X509Certificate REVOKED_CERTIFICATE = loadCertificate("target/certs/device-4712-cert.pem");
-
-    private static final X509Certificate CA_CERTIFICATE = loadCertificate("target/certs/default_tenant-cert.pem");
-
     private static final String OCSP_RESPONDER_URI = "http://127.0.0.1";
 
     private static final int OCSP_RESPONDER_PORT = 8080;
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    @Container
-    private static final GenericContainer OCSP_RESPONDER_CONTAINER = new GenericContainer(
-        new ImageFromDockerfile()
-                .withFileFromString("index.txt", createCAIndexFile())
-                .withFileFromPath("cacert.pem", Path.of("target/certs/default_tenant-cert.pem"))
-                .withFileFromPath("cakey.pem", Path.of("target/certs/default_tenant-key.pem"))
-                .withDockerfileFromBuilder(builder ->
-                        builder.from("alpine:3.19")
-                                .workDir("/ocsp")
-                                .copy("index.txt", "/ocsp/index.txt")
-                                .copy("cacert.pem", "/ocsp/cacert.pem")
-                                .copy("cakey.pem", "/ocsp/cakey.pem")
-                                .run("apk add openssl")
-                                .cmd("openssl", "ocsp", "-index", "index.txt", "-port",
-                                        Integer.toString(OCSP_RESPONDER_PORT), "-rsigner", "cacert.pem", "-rkey",
-                                        "cakey.pem", "-CA", "cacert.pem", "-text", "-ignore_err")
-                                .expose(OCSP_RESPONDER_PORT)
-                                .build()))
-                .withExposedPorts(OCSP_RESPONDER_PORT)
-                .withLogConsumer(new Slf4jLogConsumer(LOG))
-                .waitingFor(Wait.forHttp("/").forPort(OCSP_RESPONDER_PORT));;
+    private static X509Certificate validCertificate;
+
+    private static X509Certificate revokedCertificate;
+
+    private static X509Certificate caCertificate;
+
+    @SuppressWarnings({"rawtypes"})
+    private static GenericContainer ocspResponderContainer;
 
     private DeviceCertificateValidator validator;
+
+    /**
+     * Load certificates from file system and initialize OCSP responder container.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @BeforeAll
+    static void setUpAll() {
+        validCertificate = loadCertificate("target/certs/device-4711-cert.pem");
+        revokedCertificate = loadCertificate("target/certs/device-4712-cert.pem");
+        caCertificate = loadCertificate("target/certs/default_tenant-cert.pem");
+        ocspResponderContainer = new GenericContainer(
+                new ImageFromDockerfile()
+                        .withFileFromString("index.txt", createCAIndexFile())
+                        .withFileFromPath("cacert.pem", Path.of("target/certs/default_tenant-cert.pem"))
+                        .withFileFromPath("cakey.pem", Path.of("target/certs/default_tenant-key.pem"))
+                        .withDockerfileFromBuilder(builder ->
+                                builder.from("alpine:3.19")
+                                        .workDir("/ocsp")
+                                        .copy("index.txt", "/ocsp/index.txt")
+                                        .copy("cacert.pem", "/ocsp/cacert.pem")
+                                        .copy("cakey.pem", "/ocsp/cakey.pem")
+                                        .run("apk add openssl")
+                                        .cmd("openssl", "ocsp", "-index", "index.txt", "-port",
+                                                Integer.toString(OCSP_RESPONDER_PORT), "-rsigner", "cacert.pem", "-rkey",
+                                                "cakey.pem", "-CA", "cacert.pem", "-text", "-ignore_err")
+                                        .expose(OCSP_RESPONDER_PORT)
+                                        .build()))
+                .withExposedPorts(OCSP_RESPONDER_PORT)
+                .withLogConsumer(new Slf4jLogConsumer(LOG))
+                .waitingFor(Wait.forHttp("/").forPort(OCSP_RESPONDER_PORT));
+        ocspResponderContainer.start();
+    }
+
+    /**
+     * Stop OCSP responder container.
+     */
+    @AfterAll
+    static void tearDownAll() {
+        ocspResponderContainer.stop();
+    }
 
     /**
      */
@@ -109,7 +131,7 @@ class OCSPIntegrationTest {
         IOException {
         final RevocableTrustAnchor anchor = createTrustAnchor();
 
-        validator.validate(List.of(VALID_CERTIFICATE), anchor).onComplete(ctx.succeedingThenComplete());
+        validator.validate(List.of(validCertificate), anchor).onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -123,7 +145,7 @@ class OCSPIntegrationTest {
         throws CertificateException, IOException {
         final RevocableTrustAnchor anchor = createTrustAnchor();
 
-        validator.validate(List.of(REVOKED_CERTIFICATE), anchor).onComplete(ctx.succeedingThenComplete());
+        validator.validate(List.of(revokedCertificate), anchor).onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -137,10 +159,10 @@ class OCSPIntegrationTest {
         final RevocableTrustAnchor anchor = createTrustAnchor();
         anchor.setOcspEnabled(true);
         anchor.setOcspResponderUri(getOCSPResponderUri());
-        anchor.setOcspResponderCert(CA_CERTIFICATE);
+        anchor.setOcspResponderCert(caCertificate);
         anchor.setOcspNonceEnabled(true);
 
-        validator.validate(List.of(VALID_CERTIFICATE), anchor).onComplete(ctx.succeedingThenComplete());
+        validator.validate(List.of(validCertificate), anchor).onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -155,7 +177,7 @@ class OCSPIntegrationTest {
         final RevocableTrustAnchor anchor = createTrustAnchor();
         anchor.setOcspEnabled(true);
         anchor.setOcspResponderUri(getOCSPResponderUri());
-        anchor.setOcspResponderCert(CA_CERTIFICATE);
+        anchor.setOcspResponderCert(caCertificate);
         anchor.setOcspNonceEnabled(true);
 
         final SelfSignedCertificate anotherCaCert = SelfSignedCertificate.create("example.com");
@@ -163,7 +185,7 @@ class OCSPIntegrationTest {
             .compose((cert) -> {
                 final TrustAnchor anotherAnchor = new RevocableTrustAnchor(cert.getSubjectX500Principal(),
                     cert.getPublicKey(), null);
-                return validator.validate(List.of(VALID_CERTIFICATE), Set.of(anotherAnchor, anchor));
+                return validator.validate(List.of(validCertificate), Set.of(anotherAnchor, anchor));
             })
             .onComplete(ctx.succeedingThenComplete());
     }
@@ -179,7 +201,7 @@ class OCSPIntegrationTest {
         final RevocableTrustAnchor anchor = createTrustAnchor();
         anchor.setOcspEnabled(true);
         anchor.setOcspResponderUri(getOCSPResponderUri());
-        anchor.setOcspResponderCert(CA_CERTIFICATE);
+        anchor.setOcspResponderCert(caCertificate);
         anchor.setOcspNonceEnabled(true);
 
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create("iot.eclipse.org");
@@ -201,10 +223,10 @@ class OCSPIntegrationTest {
         final RevocableTrustAnchor anchor = createTrustAnchor();
         anchor.setOcspEnabled(true);
         anchor.setOcspResponderUri(getOCSPResponderUri());
-        anchor.setOcspResponderCert(CA_CERTIFICATE);
+        anchor.setOcspResponderCert(caCertificate);
         anchor.setOcspNonceEnabled(true);
 
-        validator.validate(List.of(REVOKED_CERTIFICATE), anchor).onComplete(ctx.failing(t -> {
+        validator.validate(List.of(revokedCertificate), anchor).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(CertificateException.class));
             ctx.completeNow();
         }));
@@ -215,7 +237,7 @@ class OCSPIntegrationTest {
         // When principal is loaded from certificate it is encoded as DER PrintableString but when it is created
         // from string it is encoded as UTF8String internally, this causes inconsistent issuerNameHash in OCSP
         // request, which cannot be handled by OpenSSL responder.
-        return new RevocableTrustAnchor(CA_CERTIFICATE.getSubjectX500Principal(), CA_CERTIFICATE.getPublicKey(), null);
+        return new RevocableTrustAnchor(caCertificate.getSubjectX500Principal(), caCertificate.getPublicKey(), null);
     }
 
     private static X509Certificate loadCertificate(final String certFilePath) {
@@ -233,8 +255,8 @@ class OCSPIntegrationTest {
      */
     private static String createCAIndexFile() {
         final StringBuilder sb = new StringBuilder();
-        sb.append(createCAIndexLine(VALID_CERTIFICATE, false));
-        sb.append(createCAIndexLine(REVOKED_CERTIFICATE, true));
+        sb.append(createCAIndexLine(validCertificate, false));
+        sb.append(createCAIndexLine(revokedCertificate, true));
         return sb.toString();
     }
 
@@ -249,6 +271,6 @@ class OCSPIntegrationTest {
     }
 
     private URI getOCSPResponderUri() {
-        return URI.create(OCSP_RESPONDER_URI + ":" + OCSP_RESPONDER_CONTAINER.getMappedPort(OCSP_RESPONDER_PORT));
+        return URI.create(OCSP_RESPONDER_URI + ":" + ocspResponderContainer.getMappedPort(OCSP_RESPONDER_PORT));
     }
 }
