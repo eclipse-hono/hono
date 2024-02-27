@@ -825,8 +825,10 @@ components:
                   X.509 certificate. If the `cert` property is used to provide
                   an X.509 certificate then the subject DN is determined from
                   the certificate and this property is ignored.
-                  Otherwise this property is optional, but may be needed to
-                  make OCSP revocation check work correctly.
+                  This property is optional, but without it OCSP revocation check
+                  may fail depending on responder implementation and original
+                  certificate encoding. Especially if client certificate does not
+                  use UTF8String type in subject DN encoding.
             "public-key":
                type: string
                format: byte
@@ -939,8 +941,8 @@ components:
                type: string
                description: |
                   Specifies the OCSP responder uri which will be used for OCSP revocation check of this trust
-                  anchor. If URI is not set then certificate AIA extension value is used to obtain the values
-                  instead.
+                  anchor. If URI is not set then the AIA extension value of the client certificate is used for
+                  OCSP revocation check instead.
             "ocsp-responder-cert":
                type: string
                format: byte
