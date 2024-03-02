@@ -76,8 +76,6 @@ hono:
         delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
 
 quarkus:
-  redis:
-    hosts: "redis://redis:6379"
   otel:
     exporter:
       otlp:
