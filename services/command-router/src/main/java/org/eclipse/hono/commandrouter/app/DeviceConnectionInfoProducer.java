@@ -32,7 +32,7 @@ import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.eclipse.hono.deviceconnection.redis.client.QuarkusRedisCache;
+import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationProperties;
 import org.eclipse.hono.deviceconnection.redis.client.VertxRedisCache;
 import org.eclipse.hono.util.Strings;
@@ -45,9 +45,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
-import io.quarkus.redis.datasource.ReactiveRedisDataSource;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
+import io.vertx.redis.client.RedisAPI;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
@@ -68,7 +68,7 @@ public class DeviceConnectionInfoProducer {
     String configFile;
 
     @Inject
-    ReactiveRedisDataSource reactiveRedisDataSource;
+    RedisAPI redisApi;
 
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
@@ -84,34 +84,42 @@ public class DeviceConnectionInfoProducer {
             @ConfigMapping(prefix = "hono.commandRouter.cache.common")
             final CommonCacheOptions commonCacheOptions,
             @ConfigMapping(prefix = "hono.commandRouter.cache.remote")
-            final InfinispanRemoteConfigurationOptions remoteCacheConfigurationOptions) {
+            final InfinispanRemoteConfigurationOptions remoteCacheConfigurationOptions,
+            @ConfigMapping(prefix = "hono.commandRouter.cache.redis")
+            final RedisRemoteConfigurationOptions redisCacheConfigurationOptions
+            ) {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
+        final var redisCacheConfig = new RedisRemoteConfigurationProperties(redisCacheConfigurationOptions);
 
         final String cacheBackend = System.getProperty("cache.backend");
         LOG.info("######################### Cache Backend: {}", cacheBackend);
-        if (true) {
-            return new QuarkusRedisCache(reactiveRedisDataSource);
-        }
-        if ("redis".equalsIgnoreCase(cacheBackend)) {
-            LOG.info("Creating a new REDIS cache.");
-            final var p = new RedisRemoteConfigurationProperties();
-            p.setConnectionString("redis://redis:6379");
-            return VertxRedisCache.from(vertx, p);
-        } else if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
-            LOG.info("configuring embedded cache");
-            return new EmbeddedCache<>(
-                    vertx,
-                    embeddedCacheManager(commonCacheConfig),
-                    commonCacheConfig.getCacheName());
-        } else {
+        //if (true) {
+        //    return new QuarkusRedisCache(reactiveRedisDataSource);
+        //}
+
+        if (!Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring remote cache");
             return HotrodCache.from(
                     vertx,
                     infinispanCacheConfig,
                     commonCacheConfig);
         }
+
+        if (!redisCacheConfig.getEndpoints().isEmpty()) {
+            LOG.info("Creating a new REDIS cache using {}", redisApi);
+            redisCacheConfig.getEndpoints().forEach(i -> LOG.info(" - {}", i));
+            //final var p = new RedisRemoteConfigurationProperties();
+            //p.setConnectionString("redis://redis:6379");
+            return VertxRedisCache.from(redisApi);
+        }
+
+        LOG.info("configuring embedded cache");
+        return new EmbeddedCache<>(
+                vertx,
+                embeddedCacheManager(commonCacheConfig),
+                commonCacheConfig.getCacheName());
     }
 
     private EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {

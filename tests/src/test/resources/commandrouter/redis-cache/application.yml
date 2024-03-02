@@ -15,7 +15,7 @@ hono:
       insecurePortBindAddress: "0.0.0.0"
     cache:
       redis:
-        serverList: "${hono.infinispan.host}:${hono.infinispan.port}"
+        hosts: "redis://redis:6379"
   messaging:
     name: 'Hono Command Router'
     host: "${hono.amqp-network.host}"
@@ -78,14 +78,13 @@ hono:
 quarkus:
   redis:
     hosts: "redis://redis:6379"
-  opentelemetry:
-    tracer:
-      exporter:
-        otlp:
-          endpoint: "${otel-collector.endpoint}"
+  otel:
+    exporter:
+      otlp:
+        endpoint: "${otel-collector.endpoint}"
+  console:
+    color: true
   log:
-    console:
-      color: true
     level: INFO
     min-level: TRACE
     category:

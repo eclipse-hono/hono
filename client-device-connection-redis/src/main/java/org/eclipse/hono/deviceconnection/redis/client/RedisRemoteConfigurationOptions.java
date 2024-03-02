@@ -14,6 +14,9 @@
 
 package org.eclipse.hono.deviceconnection.redis.client;
 
+import java.util.List;
+import java.util.Optional;
+
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
 //import io.smallrye.config.WithDefault;
@@ -24,4 +27,9 @@ import io.smallrye.config.ConfigMapping.NamingStrategy;
  */
 @ConfigMapping(prefix = "hono.cache.redis", namingStrategy = NamingStrategy.VERBATIM)
 public interface RedisRemoteConfigurationOptions {
+    /**
+     * TODO.
+     * @return TODO
+     */
+    Optional<List<String>> hosts();
 }

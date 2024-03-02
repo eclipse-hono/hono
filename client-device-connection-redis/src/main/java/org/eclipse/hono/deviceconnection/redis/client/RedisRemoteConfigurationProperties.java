@@ -14,10 +14,32 @@
 
 package org.eclipse.hono.deviceconnection.redis.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.redis.client.RedisOptions;
 
 /**
  * TODO.
  */
 public class RedisRemoteConfigurationProperties extends RedisOptions {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RedisRemoteConfigurationProperties.class);
+
+    /**
+     * TODO.
+     */
+    public RedisRemoteConfigurationProperties() {
+        super();
+    }
+
+    /**
+     * TODO.
+     * @param options TODO.
+     */
+    public RedisRemoteConfigurationProperties(final RedisRemoteConfigurationOptions options) {
+        super();
+        LOG.info("Setting Redis hosts configuration to {}", options.hosts());
+        options.hosts().ifPresent(this::setEndpoints);
+    }
 }

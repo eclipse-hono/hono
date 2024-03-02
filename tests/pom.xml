@@ -88,6 +88,7 @@
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
+    <!--<hono.command-router.java-options>${default.java-options} -Dcache.backend=redis</hono.command-router.java-options>-->
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
 
     <hono.service-auth.disabled>false</hono.service-auth.disabled>
@@ -464,6 +465,22 @@
         <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
       </properties>
     </profile>
+
+    <profile>
+      <id>redis_cache</id>
+      <activation>
+        <property>
+          <name>hono.commandrouting.cache</name>
+          <value>redis</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.infinispan.disabled>true</hono.infinispan.disabled>
+        <hono.command-router.config-src>redis-cache</hono.command-router.config-src>
+        <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
+      </properties>
+    </profile>
+
     <profile>
       <id>amqp</id>
       <activation>

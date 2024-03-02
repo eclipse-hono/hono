@@ -20,7 +20,6 @@
     <version>2.5.0-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
-  <!-- TODO: review in PR request, is there a reason this artifact ID does not start with "hono-"? -->
   <artifactId>client-device-connection-infinispan</artifactId>
 
   <name>Hotrod Device Connection client</name>
@@ -32,7 +31,7 @@
       <artifactId>client-device-connection</artifactId>
     </dependency>
 
-    <dependency> <!-- TODO: should I remove hono-legal and just bring it in transiently from client-device-connection? -->
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-legal</artifactId>
     </dependency>
@@ -76,7 +75,7 @@
       <artifactId>hono-client-common</artifactId>
     </dependency>
 
-    <dependency> <!-- TODO: changed from vertx-web because there only seems to be dependency on -core. Maybe there are runtime dependencies though??? -->
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
@@ -86,7 +85,7 @@
       <artifactId>guava</artifactId>
     </dependency>
 
-    <dependency> <!-- TODO: added because there is direct dependency on it but it was brought in transiently before (probably through Quarkus) -->
+    <dependency>
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config-core</artifactId>
     </dependency>
