@@ -148,6 +148,25 @@ the client certificate's *subject DN* and invokes the Credentials API's
 [*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
 [*x509-cert* type credentials]({{< relref "/api/credentials#x509-certificate" >}}) that are on record for the device.
 
+#### Certificate Revocation Checking (experimental)
+
+Hono supports [OCSP](https://www.ietf.org/rfc/rfc2560.txt) based certificate revocation checking for client certificates
+presented by devices using client certificate based authentication. If this feature is enabled, the protocol adapter
+tries to verify the client certificate's revocation status. The device with revoked or unknown certificate status is not
+allowed to connect to the protocol adapter. The adapter uses the OCSP responder URL that has been configured for the
+tenant or *Authority Information Access* (AIA) extension in the client certificate to retrieve the OCSP response. The
+response is then used to verify the client certificate's revocation status. Revocation check can be configured using the 
+[Tenant](/hono/docs/api/management/#/tenants) resource of Device Registry Management API.
+
+OCSP revocation check is supported for HTTP, MQTT, AMQP and CoAP protocol adapters.
+
+{{% notice info %}}
+This feature is experimental and may be subject to change in future releases. Current implementation checks the 
+revocation of end entity certificates only (with CA:FALSE in basic constraints extension). If OCSP revocation check
+is enabled and revocation status cannot be determined, the protocol adapter will reject the connection. Hono currently
+does not cache OCSP responses so frequent connections may cause high load on OCSP responders.
+{{% /notice %}}
+
 ### JSON Web Token based Authentication
 
 The HTTP and MQTT protocol adapters support authentication of devices with a signed
