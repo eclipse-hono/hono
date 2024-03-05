@@ -158,13 +158,13 @@ tenant or *Authority Information Access* (AIA) extension in the client certifica
 response is then used to verify the client certificate's revocation status. Revocation check can be configured using the 
 [Tenant](/hono/docs/api/management/#/tenants) resource of Device Registry Management API.
 
-OCSP revocation check is supported for HTTP, MQTT, AMQP and CoAP protocol adapters.
+OCSP revocation check is supported for all protocol adapters.
 
 {{% notice info %}}
-This feature is experimental and may be subject to change in future releases. Current implementation checks the 
-revocation of end entity certificates only (with CA:FALSE in basic constraints extension). If OCSP revocation check
-is enabled and revocation status cannot be determined, the protocol adapter will reject the connection. Hono currently
-does not cache OCSP responses so frequent connections may cause high load on OCSP responders.
+This feature is experimental and may be subject to change in future releases without further notice. Current
+implementation checks the revocation of end entity certificates only (with CA:FALSE in basic constraints extension). If
+OCSP revocation check is enabled and revocation status cannot be determined, the protocol adapter will reject the
+connection. Hono currently does not cache OCSP responses so frequent connections may cause high load on OCSP responders.
 {{% /notice %}}
 
 ### JSON Web Token based Authentication
