@@ -248,7 +248,7 @@ downstream application attached which could send any commands to the device.
 This resource MUST be used by devices that have not authenticated to the protocol adapter.
 
 {{% notice info %}}
-In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATIONREQUIRED*
 configuration property needs to be set to `false` explicitly.
 {{% /notice %}}
 
@@ -566,7 +566,7 @@ downstream application attached which could send any commands to the device.
 This resource MUST be used by devices that have not authenticated to the protocol adapter.
 
 {{% notice info %}}
-In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATIONREQUIRED*
 configuration property needs to be set to `false` explicitly.
 {{% /notice %}}
 
@@ -815,7 +815,7 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseproject
 This resource MUST be used by devices that have not authenticated to the protocol adapter.
 
 {{% notice info %}}
-In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATIONREQUIRED*
 configuration property needs to be set to `false` explicitly.
 {{% /notice %}}
 

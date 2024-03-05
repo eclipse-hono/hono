@@ -229,7 +229,7 @@ The example above assumes that the MQTT adapter is
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-`HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
+`HONO_MQTT_AUTHENTICATIONREQUIRED` configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -362,7 +362,7 @@ mosquitto_pub -h hono.eclipseprojects.io -u 'sensor1@DEFAULT_TENANT' -P hono-sec
   * (optional) Arbitrary payload. If the message has no payload, a non-empty *content-type* must be provided.
 
 This topic can be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-`HONO_MQTT_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
+`HONO_MQTT_AUTHENTICATIONREQUIRED` configuration property to be explicitly set to `false`.
 
 **Examples**
 
