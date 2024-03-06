@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,10 @@ public final class PubSubMessageHelper {
      * The name of the Pub/Sub message property indicating whether a response to the message is expected/required.
      */
     public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
+    /**
+     * The name of the Pub/Sub message property indicating whether an acknowledgement to the message is expected/required.
+     */
+    public static final String PUBSUB_PROPERTY_ACK_REQUIRED = "ack-required";
 
     /**
      * Prefix to use in the Pub/Sub message properties for marking properties of command messages that should be
@@ -200,6 +204,17 @@ public final class PubSubMessageHelper {
     public static boolean isResponseRequired(final Map<String, String> attributesMap) {
         return Boolean
                 .parseBoolean(getAttributesValue(attributesMap, PUBSUB_PROPERTY_RESPONSE_REQUIRED).orElse("false"));
+    }
+
+    /**
+     * Gets the value of the {@value PUBSUB_PROPERTY_ACK_REQUIRED} attribute.
+     *
+     * @param attributesMap The attributes map to get the value from.
+     * @return The attributes value.
+     */
+    public static boolean isAckRequired(final Map<String, String> attributesMap) {
+        return Boolean
+                .parseBoolean(getAttributesValue(attributesMap, PUBSUB_PROPERTY_ACK_REQUIRED).orElse("false"));
     }
 
     /**
