@@ -96,7 +96,8 @@ function create_client_cert {
   echo "creating client key and certificate for device $1"
   create_key "device-$1-key.pem"
   openssl req -new -key "$DIR/device-$1-key.pem" -subj "/C=CA/L=Ottawa/O=Eclipse IoT/OU=Hono/CN=Device $1" | \
-    openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/default_tenant-cert.pem -CAkey $DIR/default_tenant-key.pem -CAcreateserial
+    openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/default_tenant-cert.pem -CAkey $DIR/default_tenant-key.pem \
+      -extfile client_ext -extensions req_ext
   SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
   echo "cert.device-$1.$SUBJECT" >> $DIR/device-certs.properties
 
@@ -175,3 +176,4 @@ create_cert amqp-adapter $AMQP_ADAPTER_KEY_STORE $AMQP_ADAPTER_KEY_STORE_PWD
 create_cert example-gateway $EXAMPLE_GATEWAY_KEY_STORE $EXAMPLE_GATEWAY_KEY_STORE_PWD
 
 create_client_cert 4711
+create_client_cert 4712

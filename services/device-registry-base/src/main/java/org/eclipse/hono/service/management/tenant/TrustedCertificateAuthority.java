@@ -54,6 +54,8 @@ public class TrustedCertificateAuthority {
 
     private X500Principal subjectDn;
 
+    private byte[] subjectDnBytes;
+
     private byte[] publicKey;
 
     private X509Certificate cert;
@@ -80,6 +82,22 @@ public class TrustedCertificateAuthority {
     @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID_TEMPLATE)
     private String authIdTemplate;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean ocspRevocationEnabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_RESPONDER_URI)
+    @JsonInclude(Include.NON_NULL)
+    private String ocspResponderUri;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT)
+    @JsonInclude(Include.NON_NULL)
+    private byte[] ocspResponderCert;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED)
+    @JsonInclude(Include.NON_DEFAULT)
+    private boolean ocspNonceEnabled;
+
     /**
      * Checks if this object contains all required data.
      *
@@ -87,7 +105,10 @@ public class TrustedCertificateAuthority {
      */
     @JsonIgnore
     public final boolean isValid() {
-        if (cert != null) {
+        if (ocspRevocationEnabled && cert == null && ocspResponderCert == null) {
+            // No certificate for OCSP response verification
+            return false;
+        } else if (cert != null) {
             return true;
         } else if (subjectDn == null || publicKey == null || notBefore == null || notAfter == null) {
             return false;
@@ -173,6 +194,31 @@ public class TrustedCertificateAuthority {
     }
 
     /**
+     * Sets the subject of the trusted authority in binary format.
+     *
+     * @param subjectDnBytes The subject distinguished name encoded in ASN.1 DER format.
+     * @return A reference to this for fluent use.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES)
+    public final TrustedCertificateAuthority setSubjectDnBytes(final byte[] subjectDnBytes) {
+        this.subjectDnBytes = subjectDnBytes;
+        return this;
+    }
+
+    /**
+     * Gets the subject of this trusted authority in binary form encoded in ASN.1 DER format.
+     *
+     * @return The subject distinguished name.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES)
+    @JsonInclude(Include.NON_NULL)
+    public final byte[] getSubjectDnBytes() {
+        return Optional.ofNullable(cert)
+                .map(c -> c.getSubjectX500Principal().getEncoded())
+                .orElse(subjectDnBytes);
+    }
+
+    /**
      * Sets the public key used by this certificate authority.
      *
      * @param publicKey The DER encoded public key.
@@ -206,7 +252,6 @@ public class TrustedCertificateAuthority {
      */
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
     public final TrustedCertificateAuthority setCertificate(final byte[] certificate) throws CertificateException {
-
         final CertificateFactory factory = CertificateFactory.getInstance("X.509");
         cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certificate));
         return this;
@@ -374,4 +419,98 @@ public class TrustedCertificateAuthority {
         return this;
     }
 
+    /**
+     * Gets whether OCSP revocation check is enabled. It is disabled by default.
+     *
+     * @return True if OCSP revocation is enabled.
+     */
+    public boolean isOcspRevocationEnabled() {
+        return ocspRevocationEnabled;
+    }
+
+    /**
+     * Sets whether OCSP revocation check is enabled. It is disabled by default. If OCSP is enabled then trusted CA
+     * certificate or OCSP responder certificate must be explicitly set.
+     *
+     * @param ocspRevocationEnabled True if OCSP revocation check should be enabled.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspRevocationEnabled(final boolean ocspRevocationEnabled) {
+        this.ocspRevocationEnabled = ocspRevocationEnabled;
+        return this;
+    }
+
+    /**
+     * Gets OCSP responder uri which will be used for OCSP revocation check of this trust anchor. If URI is null then
+     * certificate AIA extension value should be used to obtain the values instead.
+     *
+     * @return OCSP responder URI or null.
+     */
+    public String getOcspResponderUri() {
+        return ocspResponderUri;
+    }
+
+    /**
+     * Sets OCSP responder uri which will be used for OCSP revocation check of this trust anchor. If URI is null then
+     * certificate AIA extension value should be used to obtain the values instead.
+     *
+     * @param ocspResponderUri OCSP responder URI or null to use certificate AIA extension instead.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspResponderUri(final String ocspResponderUri) {
+        this.ocspResponderUri = ocspResponderUri;
+        return this;
+    }
+
+    /**
+     * Gets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
+     * set then issuing CA of client certificate is used instead.
+     *
+     * @return The DER encoded X.509 CA certificate used for OCSP signature verifications.
+     * @throws CertificateException if the certificate cannot be deserialized into a byte array.
+     */
+    public byte[] getOcspResponderCert() throws CertificateException {
+        if (ocspResponderCert != null) {
+            return ocspResponderCert;
+        } else if (ocspRevocationEnabled && cert != null) {
+            return cert.getEncoded();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Sets OCSP responder certificate which is used to verify OCSP response signature. If custom certificate is not
+     * set then issuing CA of client certificate is used instead.
+     *
+     * @param ocspResponderCert The Custom DER encoded X.509 CA certificate used for verification of OCSP response
+     *                          signature or null to use client certificate issuing CA instead.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspResponderCert(final byte[] ocspResponderCert) {
+        this.ocspResponderCert = ocspResponderCert;
+        return this;
+    }
+
+    /**
+     * Gets whether nonce extension should be sent in OCSP request. Nonce is important to avoid replay attacks but can
+     * increase resource usage. It is disabled by default.
+     *
+     * @return True if nonce extension is enabled.
+     */
+    public boolean isOcspNonceEnabled() {
+        return ocspNonceEnabled;
+    }
+
+    /**
+     * Sets whether nonce extension should be sent in OCSP request. Nonce is important to avoid replay attacks but can
+     * increase resource usage. It is disabled by default.
+     *
+     * @param ocspNonceEnabled True to enable nonce extension in OCSP requests.
+     * @return A reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setOcspNonceEnabled(final boolean ocspNonceEnabled) {
+        this.ocspNonceEnabled = ocspNonceEnabled;
+        return this;
+    }
 }

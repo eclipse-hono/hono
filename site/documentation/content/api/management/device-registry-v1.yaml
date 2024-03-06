@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.12.2
+   version: 1.13.0
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -816,6 +816,19 @@ components:
                   property is ignored.
                   Otherwise, if the `public-key` property is
                   used, this property is mandatory.
+            "subject-dn-bytes":
+               type: string
+               format: byte
+               description: |
+                  The subject DN of the trusted root certificate encoded in
+                  the ASN.1 DER format which matches subject DN field in original
+                  X.509 certificate. If the `cert` property is used to provide
+                  an X.509 certificate then the subject DN is determined from
+                  the certificate and this property is ignored.
+                  This property is optional, but without it OCSP revocation check
+                  may fail depending on responder implementation and original
+                  certificate encoding. Especially if client certificate does not
+                  use UTF8String type in subject DN encoding.
             "public-key":
                type: string
                format: byte
@@ -918,6 +931,32 @@ components:
                   template string with their corresponding *Common Name (CN)*, *Organizational Unit Name (OU)* and
                   *Organization Name (O)* from the client certificate's subject DN. The *Subject DN* is formatted
                   according to the rules defined in [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
+            "ocsp-revocation-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether OCSP revocation check is enabled. It is disabled by default. If OCSP is
+                  enabled then `cert` or `ocsp-responder-cert` must be explicitly set.
+            "ocsp-responder-uri":
+               type: string
+               description: |
+                  Specifies the OCSP responder uri which will be used for OCSP revocation check of this trust
+                  anchor. If URI is not set then the AIA extension value of the client certificate is used for
+                  OCSP revocation check instead.
+            "ocsp-responder-cert":
+               type: string
+               format: byte
+               description: |
+                  The Base64 encoded binary DER encoding of the certificate which is used to verify OCSP
+                  response signature. If custom certificate is not set then issuing CA of client certificate is
+                  used instead. Either `cert` or `ocsp-responder-cert` must be explicitly set if OCSP revocation
+                  check is enabled.
+            "ocsp-nonce-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether nonce extension should be sent in OCSP request. Nonce is important to avoid
+                  replay attacks but can increase resource usage.
 
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"

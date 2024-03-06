@@ -126,6 +126,22 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_MAX_TTL_COMMAND_RESPONSE = "max-ttl-command-response";
     /**
+     * The name of the property that indicates if nonce extension should be sent in OCSP request.
+     */
+    public static final String FIELD_OCSP_NONCE_ENABLED = "ocsp-nonce-enabled";
+    /**
+     * The name of the property that contains responder certificate which is used to verify OCSP response signature.
+     */
+    public static final String FIELD_OCSP_RESPONDER_CERT = "ocsp-responder-cert";
+    /**
+     * The name of the property that contains OCSP responder uri which will be used for OCSP revocation check.
+     */
+    public static final String FIELD_OCSP_RESPONDER_URI = "ocsp-responder-uri";
+    /**
+     * The name of the property that indicates if OCSP revocation check is enabled for trusted CA.
+     */
+    public static final String FIELD_OCSP_REVOCATION_ENABLED = "ocsp-revocation-enabled";
+    /**
      * The name of the property that contains the algorithm used for a public key.
      */
     public static final String FIELD_PAYLOAD_KEY_ALGORITHM = "algorithm";

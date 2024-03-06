@@ -33,6 +33,11 @@ public abstract class RequestResponseApiConstants {
      */
     public static final String FIELD_PAYLOAD_SUBJECT_DN = "subject-dn";
     /**
+     * The name of the property that contains the <em>subject DN</em> of the CA certificate
+     * in original ASN.1 DER encoded form.
+     */
+    public static final String FIELD_PAYLOAD_SUBJECT_DN_BYTES = "subject-dn-bytes";
+    /**
      * The name of the property that contains the identifier of a tenant.
      */
     public static final String FIELD_PAYLOAD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;
