@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -116,6 +116,15 @@ public abstract class AbstractCommandContext<T extends Command> extends MapBased
      */
     protected boolean isRequestResponseCommand() {
         return !command.isOneWay();
+    }
+
+    /**
+     * Checks if the command is an ack-required command.
+     *
+     * @return True if it is an ack-required command, false otherwise.
+     */
+    protected boolean isAckRequiredCommand() {
+        return command.isAckRequired();
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -138,6 +138,9 @@ public final class PubSubBasedCommand implements Command {
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
         final boolean responseRequired = PubSubMessageHelper.isResponseRequired(attributes);
         final boolean ackRequired = PubSubMessageHelper.isAckRequired(attributes);
+        if (responseRequired && ackRequired) {
+            validationErrorJoiner.add("response-required and ack-required must not both true");
+        }
         final String correlationId = PubSubMessageHelper.getCorrelationId(attributes)
                 .filter(id -> !id.isEmpty())
                 .orElseGet(() -> {
@@ -176,7 +179,7 @@ public final class PubSubBasedCommand implements Command {
 
     @Override
     public boolean isAckRequired() {
-        return !responseRequired && ackRequired;
+        return ackRequired;
     }
 
     @Override

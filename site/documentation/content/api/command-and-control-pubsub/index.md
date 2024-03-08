@@ -63,23 +63,15 @@ project and `${tenant_id}` is the ID of the tenant that the client wants to send
 Metadata MUST be set as Pub/Sub attributes on a message. The following table provides an overview of the attributes the
 *Business Application* needs to set on a one-way command message.
 
-| Name             | Mandatory | Type      | Description                                                                                                                                                                                                                                                                                                                                                                                           |
-|:-----------------|:---------:|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *device_id*      |    yes    | *string*  | The identifier of the device that the command is targeted at.                                                                                                                                                                                                                                                                                                                                         |
-| *subject*        |    yes    | *string*  | The name of the command to be executed by the device.                                                                                                                                                                                                                                                                                                                                                 |
-| *content-type*   |    no     | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
-| *ack-required*   |    no     | *boolean* | If set to `true` a command acknowledgement message will be sent on the command-response topic once the device acknowledges the command. Currently this only works with MQTT devices which have a QoS 1 subscription on the command topic.                                                                                                                                                             |
-| *correlation-id* |    no     | *string*  | MUST be set if *ack-required* is set to `true`. The identifier used to correlate a response message to the original request. It is used as the *correlation-id* attribute in the response.                                                                                                                                                                                                            |
+| Name           | Mandatory | Type     | Description                                                                                                                                                                                                                                                                                                                                                                                           |
+|:---------------|:---------:|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| *device_id*    |    yes    | *string* | The identifier of the device that the command is targeted at.                                                                                                                                                                                                                                                                                                                                         |
+| *subject*      |    yes    | *string* | The name of the command to be executed by the device.                                                                                                                                                                                                                                                                                                                                                 |
+| *content-type* |    no     | *string* | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 
 The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the
 message's *subject* attribute may provide a hint to the device regarding the format, encoding and semantics of the
 payload data.
-
-{{% notice info %}}
-Currently the acknowledgement mechanism only works with devices connected via the MQTT protocol which have a
-subscription on the command topic with a QoS level of 1. Getting an acknowledgement indicates that the device has
-successfully received the command. However, it does not confirm whether the device has successfully processed the command. 
-{{% /notice %}}
 
 ## Send a (Request/Response) Command
 
@@ -92,9 +84,23 @@ project and `${tenant_id}` is the ID of the tenant that the client wants to send
 The Business Application can consume the corresponding command response by creating a subscription from the
 `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
 
-In contrast to a one-way command, a request/response command contains a *response-required* attribute with value `true`
-and a *correlation-id* attribute, providing the identifier that is used to correlate a response message to the original
-request.
+In contrast to a one-way command, a request/response command contains a *response-required* or an *ack-required*
+attribute with value `true` and a *correlation-id* attribute, providing the identifier that is used to correlate a
+response message to the original request.
+
+Devices can vary in their ability to respond to commands (e.g. firmware limitations). The Business Application can
+tailor its expectations based on this:
+
+1. **Device Response Expected:** For devices that can send a response, set `response-required` to true. This is the
+default behavior for sending request/response commands. The command is sent with the *correlation-id* to the device,
+which is than expected to send a corresponding command response.
+
+2. **Acknowledgement Only:** For devices lacking response capability, set `ack-required` to true. The command is sent
+without the *correlation-id* to the device, and the protocol adapter sends an acknowledgement as a command response on
+behalf of the device upon receiving a transport layer confirmation (e.g., MQTT PUBACK) from the device.
+
+**Important Note:** Setting both `response-required` and `ack-required` to true is invalid and will result in command
+rejection.
 
 **Preconditions**
 
@@ -108,15 +114,26 @@ request.
 
 **Message Flow**
 
-1. The *Business Application* writes a command message to the
-   `projects/${google_project_id}/topics/${tenant_id}.command` topic on *Pub/Sub*.
-2. Hono consumes the message from *Pub/Sub* and forwards it to the device, provided that the target device is
-   connected and is accepting commands.
-3. The device sends a command response message. Hono writes that message to
-   the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic
-   on *Pub/Sub*.
-4. The *Business Application* consumes the command response message from an independently created subscription to
-   the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
+Device sends response (*response-required* set to true):
+  1. The *Business Application* writes a command message with *response-required* set to true to the
+     `projects/${google_project_id}/topics/${tenant_id}.command` topic on *Pub/Sub*.
+  2. Hono consumes the message from *Pub/Sub* and forwards it to the device, provided that the target device is
+     connected and is accepting commands.
+  3. The device sends a command response message. Hono writes that message to
+     the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic on *Pub/Sub*.
+  4. The *Business Application* consumes the command response message from an independently created subscription to
+     the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
+
+Protocol adapter sends response on behalf of device (*ack-required* set to true):
+  1. The *Business Application* writes a command message with *ack-required* set to true to the
+     `projects/${google_project_id}/topics/${tenant_id}.command` topic on *Pub/Sub*.
+  2. Hono consumes the message from *Pub/Sub* and forwards it to the device as a one-way command, provided that the
+     target device is connected and is accepting commands.
+  3. The device acknowledges the command on the transport layer. Hono writes an acknowledgement message to
+     the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic on *Pub/Sub*.
+  4. The *Business Application* consumes the command response message from an independently created subscription to
+     the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
+
 
 **Command Message Format**
 
@@ -128,18 +145,29 @@ command message.
 |:---------------------------------------------|:---------:|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | *correlation-id*                             |    yes    | *string*  | The identifier used to correlate a response message to the original request. It is used as the *correlation-id* attribute in the response.                                                                                                                                                                                                                                                            |
 | *device_id*                                  |    yes    | *string*  | The identifier of the device that the command is targeted at.                                                                                                                                                                                                                                                                                                                                         |
-| *response-required*                          |    yes    | *boolean* | MUST be set with a value of `true`, meaning that the device is required to send a response for the command.                                                                                                                                                                                                                                                                                           |
+| *response-required*                          |    no     | *boolean* | Either *response-required* or *ack-required* MUST exclusively be set with a value of `true` (XOR). *response-required* set to `true` means that the device is required to send a response for the command.                                                                                                                                                                                            |
+| *ack-required*                               |    no     | *boolean* | Either *response-required* or *ack-required* MUST exclusively be set with a value of `true` (XOR). *ack-required* set to `true` means that the protocol adapter will try to send an acknowledgement response for the command on behalf of the device in case the command was successfully received by the device. This mechanism has some limitations which are described in the info field below.    |
 | *subject*                                    |    yes    | *string*  | The name of the command to be executed by the device.                                                                                                                                                                                                                                                                                                                                                 |
 | *content-type*                               |    no     | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *delivery-failure-notification-metadata[\*]* |    no     | *string*  | Attributes with the *delivery-failure-notification-metadata* prefix are adopted for the error command response that is sent in case delivering the command to the device failed. In case of a successful command delivery, these attributes are ignored.                                                                                                                                              |
 
 The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the
-message's *subject* attribute may provide a hint to the device regarding the format, encoding and semantics of the payload
-data.
+message's *subject* attribute may provide a hint to the device regarding the format, encoding and semantics of the
+payload data.
+
+{{% notice info %}}
+The acknowledgement mechanism is based on the transport level acknowledgement of the different communication protocols
+and indicates that a command was received from the device. For MQTT devices this means they must subscribe on the
+command topic with a Quality of Service (QoS) level of 1. Since the HTTP protocol doesn't support a transport level
+acknowledgement, acknowledgements are considered best-effort, indicating the message was sent, not necessarily received. 
+
+Currently, the acknowledgement mechanism only works with devices connected via the MQTT and HTTP protocol.
+{{% /notice %}}
 
 An application can determine the overall outcome of the operation by means of the response to the command. The response
-is either sent back by the device, or in case the command could not be successfully forwarded to the device, an error
-command response message is sent by the Hono protocol adapter or Command Router component.
+is either sent back by the device (response-required) or the adapter (ack-required), or in case the command could not be
+successfully forwarded to the device, an error command response message is sent by the Hono protocol adapter or Command
+Router component.
 
 **Response Message Format**
 
@@ -175,6 +203,9 @@ The semantics of the individual codes are specific to the device and command. Fo
 (codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
 
 **Response Message sent from Hono Component**
+
+If the command response is an acknowledgement of a command by the Hono protocol adapter, it has a status code
+of *202* and the *content-type* attribute is set to *application/vnd.eclipse-hono-delivery-success-notification+json*.
 
 If the command response message represents an error message sent by the Hono protocol adapter or Command Router
 component, with the *content-type* attribute set to *application/vnd.eclipse-hono-delivery-failure-notification+json*,
