@@ -730,7 +730,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ProcessingOutcome.from(t),
                             qos,
                             payload.length(),
-                            ctx.getTimer());
+                            ctx.getTimer(),
+                            MetricsTags.ProcessingOutcomeReason.from(t));
                     return Future.failedFuture(t);
                 });
     }
@@ -780,7 +781,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ProcessingOutcome.from(t),
                             qos,
                             payload.length(),
-                            ctx.getTimer());
+                            ctx.getTimer(),
+                            MetricsTags.ProcessingOutcomeReason.from(t));
                     return Future.failedFuture(t);
                 });
     }
