@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,9 @@ import io.opentracing.propagation.TextMap;
 /**
  * An adapter for injecting properties into an AMQP 1.0 message's message annotations.
  *
+ * @deprecated Use {@link AmqpMessageInjectAdapter} instead.
  */
+@Deprecated
 public class MessageAnnotationsInjectAdapter implements TextMap {
 
     private final Message message;

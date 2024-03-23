@@ -89,6 +89,8 @@ public interface DeviceDao {
      *                   retrieve the whole result set page by page.
      * @param filters A list of filters. The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options. The sortOptions specify properties to sort the result set by.
+     * @param isGateway A filter for restricting the search to gateway ({@code True}) or edge ({@code False} devices only.
+     *                  If <em>empty</em>, the search will not be restricted.
      * @param tracingContext The context to track the processing of the request in
      *                       or {@code null} if no such context exists.
      * @return A future indicating the outcome of the operation.
@@ -105,6 +107,7 @@ public interface DeviceDao {
             int pageOffset,
             List<Filter> filters,
             List<Sort> sortOptions,
+            Optional<Boolean> isGateway,
             SpanContext tracingContext);
 
     /**

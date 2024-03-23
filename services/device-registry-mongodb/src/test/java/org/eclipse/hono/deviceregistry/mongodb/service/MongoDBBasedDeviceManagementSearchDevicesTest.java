@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
@@ -38,7 +39,7 @@ import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying behavior of
- * {@link MongoDbBasedDeviceManagementService#searchDevices(String, int, int, java.util.List, java.util.List, io.opentracing.Span)}.
+ * {@link MongoDbBasedDeviceManagementService#searchDevices(String, int, int, List, List, java.util.Optional, io.opentracing.Span)}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -48,7 +49,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     private static final String DB_NAME = "hono-search-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
-    private MongoDbBasedDeviceDao dao;
+    private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceManagementService service;
     private Vertx vertx;
@@ -62,10 +63,10 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     public void setup(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        dao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
-        service = new MongoDbBasedDeviceManagementService(vertx, dao, credentialsDao, config);
-        Future.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
+        service = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config);
+        Future.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -86,7 +87,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
         Future.all(
-                dao.deleteAllFromCollection(),
+                deviceDao.deleteAllFromCollection(),
                 credentialsDao.deleteAllFromCollection())
             .onComplete(testContext.succeedingThenComplete());
     }
@@ -100,7 +101,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     public void closeDao(final VertxTestContext testContext) {
 
         final Promise<Void> devicesCloseHandler = Promise.promise();
-        dao.close(devicesCloseHandler);
+        deviceDao.close(devicesCloseHandler);
         final Promise<Void> credentialsCloseHandler = Promise.promise();
         credentialsDao.close(credentialsCloseHandler);
 

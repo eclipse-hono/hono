@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.pointer.JsonPointer;
 
 /**
@@ -37,27 +38,59 @@ public final class Filter {
     private Operator operator = Operator.eq;
 
     /**
-     * An enum defining supported filter operators.
+     * Supported filter operators.
      */
     public enum Operator {
-        eq
+        eq,
+        in,
+        not_in
+    }
+
+    private Filter(final String field, final Object value, final Operator op) {
+        Objects.requireNonNull(field);
+        Objects.requireNonNull(value);
+        this.field = JsonPointer.from(field);
+        this.value = value;
+        this.operator = Optional.ofNullable(op).orElse(Operator.eq);
     }
 
     /**
-     * Creates a filter for a field and value using the equals operator.
+     * Creates a filter for a field and value using the <em>equals</em> operator.
      *
-     * @param field The field to use for filtering.
+     * @param field A JSON Pointer to the field to use for filtering.
      * @param value The value corresponding to the field to use for filtering.
-     * @throws IllegalArgumentException if the field is not a valid pointer.
+     * @throws IllegalArgumentException if the field is not a valid JSON pointer.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public Filter(@JsonProperty(value = RegistryManagementConstants.FIELD_FILTER_FIELD, required = true) final String field,
             @JsonProperty(value = RegistryManagementConstants.FIELD_FILTER_VALUE, required = true) final Object value) {
-        Objects.requireNonNull(field);
-        Objects.requireNonNull(value);
+        this(field, value, Operator.eq);
+    }
 
-        this.field = JsonPointer.from(field);
-        this.value = value;
+    /**
+     * Creates a filter for a field and value list using the <em>in</em> operator.
+     *
+     * @param field A JSON Pointer to the field to use for filtering.
+     * @param valueList The list of values to match.
+     * @return The filter.
+     * @throws IllegalArgumentException if the field is not a valid pointer.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static Filter inFilter(final String field, final JsonArray valueList) {
+        return new Filter(field, valueList, Operator.in);
+    }
+
+    /**
+     * Creates a filter for a field and value list using the <em>not in</em> operator.
+     *
+     * @param field A JSON Pointer to the field to use for filtering.
+     * @param valueList The list of values to match.
+     * @return The filter.
+     * @throws IllegalArgumentException if the field is not a valid pointer.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static Filter notInFilter(final String field, final JsonArray valueList) {
+        return new Filter(field, valueList, Operator.not_in);
     }
 
     /**

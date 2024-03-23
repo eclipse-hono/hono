@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -638,7 +638,8 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                 currentSpan.log(details);
 
                 final TriTuple<Promise<R>, BiFunction<Message, ProtonDelivery, R>, Span> handler = TriTuple.of(res, responseMapper, currentSpan);
-                AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
+                AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), request,
+                        connection.getConfig().isUseLegacyTraceContextFormat());
                 replyMap.put(correlationId, handler);
 
                 final SendMessageSampler.Sample sample = sampler.start(tenantId);
