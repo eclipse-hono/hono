@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
@@ -70,6 +71,7 @@ class TrustedCertificateAuthorityTest {
 
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, certificate.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN_BYTES, certificate.getSubjectX500Principal().getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
@@ -153,9 +155,62 @@ class TrustedCertificateAuthorityTest {
         assertThrows(IllegalArgumentException.class, () -> ca.mapTo(TrustedCertificateAuthority.class));
     }
 
+    /**
+     * Verifies that decoding of a trusted CA entry containing OCSP revocation check settings.
+     *
+     * @throws CertificateException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testDecodeTrustedCAWithOCSPRevocationEnabled() throws CertificateException {
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_URI, "http://example.com:8080/")
+                .put(RegistryManagementConstants.FIELD_OCSP_RESPONDER_CERT, certificate.getEncoded())
+                .put(RegistryManagementConstants.FIELD_OCSP_NONCE_ENABLED, false);
+
+        final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
+
+        assertThat(authority.isOcspRevocationEnabled()).isTrue();
+        assertThat(authority.getOcspResponderUri()).isEqualTo("http://example.com:8080/");
+        assertThat(authority.getOcspResponderCert()).isEqualTo(certificate.getEncoded());
+        assertThat(authority.isOcspNonceEnabled()).isFalse();
+    }
+
+    /**
+     * Verifies that trusted CA certificate is used as default OCSP responder certificate when it is not
+     * explicitly set.
+     *
+     * @throws CertificateException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testDecodeTrustedCAWithMissingOCSPResponderCert() throws CertificateException {
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
+
+        final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
+
+        assertThat(authority.getOcspResponderCert()).isEqualTo(certificate.getEncoded());
+    }
+
+    /**
+     * Verifies that authority is not valid when OCSP is enabled but no certificate for signature
+     * verification is set.
+     */
+    @Test
+    public void testIsValidWithMissingOCSPResponderCertAndCACert() {
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_OCSP_REVOCATION_ENABLED, true);
+
+        final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
+
+        assertThat(authority.isValid()).isFalse();
+    }
+
     private void assertAuthority(final TrustedCertificateAuthority authority) {
         assertThat(authority.isValid()).isTrue();
         assertThat(authority.getSubjectDn()).isEqualTo(certificate.getSubjectX500Principal());
+        assertThat(authority.getSubjectDnBytes()).isEqualTo(certificate.getSubjectX500Principal().getEncoded());
         assertThat(authority.getPublicKey()).isEqualTo(certificate.getPublicKey().getEncoded());
         assertThat(authority.getKeyAlgorithm()).isEqualTo(certificate.getPublicKey().getAlgorithm());
         assertThat(authority.getNotBefore()).isEqualTo(certificate.getNotBefore().toInstant());

@@ -20,7 +20,7 @@ This guide provides examples for publishing telemetry and events for *authentica
 
 {{% notice tip %}}
 The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable
-*HONO_AMQP_AUTHENTICATION_REQUIRED* to `false`.
+*HONO_AMQP_AUTHENTICATIONREQUIRED* to `false`.
 {{% /notice %}}
 
 
@@ -273,7 +273,7 @@ client and can then be (re-)used for sending multiple messages.
     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
-adapter's *HONO_AMQP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+adapter's *HONO_AMQP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -418,7 +418,7 @@ java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --
     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
-adapter's *HONO_AMQP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+adapter's *HONO_AMQP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Example**
 

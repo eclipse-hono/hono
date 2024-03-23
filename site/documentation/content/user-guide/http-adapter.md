@@ -262,7 +262,7 @@ The example above assumes that the HTTP adapter is
       * The consumer failed to indicate in time whether it has processed the telemetry data. 
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_HTTP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+*HONO_HTTP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -534,7 +534,7 @@ content-length: 0
     tenant connected to Hono, or the consumer didn't process the event.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_HTTP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+*HONO_HTTP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -787,7 +787,7 @@ content-length: 0
     * The application has already given up on waiting for a response.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_HTTP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+*HONO_HTTP_AUTHENTICATIONREQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
