@@ -29,7 +29,6 @@
         <dependency>
             <groupId>org.eclipse.hono</groupId>
             <artifactId>hono-legal</artifactId>
-            <!-- TODO: review, should this be here and in both dependant modules (infinispan and redis)? -->
         </dependency>
         <dependency>
             <groupId>org.eclipse.hono</groupId>
@@ -52,17 +51,17 @@
         <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config-core</artifactId>
-            <!-- TODO: review, should we rather depened on smallrye-config (core is a transient dependency) -->
+            <!-- TODO: review, should we rather depend on smallrye-config (core is a transient dependency) -->
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-core</artifactId>
-            <!-- TODO: review, should we rather depened on vertx-web (vertx-core is a transient dependency) -->
+            <!-- TODO: review, should we rather depend on vertx-web (vertx-core is a transient dependency) -->
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-health-check</artifactId>
-            <!-- TODO: review, should we rather depened on vertx-web (vertx-health-check is a transient dependency) -->
+            <!-- TODO: review, should we rather depend on vertx-web (vertx-health-check is a transient dependency) -->
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

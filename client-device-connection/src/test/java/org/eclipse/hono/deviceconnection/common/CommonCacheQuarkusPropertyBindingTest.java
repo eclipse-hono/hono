@@ -26,7 +26,6 @@ public class CommonCacheQuarkusPropertyBindingTest {
 
     @Test
     void testCommonCacheConfigurationPropertiesArePickedUp() {
-
         final var commonCacheConfig = new CommonCacheConfig(
                 ConfigMappingSupport.getConfigMapping(
                         CommonCacheOptions.class,

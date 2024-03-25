@@ -257,17 +257,6 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-redis-client</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-ide-launcher</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.quarkus</groupId>
         <artifactId>quarkus-vertx</artifactId>
         <version>${quarkus.platform.version}</version>
         <exclusions>

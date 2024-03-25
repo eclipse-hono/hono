@@ -88,7 +88,6 @@
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
-    <!--<hono.command-router.java-options>${default.java-options} -Dcache.backend=redis</hono.command-router.java-options>-->
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
 
     <hono.service-auth.disabled>false</hono.service-auth.disabled>

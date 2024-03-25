@@ -89,7 +89,7 @@ public class DeviceConnectionInfoProducer {
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
 
         if (!Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
-            LOG.info("configuring cache: hotrod ({})", infinispanCacheConfig);
+            LOG.info("configuring remote cache");
             return HotrodCache.from(
                     vertx,
                     infinispanCacheConfig,
@@ -97,11 +97,11 @@ public class DeviceConnectionInfoProducer {
         }
 
         if (redisCacheConfiguration.hosts().isPresent()) {
-            LOG.info("=== REDIS === configuring cache: redis ({})", redisCacheConfiguration.hosts().get());
+            LOG.info("configuring redis cache");
             return RedisCacheVertx.from(RedisAPI.api(VertxRedisClientFactory.create(vertx, redisCacheConfiguration)));
         }
 
-        LOG.info("configuring cache: embedded ({})", commonCacheConfig);
+        LOG.info("configuring embedded cache");
         return new EmbeddedCache<>(
                 vertx,
                 embeddedCacheManager(commonCacheConfig),
