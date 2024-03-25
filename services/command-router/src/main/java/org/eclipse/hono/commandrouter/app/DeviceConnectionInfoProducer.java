@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.commandrouter.app;
 
+import io.quarkus.runtime.configuration.ConfigurationException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -87,6 +88,12 @@ public class DeviceConnectionInfoProducer {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
+
+        if (!Strings.isNullOrEmpty(infinispanCacheConfig.getServerList()) &&
+                redisCacheConfiguration.hosts().isPresent()) {
+            throw new ConfigurationException(
+                    "Both hotrod (remote) and redis cache configuration exists. Only one should be provided.");
+        }
 
         if (!Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring remote cache");

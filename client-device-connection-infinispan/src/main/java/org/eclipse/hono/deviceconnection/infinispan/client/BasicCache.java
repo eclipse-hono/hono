@@ -14,7 +14,6 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
