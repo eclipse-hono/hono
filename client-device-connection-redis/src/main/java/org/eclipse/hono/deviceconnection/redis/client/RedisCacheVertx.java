@@ -36,9 +36,9 @@ import io.vertx.redis.client.Response;
 /**
  * TODO.
  */
-public class VertxRedisCache implements Cache<String, String>, Lifecycle {
+public class RedisCacheVertx implements Cache<String, String>, Lifecycle {
 
-    private static final Logger LOG = LoggerFactory.getLogger(VertxRedisCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RedisCacheVertx.class);
 
     private final RedisAPI api;
 
@@ -47,7 +47,7 @@ public class VertxRedisCache implements Cache<String, String>, Lifecycle {
      *
      * @param api TODO.
      */
-    private VertxRedisCache(final RedisAPI api) {
+    private RedisCacheVertx(final RedisAPI api) {
         Objects.requireNonNull(api);
         this.api = api;
     }
@@ -58,29 +58,27 @@ public class VertxRedisCache implements Cache<String, String>, Lifecycle {
      * @param api TODO.
      * @return TODO.
      */
-    public static VertxRedisCache from(final RedisAPI api) {
-        LOG.info("VREDIS: creating cache with api: {}", api);
+    public static RedisCacheVertx from(final RedisAPI api) {
         Objects.requireNonNull(api);
-        return new VertxRedisCache(api);
+        return new RedisCacheVertx(api);
     }
 
     @Override
     public Future<Void> start() {
-        LOG.info("VREDIS: starting cache");
+        LOG.info("VREDIS: start()");
         return checkForCacheAvailability().mapEmpty();
     }
 
     @Override
     public Future<Void> stop() {
-        LOG.info("VREDIS: stopping cache");
+        LOG.info("VREDIS: stop()");
         api.close();
         return Future.succeededFuture();
     }
 
     @Override
     public Future<JsonObject> checkForCacheAvailability() {
-        LOG.info("VREDIS: checking for cache availability using api: {}", api);
-
+        LOG.info("VREDIS: checkForCacheAvailability()");
         Objects.requireNonNull(api);
 
         return api.ping(List.of())
@@ -184,17 +182,14 @@ public class VertxRedisCache implements Cache<String, String>, Lifecycle {
 
     @Override
     public Future<Map<String, String>> getAll(final Set<? extends String> keys) {
-        LOG.info("VREDIS: getAll {}", keys.size());
+        LOG.info("VREDIS: getAll ({})", keys.size());
         Objects.requireNonNull(api);
 
         final LinkedList<String> keyList = new LinkedList<>(keys.stream().map(String::valueOf).toList());
-        keyList.forEach(i -> LOG.info("VREDIS: Key: {}", i));
         final Map<String, String> result = new HashMap<>(keyList.size());
         return api.mget(keyList)
                 .compose(values -> {
-                    LOG.info("VREDIS: Got {} items back...", values.stream().toList().size());
                     values.forEach(i -> {
-                        LOG.info("Iterating through result list: {}", i);
                         try {
                             if (i != null) { // TODO: this is kinda strange but some results are null and the BasicCache does not include those in the returned result. Ask about/investigate.
                                 result.put(keyList.removeFirst(), i.toString());

@@ -32,8 +32,8 @@ import io.vertx.core.json.JsonObject;
  * An implementation of the Redis device connection class using the Quarkus Redis client library.
  */
 //@javax.enterprise.context.ApplicationScoped
-public class QuarkusRedisCache implements Cache<String, String> {
-    private static final Logger LOG = LoggerFactory.getLogger(QuarkusRedisCache.class);
+public class RedisCacheQuarkus implements Cache<String, String> {
+    private static final Logger LOG = LoggerFactory.getLogger(RedisCacheQuarkus.class);
 
     //private final RedisAPI redisApi;
     private final ReactiveRedisDataSource reactiveRedisDataSource;
@@ -43,7 +43,7 @@ public class QuarkusRedisCache implements Cache<String, String> {
      * TODO.
      * @param reactiveRedisDataSource TODO
      */
-    public QuarkusRedisCache(final ReactiveRedisDataSource reactiveRedisDataSource) {
+    public RedisCacheQuarkus(final ReactiveRedisDataSource reactiveRedisDataSource) {
         //this.redisApi = redisApi;
         this.reactiveRedisDataSource = reactiveRedisDataSource;
         valueCommands = reactiveRedisDataSource.value(String.class, String.class);

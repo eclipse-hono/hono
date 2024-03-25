@@ -175,7 +175,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
      */
     @Override
     public Future<JsonObject> checkForCacheAvailability() {
-
+        LOG.info("HOTROD: checkForCacheAvailability()");
         if (isStarted()) {
             final ConnectionCheckResult lastResult = lastConnectionCheckResult;
             if (lastResult != null && !lastResult.isOlderThan(CACHED_CONNECTION_CHECK_RESULT_MAX_AGE)) {

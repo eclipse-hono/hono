@@ -32,9 +32,9 @@ import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationOptions;
-import org.eclipse.hono.deviceconnection.redis.client.RedisRemoteConfigurationProperties;
-import org.eclipse.hono.deviceconnection.redis.client.VertxRedisCache;
+import org.eclipse.hono.deviceconnection.redis.client.RedisCacheVertx;
+import org.eclipse.hono.deviceconnection.redis.client.config.RedisConfig;
+import org.eclipse.hono.deviceconnection.redis.client.vertx.VertxRedisClientFactory;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
@@ -50,7 +50,6 @@ import io.vertx.core.Vertx;
 import io.vertx.redis.client.RedisAPI;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
-import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
 /**
@@ -66,9 +65,6 @@ public class DeviceConnectionInfoProducer {
 
     @ConfigProperty(name = "hono.commandRouter.cache.embedded.configurationFile", defaultValue = "/etc/hono/cache-config.xml")
     String configFile;
-
-    @Inject
-    RedisAPI redisApi;
 
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
@@ -86,36 +82,26 @@ public class DeviceConnectionInfoProducer {
             @ConfigMapping(prefix = "hono.commandRouter.cache.remote")
             final InfinispanRemoteConfigurationOptions remoteCacheConfigurationOptions,
             @ConfigMapping(prefix = "hono.commandRouter.cache.redis")
-            final RedisRemoteConfigurationOptions redisCacheConfigurationOptions
+            final RedisConfig redisCacheConfiguration
             ) {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
-        final var redisCacheConfig = new RedisRemoteConfigurationProperties(redisCacheConfigurationOptions);
-
-        final String cacheBackend = System.getProperty("cache.backend");
-        LOG.info("######################### Cache Backend: {}", cacheBackend);
-        //if (true) {
-        //    return new QuarkusRedisCache(reactiveRedisDataSource);
-        //}
 
         if (!Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
-            LOG.info("configuring remote cache");
+            LOG.info("configuring cache: hotrod ({})", infinispanCacheConfig);
             return HotrodCache.from(
                     vertx,
                     infinispanCacheConfig,
                     commonCacheConfig);
         }
 
-        if (!redisCacheConfig.getEndpoints().isEmpty()) {
-            LOG.info("Creating a new REDIS cache using {}", redisApi);
-            redisCacheConfig.getEndpoints().forEach(i -> LOG.info(" - {}", i));
-            //final var p = new RedisRemoteConfigurationProperties();
-            //p.setConnectionString("redis://redis:6379");
-            return VertxRedisCache.from(redisApi);
+        if (redisCacheConfiguration.hosts().isPresent()) {
+            LOG.info("=== REDIS === configuring cache: redis ({})", redisCacheConfiguration.hosts().get());
+            return RedisCacheVertx.from(RedisAPI.api(VertxRedisClientFactory.create(vertx, redisCacheConfiguration)));
         }
 
-        LOG.info("configuring embedded cache");
+        LOG.info("configuring cache: embedded ({})", commonCacheConfig);
         return new EmbeddedCache<>(
                 vertx,
                 embeddedCacheManager(commonCacheConfig),

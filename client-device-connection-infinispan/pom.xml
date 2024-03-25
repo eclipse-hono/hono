@@ -28,11 +28,6 @@
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-legal</artifactId>
     </dependency>
     <dependency>
@@ -72,8 +67,13 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>client-device-connection</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-common</artifactId>
     </dependency>
+
 
     <dependency>
       <groupId>io.vertx</groupId>
