@@ -10,6 +10,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * Updated to jjwt 0.12.5 which allowed us to replace a lot of manually crafted code for creating a JWK Set based
   on vert.x JWK with generic jjwt code.
+* Updated CoAP adapter to use Eclipse Californium 3.11.0.
 
 ## 2.5.1
 
