@@ -37,7 +37,6 @@
     <infinispan.version>14.0.11.Final</infinispan.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0.12.Final</infinispan-image.name>
     <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.51</jaeger.image.name>
-    <javax.transaction-api.version>1.3</javax.transaction-api.version>
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.11.5</jjwt.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
@@ -572,11 +571,6 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
         <groupId>com.bol</groupId>
         <artifactId>cryptvault</artifactId>
         <version>${cryptvault.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.transaction</groupId>
-        <artifactId>javax.transaction-api</artifactId>
-        <version>${javax.transaction-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.infinispan</groupId>
