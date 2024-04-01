@@ -30,7 +30,7 @@ import io.opentelemetry.sdk.autoconfigure.spi.ConfigProperties;
 import io.opentelemetry.sdk.extension.trace.jaeger.sampler.JaegerRemoteSamplerProvider;
 import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
-import io.opentelemetry.semconv.resource.attributes.ResourceAttributes;
+import io.opentelemetry.semconv.ResourceAttributes;
 import io.quarkus.opentelemetry.runtime.config.build.SamplerType;
 import io.quarkus.opentelemetry.runtime.config.runtime.OTelRuntimeConfig;
 import io.quarkus.opentelemetry.runtime.config.runtime.TracesRuntimeConfig;
@@ -238,6 +238,7 @@ public final class SamplerProducer {
 
     private Sampler traceIdRatioBasedSampler(final TracesRuntimeConfig tracesRuntimeConfig) {
         final Optional<Double> samplerArg = Optional.ofNullable(otelConfig.getString(PROPERTY_OTEL_TRACES_SAMPLER_ARG))
+                .or(() -> tracesRuntimeConfig.samplerArg())
                 .map(s -> {
                     try {
                         return Double.parseDouble(s);
@@ -245,8 +246,7 @@ public final class SamplerProducer {
                         LOG.warn("invalid sampler ratio config (will use 1.0)", e);
                         return 1.0d;
                     }
-                })
-                .or(() -> tracesRuntimeConfig.samplerArg());
+                });
 
         return Sampler.traceIdRatioBased(samplerArg.orElse(1.0d));
     }

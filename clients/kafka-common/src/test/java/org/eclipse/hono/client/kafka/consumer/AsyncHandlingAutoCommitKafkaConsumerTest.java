@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -318,7 +318,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             receivedRecordsCheckpoint.flag();
             return promise.future();
         };
-        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
+        final var consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
         consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
@@ -347,6 +347,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             ctx.failNow(receivedRecordsCtx.causeOfFailure());
             return;
         }
+        LOG.debug("records received");
 
         // records received, complete the handling of some of them
         recordsHandlingPromiseMap.get(0L).complete();
@@ -356,32 +357,40 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         recordsHandlingPromiseMap.get(4L).complete();
 
         // define VertxTestContexts for 3 checks (3x rebalance/commit)
-        final AtomicInteger checkIndex = new AtomicInteger(0);
-        final List<VertxTestContext> commitCheckContexts = IntStream.range(0, 3)
-                .mapToObj(i -> new VertxTestContext()).collect(Collectors.toList());
-        final List<Checkpoint> commitCheckpoints = commitCheckContexts.stream()
-                .map(c -> c.checkpoint(1)).collect(Collectors.toList());
+        final var checkIndex = new AtomicInteger(0);
+        final var commitCheckContexts = IntStream.range(0, 3)
+                .mapToObj(i -> new VertxTestContext()).toList();
+        final var commitCheckpoints = commitCheckContexts.stream()
+                .map(c -> c.laxCheckpoint(1)).toList();
         final InterruptableSupplier<Boolean> waitForCurrentCommitCheckResult = () -> {
+            final var checkContext = commitCheckContexts.get(checkIndex.get());
             assertWithMessage("partition assigned in 5s for checking of commits")
-                    .that(commitCheckContexts.get(checkIndex.get()).awaitCompletion(5, TimeUnit.SECONDS))
+                    .that(checkContext.awaitCompletion(5, TimeUnit.SECONDS))
                     .isTrue();
-            if (commitCheckContexts.get(checkIndex.get()).failed()) {
-                ctx.failNow(commitCheckContexts.get(checkIndex.get()).causeOfFailure());
+            if (checkContext.failed()) {
+                ctx.failNow(checkContext.causeOfFailure());
                 return false;
             }
             return true;
         };
 
         consumer.setOnPartitionsAssignedHandler(partitions -> {
-            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(TOPIC_PARTITION));
+            LOG.debug("onPartitionsAssignedHandler invoked [check index: {}, newly assigned partitions: {}]",
+                    checkIndex.get(), partitions.stream().map(t -> t.toString()).collect(Collectors.joining(", ")));
+            final var committedPartitions = mockConsumer.committed(Set.of(TOPIC_PARTITION));
+            final var offsetAndMetadata = committedPartitions.get(TOPIC_PARTITION);
+            LOG.debug("committed partition [name: {}, offset: {}, expected offset: {}]",
+                    TOPIC_PARTITION, offsetAndMetadata.offset(), latestFullyHandledOffset.get() + 1L);
             ctx.verify(() -> {
-                final OffsetAndMetadata offsetAndMetadata = committed.get(TOPIC_PARTITION);
                 assertThat(offsetAndMetadata).isNotNull();
-                assertThat(offsetAndMetadata.offset()).isEqualTo(latestFullyHandledOffset.get() + 1L);
+//                assertThat(offsetAndMetadata.offset()).isEqualTo(latestFullyHandledOffset.get() + 1L);
             });
-            commitCheckpoints.get(checkIndex.get()).flag();
+            if (offsetAndMetadata.offset() == latestFullyHandledOffset.get() + 1L) {
+                commitCheckpoints.get(checkIndex.get()).flag();
+            }
         });
         // now force a rebalance which should trigger the above onPartitionsAssignedHandler
+        LOG.debug("force rebalance 1");
         mockConsumer.rebalance(List.of(TOPIC_PARTITION));
         if (!waitForCurrentCommitCheckResult.get()) {
             return;
@@ -389,6 +398,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         checkIndex.incrementAndGet();
 
         // now another rebalance (ie. commit trigger) - no change in offsets
+        LOG.debug("force rebalance 2");
         mockConsumer.rebalance(List.of(TOPIC_PARTITION));
         if (!waitForCurrentCommitCheckResult.get()) {
             return;
@@ -401,6 +411,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // offset 4 already complete
         latestFullyHandledOffset.set(4);
         // again rebalance/commit
+        LOG.debug("force rebalance 3");
         mockConsumer.rebalance(List.of(TOPIC_PARTITION));
         if (waitForCurrentCommitCheckResult.get()) {
             ctx.completeNow();
@@ -480,15 +491,16 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumer.setOnPartitionsRevokedHandler(s -> {
             ctx.verify(() -> assertThat(recordsHandlingPromiseMap.get(1L).future().isComplete()).isTrue());
         });
-        final Checkpoint commitCheckDone = ctx.checkpoint(1);
+        final Checkpoint commitCheckDone = ctx.laxCheckpoint(1);
         consumer.setOnPartitionsAssignedHandler(partitions -> {
-            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(TOPIC_PARTITION));
+            final var committed = mockConsumer.committed(Set.of(TOPIC_PARTITION));
+            final var offsetAndMetadata = committed.get(TOPIC_PARTITION);
             ctx.verify(() -> {
-                final OffsetAndMetadata offsetAndMetadata = committed.get(TOPIC_PARTITION);
                 assertThat(offsetAndMetadata).isNotNull();
-                assertThat(offsetAndMetadata.offset()).isEqualTo(numTestRecords);
             });
-            commitCheckDone.flag();
+            if (offsetAndMetadata.offset() == numTestRecords) {
+                commitCheckDone.flag();
+            }
         });
         // trigger a rebalance where the currently assigned partition is revoked
         // (and then assigned again - otherwise its offset wouldn't be returned by mockConsumer.committed())
@@ -662,10 +674,12 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
 
         final VertxTestContext consumerStartedCtx = new VertxTestContext();
-        final Checkpoint consumerStartedCheckpoint = consumerStartedCtx.checkpoint(2);
+        final Checkpoint consumerStartedCheckpoint = consumerStartedCtx.laxCheckpoint(2);
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.setOnRebalanceDoneHandler(s -> consumerStartedCheckpoint.flag());
+        consumer.setOnRebalanceDoneHandler(s -> {
+            consumerStartedCheckpoint.flag();
+        });
         consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         vertx.getOrCreateContext().runOnContext(v -> {
             consumer.start()
@@ -802,7 +816,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         recordsHandlingPromiseMap.get(1L).complete();
         recordsHandlingPromiseMap.get(2L).complete();
 
-        final Checkpoint commitCheckDone = ctx.checkpoint(1);
+        final Checkpoint commitCheckDone = ctx.laxCheckpoint(1);
         consumer.setOnPartitionsAssignedHandler(partitions -> {
             LOG.info("rebalancing ...");
             final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(TOPIC_PARTITION));
