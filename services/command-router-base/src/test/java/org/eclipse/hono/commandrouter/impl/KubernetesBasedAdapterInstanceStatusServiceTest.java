@@ -366,14 +366,14 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
         server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
-                .waitFor(10).andEmit(outdatedEvent())
+                .waitFor(100).andEmit(outdatedEvent())
                 .done()
                 .once();
 
         server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
-                .waitFor(10).andEmit(new WatchEvent(pod1, "MODIFIED"))
+                .waitFor(100).andEmit(new WatchEvent(pod1, "MODIFIED"))
                 .done()
                 .once();
 
@@ -461,7 +461,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
     private static WatchEvent outdatedEvent() {
         return new WatchEventBuilder()
                 .withType("ERROR")
-                .withStatusObject(new StatusBuilder()
+                .withObject(new StatusBuilder()
                         .withCode(HttpURLConnection.HTTP_GONE)
                         .withMessage("410: The event in requested index is outdated and cleared (the requested history has been cleared [3/1]) [2]")
                         .build())

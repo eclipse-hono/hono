@@ -147,6 +147,15 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/mina-sshd).
 
+### ASM
+
+This product includes software developed by the [ASM Project](https://asm.ow2.io/index.html).
+
+Your use of *ASM* is subject to the terms and conditions defined in the file
+[LICENSE.ASM.txt](LICENSE.ASM.txt).
+
+The source code is available from [GitLab](https://gitlab.ow2.org/asm/asm).
+
 ### Automaton
 
 This product includes software developed by Anders Moeller.
@@ -458,6 +467,16 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/kafka).
+
+### Kotlin stdlib
+
+This product includes software developed by the [Kotlin project](https://kotlinlang.org/).
+
+Your use of *Kotlin stdlib* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/JetBrains/kotlin).
 
 ### Kubernetes Client
 

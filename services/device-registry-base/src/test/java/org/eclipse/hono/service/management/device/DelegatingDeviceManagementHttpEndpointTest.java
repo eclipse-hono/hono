@@ -56,6 +56,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.http.impl.HttpServerRequestInternal;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.Router;
 
 
@@ -280,6 +281,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
      * Verifies that the endpoint uses default values if the request does
      * not contain any search criteria.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testSearchDevicesUsesDefaultSearchCriteria() {
 
@@ -308,6 +310,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     /**
      * Verifies that the endpoint uses search criteria provided in a request's query parameters.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testSearchDevicesSucceedsWithSearchCriteria() {
 
@@ -463,14 +466,14 @@ public class DelegatingDeviceManagementHttpEndpointTest {
 
         final HttpServerRequestInternal request = mock(HttpServerRequestInternal.class);
         when(request.absoluteURI()).thenReturn(relativeURI);
+        when(request.authority()).thenReturn(HostAndPort.authority("localhost"));
         when(request.method()).thenReturn(method);
         when(request.scheme()).thenReturn("http");
-        when(request.host()).thenReturn("localhost");
         when(request.uri()).thenReturn(relativeURI);
         when(request.path()).thenReturn(relativeURI);
         when(request.headers()).thenReturn(requestHeaders);
-        when(request.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn("application/json");
-        when(request.getHeader(HttpHeaders.CONTENT_LENGTH)).thenReturn(String.valueOf(requestBody.length()));
+        requestHeaders.add(HttpHeaders.CONTENT_TYPE, "application/json");
+        requestHeaders.add(HttpHeaders.CONTENT_LENGTH, String.valueOf(requestBody.length()));
         when(request.params()).thenReturn(requestParams);
         when(request.resume()).thenReturn(request);
         when(request.response()).thenReturn(response);
