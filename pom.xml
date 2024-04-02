@@ -296,6 +296,7 @@
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
               <vertx.json.base64>legacy</vertx.json.base64>
+              <hono.skipDockerTests>${skipDockerTests}</hono.skipDockerTests>
             </systemPropertyVariables>
             <properties>
               <configurationParameters>
