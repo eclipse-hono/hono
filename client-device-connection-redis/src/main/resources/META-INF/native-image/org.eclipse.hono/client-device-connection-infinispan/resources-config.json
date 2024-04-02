@@ -1,0 +1,37 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": ".*\\.properties$"
+      },
+      {
+        "pattern": ".*\\.proto$"
+      },
+      {
+        "pattern": "default-configs\\/.*$"
+      },
+      {
+        "pattern": "META-INF\\/services\\/java\\.security\\.Provider"
+      },
+      {
+        "pattern": "META-INF\\/services\\/javax\\.security\\.sasl\\.SaslClientFactory"
+      },
+      {
+        "pattern": "META-INF\\/services\\/org\\.infinispan\\.configuration\\.parsing\\.ConfigurationParser"
+      },
+      {
+        "pattern": "META-INF\\/services\\/org\\.infinispan\\.factories\\.impl\\..*$"
+      },
+      {
+        "pattern": "META-INF\\/services\\/org\\.infinispan\\.protostream\\..*$"
+      }
+    ],
+    "excludes": [
+      {
+        "pattern": "META-INF\\/maven\\/.*$"
+      },{
+        "pattern": "META-INF\\/native-image\\/.*$"
+      }
+    ]
+  }
+}

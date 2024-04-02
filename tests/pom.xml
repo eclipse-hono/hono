@@ -85,7 +85,7 @@
      Command Router related properties.
      -->
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.image>hono-service-command-router</hono.command-router.image>
+    <hono.command-router.image>hono-service-command-router-infinispan</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
@@ -93,6 +93,7 @@
     <hono.service-auth.disabled>false</hono.service-auth.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
+    <hono.redis.disabled>true</hono.redis.disabled>
 
     <!--
       Messaging related properties - Kafka is used as the default one.
@@ -264,7 +265,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-command-router</artifactId>
+      <artifactId>hono-service-command-router-base</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -466,6 +467,24 @@
         <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
       </properties>
     </profile>
+
+    <profile>
+      <id>redis_cache</id>
+      <activation>
+        <property>
+          <name>hono.commandrouting.cache</name>
+          <value>redis</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.redis.disabled>false</hono.redis.disabled>
+        <hono.command-router.image>hono-service-command-router-redis</hono.command-router.image>
+        <hono.infinispan.disabled>true</hono.infinispan.disabled>
+        <hono.command-router.config-src>redis-cache</hono.command-router.config-src>
+        <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
+      </properties>
+    </profile>
+
     <profile>
       <id>amqp</id>
       <activation>
@@ -764,6 +783,7 @@
       <properties>
         <mongodb.port>27017</mongodb.port>
         <kafka.port>9094</kafka.port>
+        <redis.port>6379</redis.port>
         <qpid.amqps.port>15671</qpid.amqps.port>
         <qpid.amqp.port>15672</qpid.amqp.port>
 
@@ -919,6 +939,35 @@
                       <time>${service.startup.timeout}</time>
                       <log>.*(Infinispan Server .* started).*</log>
                     </wait>
+                  </run>
+                </image>
+                <!-- ##### Redis ##### -->
+                <image>
+                  <name>bitnami/redis</name>
+                  <alias>hono-redis-test</alias>
+                  <run>
+                    <skip>${hono.redis.disabled}</skip>
+                    <ports>
+                      <port>6379:6379</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>redis</alias>
+                    </network>
+                    <memorySwap>1500000000</memorySwap>
+                    <memory>1500000000</memory>
+                    <log>
+                      <prefix>Redis</prefix>
+                      <color>${log.color.extra-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(Ready to accept connections).*</log>
+                    </wait>
+                    <env>
+                      <ALLOW_EMPTY_PASSWORD>yes</ALLOW_EMPTY_PASSWORD>
+                    </env>
                   </run>
                 </image>
                 <!-- ##### Jaeger tracing component ##### -->
@@ -2227,7 +2276,7 @@
                 <configuration>
                   <removeVolumes>true</removeVolumes>
                   <removeNamePattern>**/hono-*-test:*</removeNamePattern>
-                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*,postgres-*</stopNamePattern>
+                  <stopNamePattern>hono-*-test-*,all-in-one-*,cp-*,postgres-*,redis-*</stopNamePattern>
                 </configuration>
               </execution>
             </executions>

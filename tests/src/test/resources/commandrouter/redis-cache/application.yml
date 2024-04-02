@@ -1,0 +1,92 @@
+hono:
+  app:
+    maxInstances: 1
+    amqpMessagingDisabled: ${hono.amqp-messaging.disabled}
+    kafkaMessagingDisabled: ${hono.kafka-messaging.disabled}
+  auth:
+    host: "${hono.auth.host}"
+    port: 5671
+    name: "command-router"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    jwksPollingInterval: "PT20S"
+  commandRouter:
+    amqp:
+      insecurePortEnabled: true
+      insecurePortBindAddress: "0.0.0.0"
+    cache:
+      redis:
+        hosts: "redis://redis:6379"
+  messaging:
+    name: 'Hono Command Router'
+    host: "${hono.amqp-network.host}"
+    port: 5673
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/command-router-key.pem"
+    certPath: "/opt/hono/config/certs/command-router-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  registration:
+    name: 'Hono Command Router'
+    host: "${hono.registration.host}"
+    port: 5672
+    username: "command-router@HONO"
+    password: "cmd-router-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  tenant:
+    name: 'Hono Command Router'
+    host: "${hono.registration.host}"
+    port: 5672
+    username: "command-router@HONO"
+    password: "cmd-router-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  command:
+    name: 'Hono Command Router'
+    host: "${hono.amqp-network.host}"
+    port: 5673
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/command-router-key.pem"
+    certPath: "/opt/hono/config/certs/command-router-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: "${hono.kafka.bootstrap.servers}"
+    commandInternal:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+        delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
+    commandResponse:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+        delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
+    event:
+      producerConfig:
+        max.block.ms: ${kafka-client.producer.max-block-ms}
+        request.timeout.ms: ${kafka-client.producer.request-timeout-ms}
+        delivery.timeout.ms: ${kafka-client.producer.delivery-timeout-ms}
+
+quarkus:
+  otel:
+    exporter:
+      otlp:
+        endpoint: "${otel-collector.endpoint}"
+  console:
+    color: true
+  log:
+    level: INFO
+    min-level: TRACE
+    category:
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}

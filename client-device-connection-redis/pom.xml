@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
+    Copyright (c) 2023 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -20,105 +20,46 @@
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
-  <artifactId>client-device-connection-infinispan</artifactId>
+  <artifactId>client-device-connection-redis</artifactId>
 
-  <name>Hotrod Device Connection client</name>
-  <description>A Hotrod based client for accessing device connection information in an Infinispan data grid.</description>
+  <name>Redis Device Connection client</name>
+  <description>A Redis based client for accessing device connection information in a Redis cluster.</description>
 
   <dependencies>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>client-device-connection</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-redis-client</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-legal</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-core</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-core-jakarta</artifactId>
-      <version>${infinispan.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-client-hotrod-jakarta</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-query-dsl</artifactId>
-      <exclusions>
-       <exclusion>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-commons</artifactId>
-       </exclusion>
-      </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-common</artifactId>
-    </dependency>
-
+    <!--
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
-
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-redis-client</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-core</artifactId>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.logmanager</groupId>
-          <artifactId>jboss-logmanager-embedded</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.logging</groupId>
-          <artifactId>jboss-logging-annotations</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-development-mode-spi</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-bootstrap-runner</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.slf4j</groupId>
-          <artifactId>slf4j-jboss-logmanager</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.graalvm.sdk</groupId>
-          <artifactId>graal-sdk</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-fs-util</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
+    -->
 
     <!-- testing -->
     <dependency>
@@ -154,11 +95,6 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

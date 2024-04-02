@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.deviceconnection.common.CommonCacheConfig;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -174,7 +175,6 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
      */
     @Override
     public Future<JsonObject> checkForCacheAvailability() {
-
         if (isStarted()) {
             final ConnectionCheckResult lastResult = lastConnectionCheckResult;
             if (lastResult != null && !lastResult.isOlderThan(CACHED_CONNECTION_CHECK_RESULT_MAX_AGE)) {
