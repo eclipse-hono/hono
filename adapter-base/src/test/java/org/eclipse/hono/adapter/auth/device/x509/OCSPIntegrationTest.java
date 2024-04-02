@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -52,7 +52,7 @@ import io.vertx.junit5.VertxTestContext;
  * tested against running instance of OCSP responder which is set up using openssl tool running in Testcontainers.
  *
  */
-@Testcontainers
+@DisabledIfSystemProperty(named = "hono.skipDockerTests", matches = "true")
 @ExtendWith(VertxExtension.class)
 class OCSPIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(OCSPIntegrationTest.class);
@@ -75,7 +75,7 @@ class OCSPIntegrationTest {
     /**
      * Load certificates from file system and initialize OCSP responder container.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings({"rawtypes", "unchecked", "resource"})
     @BeforeAll
     static void setUpAll() {
         validCertificate = loadCertificate("target/certs/device-4711-cert.pem");
