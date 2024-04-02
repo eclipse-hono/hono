@@ -50,17 +50,6 @@
       <artifactId>slf4j-api</artifactId>
     </dependency>
 
-    <!--
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-redis-client</artifactId>
-    </dependency>
-    -->
-
     <!-- testing -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>

@@ -33,14 +33,6 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>client-device-connection-redis</artifactId>
     </dependency>
-
-    <!--
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-redis-client</artifactId>
-    </dependency>
-    -->
-
   </dependencies>
 
   <build>
