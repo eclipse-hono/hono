@@ -11,7 +11,7 @@
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -19,15 +19,16 @@
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../parent</relativePath>
   </parent>
-  <artifactId>hono-service-command-router</artifactId>
-  <name>Hono Command Router</name>
-  <description>A Quarkus based implementation of Hono's Command Router API that is using Infinispan for storing data.</description>
+  <artifactId>hono-service-command-router-base</artifactId>
+  <name>Hono Service Command Router Base</name>
+  <description>Base classes for implementing a Quarkus based Hono Command Router</description>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan</artifactId>
+      <artifactId>client-device-connection-base</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-command-amqp</artifactId>
@@ -103,59 +104,5 @@
     </dependency>
 
   </dependencies>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>io.fabric8</groupId>
-          <artifactId>docker-maven-plugin</artifactId>
-          <configuration>
-            <images>
-              <image>
-                <build>
-                  <labels>
-                    <implemented.api.1>Command Router</implemented.api.1>
-                  </labels>
-                  <ports>
-                    <port>5671</port>
-                    <port>5672</port>
-                    <port>${health.check.port}</port>
-                  </ports>
-                </build>
-              </image>
-            </images>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-
-  </build>
-
-  <profiles>
-    <profile>
-      <id>build-docker-image</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>build-native-image</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 
 </project>

@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.commandrouter.app;
+package org.eclipse.hono.commandrouter.infinispan.app;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -55,9 +55,9 @@ import jakarta.inject.Singleton;
  * on whether a remote cache config with a non-empty server list is used or not.
  */
 @ApplicationScoped
-public class DeviceConnectionInfoProducer {
+public class InfinispanDeviceConnectionInfoProducer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceConnectionInfoProducer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InfinispanDeviceConnectionInfoProducer.class);
 
     @ConfigProperty(name = "hono.commandRouter.cache.embedded.configurationFile", defaultValue = "/etc/hono/cache-config.xml")
     String configFile;

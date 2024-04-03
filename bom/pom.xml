@@ -427,7 +427,7 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-service-command-router</artifactId>
+        <artifactId>hono-service-command-router-base</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -8,7 +8,7 @@
                 | |                                        
                 |_|                                        
 
-Eclipse Hono Command Router
+Eclipse Hono Infinispan Based Command Router
 
 Go to https://www.eclipse.org/hono for more information.
 
