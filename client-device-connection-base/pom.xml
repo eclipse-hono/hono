@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019, 2023 Contributors to the Eclipse Foundation
+    Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -12,7 +12,7 @@
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -20,52 +20,15 @@
     <version>2.6.0-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
-  <artifactId>client-device-connection-infinispan</artifactId>
+  <artifactId>client-device-connection-base</artifactId>
 
-  <name>Hotrod Device Connection client</name>
-  <description>A Hotrod based client for accessing device connection information in an Infinispan data grid.</description>
+  <name>Device Connection client</name>
+  <description>Base classes for client for accessing device connection information in a remote cache / data grid.</description>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-legal</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-base</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-core-jakarta</artifactId>
-      <version>${infinispan.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-client-hotrod-jakarta</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-query-dsl</artifactId>
-      <exclusions>
-       <exclusion>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-commons</artifactId>
-       </exclusion>
-      </exclusions>
-    </dependency>
-
-    <!-- TODO: these are repeated from client-device-connection-base. Keep or remove? -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -74,10 +37,31 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-common</artifactId>
+      <!-- TODO: both hono-core and hono-client-common are direct dependencies, but just declaring this one is enough -->
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-api</artifactId>
+      <!-- TODO: this is a direct dependency but was included before through a transient dependency -->
+    </dependency>
+    <dependency>
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config-core</artifactId>
+      <!-- TODO: review, should we rather depend on smallrye-config (core is a transient dependency) -->
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
+      <!-- TODO: review, should we rather depend on vertx-web (vertx-core is a transient dependency) -->
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-health-check</artifactId>
+      <!-- TODO: review, should we rather depend on vertx-web (vertx-health-check is a transient dependency) -->
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -120,13 +104,6 @@
     </dependency>
 
     <!-- testing -->
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- TODO: these are repeated from client-device-connection-base. Keep or remove? -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>

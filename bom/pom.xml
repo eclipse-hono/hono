@@ -432,6 +432,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>client-device-connection-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>client-device-connection-infinispan</artifactId>
         <version>${project.version}</version>
       </dependency>
