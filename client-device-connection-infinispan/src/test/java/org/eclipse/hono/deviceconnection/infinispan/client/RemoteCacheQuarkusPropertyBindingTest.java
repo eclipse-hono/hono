@@ -25,24 +25,9 @@ import org.infinispan.client.hotrod.configuration.Configuration;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests verifying binding of configuration properties to {@link CommonCacheConfig} and
- * {@link InfinispanRemoteConfigurationProperties}.
- *
+ * Tests verifying binding of configuration properties to {@link InfinispanRemoteConfigurationProperties}.
  */
-public class QuarkusPropertyBindingTest {
-
-    @Test
-    void testCommonCacheConfigurationPropertiesArePickedUp() {
-
-        final var commonCacheConfig = new CommonCacheConfig(
-                ConfigMappingSupport.getConfigMapping(
-                        CommonCacheOptions.class,
-                        this.getClass().getResource("/common-cache-options.yaml")));
-
-        assertThat(commonCacheConfig.getCacheName()).isEqualTo("the-cache");
-        assertThat(commonCacheConfig.getCheckKey()).isEqualTo("the-key");
-        assertThat(commonCacheConfig.getCheckValue()).isEqualTo("the-value");
-    }
+public class RemoteCacheQuarkusPropertyBindingTest {
 
     @SuppressWarnings("deprecation")
     @Test

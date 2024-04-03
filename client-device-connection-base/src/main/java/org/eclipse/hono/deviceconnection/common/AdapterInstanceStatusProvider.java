@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceconnection.infinispan.client;
+package org.eclipse.hono.deviceconnection.common;
 
 import java.util.Collection;
 import java.util.Set;
