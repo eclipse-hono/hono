@@ -26,7 +26,6 @@ public class CommonCacheQuarkusPropertyBindingTest {
 
     @Test
     void testCommonCacheConfigurationPropertiesArePickedUp() {
-        System.out.println("!!!!!!!!!!!!!================== RUNNING TEST!!!============================!!!!!!!!!!! STFS");
         final var commonCacheConfig = new CommonCacheConfig(
                 ConfigMappingSupport.getConfigMapping(
                         CommonCacheOptions.class,

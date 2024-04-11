@@ -31,7 +31,6 @@
   <logger name="org.eclipse.hono.client" level="INFO"/>
   <logger name="org.eclipse.hono.config" level="INFO"/>
   <logger name="org.eclipse.hono.connection" level="INFO"/>
-  <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="INFO"/>
   <logger name="org.eclipse.hono.util" level="INFO"/>
 
 </configuration>
