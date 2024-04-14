@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,9 +37,8 @@ import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.ext.sql.SQLClient;
-import io.vertx.ext.sql.SQLConnection;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.SqlConnection;
 
 /**
  * SQL helper methods.
@@ -82,54 +81,6 @@ public final class SQL {
             default:
                 return Future.failedFuture(e);
         }
-    }
-
-    /**
-     * Enable auto-commit.
-     *
-     * @param tracer The tracer.
-     * @param context The span.
-     * @param connection The database connection to change.
-     * @param state The auto-commit state.
-     * @return A future for tracking the outcome.
-     */
-    public static Future<SQLConnection> setAutoCommit(final Tracer tracer, final SpanContext context, final SQLConnection connection, final boolean state) {
-        final Span span = startSqlSpan(tracer, context, "set autocommit", builder -> {
-            builder.withTag("db.autocommit", state);
-        });
-        final Promise<Void> promise = Promise.promise();
-        connection.setAutoCommit(state, promise);
-        return finishSpan(promise.future().map(connection), span, null);
-    }
-
-    /**
-     * Perform commit operation.
-     *
-     * @param tracer The tracer.
-     * @param context The span.
-     * @param connection The database connection to work on.
-     * @return A future for tracking the outcome.
-     */
-    public static Future<SQLConnection> commit(final Tracer tracer, final SpanContext context, final SQLConnection connection) {
-        final Span span = startSqlSpan(tracer, context, "commit", null);
-        final Promise<Void> promise = Promise.promise();
-        connection.commit(promise);
-        return finishSpan(promise.future().map(connection), span, null);
-    }
-
-    /**
-     * Perform rollback operation.
-     *
-     * @param tracer The tracer.
-     * @param context The span.
-     * @param connection The database connection to work on.
-     * @return A future for tracking the outcome.
-     */
-    public static Future<SQLConnection> rollback(final Tracer tracer, final SpanContext context, final SQLConnection connection) {
-        final Span span = startSqlSpan(tracer, context, "rollback", null);
-        final Promise<Void> promise = Promise.promise();
-        connection.rollback(promise);
-        return finishSpan(promise.future().map(connection), span, null);
     }
 
     /**
@@ -286,40 +237,22 @@ public final class SQL {
      * @param <T> The type of the result.
      * @return A future, tracking the outcome of the operation.
      */
-    public static <T> Future<T> runTransactionally(final SQLClient client, final Tracer tracer, final SpanContext context, final BiFunction<SQLConnection, SpanContext, Future<T>> function) {
+    public static <T> Future<T> runTransactionally(final JDBCPool client, final Tracer tracer, final SpanContext context, final BiFunction<SqlConnection, SpanContext, Future<T>> function) {
 
         final Span span = startSqlSpan(tracer, context, "run transactionally", builder -> {
         });
 
-        final Promise<SQLConnection> promise = Promise.promise();
-        client.getConnection(promise);
-
-        return promise.future()
-
+        return client.withTransaction((connection) -> {
                 // log open connection
-                .onSuccess(x -> {
-                    final Map<String, Object> log = new HashMap<>();
-                    log.put(Fields.EVENT, "success");
-                    log.put(Fields.MESSAGE, "connection opened");
-                    span.log(log);
-                })
+                final Map<String, Object> log = new HashMap<>();
+                log.put(Fields.EVENT, "success");
+                log.put(Fields.MESSAGE, "connection opened");
+                span.log(log);
 
-                // disable autocommit, which is enabled by default
-                .flatMap(connection -> SQL.setAutoCommit(tracer, span.context(), connection, false)
-
-                        // run code
-                        .flatMap(y -> function.apply(connection, span.context())
-
-                                // commit or rollback ... return original result
-                                .compose(
-                                        v -> SQL.commit(tracer, span.context(), connection).map(v),
-                                        x -> SQL.rollback(tracer, span.context(), connection).flatMap(unused -> Future.failedFuture(x))))
-
-                        // close the connection
-                        .onComplete(x -> connection.close()))
-
-                .onComplete(x -> span.finish());
-
+                // execute function within a transaction
+                return function.apply(connection, span.context());
+            })
+            .onComplete(x -> span.finish());
     }
 
 }

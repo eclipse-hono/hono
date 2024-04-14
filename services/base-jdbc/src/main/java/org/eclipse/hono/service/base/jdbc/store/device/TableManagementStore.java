@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -56,11 +56,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLConnection;
-import io.vertx.ext.sql.SQLOperations;
 import io.vertx.ext.sql.UpdateResult;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.SqlConnection;
 
 /**
  * A data store for devices and credentials, based on a table data model.
@@ -114,7 +113,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param tracer The tracer to use.
      * @param cfg The SQL statement configuration.
      */
-    public TableManagementStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public TableManagementStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
         cfg.dump(log);
 
@@ -274,7 +273,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param span The span to contribute to.
      * @return A future tracking the outcome of the operation.
      */
-    protected Future<ResultSet> readDeviceForUpdate(final SQLConnection connection, final DeviceKey key, final SpanContext span) {
+    protected Future<ResultSet> readDeviceForUpdate(final SqlConnection connection, final DeviceKey key, final SpanContext span) {
         return read(connection, key, Optional.empty(), this.readForUpdateStatement, span);
     }
 
@@ -349,7 +348,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     }
 
     private Future<Void> createGroups(
-            final SQLConnection connection,
+            final SqlConnection connection,
             final DeviceKey key,
             final Set<String> memberOf,
             final SpanContext context) {
@@ -375,7 +374,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     }
 
-    private Future<Void> deleteGroups(final SQLConnection connection,
+    private Future<Void> deleteGroups(final SqlConnection connection,
                                       final DeviceKey key,
                                       final SpanContext context) {
 
@@ -442,10 +441,13 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .update(this.client);
 
         // process result, check optimistic lock
-        return checkOptimisticLock(
-                result, span,
-                resourceVersion,
-                checkSpan -> readDevice(this.client, key, checkSpan));
+        return this.client.getConnection().compose(connection -> {
+            return checkOptimisticLock(
+                    result, span,
+                    resourceVersion,
+                    checkSpan -> readDevice(connection, key, checkSpan))
+                    .onComplete(x -> connection.close());
+        });
 
     }
 
@@ -530,7 +532,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * Reads the device data.
      * <p>
      * This reads the device data using
-     * {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)} and
+     * {@link #readDevice(io.vertx.sqlclient.SqlConnection, DeviceKey, Span)} and
      * transforms the plain result into a {@link DeviceReadResult}.
      * <p>
      * If now rows where found, the result will be empty. If more than one row is found,
@@ -550,23 +552,26 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        return readDevice(this.client, key, span)
+        return this.client.getConnection().compose(connection -> {
+            return readDevice(connection, key, span)
 
-                .<Optional<DeviceReadResult>>flatMap(r -> {
-                    final var entries = r.getRows(true);
-                    switch (entries.size()) {
-                        case 0:
-                            return Future.succeededFuture(Optional.empty());
-                        case 1:
-                            final var entry = entries.get(0);
-                            final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(key.getTenantId(), key.getDeviceId(), entry);
-                            return Future.succeededFuture(Optional.of(new DeviceReadResult(deviceDto.getDeviceWithStatus(), Optional.of(deviceDto.getVersion()))));
-                        default:
-                            return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
-                    }
-                })
+                    .<Optional<DeviceReadResult>>flatMap(r -> {
+                        final var entries = r.getRows(true);
+                        switch (entries.size()) {
+                            case 0:
+                                return Future.succeededFuture(Optional.empty());
+                            case 1:
+                                final var value = entries.get(0);
+                                final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forRead(key.getTenantId(), key.getDeviceId(), value);
+                                return Future.succeededFuture(Optional.of(new DeviceReadResult(deviceDto.getDeviceWithStatus(), Optional.of(deviceDto.getVersion()))));
+                            default:
+                                return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
+                        }
+                    })
 
-                .onComplete(x -> span.finish());
+                    .onComplete(x -> connection.close())
+                    .onComplete(x -> span.finish());
+        });
 
     }
 
@@ -609,15 +614,18 @@ public class TableManagementStore extends AbstractDeviceStore {
 
         log.debug("delete - statement: {}", expanded);
 
-        final var result = expanded
-                .trace(this.tracer, span.context())
-                .update(this.client);
+        return this.client.getConnection().compose(connection -> {
+            final var result = expanded
+                    .trace(this.tracer, span.context())
+                    .update(connection);
 
-        return checkOptimisticLock(
-                result, span,
-                resourceVersion,
-                checkSpan -> readDevice(this.client, key, checkSpan))
-                .onComplete(x -> span.finish());
+            return checkOptimisticLock(
+                    result, span,
+                    resourceVersion,
+                    checkSpan -> readDevice(connection, key, checkSpan))
+                    .onComplete(x -> connection.close())
+                    .onComplete(x -> span.finish());
+        });
 
     }
 
@@ -650,7 +658,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Gets the number of devices that are registered for a tenant.
      *
-     * @param operations The SQL operations instance to use.
+     * @param connection The SQL connection instance to use.
      * @param tenantId The tenant to count devices for.
      * @param spanContext The span to contribute to.
      * @param countStatement The count statement to use.
@@ -659,7 +667,7 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @return A future tracking the outcome of the operation.
      * @throws NullPointerException if tenant is {@code null}.
      */
-    public Future<Integer> getDeviceCount(final SQLOperations operations, final String tenantId, final SpanContext spanContext, final Statement countStatement, final String field, final String value) {
+    public Future<Integer> getDeviceCount(final SqlConnection connection, final String tenantId, final SpanContext spanContext, final Statement countStatement, final String field, final String value) {
 
         Objects.requireNonNull(tenantId);
 
@@ -677,7 +685,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
         return expanded
                 .trace(this.tracer, span.context())
-                .query(operations)
+                .query(connection)
                 .map(r -> {
                     final var entries = r.getRows(true);
                     switch (entries.size()) {
@@ -812,7 +820,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     private Future<CredentialsDto> getCredentialsDto(
             final DeviceKey key,
-            final SQLConnection connection,
+            final SqlConnection connection,
             final Span span) {
 
         return readCredentialsStatement
@@ -907,11 +915,7 @@ public class TableManagementStore extends AbstractDeviceStore {
             map.put(DEVICE_ID, key.getDeviceId());
         });
 
-        final Promise<SQLConnection> promise = Promise.promise();
-        this.client.getConnection(promise);
-
-        return promise.future()
-
+        return this.client.getConnection()
                 .compose(connection -> readDevice(connection, key, span)
 
                         // check if we got back a result, if not this will abort early
@@ -1009,7 +1013,9 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        final Future<Integer> deviceCountFuture = getDeviceCount(this.client, tenantId, span.context(), countStatement, field, value);
+        final Future<Integer> deviceCountFuture = this.client.getConnection()
+                .compose(connection -> getDeviceCount(connection, tenantId, span.context(), countStatement, field, value)
+                        .onComplete(x -> connection.close()));
 
         return deviceCountFuture
                 .compose(count -> expanded.trace(this.tracer, span.context()).query(this.client))

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,8 +37,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
-import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.sql.ResultSet;
+import io.vertx.jdbcclient.JDBCPool;
 
 /**
  * A data store for devices and credentials, based on a table data model.
@@ -59,7 +58,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
      * @param cfg The SQL statement configuration.
      * @param dialect Database type, from the JDBC URL scheme
      */
-    public TableAdapterStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg, final String dialect) {
+    public TableAdapterStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg, final String dialect) {
         super(client, tracer, cfg);
         this.dialect = dialect;
         cfg.dump(log);
@@ -79,25 +78,11 @@ public class TableAdapterStore extends AbstractDeviceStore {
 
     }
 
-
-    /**
-     * Read a device using {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)} and the
-     * current SQL client.
-     *
-     * @param key The key of the device to read.
-     * @param span The span to contribute to.
-     *
-     * @return The result from {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)}.
-     */
-    protected Future<ResultSet> readDevice(final DeviceKey key, final Span span) {
-        return readDevice(this.client, key, span);
-    }
-
     /**
      * Reads the device data.
      * <p>
      * This reads the device data using
-     * {@link #readDevice(io.vertx.ext.sql.SQLOperations, DeviceKey, Span)} and
+     * {@link #readDevice(io.vertx.sqlclient.SqlConnection, DeviceKey, Span)} and
      * transforms the plain result into a {@link DeviceReadResult}.
      * <p>
      * If now rows where found, the result will be empty. If more than one row is found,
@@ -118,24 +103,27 @@ public class TableAdapterStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        return readDevice(this.client, key, span)
+        return this.client.getConnection().compose(connection -> {
+            return readDevice(connection, key, span)
 
-                .<Optional<DeviceReadResult>>flatMap(r -> {
-                    final var entries = r.getRows(true);
-                    switch (entries.size()) {
-                        case 0:
-                            return Future.succeededFuture(Optional.empty());
-                        case 1:
-                            final var entry = entries.get(0);
-                            final var device = Json.decodeValue(entry.getString("data"), Device.class);
-                            final var version = Optional.ofNullable(entry.getString("version"));
-                            return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
-                        default:
-                            return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
-                    }
-                })
+                    .<Optional<DeviceReadResult>>flatMap(r -> {
+                        final var entries = r.getRows(true);
+                        switch (entries.size()) {
+                            case 0:
+                                return Future.succeededFuture(Optional.empty());
+                            case 1:
+                                final var entry = entries.get(0);
+                                final var device = Json.decodeValue(entry.getString("data"), Device.class);
+                                final var version = Optional.ofNullable(entry.getString("version"));
+                                return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
+                            default:
+                                return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
+                        }
+                    })
 
-                .onComplete(x -> span.finish());
+                    .onComplete(x -> connection.close())
+                    .onComplete(x -> span.finish());
+        });
 
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,8 @@ import io.agroal.api.security.NamePrincipal;
 import io.agroal.api.security.SimplePassword;
 import io.agroal.pool.DataSource;
 import io.vertx.core.Vertx;
-import io.vertx.ext.jdbc.JDBCClient;
+import io.vertx.core.json.JsonObject;
+import io.vertx.jdbcclient.JDBCPool;
 
 /**
  * Configuration properties for a JDBC service.
@@ -175,14 +176,14 @@ public class JdbcProperties {
     }
 
     /**
-     * Creates a JDBC client for configuration properties.
+     * Creates a JDBC pool for configuration properties.
      *
      * @param vertx The vertx instance to use.
      * @param dataSourceProperties The properties.
-     * @return The client.
+     * @return The JDBC pool.
      * @throws IllegalArgumentException if any of the properties are invalid.
      */
-    public static JDBCClient dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
+    public static JDBCPool dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
 
         log.info("Creating new SQL client for table: {}", dataSourceProperties.getTableName());
 
@@ -213,6 +214,11 @@ public class JdbcProperties {
                                 .principal(username)
                                 .credential(password)));
 
-        return JDBCClient.create(vertx, new DataSource(configuration.get()));
+        return JDBCPool.pool(vertx, new DataSource(configuration.get()),
+                new JsonObject()
+                        .put("jdbcUrl", dataSourceProperties.getUrl())
+                        .put("username", Optional.ofNullable(dataSourceProperties.getUsername()).orElse(""))
+                        .put("database", "")
+                        .put("maxPoolSize", dataSourceProperties.getMaximumPoolSize()));
     }
 }
