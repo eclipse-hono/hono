@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,9 +26,9 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
-import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLOperations;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.SqlConnection;
 
 /**
  * An abstract base for implementing a device registration store.
@@ -37,7 +37,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractDeviceStore.class);
 
-    protected final JDBCClient client;
+    protected final JDBCPool client;
     protected final Tracer tracer;
 
     private final Statement readRegistrationStatement;
@@ -49,7 +49,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * @param tracer The tracer to use.
      * @param cfg The SQL statement configuration.
      */
-    public AbstractDeviceStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AbstractDeviceStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg.getStatement("checkConnection"));
 
         this.client = client;
@@ -69,14 +69,14 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * This will execute the {@code readRegistration} statement and simply
      * return the result set unprocessed.
      *
-     * @param operations The SQL operations to use.
+     * @param connection The SQL connection to use.
      * @param key The key to the device entry.
      * @param span The span to contribute to.
      *
      * @return The future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> readDevice(final SQLOperations operations, final DeviceKey key, final Span span) {
-        return read(operations, key, this.readRegistrationStatement, span.context());
+    protected Future<ResultSet> readDevice(final SqlConnection connection, final DeviceKey key, final Span span) {
+        return read(connection, key, this.readRegistrationStatement, span.context());
     }
 
     /**
@@ -86,15 +86,15 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * return the result set unprocessed. The statement must accept the named
      * parameters {@code tenant_id} and {@code device_id}.
      *
-     * @param operations The SQL operations to use.
+     * @param connection The SQL connection to use.
      * @param key The key to the device entry.
      * @param statement The statement to execute.
      * @param spanContext The span to contribute to.
      *
      * @return The future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Statement statement, final SpanContext spanContext) {
-        return read(operations, key, Optional.empty(), statement, spanContext);
+    protected Future<ResultSet> read(final SqlConnection connection, final DeviceKey key, final Statement statement, final SpanContext spanContext) {
+        return read(connection, key, Optional.empty(), statement, spanContext);
     }
 
     /**
@@ -104,7 +104,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      * return the result set unprocessed. The statement must accept the named
      * parameters {@code tenant_id}, {@code device_id} and {@code expected_version} (if not empty).
      *
-     * @param operations The SQL operations to use.
+     * @param connection The SQL connection to use.
      * @param key The key to the device entry.
      * @param statement The statement to execute.
      * @param resourceVersion An optional resource version to read.
@@ -112,7 +112,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
      *
      * @return The future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> read(final SQLOperations operations, final DeviceKey key, final Optional<String> resourceVersion, final Statement statement, final SpanContext spanContext) {
+    protected Future<ResultSet> read(final SqlConnection connection, final DeviceKey key, final Optional<String> resourceVersion, final Statement statement, final SpanContext spanContext) {
 
         final var expanded = statement.expand(params -> {
             params.put("tenant_id", key.getTenantId());
@@ -124,7 +124,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
 
         return expanded
                 .trace(this.tracer, spanContext)
-                .query(operations);
+                .query(connection);
 
     }
 

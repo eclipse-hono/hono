@@ -36,14 +36,16 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLOperations;
 import io.vertx.ext.sql.UpdateResult;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.SqlConnection;
+import io.vertx.sqlclient.SqlResult;
+import io.vertx.sqlclient.Tuple;
 
 /**
  * An SQL statement, which can map named parameters to positional parameters.
@@ -232,10 +234,6 @@ public final class Statement {
             return this.parameters;
         }
 
-        public JsonArray getParametersAsJson() {
-            return new JsonArray(Arrays.asList(this.parameters));
-        }
-
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
@@ -255,17 +253,6 @@ public final class Statement {
             return new ExpandedStatement(this.sql, this.parameters, tracer, spanContext);
         }
 
-        @FunctionalInterface
-        private interface Operation<T> {
-            void run(String sql, JsonArray params, Handler<AsyncResult<T>> handler);
-        }
-
-        private <T> Future<T> run(final Operation<T> operation) {
-            final Promise<T> promise = Promise.promise();
-            operation.run(this.sql, getParametersAsJson(), promise);
-            return promise.future();
-        }
-
         /**
          * Start a new span for this SQL statement.
          * @return The newly created span.
@@ -282,13 +269,46 @@ public final class Statement {
 
         /**
          * Execute this statement as a query.
+         * @param pool The connection pool to work on.
+         * @return A future tracking the query result.
+         */
+        public Future<ResultSet> query(final JDBCPool pool) {
+            final Span sqlSpan = startSqlSpan();
+            return SQL.finishSpan(pool
+                    .preparedQuery(this.sql)
+                    .execute(Tuple.from(getParameters()))
+                    .map(this::convertRowSetToResultSet), sqlSpan, (r, log) -> {
+                log.put("rows", r.getNumRows());
+            });
+        }
+
+        /**
+         * Execute this statement as a query.
          * @param connection The connection to work on.
          * @return A future tracking the query result.
          */
-        public Future<ResultSet> query(final SQLOperations connection) {
+        public Future<ResultSet> query(final SqlConnection connection) {
             final Span sqlSpan = startSqlSpan();
-            return SQL.finishSpan(run(connection::queryWithParams), sqlSpan, (r, log) -> {
+            return SQL.finishSpan(connection
+                    .preparedQuery(this.sql)
+                    .execute(Tuple.from(getParameters()))
+                    .map(this::convertRowSetToResultSet), sqlSpan, (r, log) -> {
                 log.put("rows", r.getNumRows());
+            });
+        }
+
+        /**
+         * Execute this statement as a update.
+         * @param pool The connection pool to work on.
+         * @return A future tracking the update result.
+         */
+        public Future<UpdateResult> update(final JDBCPool pool) {
+            final Span sqlSpan = startSqlSpan();
+            return SQL.finishSpan(pool
+                    .preparedQuery(this.sql)
+                    .execute(Tuple.from(getParameters()))
+                    .map(this::convertRowSetToUpdateResult), sqlSpan, (r, log) -> {
+                log.put("rows", r);
             });
         }
 
@@ -297,11 +317,33 @@ public final class Statement {
          * @param connection The connection to work on.
          * @return A future tracking the update result.
          */
-        public Future<UpdateResult> update(final SQLOperations connection) {
+        public Future<UpdateResult> update(final SqlConnection connection) {
             final Span sqlSpan = startSqlSpan();
-            return SQL.finishSpan(run(connection::updateWithParams), sqlSpan, (r, log) -> {
-                log.put("rows", r.getUpdated());
+            return SQL.finishSpan(connection
+                    .preparedQuery(this.sql)
+                    .execute(Tuple.from(getParameters()))
+                    .map(this::convertRowSetToUpdateResult), sqlSpan, (r, log) -> {
+                log.put("rows", r);
             });
+        }
+
+        private ResultSet convertRowSetToResultSet(final RowSet<Row> rows) {
+            final List<JsonArray> results = new ArrayList<>();
+            rows.forEach(row -> {
+                final JsonArray values = new JsonArray();
+                for (int index = 0; index < row.size(); ++index) {
+                    values.add(row.getValue(index));
+                }
+                results.add(values);
+            });
+            return new ResultSet()
+                    .setColumnNames(rows.columnsNames())
+                    .setResults(results);
+        }
+
+        private UpdateResult convertRowSetToUpdateResult(final SqlResult<RowSet<Row>> sqlResult) {
+            return new UpdateResult()
+                    .setUpdated(sqlResult.rowCount());
         }
 
     }

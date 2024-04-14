@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.service.base.jdbc.store.tenant;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -41,10 +43,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.sql.SQLConnection;
-import io.vertx.ext.sql.SQLOperations;
 import io.vertx.ext.sql.UpdateResult;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.SqlConnection;
 
 /**
  * A data store for tenant management information.
@@ -75,7 +76,7 @@ public class ManagementStore extends AbstractTenantStore {
      * @param tracer The tracer to use.
      * @param cfg The statement configuration to use.
      */
-    public ManagementStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public ManagementStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
 
 
@@ -178,11 +179,11 @@ public class ManagementStore extends AbstractTenantStore {
     public Future<Integer> getTenantCount() {
 
         final Promise<Integer> result = Promise.promise();
-        this.client.querySingle(countStatementSql, rs -> {
+        this.client.query(countStatementSql).execute(rs -> {
             if (rs.failed()) {
                 result.fail(new IllegalStateException("failed to query number of tenants", rs.cause()));
             } else {
-                result.complete(rs.result().getInteger(0));
+                result.complete(rs.result().iterator().next().getInteger(0));
             }
         });
         return result.future();
@@ -234,7 +235,7 @@ public class ManagementStore extends AbstractTenantStore {
 
     }
 
-    private Future<Void> deleteAllTrustAnchors(final SQLConnection connection, final String tenantId, final Span span) {
+    private Future<Void> deleteAllTrustAnchors(final SqlConnection connection, final String tenantId, final Span span) {
 
         return this.deleteAllTrustAnchorsStatement
 
@@ -246,7 +247,7 @@ public class ManagementStore extends AbstractTenantStore {
 
     }
 
-    private Future<Void> insertAllTrustAnchors(final SQLConnection connection, final String tenantId, final Tenant tenant, final Span span) {
+    private Future<Void> insertAllTrustAnchors(final SqlConnection connection, final String tenantId, final Tenant tenant, final Span span) {
 
         if (tenant.getTrustedCertificateAuthorities() == null || tenant.getTrustedCertificateAuthorities().isEmpty()) {
             return Future.succeededFuture();
@@ -331,15 +332,18 @@ public class ManagementStore extends AbstractTenantStore {
 
         log.debug("delete - statement: {}", expanded);
 
-        final var result = expanded
-                .trace(this.tracer, span.context())
-                .update(this.client);
+        return this.client.getConnection().compose(connection -> {
+            final var result = expanded
+                    .trace(this.tracer, span.context())
+                    .update(connection);
 
-        return checkOptimisticLock(
-                result, span,
-                resourceVersion,
-                checkSpan -> readTenantEntryById(this.client, tenantId, checkSpan.context()))
-                .onComplete(x -> span.finish());
+            return checkOptimisticLock(
+                    result, span,
+                    resourceVersion,
+                    checkSpan -> readTenantEntryById(connection, tenantId, checkSpan.context()))
+                    .onComplete(x -> connection.close())
+                    .onComplete(x -> span.finish());
+        });
 
     }
 
@@ -413,7 +417,7 @@ public class ManagementStore extends AbstractTenantStore {
      * {@link org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException} is reported via the future. If the
      * entity was not found, an update result with zero changes is returned.
      *
-     * @param operations The SQL instance to use.
+     * @param connection The SQL connection to use.
      * @param tenantId The tenant ID to update.
      * @param statement The update statement to use.
      * @param jsonValue The JSON value of the data field.
@@ -423,7 +427,7 @@ public class ManagementStore extends AbstractTenantStore {
      * @return The future, tracking the outcome of the operation.
      */
     protected Future<UpdateResult> updateJsonField(
-            final SQLOperations operations,
+            final SqlConnection connection,
             final String tenantId,
             final Statement statement,
             final String jsonValue,
@@ -443,13 +447,13 @@ public class ManagementStore extends AbstractTenantStore {
         // execute update
         final var result = expanded
                 .trace(this.tracer, span.context())
-                .update(operations);
+                .update(connection);
 
         // process result, check optimistic lock
         return checkOptimisticLock(
                 result, span,
                 resourceVersion,
-                checkSpan -> readTenantEntryById(operations, tenantId, checkSpan.context()));
+                checkSpan -> readTenantEntryById(connection, tenantId, checkSpan.context()));
     }
 
     /**

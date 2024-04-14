@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,9 +35,9 @@ import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLOperations;
+import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.sqlclient.SqlConnection;
 
 /**
  * A data store for tenant information.
@@ -49,7 +49,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractTenantStore.class);
 
-    protected final JDBCClient client;
+    protected final JDBCPool client;
     protected final Tracer tracer;
 
     private final Statement readStatement;
@@ -62,7 +62,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
      * @param tracer The tracer to use.
      * @param cfg The statement configuration to use.
      */
-    public AbstractTenantStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AbstractTenantStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg.getStatement("checkConnection"));
         cfg.dump(log);
 
@@ -118,12 +118,12 @@ public abstract class AbstractTenantStore extends AbstractStore {
     /**
      * Read a tenant, using the provided statement.
      *
-     * @param operations The operations to use.
+     * @param connection The connection to use.
      * @param expanded The statement to use.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    protected Future<Optional<TenantReadResult>> readTenantBy(final SQLOperations operations, final ExpandedStatement expanded, final SpanContext spanContext) {
+    protected Future<Optional<TenantReadResult>> readTenantBy(final SqlConnection connection, final ExpandedStatement expanded, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "read tenant by", getClass().getSimpleName())
                 .start();
@@ -131,7 +131,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
         return expanded
 
                 .trace(this.tracer, span.context())
-                .query(operations)
+                .query(connection)
 
                 .<Optional<TenantReadResult>>flatMap(r -> {
                     final var entries = r.getRows(true);
@@ -160,7 +160,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
                 .flatMap(result -> {
 
                     if (result.isPresent()) {
-                        return fillTrustAnchors(operations, result.get(), span.context())
+                        return fillTrustAnchors(connection, result.get(), span.context())
                                 .map(Optional::ofNullable);
                     } else {
                         return Future.succeededFuture(result);
@@ -177,12 +177,12 @@ public abstract class AbstractTenantStore extends AbstractStore {
      * <p>
      * The result set will contain zero or one rows.
      *
-     * @param operations The operations to use.
+     * @param connection The connection to use.
      * @param id The ID of the tenant to read.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> readTenantEntryById(final SQLOperations operations, final String id, final SpanContext spanContext) {
+    protected Future<ResultSet> readTenantEntryById(final SqlConnection connection, final String id, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "read tenant entry", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, id)
@@ -194,7 +194,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
 
         return expanded
                 .trace(this.tracer, span.context())
-                .query(operations)
+                .query(connection)
                 .onComplete(x -> span.finish());
 
     }
@@ -204,12 +204,12 @@ public abstract class AbstractTenantStore extends AbstractStore {
      * <p>
      * The result set will contain zero or more rows.
      *
-     * @param operations The operations to use.
+     * @param connection The connection to use.
      * @param id The ID of the tenant to read the trust anchors for.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    protected Future<ResultSet> readTenantTrustAnchors(final SQLOperations operations, final String id, final SpanContext spanContext) {
+    protected Future<ResultSet> readTenantTrustAnchors(final SqlConnection connection, final String id, final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "populate trust anchors", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, id)
@@ -223,7 +223,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
 
         return expanded
                 .trace(this.tracer, span.context())
-                .query(operations)
+                .query(connection)
                 .onComplete(x -> span.finish());
 
     }
@@ -231,18 +231,18 @@ public abstract class AbstractTenantStore extends AbstractStore {
     /**
      * Fill the trust anchors for an already loaded tenant.
      *
-     * @param operations The SQL operations to use.
+     * @param connection The SQL connection to use.
      * @param tenant The tenant read result to populate.
      * @param spanContext The span to contribute to.
      * @return The future, tracking the outcome of the operation.
      */
     protected Future<TenantReadResult> fillTrustAnchors(
-            final SQLOperations operations,
+            final SqlConnection connection,
             final TenantReadResult tenant,
             final SpanContext spanContext
     ) {
 
-        return readTenantTrustAnchors(operations, tenant.getId(), spanContext)
+        return readTenantTrustAnchors(connection, tenant.getId(), spanContext)
                 .map(result -> {
                     tenant
                             .getTenant()

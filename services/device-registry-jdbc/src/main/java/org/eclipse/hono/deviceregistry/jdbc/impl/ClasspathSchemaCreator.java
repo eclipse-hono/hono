@@ -31,7 +31,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.jdbc.JDBCClient;
+import io.vertx.jdbcclient.JDBCPool;
 
 /**
  * Create the expected database schema if it does not exist from SQL script bundled with the classpath.
@@ -102,17 +102,17 @@ public class ClasspathSchemaCreator implements SchemaCreator {
 
     private Future<Void> runScript(final JdbcProperties jdbcProperties, final String script, final SpanContext ctx) {
 
-        final JDBCClient jdbcClient = JdbcProperties.dataSource(vertx, jdbcProperties);
+        final JDBCPool jdbcPool = JdbcProperties.dataSource(vertx, jdbcProperties);
 
-        final Promise<Void> clientCloseTracker = Promise.promise();
-        SQL.runTransactionally(jdbcClient, tracer, ctx,
+        final Promise<Void> poolCloseTracker = Promise.promise();
+        SQL.runTransactionally(jdbcPool, tracer, ctx,
                 (connection, context) -> {
                     return Optional.ofNullable(Statement.statement(script))
                             .map(Statement::expand)
                             .map(stmt -> {
                                 log.debug("creating database schema in [{}] using script: {}", jdbcProperties.getUrl(), stmt);
                                 return stmt
-                                        .query(jdbcClient)
+                                        .query(connection)
                                         .recover(SQL::translateException);
                             })
                             .orElseGet(() -> {
@@ -121,8 +121,8 @@ public class ClasspathSchemaCreator implements SchemaCreator {
                                 return Future.failedFuture("cannot create database schema using script");
                             });
                 })
-                .onComplete(ar -> jdbcClient.close(clientCloseTracker));
-        return clientCloseTracker.future();
+                .onComplete(ar -> jdbcPool.close(poolCloseTracker));
+        return poolCloseTracker.future();
     }
 
 }

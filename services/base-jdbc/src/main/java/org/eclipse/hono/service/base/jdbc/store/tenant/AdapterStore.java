@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,8 +27,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.jdbc.JDBCClient;
-
+import io.vertx.jdbcclient.JDBCPool;
 
 /**
  * A data store for tenant information.
@@ -44,7 +43,7 @@ public class AdapterStore extends AbstractTenantStore {
      * @param tracer The tracer to use.
      * @param cfg The statement configuration to use.
      */
-    public AdapterStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AdapterStore(final JDBCPool client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
 
         this.readByTrustAnchorStatement = cfg
@@ -99,8 +98,9 @@ public class AdapterStore extends AbstractTenantStore {
             map.put("subject_dn", subjectDn);
         });
 
-        return readTenantBy(this.client, expanded, spanContext);
-
+        return this.client.getConnection()
+                .compose(connection -> readTenantBy(connection, expanded, spanContext)
+                        .onComplete(r -> connection.close()));
     }
 
     /**
