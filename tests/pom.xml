@@ -634,7 +634,7 @@
         <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
         <hono.auth-server.max-mem>60000000</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
-        <hono.command-router.image>hono-service-command-router-native</hono.command-router.image>
+        <hono.command-router.image>hono-service-command-router-infinispan-native</hono.command-router.image>
         <hono.command-router.max-mem>100000000</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
