@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+# Copyright (c) 2016 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -23,6 +23,7 @@ IMAGES="hono-adapter-amqp \
         hono-adapter-mqtt \
         hono-adapter-sigfox \
         hono-service-auth \
+        hono-service-command-router-infinispan \
         hono-service-command-router \
         hono-service-device-registry-jdbc \
         hono-service-device-registry-mongodb"
@@ -34,6 +35,7 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-adapter-mqtt-native \
         hono-adapter-sigfox-native \
         hono-service-auth-native \
+        hono-service-command-router-infinispan-native \
         hono-service-command-router-native \
         hono-service-device-registry-jdbc-native \
         hono-service-device-registry-mongodb-native"
@@ -44,7 +46,16 @@ echo "called as $ME"
 if [[ "push_hono_native_images.sh" == "$ME" ]]
 then
   IMAGES=${NATIVE_IMAGES}
+  COMMAND_ROUTER_IMAGE="eclipse/hono-service-command-router-infinispan-native:${TAG}"
+  COMMAND_ROUTER_IMAGE_LEGACY="eclipse/hono-service-command-router-native:${TAG}"
+else
+  COMMAND_ROUTER_IMAGE="eclipse/hono-service-command-router-infinispan:${TAG}"
+  COMMAND_ROUTER_IMAGE_LEGACY="eclipse/hono-service-command-router:${TAG}"
 fi
+
+# Tag the existing Infinispan Command Router image with the legacy name for backwards compatibility
+echo "tagging existing command-router image (${COMMAND_ROUTER_IMAGE}) with legacy name (${COMMAND_ROUTER_IMAGE_LEGACY})"
+docker tag "${COMMAND_ROUTER_IMAGE}" "$COMMAND_ROUTER_IMAGE_LEGACY"
 
 if [[ -n "$TAG" ]]
 then
@@ -59,7 +70,7 @@ then
       IMAGE_NAME="${ECLIPSE_IMAGE_NAME}"
     fi
     echo "pushing image ${IMAGE_NAME}:${TAG} ..."
-    docker push "${IMAGE_NAME}:${TAG}"
+    #docker push "${IMAGE_NAME}:${TAG}"
   done
 else
   echo "This script can be used to push Hono's images from"
