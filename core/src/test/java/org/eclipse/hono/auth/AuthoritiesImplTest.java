@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,10 +34,11 @@ public class AuthoritiesImplTest {
     @Test
     public void testFromClaims() {
 
-        final Claims claims = Jwts.claims();
-        claims.put("r:telemetry/*", "W");
-        claims.put("r:registration/DEFAULT_TENANT", "RW");
-        claims.put("o:credentials/*:get", "E");
+        final Claims claims = Jwts.claims()
+            .add("r:telemetry/*", "W")
+            .add("r:registration/DEFAULT_TENANT", "RW")
+            .add("o:credentials/*:get", "E")
+            .build();
         final Authorities auth = AuthoritiesImpl.from(claims);
         assertThat(auth.isAuthorized(ResourceIdentifier.fromString("telemetry/tenantA"), Activity.WRITE)).isTrue();
         assertThat(auth.isAuthorized(ResourceIdentifier.fromString("registration/DEFAULT_TENANT"), Activity.READ)).isTrue();

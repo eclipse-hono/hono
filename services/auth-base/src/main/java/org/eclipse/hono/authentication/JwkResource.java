@@ -21,7 +21,9 @@ import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOption
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.jsonwebtoken.jackson.io.JacksonSerializer;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -45,9 +47,14 @@ public final class JwkResource {
      * @param authTokenFactory The factory to obtain the JWK from.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     public JwkResource(final AuthTokenFactory authTokenFactory) {
         Objects.requireNonNull(authTokenFactory);
-        jwkBytes = authTokenFactory.getValidatingJwkSet().toBuffer();
+        final var jwkSet = authTokenFactory.getValidatingJwkSet();
+        jwkBytes = Buffer.buffer((byte[]) new JacksonSerializer().serialize(jwkSet));
+        if (LOG.isInfoEnabled()) {
+            LOG.info("using JWK set:{}{}", System.lineSeparator(), new JsonObject(jwkBytes).encodePrettily());
+        }
     }
 
     /**

@@ -93,9 +93,9 @@ io.grpc:grpc-protobuf-lite:jar:1.56.0
 io.grpc:grpc-services:jar:1.56.0
 io.grpc:grpc-stub:jar:1.56.0
 io.grpc:grpc-xds:jar:1.56.0
-io.jsonwebtoken:jjwt-api:jar:0.11.5
-io.jsonwebtoken:jjwt-impl:jar:0.11.5
-io.jsonwebtoken:jjwt-jackson:jar:0.11.5
+io.jsonwebtoken:jjwt-api:jar:0.12.5
+io.jsonwebtoken:jjwt-impl:jar:0.12.5
+io.jsonwebtoken:jjwt-jackson:jar:0.12.5
 io.micrometer:micrometer-commons:jar:1.11.1
 io.micrometer:micrometer-core:jar:1.11.1
 io.micrometer:micrometer-observation:jar:1.11.1

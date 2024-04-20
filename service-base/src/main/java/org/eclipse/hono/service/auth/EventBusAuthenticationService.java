@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -153,17 +153,17 @@ public final class EventBusAuthenticationService implements AuthenticationServic
         private HonoUserImpl(final Jws<Claims> expandedToken, final String token) {
             Objects.requireNonNull(expandedToken);
             Objects.requireNonNull(token);
-            if (expandedToken.getBody() == null) {
+            if (expandedToken.getPayload() == null) {
                 throw new IllegalArgumentException("token has no claims");
             }
             this.token = token;
             this.expandedToken = expandedToken;
-            this.authorities = AuthoritiesImpl.from(expandedToken.getBody());
+            this.authorities = AuthoritiesImpl.from(expandedToken.getPayload());
         }
 
         @Override
         public String getName() {
-            return expandedToken.getBody().getSubject();
+            return expandedToken.getPayload().getSubject();
         }
 
         @Override
@@ -185,7 +185,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
 
         @Override
         public Instant getExpirationTime() {
-            return expandedToken.getBody().getExpiration().toInstant();
+            return expandedToken.getPayload().getExpiration().toInstant();
         }
     }
 }

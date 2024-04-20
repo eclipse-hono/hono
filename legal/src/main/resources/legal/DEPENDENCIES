@@ -93,9 +93,9 @@ maven/mavencentral/io.grpc/grpc-protobuf-lite/1.56.0, Apache-2.0, approved, clea
 maven/mavencentral/io.grpc/grpc-services/1.56.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.grpc/grpc-stub/1.56.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.grpc/grpc-xds/1.56.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.jsonwebtoken/jjwt-api/0.11.5, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.11.5, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.11.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.jsonwebtoken/jjwt-api/0.12.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.12.5, Apache-2.0, approved, #14485
+maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.12.5, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-commons/1.11.1, Apache-2.0 AND (Apache-2.0 AND MIT), approved, #9243
 maven/mavencentral/io.micrometer/micrometer-core/1.11.1, Apache-2.0 AND (Apache-2.0 AND MIT), approved, #9238
 maven/mavencentral/io.micrometer/micrometer-observation/1.11.1, Apache-2.0, approved, #9242

@@ -39,7 +39,7 @@
     <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.51</jaeger.image.name>
     <javax.transaction-api.version>1.3</javax.transaction-api.version>
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
-    <jjwt.version>0.11.5</jjwt.version>
+    <jjwt.version>0.12.5</jjwt.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
     <logback.version>1.4.12</logback.version>
     <mongodb-image.name>docker.io/library/mongo:6.0</mongodb-image.name>

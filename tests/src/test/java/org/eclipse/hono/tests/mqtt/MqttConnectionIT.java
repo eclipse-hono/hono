@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -129,13 +129,15 @@ public class MqttConnectionIT extends MqttTestBase {
         final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
 
         final var jws = Jwts.builder()
-                .setAudience(CredentialsConstants.AUDIENCE_HONO_ADAPTER)
-                .setIssuer(deviceId)
-                .setSubject(deviceId)
+                .header().type("JWT")
+                .and()
+                .audience().add(CredentialsConstants.AUDIENCE_HONO_ADAPTER)
+                .and()
+                .issuer(deviceId)
+                .subject(deviceId)
                 .claim(CredentialsConstants.CLAIM_TENANT_ID, tenantId)
-                .setIssuedAt(Date.from(Instant.now()))
-                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
-                .setHeaderParam("typ", "JWT")
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
                 .signWith(keyPair.getPrivate())
                 .compact();
 
@@ -165,9 +167,10 @@ public class MqttConnectionIT extends MqttTestBase {
         final var rpkCredential = Credentials.createRPKCredential(deviceId, keyPair.getPublic());
 
         final var jws = Jwts.builder()
-                .setIssuedAt(Date.from(Instant.now()))
-                .setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
-                .setHeaderParam("typ", "JWT")
+                .header().type("JWT")
+                .and()
+                .issuedAt(Date.from(Instant.now()))
+                .expiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
                 .signWith(keyPair.getPrivate())
                 .compact();
         final var options = new MqttClientOptions(defaultOptions)

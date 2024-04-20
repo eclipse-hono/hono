@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -98,6 +98,6 @@ public interface AuthenticationServerClientOptions {
      *
      * @return {@code true} if the property is required.
      */
-    @WithDefault("true")
+    @WithDefault("false")
     boolean jwksSignatureAlgorithmRequired();
 }
