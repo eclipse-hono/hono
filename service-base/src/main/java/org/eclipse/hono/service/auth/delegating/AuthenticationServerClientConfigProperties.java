@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,7 +37,7 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
     private String jwksEndpointUri = AuthenticationServerClientOptions.DEFAULT_JWKS_ENDPOINT_URI;
     private boolean jwksEndpointTlsEnabled = false;
     private Duration jwksPollingInterval = Duration.ofMinutes(5);
-    private boolean jwksSignatureAlgorithmRequired = true;
+    private boolean jwksSignatureAlgorithmRequired = false;
 
     /**
      * Creates new properties using default values.
@@ -195,7 +195,7 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
      * the signature algorithm to use with the key as described in
      * <a href="https://datatracker.ietf.org/doc/html/rfc7517#section-4.4">RFC 7517, Section 4.4</a>.
      * <p>
-     * The default value of this property is {@code true}.
+     * The default value of this property is {@code false}.
      *
      * @return {@code true} if the property is required.
      */

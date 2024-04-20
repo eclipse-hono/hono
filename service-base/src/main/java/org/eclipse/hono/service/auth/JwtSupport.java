@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 import javax.crypto.SecretKey;
@@ -29,7 +28,6 @@ import org.eclipse.hono.config.KeyLoader;
 
 import com.google.common.hash.Hashing;
 
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.InvalidKeyException;
 import io.vertx.core.Vertx;
 
@@ -44,8 +42,8 @@ abstract class JwtSupport {
      */
     protected final Vertx vertx;
 
-    private final Map<String, KeySpec> signingKeys = new HashMap<>(5);
-    private final Map<String, KeySpec> validatingKeys = new HashMap<>(5);
+    private final Map<String, Key> signingKeys = new HashMap<>(5);
+    private final Map<String, Key> validatingKeys = new HashMap<>(5);
 
     /**
      * Creates a new helper for a vertx instance.
@@ -81,9 +79,8 @@ abstract class JwtSupport {
     protected final String addSecretKey(final SecretKey secretKey) {
         Objects.requireNonNull(secretKey);
         final var id = createKeyId(secretKey.getEncoded());
-        final var keySpec = new KeySpec(secretKey, SignatureAlgorithm.forSigningKey(secretKey));
-        this.signingKeys.put(id, keySpec);
-        this.validatingKeys.put(id, keySpec);
+        this.signingKeys.put(id, secretKey);
+        this.validatingKeys.put(id, secretKey);
         return id;
     }
 
@@ -134,9 +131,8 @@ abstract class JwtSupport {
         Objects.requireNonNull(keyId);
         Objects.requireNonNull(privateKey);
         Objects.requireNonNull(publicKey);
-        final var alg = SignatureAlgorithm.forSigningKey(privateKey);
-        this.signingKeys.put(keyId, new KeySpec(privateKey, alg));
-        this.validatingKeys.put(keyId, new KeySpec(publicKey, alg));
+        this.signingKeys.put(keyId, privateKey);
+        this.validatingKeys.put(keyId, publicKey);
     }
 
     /**
@@ -152,8 +148,7 @@ abstract class JwtSupport {
         if (publicKey == null) {
             throw new IllegalArgumentException("cannot load public key: " + keyPath);
         } else {
-            final var keySpec = new KeySpec(publicKey);
-            setValidatingKeys(Map.of(createKeyId(publicKey.getEncoded()), keySpec));
+            setValidatingKeys(Map.of(createKeyId(publicKey.getEncoded()), publicKey));
         }
     }
 
@@ -163,7 +158,7 @@ abstract class JwtSupport {
      * @param keys (key ID, key) tuples.
      * @throws NullPointerException if keys is {@code null}.
      */
-    protected final void setValidatingKeys(final Map<String, KeySpec> keys) {
+    protected final void setValidatingKeys(final Map<String, Key> keys) {
         Objects.requireNonNull(keys);
         this.validatingKeys.clear();
         this.validatingKeys.putAll(keys);
@@ -175,7 +170,7 @@ abstract class JwtSupport {
      * @return The key.
      * @throws IllegalStateException if no key or more than one key is registered.
      */
-    protected final KeySpec getValidatingKey() {
+    protected final Key getValidatingKey() {
         if (validatingKeys.size() != 1) {
             throw new IllegalStateException("more than one validating key is registered");
         }
@@ -189,7 +184,7 @@ abstract class JwtSupport {
      * @return The key or {@code null} if no key is registered for the given identifier.
      * @throws NullPointerException if key ID is {@code null}.
      */
-    protected final KeySpec getValidatingKey(final String keyId) {
+    protected final Key getValidatingKey(final String keyId) {
         Objects.requireNonNull(keyId);
         return validatingKeys.get(keyId);
     }
@@ -199,7 +194,7 @@ abstract class JwtSupport {
      *
      * @return An unmodifiable view on the set of (key ID, key) tuples.
      */
-    protected final Set<Map.Entry<String, KeySpec>> getValidatingKeys() {
+    protected final Set<Map.Entry<String, Key>> getValidatingKeys() {
         return Collections.unmodifiableSet(validatingKeys.entrySet());
     }
 
@@ -219,84 +214,8 @@ abstract class JwtSupport {
      * @return The key or {@code null} if no key is registered for the given identifier.
      * @throws NullPointerException if key ID is {@code null}.
      */
-    protected final KeySpec getSigningKey(final String keyId) {
+    protected final Key getSigningKey(final String keyId) {
         Objects.requireNonNull(keyId);
         return signingKeys.get(keyId);
-    }
-
-    /**
-     * A container for a key and its meta data.
-     *
-     * The meta data includes a signature algorithm that is supposed to be used with the
-     * key when creating and/or validating digital signatures.
-     */
-    static class KeySpec {
-        final SignatureAlgorithm algorithm;
-        final Key key;
-
-        /**
-         * Creates a new spec for a key.
-         *
-         * @param key The key.
-         * @throws NullPointerException if key is {@code null}.
-         */
-        KeySpec(final Key key) {
-            this(key, (SignatureAlgorithm) null);
-        }
-
-        /**
-         * Creates a new spec for a key and a signature algorithm.
-         *
-         * @param key The key.
-         * @param algorithmName The JWA name of the signature algorithm to use or {@code null} if the key
-         *                      may be used with any algorithm that is compatible with the key's strength.
-         * @throws NullPointerException if key is {@code null}.
-         */
-        KeySpec(final Key key, final String algorithmName) {
-            this(key, Optional.ofNullable(algorithmName)
-                    .map(SignatureAlgorithm::forName)
-                    .orElse(null));
-        }
-
-        /**
-         * Creates a new spec for a key and a signature algorithm.
-         *
-         * @param key The key.
-         * @param algorithm The signature algorithm to use or {@code null} if the key
-         *                  may be used with any algorithm that is compatible with the key's strength.
-         * @throws NullPointerException if key is {@code null}.
-         */
-        KeySpec(final Key key, final SignatureAlgorithm algorithm) {
-            this.key = Objects.requireNonNull(key);
-            this.algorithm = algorithm;
-        }
-
-        /**
-         * Checks if a given signature algorithm can be used with the key.
-         *
-         * @param algorithmName The JWA name of the algorithm.
-         * @return {@code true} if either
-         *         <ul>
-         *         <li>the key does not require any particular algorithm at all, i.e. the algorithm property is {@code null},
-         *         or</li>
-         *         <li>the given algorithm name is equal to the name of the key's required algorithm.</li>
-         *         </ul>
-         */
-        boolean supportsSignatureAlgorithm(final String algorithmName) {
-
-            Objects.requireNonNull(algorithmName);
-
-            if (algorithm == null) {
-                // check if the key can be used with the given algorithm
-                try {
-                    SignatureAlgorithm.forName(algorithmName).assertValidVerificationKey(key);
-                    return true;
-                } catch (final io.jsonwebtoken.security.SecurityException e) {
-                    return false;
-                }
-            } else {
-                return algorithm.getValue().equals(algorithmName);
-            }
-        }
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,12 +29,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SigningKeyResolverAdapter;
-import io.jsonwebtoken.security.InvalidKeyException;
+import io.jsonwebtoken.LocatorAdapter;
+import io.jsonwebtoken.security.JwkSet;
+import io.jsonwebtoken.security.Jwks;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
-import io.jsonwebtoken.security.SignatureException;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -44,9 +43,6 @@ import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.RequestOptions;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.impl.jose.JWK;
 
 /**
  * A parser that creates a token from a compact serialization of a JWS containing a JSON Web Token as payload.
@@ -54,11 +50,6 @@ import io.vertx.ext.auth.impl.jose.JWK;
  * Supports retrieving a JWT set that contains the key(s) from a web resource.
  *
  */
-@RegisterForReflection(targets = {
-                        io.jsonwebtoken.impl.DefaultJwtParserBuilder.class,
-                        io.jsonwebtoken.jackson.io.JacksonDeserializer.class,
-                        io.jsonwebtoken.impl.compression.DeflateCompressionCodec.class
-})
 public final class JjwtBasedAuthTokenValidator extends JwtSupport implements AuthTokenValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(JjwtBasedAuthTokenValidator.class);
@@ -170,32 +161,24 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
         httpClient.request(requestOptions)
             .compose(HttpClientRequest::send)
             .compose(HttpClientResponse::body)
-            .map(Buffer::toJsonObject)
-            .map(json -> {
+            .map(Buffer::toString)
+            .map(jsonString -> {
+                final JwkSet jwkSet = Jwks.setParser().build().parse(jsonString);
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("server returned JWK set:{}{}", System.lineSeparator(), json.encodePrettily());
+                    LOG.debug("server returned JWK set:{}{}", System.lineSeparator(), jwkSet.toString());
                 }
-                final var keys = json.getJsonArray("keys", new JsonArray());
-                if (keys.isEmpty()) {
+                if (jwkSet.isEmpty()) {
                     LOG.warn("server returned empty key set, won't be able to validate tokens");
                 }
-                return keys;
+                return jwkSet;
             })
             .onSuccess(jwkSet -> {
-                final Map<String, KeySpec> keys = new HashMap<>();
-                jwkSet.stream()
-                    .filter(JsonObject.class::isInstance)
-                    .map(JsonObject.class::cast)
-                    .forEach(json -> {
-                        if (isJwksSignatureAlgorithmRequired && !json.containsKey("alg")) {
-                            LOG.warn("JSON Web Key does not contain required alg property, skipping key ...");
+                final Map<String, Key> keys = new HashMap<>();
+                jwkSet.forEach(jwk -> {
+                        if (isJwksSignatureAlgorithmRequired && jwk.getAlgorithm() == null) {
+                            LOG.warn("JSON Web Key [id: {}] does not contain required alg property, skipping key ...", jwk.getId());
                         } else {
-                            try {
-                                final var jwk = new JWK(json);
-                                keys.put(jwk.getId(), new KeySpec(jwk.publicKey(), jwk.getAlgorithm()));
-                            } catch (final Exception e) {
-                                LOG.warn("failed to deserialize JSON Web Key retrieved from server", e.getCause());
-                            }
+                            keys.put(jwk.getId(), jwk.toKey());
                         }
                     });
                 setValidatingKeys(keys);
@@ -209,55 +192,33 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
             .onComplete(ar -> jwksPollingInProgress.set(false));
     }
 
-    private Key getValidatingKey(final String keyId, final String algorithmName) {
-        if (keyId == null) {
-            LOG.debug("token has no kid header, will try to use default key for validating signature");
-            final var keySpec = getValidatingKey();
-            if (keySpec.supportsSignatureAlgorithm(algorithmName)) {
-                return keySpec.key;
-            } else {
-                throw new InvalidKeyException("""
-                        validating key on record does not support signature algorithm [%s] used in token\
-                        """.formatted(algorithmName));
-            }
-        } else {
-            final var keySpec = getValidatingKey(keyId);
-            if (keySpec == null) {
-                LOG.debug("unknown validating key [id: {}]", keyId);
-                requestJwkSet();
-                throw new InvalidKeyException("unknown validating key");
-            } else if (keySpec.supportsSignatureAlgorithm(algorithmName)) {
-                LOG.debug("using key [id: {}] to validate signature (alg: {}]", keyId, algorithmName);
-                return keySpec.key;
-            } else {
-                throw new InvalidKeyException("""
-                        validating key on record [id: %s] does not support signature
-                        algorithm [%s] used in token\
-                        """.formatted(keyId, algorithmName));
-            }
-        }
-    }
-
     @Override
     public Jws<Claims> expand(final String token) {
 
         Objects.requireNonNull(token);
-        final var builder = Jwts.parserBuilder()
+        final var builder = Jwts.parser()
                 .requireIssuer(config.getIssuer())
-                .setSigningKeyResolver(new SigningKeyResolverAdapter() {
+                .keyLocator(new LocatorAdapter<Key>() {
                     @Override
-                    public Key resolveSigningKey(
-                            @SuppressWarnings("rawtypes") final JwsHeader header,
-                            final Claims claims) {
-
-                        final var algorithmName = Optional.ofNullable(header.getAlgorithm())
-                                .orElseThrow(() -> new SignatureException("token does not contain required alg header"));
+                    public Key locate(final JwsHeader header) {
                         final var keyId = header.getKeyId();
-                        return getValidatingKey(keyId, algorithmName);
+                        if (keyId == null) {
+                            LOG.debug("token has no kid header, will try to use default key for validating signature");
+                            return getValidatingKey();
+                        } else {
+                            final var validatingKey = getValidatingKey(keyId);
+                            if (validatingKey == null) {
+                                LOG.debug("unknown validating key [id: {}], refreshing JWK set ...", keyId);
+                                requestJwkSet();
+                                return null;
+                            } else {
+                                return validatingKey;
+                            }
+                        }
                     }
                 });
 
         Optional.ofNullable(config.getAudience()).ifPresent(builder::requireAudience);
-        return builder.build().parseClaimsJws(token);
+        return builder.build().parseSignedClaims(token);
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ import java.time.Duration;
 
 import org.eclipse.hono.auth.Authorities;
 
-import io.vertx.core.json.JsonObject;
+import io.jsonwebtoken.security.JwkSet;
 
 /**
  * A factory for creating JSON Web Tokens containing user identity and
@@ -64,5 +64,5 @@ public interface AuthTokenFactory {
      * @return The JWK set.
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc7517">RFC 7517</a>
      */
-    JsonObject getValidatingJwkSet();
+    JwkSet getValidatingJwkSet();
 }
