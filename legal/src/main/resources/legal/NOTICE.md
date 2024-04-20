@@ -77,6 +77,26 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-collections).
 
+### Apache Commons IO
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons IO* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-io).
+
+### Apache Commons Lang
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons Lang* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-lang).
+
 ### Apache Commons Logging
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
