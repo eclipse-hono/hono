@@ -13,6 +13,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   * [CVE-2024-29025](https://nvd.nist.gov/vuln/detail/CVE-2024-29025)
   * [CVE-2023-51775](https://bitbucket.org/b_c/jose4j/issues/212)
   * [CVE-2024-29025](https://nvd.nist.gov/vuln/detail/CVE-2024-29025)
+* Also push JDBC Registry native executable image to Docker Hub.
 
 ## 2.5.0
 
