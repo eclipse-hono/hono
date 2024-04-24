@@ -4,6 +4,17 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 2.5.1
+
+### Fixes & Enhancements
+
+* Updated Quarkus to 3.2.12 which includes fixes for
+  * [CVE-2024-2700](https://nvd.nist.gov/vuln/detail/CVE-2024-2700)
+  * [CVE-2024-29025](https://nvd.nist.gov/vuln/detail/CVE-2024-29025)
+  * [CVE-2023-51775](https://bitbucket.org/b_c/jose4j/issues/212)
+  * [CVE-2024-29025](https://nvd.nist.gov/vuln/detail/CVE-2024-29025)
+* Also push JDBC Registry native executable image to Docker Hub.
+
 ## 2.5.0
 
 ### New Features
