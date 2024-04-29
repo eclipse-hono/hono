@@ -43,25 +43,37 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
 ME=$(basename "$0")
 echo "called as $ME"
 
+COMMAND_ROUTER_IMAGE_LEGACY_BASE="hono-service-command-router"
+COMMAND_ROUTER_IMAGE_INFINISPAN_BASE="${COMMAND_ROUTER_IMAGE_LEGACY_BASE}-infinispan"
+
+ECLIPSE_REPO="eclipse"
+
 if [[ "push_hono_native_images.sh" == "$ME" ]]
 then
   IMAGES=${NATIVE_IMAGES}
-  COMMAND_ROUTER_IMAGE="eclipse/hono-service-command-router-infinispan-native:${TAG}"
-  COMMAND_ROUTER_IMAGE_LEGACY="eclipse/hono-service-command-router-native:${TAG}"
+  ECLIPSE_COMMAND_ROUTER_IMAGE_NAME="${ECLIPSE_REPO}/${COMMAND_ROUTER_IMAGE_INFINISPAN_BASE}-native:${TAG}"
+  ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME="${ECLIPSE_REPO}/${COMMAND_ROUTER_IMAGE_LEGACY_BASE}-native:${TAG}"
 else
-  COMMAND_ROUTER_IMAGE="eclipse/hono-service-command-router-infinispan:${TAG}"
-  COMMAND_ROUTER_IMAGE_LEGACY="eclipse/hono-service-command-router:${TAG}"
+  ECLIPSE_COMMAND_ROUTER_IMAGE_NAME="${ECLIPSE_REPO}/${COMMAND_ROUTER_IMAGE_INFINISPAN_BASE}:${TAG}"
+  ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME="${ECLIPSE_REPO}/${COMMAND_ROUTER_IMAGE_LEGACY_BASE}:${TAG}"
 fi
 
-# Tag the existing Infinispan Command Router image with the legacy name for backwards compatibility
-echo "tagging existing command-router image (${COMMAND_ROUTER_IMAGE}) with legacy name (${COMMAND_ROUTER_IMAGE_LEGACY})"
-docker tag "${COMMAND_ROUTER_IMAGE}" "$COMMAND_ROUTER_IMAGE_LEGACY"
+# Tag the Infinispan Command Router image produced in the build with its legacy name for backwards compatibility.
+# The Command Router will be published using both the new and legacy names when looping through the IMAGES array below.
+echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME}) with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
+docker tag "${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
+
+# TODO: should we exit this script before attempting to push images if command-router could not be re-tagged above?
+if [ $? -ne 0 ]; then
+    echo "re-tagging ${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME} with legacy name failed"
+    exit 1
+fi
 
 if [[ -n "$TAG" ]]
 then
   for image in $IMAGES
   do
-    ECLIPSE_IMAGE_NAME="eclipse/$image"
+    ECLIPSE_IMAGE_NAME="${ECLIPSE_REPO}/$image"
     if [[ "docker.io" != "${CR}" || "eclipse" != "${REPO}" ]]
     then
       IMAGE_NAME="${CR}/${REPO}/${image}"
