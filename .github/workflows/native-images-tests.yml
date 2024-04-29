@@ -1,4 +1,4 @@
-# Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+# Copyright (c) 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -29,13 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     name: "Run integration tests with native images"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Maven
-      uses: stCarolas/setup-maven@v4.5
+      uses: stCarolas/setup-maven@v5
       with:
         maven-version: 3.8.8
     - name: Set up JDK
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: "temurin"
         java-version: "17"
