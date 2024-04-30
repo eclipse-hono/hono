@@ -63,11 +63,9 @@ fi
 echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME})" \
      " with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
 
-docker tag "${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
-
-# TODO: should we exit this script before attempting to push images if command-router could not be re-tagged above?
-if [ $? -ne 0 ]; then
-    echo "re-tagging ${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME} with legacy name failed"
+if ! docker tag "${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
+then
+    echo "re-tagging ${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME} with legacy name failed. Exiting!"
     exit 1
 fi
 
@@ -79,7 +77,11 @@ then
     if [[ "docker.io" != "${CR}" || "eclipse" != "${REPO}" ]]
     then
       IMAGE_NAME="${CR}/${REPO}/${image}"
-      docker tag "${ECLIPSE_IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:${TAG}"
+      if ! docker tag "${ECLIPSE_IMAGE_NAME}:${TAG}" "${IMAGE_NAME}:${TAG}"
+      then
+          echo "re-tagging ${ECLIPSE_IMAGE_NAME}:${TAG} as ${IMAGE_NAME}:${TAG} failed. Exiting!"
+          exit 1
+      fi
     else
       IMAGE_NAME="${ECLIPSE_IMAGE_NAME}"
     fi
