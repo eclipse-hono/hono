@@ -16,6 +16,9 @@ TAG=$1
 CR=${2:-"docker.io"}
 REPO=${3:-"eclipse"}
 
+COMMAND_ROUTER_IMAGE_LEGACY_BASE="hono-service-command-router"
+COMMAND_ROUTER_IMAGE_INFINISPAN_BASE="${COMMAND_ROUTER_IMAGE_LEGACY_BASE}-infinispan"
+
 IMAGES="hono-adapter-amqp \
         hono-adapter-coap \
         hono-adapter-http \
@@ -23,8 +26,8 @@ IMAGES="hono-adapter-amqp \
         hono-adapter-mqtt \
         hono-adapter-sigfox \
         hono-service-auth \
-        hono-service-command-router-infinispan \
-        hono-service-command-router \
+        ${COMMAND_ROUTER_IMAGE_INFINISPAN_BASE} \
+        ${COMMAND_ROUTER_IMAGE_LEGACY_BASE} \
         hono-service-device-registry-jdbc \
         hono-service-device-registry-mongodb"
 
@@ -35,16 +38,13 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-adapter-mqtt-native \
         hono-adapter-sigfox-native \
         hono-service-auth-native \
-        hono-service-command-router-infinispan-native \
-        hono-service-command-router-native \
+        ${COMMAND_ROUTER_IMAGE_INFINISPAN_BASE}-native \
+        ${COMMAND_ROUTER_IMAGE_LEGACY_BASE}-native \
         hono-service-device-registry-jdbc-native \
         hono-service-device-registry-mongodb-native"
 
 ME=$(basename "$0")
 echo "called as $ME"
-
-COMMAND_ROUTER_IMAGE_LEGACY_BASE="hono-service-command-router"
-COMMAND_ROUTER_IMAGE_INFINISPAN_BASE="${COMMAND_ROUTER_IMAGE_LEGACY_BASE}-infinispan"
 
 ECLIPSE_REPO="eclipse"
 
@@ -60,7 +60,8 @@ fi
 
 # Tag the Infinispan Command Router image produced in the build with its legacy name for backwards compatibility.
 # The Command Router will be published using both the new and legacy names when looping through the IMAGES array below.
-echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}) with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
+echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME})"
+echo "  with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
 docker tag "${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
 
 # TODO: should we exit this script before attempting to push images if command-router could not be re-tagged above?
