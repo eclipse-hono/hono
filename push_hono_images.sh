@@ -60,12 +60,12 @@ fi
 
 # Tag the Infinispan Command Router image produced in the build with its legacy name for backwards compatibility.
 # The Command Router will be published using both the new and legacy names when looping through the IMAGES array below.
-echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME}) with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
-docker tag "${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
+echo "tagging existing command-router image (${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}) with legacy name (${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME})"
+docker tag "${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME}" "${ECLIPSE_COMMAND_ROUTER_LEGACY_IMAGE_NAME}"
 
 # TODO: should we exit this script before attempting to push images if command-router could not be re-tagged above?
 if [ $? -ne 0 ]; then
-    echo "re-tagging ${ECLIPSE_COMMAND_ROUTER_IMAGE_NAME} with legacy name failed"
+    echo "re-tagging ${ECLIPSE_COMMAND_ROUTER_INFINISPAN_IMAGE_NAME} with legacy name failed"
     exit 1
 fi
 
