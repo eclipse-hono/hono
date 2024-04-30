@@ -71,6 +71,8 @@ fi
 
 if [[ -n "$TAG" ]]
 then
+  IMAGES_TO_PUSH=()
+  # Collect all images for pushing, re-tagging if necessary
   for image in $IMAGES
   do
     ECLIPSE_IMAGE_NAME="${ECLIPSE_REPO}/$image"
@@ -84,9 +86,21 @@ then
       fi
     else
       IMAGE_NAME="${ECLIPSE_IMAGE_NAME}"
+      if ! docker inspect "${IMAGE_NAME}:${TAG}" > /dev/null
+      then
+          echo "image ${IMAGE_NAME}:${TAG} does not exist. Exiting!"
+          exit 1
+      fi
     fi
-    echo "pushing image ${IMAGE_NAME}:${TAG} ..."
-    #docker push "${IMAGE_NAME}:${TAG}"
+    # Collect the image for pushing
+    IMAGES_TO_PUSH+=("${IMAGE_NAME}:${TAG}")
+  done
+
+  # Now push all images that were collected
+  for image in ${IMAGES_TO_PUSH[*]}
+  do
+    echo "pushing image ${image} ..."
+    docker push "${image}"
   done
 else
   echo "This script can be used to push Hono's images from"
