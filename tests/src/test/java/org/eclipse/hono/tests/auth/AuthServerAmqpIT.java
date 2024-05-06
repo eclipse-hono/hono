@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.tests.auth;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.Key;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -36,12 +36,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.jsonwebtoken.JwsHeader;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.LocatorAdapter;
+import io.jsonwebtoken.security.JwkSet;
+import io.jsonwebtoken.security.Jwks;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.impl.jose.JWK;
-import io.vertx.ext.auth.impl.jose.JWT;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -112,14 +113,9 @@ public class AuthServerAmqpIT {
             .onSuccess(response -> {
                 LOG.debug("response from Authentication Server:{}{}", System.lineSeparator(), response.body().toString());
             })
-            .map(HttpResponse::bodyAsJsonObject)
+            .map(HttpResponse::bodyAsString)
             .map(jwkSet -> {
-                final var keys = jwkSet.getJsonArray("keys", new JsonArray());
-                ctx.verify(() -> assertAll(
-                        () -> assertThat(keys).hasSize(1),
-                        () -> assertThat(keys.getValue(0)).isInstanceOf(JsonObject.class)
-                        ));
-                return new JWK(keys.getJsonObject(0));
+                return Jwks.setParser().build().parse(jwkSet);
             });
 
         final var token = client.verifyPlain(null, "hono-client", "secret");
@@ -127,17 +123,29 @@ public class AuthServerAmqpIT {
         Future.all(validationKey, token)
             .onComplete(ctx.succeeding(ok -> {
                 final var user = token.result();
+                final JwkSet jwks = validationKey.result();
                 LOG.debug("retrieved token:{}{}", System.lineSeparator(), user.getToken());
                 ctx.verify(() -> {
                     assertThat(user.getToken()).isNotNull();
-                    final var jwt = new JWT().addJWK(validationKey.result());
-                    final var json = jwt.decode(user.getToken(), true, null);
-                    LOG.info("JWT:{}{}", System.lineSeparator(), json.encodePrettily());
-                    assertThat(json.getJsonObject("header").getString("kid")).isNotNull();
-                    assertThat(json.getJsonObject("payload").getString("iss"))
-                        .isEqualTo(SignatureSupportingOptions.DEFAULT_ISSUER);
-                    assertThat(json.getJsonObject("payload").getString("sub")).isEqualTo("hono-client");
-                    assertThat(json.getJsonObject("payload").getString("aud")).isEqualTo("hono-components");
+                    final var claimsJws = Jwts.parser()
+                        .requireIssuer(SignatureSupportingOptions.DEFAULT_ISSUER)
+                        .requireSubject("hono-client")
+                        .requireAudience("hono-components")
+                        .keyLocator(new LocatorAdapter<Key>() {
+                            protected Key locate(final JwsHeader header) {
+                                return Optional.ofNullable(header.getKeyId())
+                                        .flatMap(keyId -> jwks.getKeys().stream()
+                                                .filter(jwk -> {
+                                                    LOG.debug("checking JWK: {}", jwk);
+                                                    return keyId.equals(jwk.getId());
+                                                }).findFirst())
+                                        .map(jwk -> jwk.toKey())
+                                        .orElse(null);
+                            }
+                        })
+                        .build()
+                        .parseSignedClaims(user.getToken());
+                    assertThat(claimsJws).isNotNull();
                 });
                 ctx.completeNow();
             }));

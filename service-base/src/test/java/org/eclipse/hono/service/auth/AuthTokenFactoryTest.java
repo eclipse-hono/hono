@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,8 +32,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.IncorrectClaimException;
 import io.jsonwebtoken.Jws;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.ext.auth.impl.jose.JWK;
 import io.vertx.junit5.VertxExtension;
 
 
@@ -88,10 +86,10 @@ public class AuthTokenFactoryTest {
         final String token = factory.createToken("userA", authorities);
 
         final Jws<Claims> parsedToken = validator.expand(token);
-        assertThat(parsedToken.getBody()).isNotNull();
-        assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtLeast(expirationMin);
-        assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtMost(expirationMax);
-        assertThat(parsedToken.getBody().getSubject()).isEqualTo("userA");
+        assertThat(parsedToken.getPayload()).isNotNull();
+        assertThat(parsedToken.getPayload().getExpiration().toInstant()).isAtLeast(expirationMin);
+        assertThat(parsedToken.getPayload().getExpiration().toInstant()).isAtMost(expirationMax);
+        assertThat(parsedToken.getPayload().getSubject()).isEqualTo("userA");
     }
 
     /**
@@ -102,10 +100,10 @@ public class AuthTokenFactoryTest {
     public void testGetValidatingKeysReturnsProperKey() {
 
         final var jwks = factory.getValidatingJwkSet();
-        final JsonArray keys = jwks.getJsonArray("keys");
+        final var keys = jwks.getKeys();
         assertThat(keys).hasSize(1);
-        final var jwk = new JWK(keys.getJsonObject(0));
-        assertThat(jwk.publicKey()).isEqualTo(publicKey);
+        final var jwk = keys.iterator().next();
+        assertThat(jwk.toKey()).isEqualTo(publicKey);
     }
 
     /**

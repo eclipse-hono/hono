@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -25,11 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import javax.crypto.KeyGenerator;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -43,11 +40,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.SignatureAlgorithm;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -63,18 +59,19 @@ class DefaultJwsValidatorTest {
     private final String deviceId = "device-id";
     private final String authId = "auth-id";
     private DefaultJwsValidator authTokenValidator;
-    private Map<String, Object> jwtHeader;
     private Instant instantNow;
     private Instant instantPlus24Hours;
 
     @BeforeEach
     void setUp() {
         authTokenValidator = new DefaultJwsValidator();
-        jwtHeader = new HashMap<>();
-        jwtHeader.put(JwsHeader.TYPE, "JWT");
 
         instantNow = Instant.now();
         instantPlus24Hours = instantNow.plus(Duration.ofHours(24));
+    }
+
+    JwtBuilder jwtBuilder() {
+        return Jwts.builder().header().type("JWT").and();
     }
 
     /**
@@ -82,33 +79,41 @@ class DefaultJwsValidatorTest {
      */
     @ParameterizedTest
     @CsvSource(value = {
-        "RS256,2048",
-        "RS256,4096",
-        "RS384,2048",
-        "RS512,2048",
-        "PS256,2048",
-        "PS384,2048",
-        "PS512,2048",
-        "ES256,256",
-        "ES384,384"
+        "RS256,RSA,2048",
+        "RS256,RSA,4096",
+        "RS384,RSA,2048",
+        "RS512,RSA,2048",
+        "PS256,RSA,2048",
+        "PS384,RSA,2048",
+        "PS512,RSA,2048",
+        "ES256,EC,256",
+        "ES384,EC,384"
     })
-    void testExpandValidJwtWithValidPublicKey(final String algorithm, final int keySize, final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.forName(algorithm);
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, keySize);
-        final byte[] publicKey = keyPair.getPublic().getEncoded();
-        final var creds = CredentialsObject.fromRawPublicKey(deviceId, authId, alg.getFamilyName(), publicKey,
-                        instantNow.minusSeconds(3600), instantNow.plusSeconds(3600));
-
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
-        authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
-            .onComplete(ctx.succeeding(jws -> {
-                ctx.verify(() -> {
-                    assertThat(jws.getHeader().getAlgorithm()).isEqualTo(alg.getValue());
-                });
-                ctx.completeNow();
-            }));
+    void testExpandValidJwtWithValidPublicKey(
+            final String algorithm,
+            final String algType,
+            final int keySize,
+            final VertxTestContext ctx) throws GeneralSecurityException {
+        final var alg = Jwts.SIG.get().forKey(algorithm);
+        if (alg instanceof SignatureAlgorithm sigAlg) {
+            final var keyPair = generateKeyPair(algType, keySize);
+            final byte[] publicKey = keyPair.getPublic().getEncoded();
+            final var creds = CredentialsObject.fromRawPublicKey(deviceId, authId, keyPair.getPublic().getAlgorithm(), publicKey,
+                            instantNow.minusSeconds(3600), instantNow.plusSeconds(3600));
+            final String jwt = jwtBuilder()
+                    .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                    .signWith(keyPair.getPrivate(), sigAlg)
+                    .compact();
+            authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
+                .onComplete(ctx.succeeding(jws -> {
+                    ctx.verify(() -> {
+                        assertThat(jws.getHeader().getAlgorithm()).isEqualTo(alg.getId());
+                    });
+                    ctx.completeNow();
+                }));
+        } else {
+            org.junit.Assert.fail("not a signature algorithm");
+        }
 
     }
 
@@ -118,47 +123,44 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandValidJwtWithMultipleDifferentPublicKeysWithinTheirValidityPeriod(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair1 = generateKeyPair(alg, 256);
-        final KeyPair keyPair2 = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair1 = alg.keyPair().build();
+        final KeyPair keyPair2 = alg.keyPair().build();
 
         final JsonObject secondSecret = CredentialsObject.emptySecret(
                 instantNow.minusSeconds(1500),
                 instantNow.plusSeconds(5000))
-            .put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, CredentialsConstants.EC_ALG)
+            .put(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM, keyPair2.getPublic().getAlgorithm())
             .put(CredentialsConstants.FIELD_SECRETS_KEY, keyPair2.getPublic().getEncoded());
 
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
-                CredentialsConstants.EC_ALG,
+                keyPair1.getPublic().getAlgorithm(),
                 keyPair1.getPublic().getEncoded(),
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
         creds.addSecret(secondSecret);
 
-        final String jwt1 = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair1.getPrivate());
-        final String jwt2 = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair2.getPrivate());
+        final String jwt1 = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair1.getPrivate())
+                .compact();
+        final String jwt2 = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair2.getPrivate())
+                .compact();
 
         authTokenValidator.expand(jwt1, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .compose(jws1 -> {
                 ctx.verify(() -> {
-                    assertThat(jws1.getBody().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
+                    assertThat(jws1.getPayload().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
                 });
                 return authTokenValidator.expand(jwt2, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW);
             })
             .onComplete(ctx.succeeding(jws2 -> {
                 ctx.verify(() -> {
-                    assertThat(jws2.getBody().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
+                    assertThat(jws2.getPayload().getExpiration().toInstant()).isAtMost(instantPlus24Hours);
                 });
                 ctx.completeNow();
             }));
@@ -169,18 +171,20 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForJwsUsingHmacKey(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.HS256;
-        final Key key = generateHmacKey();
+        final var alg = Jwts.SIG.HS256;
+        final Key key = alg.key().build();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
-                alg.getFamilyName(),
+                key.getAlgorithm(),
                 key.getEncoded(),
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, key);
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(key)
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 assertThat(t).isInstanceOf(ClientErrorException.class);
@@ -193,20 +197,19 @@ class DefaultJwsValidatorTest {
     /**
      * Verifies that expand fails when an invalid JWS is provided.
      */
-
     @Test
     void testExpandFailsForMalformedJws(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         final var creds = CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG, publicKey,
                         instantNow.minusSeconds(3600), instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair.getPrivate())
-            .replaceFirst("e", "a");
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact()
+                .replaceFirst("e", "a");
 
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
@@ -224,14 +227,15 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForTokenWithoutIat(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
 
         final var creds = CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG,
                 keyPair.getPublic().getEncoded(), instantNow.minusSeconds(3600), instantNow.plusSeconds(3600));
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, null, instantPlus24Hours), alg, keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -247,15 +251,16 @@ class DefaultJwsValidatorTest {
      * Verifies that expand fails for a token that does not contain an <em>exp</em> claim.
      */
     @Test
-    void testExpandExpClaimMissing(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+    void testExpandFailsForTokenWithoutExpiration(final VertxTestContext ctx) {
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final var creds = CredentialsObject.fromRawPublicKey(deviceId, authId, CredentialsConstants.EC_ALG,
                 keyPair.getPublic().getEncoded(), instantNow.minusSeconds(3600), instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, instantNow, null), alg, keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -272,10 +277,8 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandNotYetValidJwtWithValidEcPublicKey(final VertxTestContext ctx) {
-
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
@@ -286,9 +289,10 @@ class DefaultJwsValidatorTest {
                 instantNow.plusSeconds(3600));
 
         final var tooFarInTheFuture = instantNow.plus(ALLOWED_CLOCK_SKEW).plusSeconds(5);
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, tooFarInTheFuture, instantPlus24Hours),
-                alg, keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(tooFarInTheFuture)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -305,9 +309,8 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForTokenWithExpNotAfterIat(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
@@ -316,11 +319,10 @@ class DefaultJwsValidatorTest {
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantNow),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantNow)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -337,9 +339,8 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForTokenExceedingMaxValidityPeriod(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
@@ -348,11 +349,10 @@ class DefaultJwsValidatorTest {
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours.plus(ALLOWED_CLOCK_SKEW).plusSeconds(10)),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours.plus(ALLOWED_CLOCK_SKEW).plusSeconds(10))).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -369,9 +369,8 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsIfCandidateKeyCannotBeDeserialized(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        final KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         publicKey[0] = publicKey[1];
         final var creds = CredentialsObject.fromRawPublicKey(
@@ -381,11 +380,10 @@ class DefaultJwsValidatorTest {
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
 
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
@@ -403,9 +401,8 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForNonMatchingPublicKey(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.ES256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        KeyPair keyPair = generateKeyPair(alg, 256);
+        final var alg = Jwts.SIG.ES256;
+        KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
@@ -415,9 +412,11 @@ class DefaultJwsValidatorTest {
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        keyPair = generateKeyPair(alg, 256);
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
+        keyPair = alg.keyPair().build();
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -434,15 +433,13 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsIfNoCandidateKeyExist(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
+        final var alg = Jwts.SIG.RS256;
+        final KeyPair keyPair = alg.keyPair().build();
 
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
 
         authTokenValidator.expand(jwt, List.of(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
@@ -460,22 +457,21 @@ class DefaultJwsValidatorTest {
      */
     @Test
     void testExpandFailsForTokenWithoutTypeHeader(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
+        final var alg = Jwts.SIG.RS256;
+        final KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
-                alg.getFamilyName(),
+                keyPair.getPrivate().getAlgorithm(),
                 publicKey,
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        final String jwt = generateJws(
-                Map.of(),
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = Jwts.builder()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
 
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
@@ -492,24 +488,23 @@ class DefaultJwsValidatorTest {
      * Verifies that expand fails for a token that has a <em>typ</em> header with a value other than {@code JWT}.
      */
     @Test
-    void testExpandTypFieldInJwtHeaderInvalid(final VertxTestContext ctx) {
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
+    void testExpandFailsForTokenWithInvalidType(final VertxTestContext ctx) {
+        final var alg = Jwts.SIG.RS256;
+        final KeyPair keyPair = alg.keyPair().build();
         final byte[] publicKey = keyPair.getPublic().getEncoded();
         final var creds = CredentialsObject.fromRawPublicKey(
                 deviceId,
                 authId,
-                alg.getFamilyName(),
+                keyPair.getPrivate().getAlgorithm(),
                 publicKey,
                 instantNow.minusSeconds(3600),
                 instantNow.plusSeconds(3600));
 
-        jwtHeader.put(JwsHeader.TYPE, "invalid");
-        final String jwt = generateJws(
-                jwtHeader,
-                generateJwtClaims(null, null, instantNow, instantPlus24Hours),
-                alg,
-                keyPair.getPrivate());
+        final String jwt = Jwts.builder()
+                .header().type("invalid").and()
+                .claims().issuedAt(Date.from(instantNow)).expiration(Date.from(instantPlus24Hours)).and()
+                .signWith(keyPair.getPrivate())
+                .compact();
 
         authTokenValidator.expand(jwt, creds.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
             .onComplete(ctx.failing(t -> {
@@ -528,12 +523,18 @@ class DefaultJwsValidatorTest {
     @Test
     void testGetJwtClaimsValidJwt() {
         final String tenantId = "tenant-id";
-        final SignatureAlgorithm alg = SignatureAlgorithm.RS256;
-        jwtHeader.put(JwsHeader.ALGORITHM, alg.getValue());
-        final KeyPair keyPair = generateKeyPair(alg, 2048);
+        final var alg = Jwts.SIG.RS256;
+        final KeyPair keyPair = alg.keyPair().build();
 
-        final String jwt = generateJws(jwtHeader,
-                generateJwtClaims(tenantId, authId, instantNow, instantPlus24Hours), alg, keyPair.getPrivate());
+        final String jwt = jwtBuilder()
+                .claims()
+                    .issuer(tenantId)
+                    .subject(authId)
+                    .issuedAt(Date.from(instantNow))
+                    .expiration(Date.from(instantPlus24Hours))
+                    .and()
+                .signWith(keyPair.getPrivate())
+                .compact();
         final JsonObject claims = DefaultJwsValidator.getJwtClaims(jwt);
         assertThat(claims.getString(Claims.ISSUER)).isEqualTo(tenantId);
         assertThat(claims.getString(Claims.SUBJECT)).isEqualTo(authId);
@@ -548,50 +549,9 @@ class DefaultJwsValidatorTest {
         assertThrows(MalformedJwtException.class, () -> DefaultJwsValidator.getJwtClaims(jwt));
     }
 
-    private String generateJws(final Map<String, Object> header, final Map<String, Object> claims,
-            final SignatureAlgorithm alg, final Key key) {
-        final JwtBuilder jwtBuilder = Jwts.builder().setHeaderParams(header).setClaims(claims).signWith(key, alg);
-        return jwtBuilder.compact();
-    }
-
-    private KeyPair generateKeyPair(final SignatureAlgorithm alg, final int keySize) {
-        String algType = alg.getFamilyName();
-        if (alg.isEllipticCurve()) {
-            algType = CredentialsConstants.EC_ALG;
-        }
-        try {
-            final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(algType);
-            keyPairGenerator.initialize(keySize);
-            return keyPairGenerator.generateKeyPair();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Key generateHmacKey() {
-        try {
-            final KeyGenerator keyGenerator = KeyGenerator.getInstance("HmacSHA256");
-            return keyGenerator.generateKey();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Map<String, Object> generateJwtClaims(
-            final String iss,
-            final String sub,
-            final Instant iat,
-            final Instant exp) {
-
-        final Map<String, Object> jwtClaims = new HashMap<>();
-        jwtClaims.put(Claims.ISSUER, iss);
-        jwtClaims.put(Claims.SUBJECT, sub);
-        if (iat != null) {
-            jwtClaims.put(Claims.ISSUED_AT, Date.from(iat));
-        }
-        if (exp != null) {
-            jwtClaims.put(Claims.EXPIRATION, Date.from(exp));
-        }
-        return jwtClaims;
+    private KeyPair generateKeyPair(final String algType, final int keySize) throws NoSuchAlgorithmException {
+        final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(algType);
+        keyPairGenerator.initialize(keySize);
+        return keyPairGenerator.generateKeyPair();
     }
 }

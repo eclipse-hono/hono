@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
@@ -30,6 +31,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.MalformedJwtException;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
 
@@ -112,14 +114,22 @@ public class JwtAuthHandler extends ExecutionContextAuthHandler<MqttConnectConte
 
         try {
             final var claims = DefaultJwsValidator.getJwtClaims(auth.getPassword());
-            final JsonObject credentials;
-            if (Objects.equals(claims.getString(Claims.AUDIENCE), CredentialsConstants.AUDIENCE_HONO_ADAPTER)) {
+            final JsonObject credentials = Optional.ofNullable(claims.getValue(Claims.AUDIENCE))
+                .map(v -> {
+                    // support both kinds of audience claim values: single string and array of strings
+                    if (v instanceof String stringValue) {
+                        return JsonArray.of(stringValue);
+                    } else if (v instanceof JsonArray array) {
+                        return array;
+                    } else {
+                        return JsonArray.of();
+                    }
+                })
+                .filter(aud -> aud.contains(CredentialsConstants.AUDIENCE_HONO_ADAPTER))
                 // extract tenant, device ID and issuer from claims
-                credentials = parseCredentialsFromClaims(claims);
-            } else {
+                .map(aud -> parseCredentialsFromClaims(claims))
                 // extract tenant and device ID from MQTT client identifier
-                credentials = parseCredentialsFromString(context.deviceEndpoint().clientIdentifier());
-            }
+                .orElseGet(() -> parseCredentialsFromString(context.deviceEndpoint().clientIdentifier()));
             credentials.put(CredentialsConstants.FIELD_PASSWORD, auth.getPassword());
             result.complete(credentials);
         } catch (final MalformedJwtException e) {

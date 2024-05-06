@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter.auth.device.jwt;
 
 import java.net.HttpURLConnection;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -27,27 +26,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.SigningKeyResolverAdapter;
 import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.security.SignatureException;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -107,85 +100,50 @@ public class DefaultJwsValidator implements JwsValidator {
     private PublicKey convertPublicKeyByteArrayToPublicKey(
             final JsonObject rawPublicKeySecret) throws InvalidKeySpecException, NoSuchAlgorithmException {
 
-        final byte[] encodedPublicKey = rawPublicKeySecret.getBinary(RegistryManagementConstants.FIELD_SECRETS_KEY);
-        final String alg = rawPublicKeySecret.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM);
-        final X509EncodedKeySpec keySpecX509 = new X509EncodedKeySpec(encodedPublicKey);
+        final var encodedPublicKey = rawPublicKeySecret.getBinary(RegistryManagementConstants.FIELD_SECRETS_KEY);
+        final var alg = rawPublicKeySecret.getString(RegistryManagementConstants.FIELD_SECRETS_ALGORITHM);
+        final var keySpecX509 = new X509EncodedKeySpec(encodedPublicKey);
         return KeyFactory.getInstance(alg).generatePublic(keySpecX509);
     }
 
-    private void doExpand(
-            final String jws,
-            final List<JsonObject> candidateKeys,
-            final Duration allowedClockSkew,
-            final Promise<Jws<Claims>> resultHandler) {
-
-        final SignatureAlgorithm signatureAlgorithmFromToken;
-        try {
-            final var header = DefaultJwsValidator.getJwtHeader(jws);
-            signatureAlgorithmFromToken = Optional.ofNullable(header.getString("alg"))
-                    .map(SignatureAlgorithm::forName)
-                    .orElseThrow(() -> new SignatureException("Missing signature algorithm header"));
-        } catch (final JwtException e) {
-            resultHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, e));
-            return;
-        }
-
+    private Jws<Claims> doExpand(
+                final String jws,
+                final List<JsonObject> candidateKeys,
+                final Duration allowedClockSkew) {
 
         final var claims = candidateKeys.stream()
-                .filter(spec -> Optional.ofNullable(spec.getString(CredentialsConstants.FIELD_SECRETS_ALGORITHM))
-                        .map(alg -> signatureAlgorithmFromToken.getFamilyName().startsWith(alg))
-                        .orElse(false))
-                .flatMap(spec -> {
+                .<Jws<Claims>>mapMulti((spec, consumer) -> {
                     try {
-                        return Stream.of(convertPublicKeyByteArrayToPublicKey(spec));
-                    } catch (final InvalidKeySpecException | NoSuchAlgorithmException e) {
-                        return Stream.empty();
-                    }
-                })
-                .flatMap(publicKey -> {
-                    try {
-                        final var parsedClaims = Jwts.parserBuilder()
-                                .setAllowedClockSkewSeconds(allowedClockSkew.toSeconds())
-                                .setSigningKeyResolver(new SigningKeyResolverAdapter() {
-
-                                    @SuppressWarnings("rawtypes")
-                                    @Override
-                                    public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
-                                        final var tokenType = Optional.ofNullable(header.getType())
-                                                .orElseThrow(() -> new MalformedJwtException("JWT must contain typ header"));
-                                        if (!tokenType.equalsIgnoreCase(EXPECTED_TOKEN_TYPE)) {
-                                            throw new MalformedJwtException(
-                                                    "invalid typ header value [expected: %s, found: %s]"
-                                                        .formatted(EXPECTED_TOKEN_TYPE, tokenType));
-                                        }
-                                        final var signatureAlgorithm = Optional.ofNullable(header.getAlgorithm())
-                                                .map(SignatureAlgorithm::forName)
-                                                .orElseThrow(() -> new MalformedJwtException("JWT must contain alg header"));
-                                        if (signatureAlgorithm.getFamilyName().startsWith(publicKey.getAlgorithm())) {
-                                            return publicKey;
-                                        } else {
-                                            throw new JwtException("key algorithm does not match JWT header value");
-                                        }
-                                    }
-                                })
+                        final var publicKey = convertPublicKeyByteArrayToPublicKey(spec);
+                        final var claimsJws = Jwts.parser()
+                                .clockSkewSeconds(allowedClockSkew.toSeconds())
+                                .verifyWith(publicKey)
                                 .build()
-                                .parseClaimsJws(jws);
-                        return Stream.of(parsedClaims);
+                                .parseSignedClaims(jws);
+                        if (Objects.equals(claimsJws.getHeader().getType(), EXPECTED_TOKEN_TYPE)) {
+                            consumer.accept(claimsJws);
+                        } else {
+                            LOG.debug("JWT must contain header [name: type, value: {}", EXPECTED_TOKEN_TYPE);
+                        }
+                    } catch (final InvalidKeySpecException | NoSuchAlgorithmException e) {
+                        LOG.debug("failed to create candidate public key [auth-id: {}]",
+                                spec.getString(RegistryManagementConstants.FIELD_AUTH_ID), e);
                     } catch (final JwtException e) {
-                        LOG.debug("failed to validate token using key [{}]", publicKey, e);
-                        return Stream.empty();
+                        LOG.debug("failed to validate token using candidate key [auth-id: {}]",
+                                spec.getString(RegistryManagementConstants.FIELD_AUTH_ID), e);
                     }
                 })
                 .findFirst();
 
         if (claims.isEmpty()) {
-            resultHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
+            throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED);
         } else {
             try {
                 assertAdditionalClaimsPolicy(claims.get(), allowedClockSkew);
-                resultHandler.complete(claims.get());
+                return claims.get();
             } catch (final JwtException e) {
-                resultHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, e));
+                LOG.debug("failed to validate JWT's claims", e);
+                throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, e);
             }
         }
     }
@@ -200,29 +158,29 @@ public class DefaultJwsValidator implements JwsValidator {
         Objects.requireNonNull(candidateKeys);
         Objects.requireNonNull(allowedClockSkew);
 
-        final Promise<Jws<Claims>> result = Promise.promise();
         final Context currentContext = Vertx.currentContext();
         if (currentContext == null) {
-            doExpand(token, candidateKeys, allowedClockSkew, result);
+            try {
+                return Future.succeededFuture(doExpand(token, candidateKeys, allowedClockSkew));
+            } catch (final ServiceInvocationException e) {
+                return Future.failedFuture(e);
+            }
         } else {
-            currentContext.executeBlocking(codeHandler -> doExpand(
+            return currentContext.executeBlocking(() -> doExpand(
                     token,
                     candidateKeys,
-                    allowedClockSkew,
-                    codeHandler),
-                true, result);
+                    allowedClockSkew), true);
         }
-        return result.future();
     }
 
     // TODO think about moving these additional checks to the JwtAuthProvider because
     // the parameters behind these checks might better be defined at the tenant level
     private void assertAdditionalClaimsPolicy(final Jws<Claims> claims, final Duration allowedClockSkew) {
 
-        final var iat = Optional.ofNullable(claims.getBody().getIssuedAt())
+        final var iat = Optional.ofNullable(claims.getPayload().getIssuedAt())
                 .map(Date::toInstant)
                 .orElseThrow(() -> new UnsupportedJwtException("JWT must contain iat claim"));
-        final var exp = Optional.ofNullable(claims.getBody().getExpiration())
+        final var exp = Optional.ofNullable(claims.getPayload().getExpiration())
                 .map(Date::toInstant)
                 .orElseThrow(() -> new UnsupportedJwtException("JWT must contain exp claim"));
 

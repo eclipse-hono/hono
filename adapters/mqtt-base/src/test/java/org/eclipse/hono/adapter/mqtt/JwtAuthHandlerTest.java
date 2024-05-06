@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,10 +87,10 @@ public class JwtAuthHandlerTest {
             throw new RuntimeException(e);
         }
         final var builder = Jwts.builder().signWith(key);
-        Optional.ofNullable(audience).ifPresent(builder::setAudience);
+        Optional.ofNullable(audience).ifPresent(aud -> builder.audience().add(aud));
         Optional.ofNullable(tenant).ifPresent(t -> builder.claim(CredentialsConstants.CLAIM_TENANT_ID, t));
-        Optional.ofNullable(subject).ifPresent(s -> builder.setSubject(s).setIssuer(s));
-        builder.setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))));
+        Optional.ofNullable(subject).ifPresent(s -> builder.subject(s).issuer(s));
+        builder.expiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))));
         return builder.compact();
     }
 
@@ -132,7 +132,7 @@ public class JwtAuthHandlerTest {
 
     /**
      * Verifies that the handler extracts the tenant and auth ID from the JWT,
-     * if the JWT's audience claim does have value {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
+     * if the JWT's audience claim contains {@value CredentialsConstants#AUDIENCE_HONO_ADAPTER}.
      *
      * @param ctx The vert.x test context.
      */
