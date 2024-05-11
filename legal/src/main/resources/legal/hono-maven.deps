@@ -1,6 +1,6 @@
 biz.paluch.logging:logstash-gelf:jar:1.15.1
-ch.qos.logback:logback-classic:jar:1.4.12
-ch.qos.logback:logback-core:jar:1.4.12
+ch.qos.logback:logback-classic:jar:1.5.6
+ch.qos.logback:logback-core:jar:1.5.6
 com.aayushatharva.brotli4j:brotli4j:jar:1.12.0
 com.aayushatharva.brotli4j:native-linux-x86_64:jar:1.12.0
 com.aayushatharva.brotli4j:service:jar:1.12.0

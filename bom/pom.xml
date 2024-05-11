@@ -40,7 +40,7 @@
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.12.5</jjwt.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
-    <logback.version>1.4.12</logback.version>
+    <logback.version>1.5.6</logback.version>
     <mongodb-image.name>docker.io/library/mongo:6.0</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
