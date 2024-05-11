@@ -16,18 +16,11 @@ The registry is implemented as a Quarkus application, using a MongoDB database a
 either directly from the command line or by means of starting the corresponding
 [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb/) created from it.
 
-The registry is compatible and known to work with following MongoDB versions:
+The registry is compatible and known to work with the following MongoDB versions:
 
-* [MongoDB 4.4](https://www.mongodb.com/docs/v4.4/release-notes/4.4/)
 * [MongoDB 5.0](https://www.mongodb.com/docs/v5.0/release-notes/5.0/)
 * [MongoDB 6.0](https://www.mongodb.com/docs/v6.0/release-notes/6.0/)
 * [MongoDB 7.0](https://www.mongodb.com/docs/v7.0/release-notes/7.0/)
-
-{{% notice warning %}}
-According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
-for Mongo DB 4.4 will end Feb 2024. Consequently, support for Mongo 4.4 in Hono has been deprecated and will be removed
-in a future version altogether. Users are encouraged to migrate to Mongo DB 6.0 or later.
-{{% /notice %}}
 
 ## Service Configuration
 
