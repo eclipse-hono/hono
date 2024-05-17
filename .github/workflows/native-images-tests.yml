@@ -45,7 +45,7 @@ jobs:
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
         -Pbuild-native-image,metrics-prometheus -am \
-        -pl :hono-service-auth,:hono-service-command-router,:hono-service-device-registry-mongodb,:hono-service-device-registry-jdbc,\
+        -pl :hono-service-auth,:hono-service-command-router-infinispan,:hono-service-device-registry-mongodb,:hono-service-device-registry-jdbc,\
         :hono-adapter-mqtt,:hono-adapter-amqp,:hono-adapter-coap,:hono-adapter-http,:hono-adapter-lora,\
         :hono-tests
     - name: "Run integration tests with Mongo DB and Kafka"
