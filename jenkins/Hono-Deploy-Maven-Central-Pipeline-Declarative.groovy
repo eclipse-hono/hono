@@ -181,7 +181,7 @@ pipeline {
                 :hono-client-telemetry-kafka,\
                 :hono-example,\
                 :hono-service-auth,\
-                :hono-service-command-router,\
+                :hono-service-command-router-infinispan,\
                 :hono-service-device-registry-jdbc,\
                 :hono-service-device-registry-mongodb,\
                 "
