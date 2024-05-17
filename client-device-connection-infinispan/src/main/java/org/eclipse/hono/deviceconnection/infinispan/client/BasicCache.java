@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.deviceconnection.common.Cache;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
 import org.infinispan.commons.api.BasicCacheContainer;

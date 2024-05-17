@@ -85,7 +85,7 @@
      Command Router related properties.
      -->
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.image>hono-service-command-router</hono.command-router.image>
+    <hono.command-router.image>hono-service-command-router-infinispan</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
@@ -264,7 +264,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-command-router</artifactId>
+      <artifactId>hono-service-command-router-base</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -629,7 +629,7 @@
         <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
         <hono.auth-server.max-mem>60000000</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
-        <hono.command-router.image>hono-service-command-router-native</hono.command-router.image>
+        <hono.command-router.image>hono-service-command-router-infinispan-native</hono.command-router.image>
         <hono.command-router.max-mem>100000000</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
