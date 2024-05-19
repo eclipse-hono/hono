@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -51,7 +50,6 @@ public class KafkaMockConsumer<K, V> extends MockConsumer<K, V> {
     private final AtomicBoolean skipSettingClosedFlagOnNextClose = new AtomicBoolean();
     private final List<Handler<Map<TopicPartition, OffsetAndMetadata>>> commitListeners = new ArrayList<>();
 
-    private boolean revokeAllOnRebalance = true;
     private Collection<TopicPartition> nextPollRebalancePartitionAssignment;
     private Collection<TopicPartition> onSubscribeRebalancePartitionAssignment;
     private ConsumerRebalanceListener rebalanceListener;
@@ -79,18 +77,6 @@ public class KafkaMockConsumer<K, V> extends MockConsumer<K, V> {
     private static PartitionInfo getPartitionInfo(final String topic, final int partition, final Node node) {
         final Node[] replicas = new Node[]{};
         return new PartitionInfo(topic, partition, node, replicas, replicas);
-    }
-
-    /**
-     * Sets whether the <em>onPartitionsRevoked</em> method shall be invoked with all currently assigned partitions when
-     * a rebalance is triggered.
-     * If set to {@code false}, only the partitions will be revoked that are not in the list of newly assigned
-     * partitions.
-     *
-     * @param revokeAllOnRebalance {@code true} if all assigned partitions shall be revoked on a rebalance.
-     */
-    public void setRevokeAllOnRebalance(final boolean revokeAllOnRebalance) {
-        this.revokeAllOnRebalance = revokeAllOnRebalance;
     }
 
     /**
@@ -143,19 +129,6 @@ public class KafkaMockConsumer<K, V> extends MockConsumer<K, V> {
                     rebalance(newAssignment);
                 });
         return super.poll(timeout);
-    }
-
-    @Override
-    public synchronized void rebalance(final Collection<TopicPartition> newAssignment) {
-        Optional.ofNullable(rebalanceListener)
-                .ifPresent(listener -> {
-                    listener.onPartitionsRevoked(assignment().stream()
-                            .filter(tp -> revokeAllOnRebalance || !newAssignment.contains(tp))
-                            .collect(Collectors.toList()));
-                });
-        super.rebalance(newAssignment);
-        Optional.ofNullable(rebalanceListener)
-                .ifPresent(listener -> listener.onPartitionsAssigned(newAssignment));
     }
 
     /**

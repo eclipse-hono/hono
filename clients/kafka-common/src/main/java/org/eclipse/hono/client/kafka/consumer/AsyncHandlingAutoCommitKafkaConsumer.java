@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,9 +63,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
  * completed gets committed. This prevents incompletely handled records and thereby enables at-least-once semantics.
  * <p>
  * In terms of when offsets are committed, the behaviour is similar to the one used for a consumer with
- * <em>enable.auto.commit</em>. Commits are done periodically (using <em>commitAsync</em>) and when a rebalance
- * happens or the consumer is stopped (using <em>commitSync</em>). The periodic commit interval is defined via
- * the standard <em>auto.commit.interval.ms</em> configuration property.
+ * <em>enable.auto.commit</em>. Commits are done periodically (using <em>commitAsync</em>), and they are also done
+ * (using <em>commitSync</em>) when the consumer is stopped or a rebalance happens (with eager rebalancing
+ * or a non-empty revoked partitions list).
+ * The periodic commit interval is defined via the standard <em>auto.commit.interval.ms</em> configuration property.
  * <p>
  * In order to not fall behind with the position of the committed offset vs. the last received offset, users of this
  * class have to make sure that the record handling function, which provides the completion Future, is completed in time.
@@ -90,7 +91,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
  * still done) but record fetching from all assigned topic partitions is suspended until the throttling threshold is
  * reached again.
  * The overall limit, i.e. the maximum number of incomplete record handler result futures at a given point in time, is
- * calculated from the above mentioned throttling threshold plus the maximum number of records per poll operation.
+ * calculated from the above-mentioned throttling threshold plus the maximum number of records per poll operation.
  *
  * @param <V> The type of record payload this consumer can process.
  */
@@ -653,7 +654,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
          * the 'skipOffsetRecommitPeriodSeconds'. Note that for the actual commit, {@code 1} has to be added to the
          * returned value.
          * <p>
-         * Otherwise an empty Optional is returned.
+         * Otherwise, an empty Optional is returned.
          *
          * @return The offset wrapped in an Optional or an empty Optional if no offset commit is needed.
          */
