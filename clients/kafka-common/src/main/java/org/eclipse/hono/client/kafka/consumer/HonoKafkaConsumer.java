@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -720,7 +720,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                    LOG.debug("partitions assigned: [{}] [client-id: {}]",
+                            HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
                 }
                 ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 updateSubscribedTopicPatternTopicsAndRemoveMetrics();
@@ -744,7 +745,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("partitions revoked: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                    LOG.debug("partitions revoked: [{}] [client-id: {}]",
+                            HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
                 }
                 onPartitionsRevokedBlocking(partitionsSet);
                 context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
