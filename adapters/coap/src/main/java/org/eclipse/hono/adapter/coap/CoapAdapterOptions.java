@@ -152,4 +152,25 @@ public interface CoapAdapterOptions {
      */
     @WithDefault("500")
     int timeoutToAck();
+
+    /**
+     * Gets the DTLS connection id length in bytes.
+     * <p>
+     * <a href= "https://www.rfc-editor.org/rfc/rfc9146.html" target
+     * ="_blank">RFC 9146, Connection Identifier for DTLS 1.2</a>
+     *
+     * <ul>
+     * <li>{@code null} disabled support for connection id.</li>
+     * <li>{@code 0} enable support for connection id, but don't use it for
+     * incoming traffic to this peer.</li>
+     * <li>{@code n} use connection id of n bytes. Note: chose n large enough
+     * for the number of considered peers. Recommended to have 100 time more
+     * values than peers. E.g. 65000 peers, chose not 2 bytes, chose at lease 3
+     * bytes!</li>
+     * </ul>
+     *
+     * @return DTLS connection ID length in bytes, null disabled, 0 enables support without active use of CID.
+     */
+    @WithDefault("null")
+    int dtlsConnectionIdLength();
 }

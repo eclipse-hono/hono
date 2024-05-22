@@ -67,6 +67,11 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      */
     public static final int DEFAULT_BLOCKWISE_STATUS_LIFETIME = 300000;
 
+    /**
+     * DTLS connection ID length in bytes, null disabled, 0 enables support without active use of CID.
+     */
+    public static final Integer DEFAULT_DTLS_CONNECTION_ID_LENGTH = null;
+
     static {
         DEFAULT_CONNECTOR_THREADS = 2;
         final int cpu = Runtime.getRuntime().availableProcessors();
@@ -91,6 +96,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int blockwiseStatusLifetime = DEFAULT_BLOCKWISE_STATUS_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
+    private Integer dtlsConnectionIdLength = DEFAULT_DTLS_CONNECTION_ID_LENGTH;
 
     /**
      * Creates properties using default values.
@@ -117,6 +123,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
         this.networkConfig = options.networkConfig().orElse(null);
         this.secureNetworkConfig = options.secureNetworkConfig().orElse(null);
         setTimeoutToAck(options.timeoutToAck());
+        setDtlsConnectionIdLength(options.dtlsConnectionIdLength());
     }
 
     /**
@@ -465,5 +472,47 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
             throw new IllegalArgumentException("timeout to ack must be at least -1");
         }
         this.timeoutToAck = timeoutToAck;
+    }
+
+    /**
+     * Gets the DTLS connection id length in bytes.
+     * <p>
+     * <a href= "https://www.rfc-editor.org/rfc/rfc9146.html" target
+     * ="_blank">RFC 9146, Connection Identifier for DTLS 1.2</a>
+     *
+     * <ul>
+     * <li>{@code null} disabled support for connection id.</li>
+     * <li>{@code 0} enable support for connection id, but don't use it for
+     * incoming traffic to this peer.</li>
+     * <li>{@code n} use connection id of n bytes. Note: chose n large enough
+     * for the number of considered peers. Recommended to have 100 time more
+     * values than peers. E.g. 65000 peers, chose not 2 bytes, chose at lease 3
+     * bytes!</li>
+     * </ul>
+     *
+     * @return DTLS connection ID length in bytes, null disabled, 0 enables support without active use of CID.
+     */
+    public final Integer getDtlsConnectionIdLength() {
+        return dtlsConnectionIdLength;
+    }
+
+    /**
+     * Sets the DTLS connection id length in bytes.
+     * <p>
+     * <a href= "https://www.rfc-editor.org/rfc/rfc9146.html" target
+     * ="_blank">RFC 9146, Connection Identifier for DTLS 1.2</a>
+     *
+     * <ul>
+     * <li>{@code null} disabled support for connection id.</li>
+     * <li>{@code 0} enable support for connection id, but don't use it for
+     * incoming traffic to this peer.</li>
+     * <li>{@code n} use connection id of n bytes. Note: chose n large enough
+     * for the number of considered peers. Recommended to have 100 time more
+     * values than peers. E.g. 65000 peers, chose not 2 bytes, chose at lease 3
+     * bytes!</li>
+     * </ul>
+     */
+    public final void setDtlsConnectionIdLength(final Integer dtlsConnectionIdLength) {
+        this.dtlsConnectionIdLength = dtlsConnectionIdLength;
     }
 }

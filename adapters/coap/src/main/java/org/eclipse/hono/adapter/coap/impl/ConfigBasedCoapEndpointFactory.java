@@ -237,6 +237,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         final Configuration networkConfig = newDefaultConfiguration();
         networkConfig.set(DtlsConfig.DTLS_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
         networkConfig.set(DtlsConfig.DTLS_CONNECTOR_THREAD_COUNT, config.getDtlsThreads());
+        networkConfig.set(DtlsConfig.DTLS_CONNECTION_ID_LENGTH, config.getDtlsConnectionIdLength());
         return loadConfiguration(config.getNetworkConfig(), networkConfig)
                 .compose(c -> loadConfiguration(config.getSecureNetworkConfig(), c));
     }
