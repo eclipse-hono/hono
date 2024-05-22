@@ -262,12 +262,28 @@ public abstract class CoapTestBase {
      * @param deviceId The device to add a shared secret for.
      * @param tenant The tenant that the device belongs to.
      * @param sharedSecret The secret shared with the CoAP server.
+     * @param dtlsConnectionIdLength The length of DTLS connection ID (CID) used.
+     * @return The client.
+     */
+    protected CoapClient getCoapsClient(final String deviceId, final String tenant, final String sharedSecret,
+                                        final Integer dtlsConnectionIdLength) {
+        return getCoapsClient(new AdvancedSinglePskStore(IntegrationTestSupport.getUsername(deviceId, tenant),
+                sharedSecret.getBytes(StandardCharsets.UTF_8)), dtlsConnectionIdLength);
+    }
+
+    /**
+     * Creates the client to use for uploading data to the secure endpoint
+     * of the CoAP adapter.
+     *
+     * @param deviceId The device to add a shared secret for.
+     * @param tenant The tenant that the device belongs to.
+     * @param sharedSecret The secret shared with the CoAP server.
      * @return The client.
      */
     protected CoapClient getCoapsClient(final String deviceId, final String tenant, final String sharedSecret) {
         return getCoapsClient(new AdvancedSinglePskStore(
-                IntegrationTestSupport.getUsername(deviceId, tenant),
-                sharedSecret.getBytes(StandardCharsets.UTF_8)));
+                        IntegrationTestSupport.getUsername(deviceId, tenant),
+                        sharedSecret.getBytes(StandardCharsets.UTF_8)), null);
     }
 
     /**
@@ -275,10 +291,12 @@ public abstract class CoapTestBase {
      * of the CoAP adapter.
      *
      * @param pskStoreToUse The store to retrieve shared secrets from.
+     * @param dtlsConnectionIdLength The length of DTLS connection ID (CID) used.
      * @return The client.
      */
-    protected CoapClient getCoapsClient(final AdvancedPskStore pskStoreToUse) {
+    protected CoapClient getCoapsClient(final AdvancedPskStore pskStoreToUse, final Integer dtlsConnectionIdLength) {
         final Configuration configuration = new Configuration();
+        configuration.set(DtlsConfig.DTLS_CONNECTION_ID_LENGTH, dtlsConnectionIdLength);
         final DtlsConnectorConfig.Builder dtlsConfig = DtlsConnectorConfig.builder(configuration);
         dtlsConfig.setAdvancedPskStore(pskStoreToUse);
         return getCoapsClient(dtlsConfig);

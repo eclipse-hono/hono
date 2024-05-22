@@ -26,6 +26,8 @@ import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.elements.DtlsEndpointContext;
+import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.exception.ConnectorException;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -235,6 +237,52 @@ public class TelemetryCoapIT extends CoapTestBase {
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
+    }
+
+    /**
+     * Verifies that a connection ID (CID) is generated when the DTLS_CONNECTION_ID_LENGTH config is set and that the
+     * CID is not generated wth DTLS_CONNECTION_ID_LENGTH is not set.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testConnectionID(final VertxTestContext ctx) throws InterruptedException  {
+
+        final Tenant tenant = new Tenant();
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
+
+        final CoapClient clientWithCid = getCoapsClient(deviceId, tenantId, SECRET, 6);
+        testUploadMessages(ctx, tenantId,
+                null,
+                count -> {
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(count), count);
+                    clientWithCid.advanced(getHandler(result), request);
+                    return result.future();
+                });
+
+        final EndpointContext endpointContextWithCid = clientWithCid.getDestinationContext();
+        assertThat(endpointContextWithCid.get(DtlsEndpointContext.KEY_READ_CONNECTION_ID)).isNotNull();
+        assertThat(endpointContextWithCid.get(DtlsEndpointContext.KEY_READ_CONNECTION_ID).length()).isEqualTo(6);
+        assertThat(endpointContextWithCid.get(DtlsEndpointContext.KEY_WRITE_CONNECTION_ID)).isNotNull();
+        assertThat(endpointContextWithCid.get(DtlsEndpointContext.KEY_WRITE_CONNECTION_ID).length()).isEqualTo(6);
+
+        final CoapClient clientWithoutCid = getCoapsClient(deviceId, tenantId, SECRET);
+        testUploadMessages(ctx, tenantId,
+                null,
+                count -> {
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(count), count);
+                    clientWithoutCid.advanced(getHandler(result), request);
+                    return result.future();
+                });
+
+        final EndpointContext endpointContextWithoutCid = clientWithoutCid.getDestinationContext();
+        assertThat(endpointContextWithoutCid.get(DtlsEndpointContext.KEY_READ_CONNECTION_ID)).isNull();
+        assertThat(endpointContextWithoutCid.get(DtlsEndpointContext.KEY_WRITE_CONNECTION_ID)).isNull();
     }
 
 }
