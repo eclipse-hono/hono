@@ -198,7 +198,7 @@
     <jaeger.host>hono-jaeger</jaeger.host>
     <jaeger.otel-collector.port>4317</jaeger.otel-collector.port>
 
-    <otel-collector.endpoint></otel-collector.endpoint>
+    <otel-collector.endpoint>http://localhost</otel-collector.endpoint>
     <otel-traces-sampler>always_off</otel-traces-sampler>
 
     <!-- prevents circular dependency -->
