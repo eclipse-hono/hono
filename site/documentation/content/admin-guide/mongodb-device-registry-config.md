@@ -22,6 +22,12 @@ The registry is compatible and known to work with the following MongoDB versions
 * [MongoDB 6.0](https://www.mongodb.com/docs/v6.0/release-notes/6.0/)
 * [MongoDB 7.0](https://www.mongodb.com/docs/v7.0/release-notes/7.0/)
 
+{{% notice warning %}}
+According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
+for Mongo DB 5.0 will end Oct 2024. Consequently, support for Mongo 5.0 in Hono has been deprecated and will be removed
+in a future version altogether. Users are encouraged to migrate to Mongo DB 6.0 or later.
+{{% /notice %}}
+
 ## Service Configuration
 
 The following table provides an overview of the configuration variables and corresponding system properties for
