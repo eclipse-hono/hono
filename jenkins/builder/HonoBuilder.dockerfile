@@ -18,9 +18,8 @@
 
 FROM debian:bullseye-slim
 
-ARG MANDREL_VERSION=23.0.2.1-Final
-# either java11 or java17
-ARG JDK_VERSION=java17
+ARG MANDREL_VERSION=23.1.3.1-Final
+ARG JDK_VERSION=java21
 ARG MVN_VERSION=3.8.8
 
 ENV GRAALVM_HOME=/graalvm
