@@ -4,13 +4,30 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.6.0 (not yet released)
+## 2.6.0
+
+### New Features
+
+* The protocol adapters now have experimental support for doing OCSP based client certificate revocation
+  checks.
 
 ### Fixes & Enhancements
 
+* The Command Router code has been split up into a base module and an Infinispan based implementation. This
+  is in preparation of a Redis based implementation which is to be added in one of the upcoming minor versions.
+* Updated to latest Quarkus LTS version (3.8).
 * Updated to jjwt 0.12.5 which allowed us to replace a lot of manually crafted code for creating a JWK Set based
   on vert.x JWK with generic jjwt code.
 * Updated CoAP adapter to use Eclipse Californium 3.11.0.
+* Also push JDBC Registry native executable image to Docker Hub.
+
+### Deprecations
+
+* According to the [MongoDB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
+  for MongoDB 5.0 will end Oct 2024.
+  Until that date the MongoDB based Device Registry will be tested with MongoDB 5.0, 6.0 and 7.0 in the CI workflows.
+  However, support for MongoDB 5.0 in Hono has been deprecated and will be removed in a future version altogether.
+  Users are encouraged to migrate to MongoDB 6.0 or later.
 
 ## 2.5.1
 
