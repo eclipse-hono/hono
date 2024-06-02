@@ -17,7 +17,6 @@ package org.eclipse.hono.deviceregistry.mongodb.app;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
@@ -44,12 +43,8 @@ public class HttpServerFactory extends AbstractHttpServerFactory {
     @Inject
     MongoClient mongoClient;
 
-    private MongoDbBasedHttpServiceConfigProperties httpServerProperties;
-
     @Inject
-    void setHttpServerProperties(final MongoDbBasedHttpServiceConfigOptions endpointOptions) {
-        this.httpServerProperties = new MongoDbBasedHttpServiceConfigProperties(endpointOptions);
-    }
+    MongoDbBasedHttpServiceConfigProperties httpServerProperties;
 
     @Override
     protected final HttpServiceConfigProperties getHttpServerProperties() {

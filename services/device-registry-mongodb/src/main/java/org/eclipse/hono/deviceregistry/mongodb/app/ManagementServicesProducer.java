@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
@@ -89,6 +89,7 @@ public class ManagementServicesProducer {
      * @param deviceDao The DAO for accessing device data.
      * @param credentialsDao The DAO for accessing credentials data.
      * @param tenantInformationService The service for retrieving tenant information.
+     * @param httpServiceConfigProperties The HTTP service configuration.
      * @return The service.
      */
     @Produces
@@ -96,13 +97,15 @@ public class ManagementServicesProducer {
     public DeviceManagementService deviceManagementService(
             final DeviceDao deviceDao,
             final CredentialsDao credentialsDao,
-            final TenantInformationService tenantInformationService) {
+            final TenantInformationService tenantInformationService,
+            final MongoDbBasedHttpServiceConfigProperties httpServiceConfigProperties) {
 
         final var service = new MongoDbBasedDeviceManagementService(
                 vertx,
                 deviceDao,
                 credentialsDao,
-                registrationServiceProperties);
+                registrationServiceProperties,
+                httpServiceConfigProperties);
         service.setTenantInformationService(tenantInformationService);
         return service;
     }

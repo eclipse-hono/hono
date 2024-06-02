@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,8 @@
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
 import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
-import org.eclipse.hono.service.http.HttpServiceConfigOptions;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 
-import io.smallrye.config.ConfigMapping;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -28,17 +26,11 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class HttpServerFactory extends AbstractHttpServerFactory {
 
-    private HttpServiceConfigProperties httpServerProperties;
-
     @Inject
-    void setHttpServerProperties(
-            @ConfigMapping(prefix = "hono.registry.http")
-            final HttpServiceConfigOptions endpointOptions) {
-        this.httpServerProperties = new HttpServiceConfigProperties(endpointOptions);
-    }
+    HttpServiceConfigProperties httpServerConfigProperties;
 
     @Override
     protected final HttpServiceConfigProperties getHttpServerProperties() {
-        return httpServerProperties;
+        return httpServerConfigProperties;
     }
 }

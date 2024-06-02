@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,8 @@ package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigOptions;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigOptions;
@@ -68,5 +70,18 @@ public class ConfigPropertiesProducer {
     public MongoDbBasedCredentialsConfigProperties credentialsServiceProperties(
             final MongoDbBasedCredentialsConfigOptions options) {
         return new MongoDbBasedCredentialsConfigProperties(options);
+    }
+
+    /**
+     * Creates HTTP service configuration properties from existing options.
+     *
+     * @param options The options.
+     * @return The properties.
+     */
+    @Produces
+    @Singleton
+    public MongoDbBasedHttpServiceConfigProperties httpServiceProperties(
+            final MongoDbBasedHttpServiceConfigOptions options) {
+        return new MongoDbBasedHttpServiceConfigProperties(options);
     }
 }

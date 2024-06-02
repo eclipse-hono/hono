@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
@@ -49,6 +50,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     private static final String DB_NAME = "hono-search-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
+    private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceManagementService service;
@@ -65,7 +67,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         vertx = Vertx.vertx();
         deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
-        service = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config);
+        service = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config, serviceConfig);
         Future.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }
 

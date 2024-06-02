@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,6 +70,20 @@ class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implemen
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to create device with device id which does not match the device id pattern fails with a 400.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateDeviceFailsIfDeviceIdDoesNotMatchDeviceIdPattern(final VertxTestContext ctx) {
+        getDeviceManagementService().createDevice(TENANT, Optional.of(INVALID_DEVICE), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST));
                 ctx.completeNow();
             }));
     }
