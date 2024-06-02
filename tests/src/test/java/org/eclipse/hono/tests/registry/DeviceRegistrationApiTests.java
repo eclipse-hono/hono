@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -315,4 +316,29 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                     ctx.completeNow();
                 }));
     }
+
+    /**
+     * Verifies that device auto-provisioning fails to assert with an invalid device id with a 400 error code.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testAssertRegistrationAutoProvisionFailsForInvalidDeviceId(final VertxTestContext ctx) {
+
+        final String deviceId = getHelper().getRandomDeviceId(tenantId) + "++££";
+        final String gatewayId = getHelper().getRandomDeviceId(tenantId);
+
+        final Device device = new Device();
+        device.setAuthorities(Set.of("auto-provisioning-enabled"));
+
+        getHelper().registry
+                .registerDevice(tenantId, gatewayId, device)
+                .compose(ok -> getClient().assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE.context()))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST));
+                    ctx.completeNow();
+                }));
+    }
+
 }

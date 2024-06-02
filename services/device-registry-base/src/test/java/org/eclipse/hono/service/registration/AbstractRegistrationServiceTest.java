@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.service.registration;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -61,6 +62,10 @@ public interface AbstractRegistrationServiceTest {
      * The device identifier used in tests.
      */
     String DEVICE = "4711";
+    /**
+     * Invalid device identifier used in tests.
+     */
+    String INVALID_DEVICE = "**4711++";
     /**
      * The gateway identifier used in the tests.
      */

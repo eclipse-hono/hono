@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,6 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-
 
 package org.eclipse.hono.deviceregistry.jdbc.app;
 
@@ -24,6 +23,7 @@ import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;
+import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -75,6 +75,7 @@ public class ManagementServicesProducer {
      * @param devicesManagementStore The data store for accessing device data.
      * @param deviceServiceOptions The device management service configuration.
      * @param tenantInformationService The service for retrieving tenant information.
+     * @param httpServiceConfigProperties The HTTP service configuration.
      * @return The service.
      */
     @Produces
@@ -82,9 +83,14 @@ public class ManagementServicesProducer {
     public DeviceManagementService deviceManagementService(
             final TableManagementStore devicesManagementStore,
             final DeviceServiceOptions deviceServiceOptions,
-            final TenantInformationService tenantInformationService) {
+            final TenantInformationService tenantInformationService,
+            final HttpServiceConfigProperties httpServiceConfigProperties) {
 
-        final var service = new DeviceManagementServiceImpl(vertx, devicesManagementStore, deviceServiceOptions);
+        final var service = new DeviceManagementServiceImpl(
+                vertx,
+                devicesManagementStore,
+                deviceServiceOptions,
+                httpServiceConfigProperties);
         service.setTenantInformationService(tenantInformationService);
         return service;
     }

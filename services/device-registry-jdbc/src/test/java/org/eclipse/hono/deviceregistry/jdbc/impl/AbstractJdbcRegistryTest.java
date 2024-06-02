@@ -36,6 +36,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceOptions;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -129,6 +130,8 @@ abstract class AbstractJdbcRegistryTest {
         when(properties.credentialsTtl()).thenReturn(Duration.ofMinutes(1));
         when(properties.registrationTtl()).thenReturn(Duration.ofMinutes(1));
 
+        final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
+
         this.credentialsAdapter = new CredentialsServiceImpl(
                 DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
                 properties
@@ -147,7 +150,8 @@ abstract class AbstractJdbcRegistryTest {
         this.registrationManagement = new DeviceManagementServiceImpl(
                 vertx,
                 DeviceStores.managementStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
-                properties
+                properties,
+                serviceConfig
         );
 
         tenantInformationService = mock(TenantInformationService.class);

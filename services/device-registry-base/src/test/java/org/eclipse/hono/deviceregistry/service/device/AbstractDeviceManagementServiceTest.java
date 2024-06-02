@@ -28,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -67,7 +68,8 @@ public class AbstractDeviceManagementServiceTest {
         eventBus = mock(EventBus.class);
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
-        deviceManagementService = new TestDeviceManagementService(vertx);
+        final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
+        deviceManagementService = new TestDeviceManagementService(vertx, serviceConfig);
     }
 
     /**
@@ -223,8 +225,8 @@ public class AbstractDeviceManagementServiceTest {
 
     private static class TestDeviceManagementService extends AbstractDeviceManagementService {
 
-        TestDeviceManagementService(final Vertx vertx) {
-            super(vertx);
+        TestDeviceManagementService(final Vertx vertx, final ServiceConfigProperties serviceConfig) {
+            super(vertx, serviceConfig);
         }
 
         @Override

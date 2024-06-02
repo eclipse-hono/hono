@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
@@ -19,10 +20,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.StatusCodeMapper;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -64,15 +68,19 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
     private final Handler<AbstractNotification> notificationSender;
 
+    private final ServiceConfigProperties serviceConfig;
+
     /**
      * Creates a new AbstractDeviceManagementService.
      *
      * @param vertx The vert.x instance to use.
+     * @param serviceConfig The service config instance to use for device id validation.
      * @throws NullPointerException if vertx is {@code null}.
      */
-    protected AbstractDeviceManagementService(final Vertx vertx) {
+    protected AbstractDeviceManagementService(final Vertx vertx, final ServiceConfigProperties serviceConfig) {
         this.vertx = Objects.requireNonNull(vertx);
         this.notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
+        this.serviceConfig = serviceConfig;
     }
 
     /**
@@ -276,6 +284,15 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
         Objects.requireNonNull(span);
 
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
+        final Matcher matcher = serviceConfig.getDeviceIdPattern().matcher(deviceIdValue);
+
+        if (!matcher.matches()) {
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "invalid device ID: %s".formatted(deviceIdValue)
+            ));
+        }
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)

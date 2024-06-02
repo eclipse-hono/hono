@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
@@ -74,6 +76,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
+    private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsDao credentialsDao;
@@ -93,7 +96,12 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         vertx = Vertx.vertx();
         deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
-        deviceManagementService = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config);
+        deviceManagementService = new MongoDbBasedDeviceManagementService(
+                vertx,
+                deviceDao,
+                credentialsDao,
+                config,
+                serviceConfig);
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
@@ -221,6 +229,20 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to create device with device id which does not match the device id pattern fails with a 400.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateDeviceFailsIfDeviceIdDoesNotMatchDeviceIdPattern(final VertxTestContext ctx) {
+        getDeviceManagementService().createDevice(TENANT, Optional.of(INVALID_DEVICE), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST));
                 ctx.completeNow();
             }));
     }

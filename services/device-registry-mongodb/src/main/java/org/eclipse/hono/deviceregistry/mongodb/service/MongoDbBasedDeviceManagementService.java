@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
@@ -62,14 +64,16 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
      * @param deviceDao The data access object to use for accessing device data in the MongoDB.
      * @param credentialsDao The data access object to use for accessing credentials data in the MongoDB.
      * @param config The properties for configuring this service.
+     * @param serviceConfig The service config to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceManagementService(
             final Vertx vertx,
             final DeviceDao deviceDao,
             final CredentialsDao credentialsDao,
-            final MongoDbBasedRegistrationConfigProperties config) {
-        super(vertx);
+            final MongoDbBasedRegistrationConfigProperties config,
+            final ServiceConfigProperties serviceConfig) {
+        super(vertx, serviceConfig);
         Objects.requireNonNull(deviceDao);
         Objects.requireNonNull(credentialsDao);
         Objects.requireNonNull(config);

@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
@@ -80,6 +82,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
 
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
     private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
+    private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceDao deviceDao;
@@ -112,7 +115,8 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                 vertx,
                 deviceDao,
                 credentialsDao,
-                registrationServiceConfig);
+                registrationServiceConfig,
+                serviceConfig);
 
         Future.all(deviceDao.createIndices(), credentialsDao.createIndices())
             .onComplete(ctx.succeedingThenComplete());

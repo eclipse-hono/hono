@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -53,9 +54,14 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
      * @param vertx The vert.x instance to use.
      * @param store The backing store to use.
      * @param properties The service properties.
+     * @param serviceConfig The service config to use.
      */
-    public DeviceManagementServiceImpl(final Vertx vertx, final TableManagementStore store, final DeviceServiceOptions properties) {
-        super(vertx);
+    public DeviceManagementServiceImpl(
+            final Vertx vertx,
+            final TableManagementStore store,
+            final DeviceServiceOptions properties,
+            final ServiceConfigProperties serviceConfig) {
+        super(vertx, serviceConfig);
         this.store = store;
         this.ttl = Optional.of(CacheDirective.maxAgeDirective(properties.registrationTtl()));
         this.config = properties;
