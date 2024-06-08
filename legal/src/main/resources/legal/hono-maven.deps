@@ -50,7 +50,7 @@ com.squareup.okio:okio:jar:3.6.0
 com.squareup.okio:okio-jvm:jar:3.6.0
 com.squareup:protoparser:jar:4.0.3
 info.picocli:picocli:jar:4.7.5
-info.picocli:picocli-shell-jline3:jar:4.7.4
+info.picocli:picocli-shell-jline3:jar:4.7.6
 io.agroal:agroal-api:jar:2.3
 io.agroal:agroal-narayana:jar:2.3
 io.agroal:agroal-pool:jar:2.3
@@ -342,7 +342,7 @@ org.jetbrains.kotlin:kotlin-stdlib:jar:1.9.22
 org.jetbrains.kotlin:kotlin-stdlib-jdk7:jar:1.9.22
 org.jetbrains.kotlin:kotlin-stdlib-jdk8:jar:1.9.22
 org.jgroups:jgroups:jar:5.2.23.Final
-org.jline:jline:jar:3.23.0
+org.jline:jline:jar:3.26.1
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.locationtech.jts:jts-core:jar:1.17.0
 org.lz4:lz4-java:jar:1.8.0

@@ -98,7 +98,7 @@
     <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli-shell-jline3</artifactId>
-      <version>4.7.4</version>
+      <version>4.7.6</version>
     </dependency>
     <dependency>
       <groupId>net.java.dev.jna</groupId>
@@ -183,7 +183,7 @@
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
         <quarkus.native.resources.includes>hono-cli-build.properties</quarkus.native.resources.includes>
-        <quarkus.native.additional-build-args>--initialize-at-run-time=org.jline.nativ.JLineLibrary</quarkus.native.additional-build-args>
+        <quarkus.native.additional-build-args>--initialize-at-run-time=org.jline.nativ</quarkus.native.additional-build-args>
       </properties>
     </profile>
   </profiles>
