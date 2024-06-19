@@ -79,4 +79,14 @@ public interface PrometheusBasedResourceLimitCheckOptions {
      */
     @WithDefault("1000")
     int connectTimeout();
+
+    /**
+     * Gets the TCP port of the server that this client is configured to connect to.
+     * <p>
+     * The default value of this property is 9090.
+     *
+     * @return The port number.
+     */
+    @WithDefault("9090")
+    int port();
 }

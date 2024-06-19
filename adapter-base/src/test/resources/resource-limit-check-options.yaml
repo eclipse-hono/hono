@@ -5,5 +5,6 @@ hono:
       cacheMinSize: 5555
       cacheTimeout: 555
       connectTimeout: 777
-      host: "prometheus"
       queryTimeout: 2222
+      host: "prometheus"
+      port: 888

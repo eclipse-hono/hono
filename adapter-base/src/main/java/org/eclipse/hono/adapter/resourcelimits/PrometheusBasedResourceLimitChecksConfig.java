@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.adapter.resourcelimits;
 
 import org.eclipse.hono.client.amqp.config.AuthenticatingClientConfigProperties;
@@ -68,7 +69,7 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
      */
     public PrometheusBasedResourceLimitChecksConfig(final PrometheusBasedResourceLimitCheckOptions options) {
         super(options.clientOptions());
-        setPort(9090);
+        setPort(options.port());
         this.cacheMaxSize = options.cacheMaxSize();
         this.cacheMinSize = options.cacheMinSize();
         this.cacheTimeout = options.cacheTimeout();
