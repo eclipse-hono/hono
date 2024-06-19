@@ -43,5 +43,6 @@ class PrometheusBasedResourceLimitCheckOptionsTest {
         // client options
         assertThat(props.isHostConfigured()).isTrue();
         assertThat(props.getHost()).isEqualTo("prometheus");
+        assertThat(props.getPort()).isEqualTo(888);
     }
 }
