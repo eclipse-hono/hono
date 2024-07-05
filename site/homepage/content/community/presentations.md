@@ -12,6 +12,11 @@ On this page you can find links to arbitrary resources covering Eclipse Hono&tra
 and meet-ups or are available online.
 <!--more-->
 
+## "Hono Load Tests with CoAP devices" (Blog post July 2024)
+
+* Author: Nikolay Deliyski (Bosch Digital)
+* [Article]({{< relref "blog-load-tests-coap" >}})
+
 ## "Release of new MongoDB based device registry in Eclipse Hono" (Blog post November 2020)
 
 * Author: Kartheeswaran Kalidass (Bosch.IO)
