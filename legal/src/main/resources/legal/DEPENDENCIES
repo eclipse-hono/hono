@@ -1,6 +1,6 @@
 maven/mavencentral/biz.paluch.logging/logstash-gelf/1.15.1, MIT, approved, clearlydefined
-maven/mavencentral/ch.qos.logback/logback-classic/1.5.6, EPL-1.0 AND LGPL-2.1-only, approved, #13282
-maven/mavencentral/ch.qos.logback/logback-core/1.5.6, EPL-1.0 AND LGPL-2.1-only, approved, #13283
+maven/mavencentral/ch.qos.logback/logback-classic/1.5.6, EPL-1.0 AND LGPL-2.1-only, approved, #15279
+maven/mavencentral/ch.qos.logback/logback-core/1.5.6, EPL-1.0 AND LGPL-2.1-only, approved, #15210
 maven/mavencentral/com.aayushatharva.brotli4j/brotli4j/1.16.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.aayushatharva.brotli4j/native-linux-x86_64/1.16.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.aayushatharva.brotli4j/service/1.16.0, Apache-2.0, approved, clearlydefined
@@ -27,7 +27,7 @@ maven/mavencentral/com.google.auth/google-auth-library-oauth2-http/1.23.0, BSD-3
 maven/mavencentral/com.google.auto.value/auto-value-annotations/1.10.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.cloud/google-cloud-core/2.35.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.cloud/google-cloud-pubsub/1.127.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.google.code.findbugs/jsr305/3.0.2, Apache-2.0, approved, #20
+maven/mavencentral/com.google.code.findbugs/jsr305/3.0.2, CC-BY-2.5, approved, #15220
 maven/mavencentral/com.google.code.gson/gson/2.10.1, Apache-2.0, approved, #6159
 maven/mavencentral/com.googlecode.juniversalchardet/juniversalchardet/1.0.3, MPL-1.1, approved, CQ10305
 maven/mavencentral/com.google.errorprone/error_prone_annotations/2.24.0, Apache-2.0, approved, #12448
@@ -45,12 +45,12 @@ maven/mavencentral/com.mchange/c3p0/0.9.5.5, LGPL-2.1-only OR EPL-1.0, approved,
 maven/mavencentral/com.mchange/mchange-commons-java/0.2.19, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
 maven/mavencentral/commons-codec/commons-codec/1.16.1, Apache-2.0 AND (Apache-2.0 AND BSD-3-Clause), approved, #9157
 maven/mavencentral/commons-io/commons-io/2.15.1, Apache-2.0, approved, #11244
-maven/mavencentral/com.squareup.okhttp3/okhttp/4.12.0, Apache-2.0, approved, #11156
+maven/mavencentral/com.squareup.okhttp3/okhttp/4.12.0, Apache-2.0, approved, #15227
 maven/mavencentral/com.squareup.okio/okio/3.6.0, Apache-2.0, approved, #11155
 maven/mavencentral/com.squareup.okio/okio-jvm/3.6.0, Apache-2.0, approved, #11158
 maven/mavencentral/com.squareup/protoparser/4.0.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/info.picocli/picocli/4.7.5, Apache-2.0, approved, #4365
-maven/mavencentral/info.picocli/picocli-shell-jline3/4.7.4, Apache-2.0, approved, #10606
+maven/mavencentral/info.picocli/picocli-shell-jline3/4.7.6, Apache-2.0, approved, #10606
 maven/mavencentral/io.agroal/agroal-api/2.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.agroal/agroal-narayana/2.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.agroal/agroal-pool/2.3, Apache-2.0, approved, clearlydefined
@@ -288,7 +288,7 @@ maven/mavencentral/net.java.dev.jna/jna/5.8.0, Apache-2.0 OR LGPL-2.1-or-later, 
 maven/mavencentral/org.apache.commons/commons-collections4/4.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.26.1, Apache-2.0 AND (Apache-2.0 AND BSD-3-Clause), approved, #13288
 maven/mavencentral/org.apache.commons/commons-lang3/3.14.0, Apache-2.0, approved, #11677
-maven/mavencentral/org.apache.httpcomponents/httpclient/4.5.14, Apache-2.0 AND LicenseRef-Public-Domain, approved, CQ23527
+maven/mavencentral/org.apache.httpcomponents/httpclient/4.5.14, Apache-2.0, approved, #15248
 maven/mavencentral/org.apache.httpcomponents/httpcore/4.4.16, Apache-2.0, approved, CQ23528
 maven/mavencentral/org.apache.kafka/kafka-clients/3.6.1, Apache-2.0 AND (Apache-2.0 AND MIT) AND (Apache-2.0 AND BSD-3-Clause), approved, #11084
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.22.1, Apache-2.0, approved, #12576
@@ -312,7 +312,7 @@ maven/mavencentral/org.eclipse.parsson/parsson/1.1.5, EPL-2.0, approved, ee4j.pa
 maven/mavencentral/org.fusesource.jansi/jansi/2.4.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.graalvm.sdk/nativeimage/23.1.2, UPL-1.0, approved, #10921
 maven/mavencentral/org.graalvm.sdk/word/23.1.2, UPL-1.0, approved, #10917
-maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, BSD-2-Clause OR LicenseRef-Public-Domain, approved, CQ13192
+maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, CC0-1.0, approved, #15259
 maven/mavencentral/org.infinispan/infinispan-client-hotrod-jakarta/14.0.27.Final, Apache-2.0, approved, #10936
 maven/mavencentral/org.infinispan/infinispan-commons-jakarta/14.0.27.Final, Apache-2.0 AND LicenseRef-Public-Domain, approved, #10937
 maven/mavencentral/org.infinispan/infinispan-core-jakarta/14.0.27.Final, Apache-2.0, approved, #10938
@@ -337,8 +337,8 @@ maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib-common/1.9.22, Apache-2.0,
 maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib-jdk7/1.9.22, Apache-2.0, approved, #14188
 maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib-jdk8/1.9.22, Apache-2.0, approved, #14185
 maven/mavencentral/org.jgroups/jgroups/5.2.23.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.jline/jline/3.23.0, BSD-3-Clause AND Apache-2.0, approved, #10622
-maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
+maven/mavencentral/org.jline/jline/3.26.1, BSD-3-Clause AND Apache-2.0, approved, #14872
+maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, CC0-1.0, approved, #15280
 maven/mavencentral/org.locationtech.jts/jts-core/1.17.0, EPL-2.0, approved, locationtech.jts
 maven/mavencentral/org.lz4/lz4-java/1.8.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/bson/4.11.1, Apache-2.0, approved, clearlydefined
