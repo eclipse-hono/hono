@@ -37,6 +37,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
             org.infinispan.protostream.types.protobuf.EmptySchemaImpl.class,
             org.infinispan.protostream.types.protobuf.TimestampSchemaImpl.class,
             org.infinispan.protostream.types.protobuf.WrappersSchemaImpl.class,
+            org.infinispan.util.logging.Log_$logger.class,
             org.wildfly.security.password.impl.DigestPasswordAlgorithmParametersSpiImpl.class,
             org.wildfly.security.password.impl.IteratedSaltedPasswordAlgorithmParametersSpiImpl.class,
             org.wildfly.security.password.impl.OneTimePasswordAlgorithmParametersSpiImpl.class,
