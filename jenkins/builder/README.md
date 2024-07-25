@@ -6,13 +6,13 @@ The image can be built using
 
 ```sh
 # in folder $HONO_HOME/jenkins/builder
-docker build -t eclipse/hono-builder:2.6.0 -f HonoBuilder.dockerfile .
+docker build -t eclipse/hono-builder:2.7.0 -f HonoBuilder.dockerfile .
 ```
 
 The resulting image needs to be pushed (manually) to Docker Hub before running any of the build pipelines
 on the Eclipse Jenkins build infrastructure:
 
 ```sh
-docker push eclipse/hono-builder:2.6.0
+docker push eclipse/hono-builder:2.7.0
 ```
 
