@@ -78,6 +78,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -97,6 +98,8 @@ import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.mqtt.messages.MqttSubscribeMessage;
+import io.vertx.mqtt.messages.codes.MqttPubAckReasonCode;
+import io.vertx.mqtt.messages.codes.MqttSubAckReasonCode;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedMqttProtocolAdapter}.
@@ -737,7 +740,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         upload.accept(adapter, context);
 
         // THEN the device does not receive a PUBACK
-        verify(endpoint, never()).publishAcknowledge(anyInt());
+        verify(endpoint, never()).publishAcknowledge(anyInt(), any(MqttPubAckReasonCode.class), any(MqttProperties.class));
         // and the message has not been reported as forwarded
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
@@ -750,7 +753,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // until the message has been settled and accepted
         outcome.complete();
-        verify(endpoint).publishAcknowledge(5555555);
+        verify(endpoint).publishAcknowledge(5555555, MqttPubAckReasonCode.SUCCESS, MqttProperties.NO_PROPERTIES);
         verify(metrics).reportTelemetry(
                 eq(type),
                 eq("my-tenant"),
@@ -883,7 +886,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
                 ctx.verify(() -> {
                     // THEN the device has received a PUBACK
-                    verify(endpoint).publishAcknowledge(5555555);
+                    verify(endpoint).publishAcknowledge(5555555, MqttPubAckReasonCode.SUCCESS, MqttProperties.NO_PROPERTIES);
                     // and the message has been sent downstream
                     // including the "retain" annotation
                     verify(telemetrySender).sendTelemetry(
@@ -1148,16 +1151,16 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter
-        final ArgumentCaptor<List<MqttQoS>> codeCaptor = ArgumentCaptor.forClass(List.class);
-        verify(endpoint).subscribeAcknowledge(eq(15), codeCaptor.capture());
+        final ArgumentCaptor<List<MqttSubAckReasonCode>> codeCaptor = ArgumentCaptor.forClass(List.class);
+        verify(endpoint).subscribeAcknowledge(eq(15), codeCaptor.capture(), eq(MqttProperties.NO_PROPERTIES));
         assertThat(codeCaptor.getValue()).hasSize(subscriptions.size());
-        assertThat(codeCaptor.getValue().get(0)).isEqualTo(MqttQoS.FAILURE);
-        assertThat(codeCaptor.getValue().get(1)).isEqualTo(MqttQoS.FAILURE);
-        assertThat(codeCaptor.getValue().get(2)).isEqualTo(MqttQoS.FAILURE);
-        assertThat(codeCaptor.getValue().get(3)).isEqualTo(MqttQoS.AT_MOST_ONCE);
-        assertThat(codeCaptor.getValue().get(4)).isEqualTo(MqttQoS.FAILURE);
-        assertThat(codeCaptor.getValue().get(5)).isEqualTo(MqttQoS.FAILURE);
-        assertThat(codeCaptor.getValue().get(6)).isEqualTo(MqttQoS.AT_MOST_ONCE);
+        assertThat(codeCaptor.getValue().get(0)).isEqualTo(MqttSubAckReasonCode.UNSPECIFIED_ERROR);
+        assertThat(codeCaptor.getValue().get(1)).isEqualTo(MqttSubAckReasonCode.UNSPECIFIED_ERROR);
+        assertThat(codeCaptor.getValue().get(2)).isEqualTo(MqttSubAckReasonCode.UNSPECIFIED_ERROR);
+        assertThat(codeCaptor.getValue().get(3)).isEqualTo(MqttSubAckReasonCode.qosGranted(MqttQoS.AT_MOST_ONCE));
+        assertThat(codeCaptor.getValue().get(4)).isEqualTo(MqttSubAckReasonCode.UNSPECIFIED_ERROR);
+        assertThat(codeCaptor.getValue().get(5)).isEqualTo(MqttSubAckReasonCode.UNSPECIFIED_ERROR);
+        assertThat(codeCaptor.getValue().get(6)).isEqualTo(MqttSubAckReasonCode.qosGranted(MqttQoS.AT_MOST_ONCE));
     }
 
     private static MqttTopicSubscription newMockTopicSubscription(final String filter, final MqttQoS qos) {

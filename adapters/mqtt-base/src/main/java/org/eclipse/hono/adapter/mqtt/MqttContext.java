@@ -28,11 +28,13 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
+import io.vertx.mqtt.messages.codes.MqttPubAckReasonCode;
 
 /**
  * A dictionary of relevant information required during the
@@ -162,8 +164,14 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
                 result.propertyBag = bag;
                 result.topic = bag.topicWithoutPropertyBag();
                 result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
-                // set the content-type using the corresponding value from the property bag
-                result.contentType = bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE);
+                // 1. set the content-type using the corresponding value from the property bag
+                // 2. set the content-type using the corresponding value from the mqtt message properties (MQTT5)
+                result.contentType = Optional.ofNullable(bag.getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE))
+                        .orElse(Optional.ofNullable(publishedMessage.properties())
+                                .map(properties -> properties.getProperty(MqttProperties.MqttPropertyType.CONTENT_TYPE.value()))
+                                .map(MqttProperties.MqttProperty::value)
+                                .map(Object::toString)
+                                .orElse(null));
                 if (result.endpoint == EndpointType.EVENT) {
                     result.timeToLive = determineTimeToLive(bag);
                 }
@@ -423,10 +431,12 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
 
     /**
      * Sends a PUBACK for the message to the device.
+     *
+     * @param reasonCode Mqtt Publish Acknowledge reason code.
      */
-    public void acknowledge() {
+    public void acknowledge(final MqttPubAckReasonCode reasonCode) {
         if (message != null && deviceEndpoint != null && isAtLeastOnce()) {
-            deviceEndpoint.publishAcknowledge(message.messageId());
+            deviceEndpoint.publishAcknowledge(message.messageId(), reasonCode, MqttProperties.NO_PROPERTIES);
         }
     }
 
