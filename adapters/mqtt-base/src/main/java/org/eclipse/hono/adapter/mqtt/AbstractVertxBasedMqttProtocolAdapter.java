@@ -88,6 +88,7 @@ import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -106,6 +107,9 @@ import io.vertx.mqtt.MqttTopicSubscription;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 import io.vertx.mqtt.messages.MqttSubscribeMessage;
 import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
+import io.vertx.mqtt.messages.codes.MqttPubAckReasonCode;
+import io.vertx.mqtt.messages.codes.MqttSubAckReasonCode;
+import io.vertx.mqtt.messages.codes.MqttUnsubAckReasonCode;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
@@ -885,7 +889,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     // check that the remote MQTT client is still connected before sending PUBACK
                     if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
                         currentSpan.log(EVENT_SENDING_PUBACK);
-                        ctx.acknowledge();
+                        ctx.acknowledge(MqttPubAckReasonCode.SUCCESS);
                     }
                     currentSpan.finish();
                     return Future.<Void> succeededFuture();
@@ -968,7 +972,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
                 currentSpan.log(EVENT_SENDING_PUBACK);
-                ctx.acknowledge();
+                ctx.acknowledge(MqttPubAckReasonCode.SUCCESS);
             }
             currentSpan.finish();
             return ok;
@@ -1266,7 +1270,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 span.log("skipped sending PUBACK");
                             } else if (context.deviceEndpoint().isConnected()) {
                                 span.log(EVENT_SENDING_PUBACK);
-                                context.acknowledge();
+                                context.acknowledge(MqttPubAckReasonCode.UNSPECIFIED_ERROR);
                             }
                         }
                         span.finish();
@@ -1415,11 +1419,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             Future.join(new ArrayList<>(subscriptionOutcomes)).onComplete(v -> {
 
                 if (endpoint.isConnected()) {
-                    // return a status code for each topic filter contained in the SUBSCRIBE packet
-                    final List<MqttQoS> grantedQosLevels = subscriptionOutcomes.stream()
-                            .map(future -> future.failed() ? MqttQoS.FAILURE : future.result().getQos())
+                    // return a reason code for each topic filter contained in the SUBSCRIBE packet
+                    final List<MqttSubAckReasonCode> reasonCodes = subscriptionOutcomes.stream()
+                            .map(future -> future.failed() ? MqttSubAckReasonCode.UNSPECIFIED_ERROR : MqttSubAckReasonCode.qosGranted(future.result().getQos()))
                             .collect(Collectors.toList());
-                    endpoint.subscribeAcknowledge(subscribeMsg.messageId(), grantedQosLevels);
+                    endpoint.subscribeAcknowledge(subscribeMsg.messageId(), reasonCodes, MqttProperties.NO_PROPERTIES);
                 } else {
                     TracingHelper.logError(span, "skipped sending command subscription notification - endpoint not connected anymore");
                     log.debug("skipped sending command subscription notification - endpoint not connected anymore [tenant-id: {}, device-id: {}]",
@@ -1785,6 +1789,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
             final Span span = newSpan("UNSUBSCRIBE");
 
+            final List<MqttUnsubAckReasonCode> reasonCodes = new ArrayList<>();
             final List<Future<Void>> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
             unsubscribeMsg.topics().forEach(topic -> {
 
@@ -1810,13 +1815,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 if (removedSubscription.get() != null) {
                     log.debug("removed subscription with topic [{}] for device [tenant-id: {}, device-id: {}]",
                             topic, removedSubscription.get().getTenant(), removedSubscription.get().getDeviceId());
+                    reasonCodes.add(MqttUnsubAckReasonCode.SUCCESS);
                 } else {
                     TracingHelper.logError(span, String.format("no subscription found for topic filter [%s]", topic));
                     log.debug("cannot unsubscribe - no subscription found for topic filter [{}]", topic);
+                    reasonCodes.add(MqttUnsubAckReasonCode.UNSPECIFIED_ERROR);
                 }
             });
             if (endpoint.isConnected()) {
-                endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
+                endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId(), reasonCodes, MqttProperties.NO_PROPERTIES);
             }
             Future.join(removalDoneFutures).onComplete(r -> span.finish());
         }

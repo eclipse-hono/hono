@@ -11,11 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +32,7 @@ import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.opentracing.Span;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -95,17 +96,43 @@ public class MqttContextTest {
      * Verifies the <em>content-type</em> value retrieved from the <em>property-bag</em> in a message's topic.
      */
     @Test
-    public void verifyContentType() {
+    public void verifyContentTypeFromPropertyBag() {
         final String contentType = "application/vnd.eclipse.ditto+json";
         final String encodedContentType = URLEncoder.encode(contentType, StandardCharsets.UTF_8);
         final var device = new DeviceUser("tenant", "device");
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        final MqttProperties msgProperties = new MqttProperties();
+        msgProperties.add(new MqttProperties.StringProperty(MqttProperties.MqttPropertyType.CONTENT_TYPE.value(), "offending/value+json"));
         when(msg.topicName()).thenReturn(
                 String.format("event/tenant/device/?Content-Type=%s&param2=value2&param3=value3", encodedContentType));
+        when(msg.properties()).thenReturn(
+                msgProperties);
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
 
         assertNotNull(context.propertyBag());
         assertEquals(contentType, context.propertyBag().getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
+        assertEquals(contentType, context.contentType());
+    }
+
+    /**
+     * Verifies the <em>content-type</em> value retrieved from the <em>properties</em> in a message.
+     */
+    @Test
+    public void verifyContentTypeFromProperties() {
+        final String contentType = "application/vnd.eclipse.ditto+json";
+        final var device = new DeviceUser("tenant", "device");
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        final MqttProperties msgProperties = new MqttProperties();
+        msgProperties.add(new MqttProperties.StringProperty(MqttProperties.MqttPropertyType.CONTENT_TYPE.value(), contentType));
+        when(msg.topicName()).thenReturn(
+                "event/tenant/device/?param2=value2&param3=value3");
+        when(msg.properties()).thenReturn(
+                msgProperties);
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), span, device);
+
+        assertNotNull(context.propertyBag());
+        assertNull(context.propertyBag().getProperty(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
+        assertEquals(contentType, context.contentType());
     }
 
     /**
