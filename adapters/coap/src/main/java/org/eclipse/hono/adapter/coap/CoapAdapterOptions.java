@@ -152,4 +152,14 @@ public interface CoapAdapterOptions {
      */
     @WithDefault("500")
     int timeoutToAck();
+
+    /**
+     * Checks, if message tracing log is enabled.
+     * <p>
+     * When enabled, the CoAP adapter will log all incoming and outgoing messages tracing information.
+     *
+     * @return {@code true} enable message tracing log, {@code false} disable message tracing log.
+     */
+    @WithDefault("false")
+    boolean messageTracingLogEnabled();
 }
