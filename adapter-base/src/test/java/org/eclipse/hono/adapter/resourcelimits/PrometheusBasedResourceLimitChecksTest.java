@@ -306,7 +306,9 @@ public class PrometheusBasedResourceLimitChecksTest {
     @Test
     public void testMessageLimitFallsBackToDefaultValueIfQueryStillRunning(final VertxTestContext ctx) {
 
-        when(dataVolumeCache.get(any(LimitedResourceKey.class))).thenReturn(new CompletableFuture<LimitedResource<Long>>());
+        when(dataVolumeCache.get(any(LimitedResourceKey.class)))
+                .thenReturn(new CompletableFuture<LimitedResource<Long>>()
+                        .orTimeout(2, TimeUnit.SECONDS));
         final long incomingMessageSize = 20;
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT);
 
@@ -388,7 +390,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     private void givenCurrentConnections(final Long maxConnections, final Long currentConnections) {
         when(connectionCountCache.get(any(LimitedResourceKey.class))).thenAnswer(i -> {
             final var count = new CompletableFuture<LimitedResource<Long>>();
-            count.complete(new LimitedResource<>(maxConnections, currentConnections));
+            count.completeOnTimeout(new LimitedResource<>(maxConnections, currentConnections), 100, TimeUnit.MILLISECONDS);
             return count;
         });
     }
@@ -396,7 +398,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     private void givenDataVolumeUsageInBytes(final Long maxBytes, final Long consumedBytes) {
         when(dataVolumeCache.get(any(LimitedResourceKey.class))).thenAnswer(i -> {
             final var count = new CompletableFuture<LimitedResource<Long>>();
-            count.complete(new LimitedResource<>(maxBytes, consumedBytes.longValue()));
+            count.completeOnTimeout(new LimitedResource<>(maxBytes, consumedBytes.longValue()), 100, TimeUnit.MILLISECONDS);
             return count;
         });
     }
@@ -404,7 +406,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     private void givenDeviceConnectionDuration(final Duration maxDuration, final Duration consumedConnectionDuration) {
         when(connectionDurationCache.get(any(LimitedResourceKey.class))).thenAnswer(i -> {
             final var count = new CompletableFuture<LimitedResource<Duration>>();
-            count.complete(new LimitedResource<>(maxDuration, consumedConnectionDuration));
+            count.completeOnTimeout(new LimitedResource<>(maxDuration, consumedConnectionDuration), 100, TimeUnit.MILLISECONDS);
             return count;
         });
     }
