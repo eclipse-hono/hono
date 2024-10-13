@@ -16,11 +16,16 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
+import org.eclipse.californium.core.coap.EmptyMessage;
+import org.eclipse.californium.core.coap.Message;
+import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Endpoint;
-import org.eclipse.californium.core.network.interceptors.MessageTracer;
+import org.eclipse.californium.core.network.interceptors.MessageInterceptor;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
@@ -200,7 +205,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
                                 if (getConfig().isMessageTracingLogEnabled()) {
-                                    ep.addInterceptor(new MessageTracer());
+                                    ep.addInterceptor(getMessageTracer());
                                 }
                                 ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
@@ -210,7 +215,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
                                 if (getConfig().isMessageTracingLogEnabled()) {
-                                    ep.addInterceptor(new MessageTracer());
+                                    ep.addInterceptor(getMessageTracer());
                                 }
                                 ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
@@ -231,6 +236,75 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             startingServer.add(resource);
         });
         resourcesToAdd.clear();
+    }
+
+    private MessageInterceptor getMessageTracer() {
+       return new MessageInterceptor() {
+            @Override
+            public void sendRequest(final Request request) {
+                log.info("{} <== req {}", request.getDestinationContext(), getTracingString(request));
+            }
+
+            @Override
+            public void sendResponse(final Response response) {
+                log.info("{} <== res {}", response.getDestinationContext(), getTracingString(response));
+            }
+
+            @Override
+            public void sendEmptyMessage(final EmptyMessage emptyMessage) {
+                log.info("{} <== emp {}", emptyMessage.getDestinationContext(), getTracingString(emptyMessage));
+            }
+
+            @Override
+            public void receiveRequest(final Request request) {
+                log.info("{} ==> req {}", request.getSourceContext(), getTracingString(request));
+            }
+
+            @Override
+            public void receiveResponse(final Response response) {
+                log.info("{} ==> res {}", response.getSourceContext(), getTracingString(response));
+            }
+
+            @Override
+            public void receiveEmptyMessage(final EmptyMessage emptyMessage) {
+                log.info("{} ==> emp {}", emptyMessage.getSourceContext(), getTracingString(emptyMessage));
+            }
+
+            private String getTracingString(final Message message) {
+                final String status = ((Supplier<String>) (() -> {
+                    if (message.isCanceled()) {
+                        return "canceled ";
+                    } else if (message.getSendError() != null) {
+                        return message.getSendError().getMessage() + " ";
+                    } else if (message.isRejected()) {
+                        return "rejected ";
+                    } else if (message.isAcknowledged()) {
+                        return "acked ";
+                    } else {
+                        return message.isTimedOut() ? "timeout " : "";
+                    }
+                })).get();
+
+                final String code;
+                if (message instanceof Request request) {
+                    code = request.getCode() == null ? "PING" : request.getCode().toString();
+                } else if (message instanceof Response response) {
+                    code = response.getCode().toString();
+                } else {
+                    code = "";
+                }
+
+                final String payload;
+                if (message.getOffloadMode() != null) {
+                    payload = "offloaded " + message.getOffloadMode();
+                } else {
+                    payload = "payload " + (message.getPayload() == null ? 0 : message.getPayload().length) + " bytes";
+                }
+
+                return String.format("%s-%-6s MID=%5d, Token=%s, OptionSet=%s, %s%s",
+                        message.getType(), code, message.getMID(), message.getTokenString(), message.getOptions(), status, payload);
+            }
+        };
     }
 
     /**
