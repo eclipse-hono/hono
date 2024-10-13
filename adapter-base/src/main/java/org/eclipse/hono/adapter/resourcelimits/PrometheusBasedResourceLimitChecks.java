@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
 import org.eclipse.hono.client.registry.TenantClient;
@@ -113,32 +114,28 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         final var value = connectionCountCache.get(new LimitedResourceKey(tenant.getTenantId(), tenantClient::get));
 
-        if (value.isDone()) {
-            try {
-                final var limitedResource = value.get();
-                TracingHelper.TAG_CACHE_HIT.set(span, Boolean.TRUE);
-                span.log(Map.of(
-                        TenantConstants.FIELD_MAX_CONNECTIONS, Optional.ofNullable(limitedResource.getCurrentLimit())
-                            .map(String::valueOf)
-                            .orElse("N/A"),
-                        "current-connections", limitedResource.getCurrentValue()));
-                final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
-                        .map(limit -> limitedResource.getCurrentValue() >= limit)
-                        .orElse(false);
-                result.complete(isExceeded);
-            } catch (InterruptedException | ExecutionException e) {
-                // this means that the query could not be run successfully
-                TracingHelper.logError(span, e);
-                // fall back to default value
-                result.complete(Boolean.FALSE);
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        } else {
-            LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-            span.log(EVENT_QUERY_STILL_RUNNING);
+        try {
+            final var limitedResource = value.get();
+            TracingHelper.TAG_CACHE_HIT.set(span, Boolean.TRUE);
+            span.log(Map.of(
+                    TenantConstants.FIELD_MAX_CONNECTIONS, Optional.ofNullable(limitedResource.getCurrentLimit())
+                        .map(String::valueOf)
+                        .orElse("N/A"),
+                    "current-connections", limitedResource.getCurrentValue()));
+            final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
+                    .map(limit -> limitedResource.getCurrentValue() >= limit)
+                    .orElse(false);
+            result.complete(isExceeded);
+        } catch (CancellationException | ExecutionException | InterruptedException e) {
+            // this means that the query could not be run successfully
+            TracingHelper.logError(span, e);
+            // fall back to default value
             result.complete(Boolean.FALSE);
+            if (e instanceof InterruptedException) {
+                LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                span.log(EVENT_QUERY_STILL_RUNNING);
+                Thread.currentThread().interrupt();
+            }
         }
 
         return result.future()
@@ -201,32 +198,28 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
             final var value = dataVolumeCache.get(new LimitedResourceKey(tenant.getTenantId(), tenantClient::get));
 
-            if (value.isDone()) {
-                try {
-                    final var limitedResource = value.get();
-                    TracingHelper.TAG_CACHE_HIT.set(span, true);
-                    span.log(Map.of(
-                            "current period bytes limit", Optional.ofNullable(limitedResource.getCurrentLimit())
-                            .map(String::valueOf)
-                            .orElse("N/A"),
-                            "current period bytes consumed", limitedResource.getCurrentValue()));
-                    final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
-                            .map(limit -> (limitedResource.getCurrentValue() + payloadSize) > limit)
-                            .orElse(false);
-                    result.complete(isExceeded);
-                } catch (InterruptedException | ExecutionException e) {
-                    // this means that the query could not be run successfully
-                    TracingHelper.logError(span, e);
-                    // fall back to default value
-                    result.complete(Boolean.FALSE);
-                    if (e instanceof InterruptedException) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            } else {
-                LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-                span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
+            try {
+                final var limitedResource = value.get();
+                TracingHelper.TAG_CACHE_HIT.set(span, true);
+                span.log(Map.of(
+                        "current period bytes limit", Optional.ofNullable(limitedResource.getCurrentLimit())
+                                .map(String::valueOf)
+                                .orElse("N/A"),
+                        "current period bytes consumed", limitedResource.getCurrentValue()));
+                final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
+                        .map(limit -> (limitedResource.getCurrentValue() + payloadSize) > limit)
+                        .orElse(false);
+                result.complete(isExceeded);
+            } catch (CancellationException | ExecutionException | InterruptedException e) {
+                // this means that the query could not be run successfully
+                TracingHelper.logError(span, e);
+                // fall back to default value
                 result.complete(Boolean.FALSE);
+                if (e instanceof InterruptedException) {
+                    LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                    span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
+                    Thread.currentThread().interrupt();
+                }
             }
         }
         return result.future()
@@ -253,32 +246,28 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final var key = new LimitedResourceKey(tenant.getTenantId(), tenantClient::get);
         final var value = connectionDurationCache.get(key);
 
-        if (value.isDone()) {
-            try {
-                final var limitedResource = value.get();
-                TracingHelper.TAG_CACHE_HIT.set(span, true);
-                span.log(Map.of(
-                        "current period's connection duration limit", Optional.ofNullable(limitedResource.getCurrentLimit())
-                        .map(String::valueOf)
-                        .orElse("N/A"),
-                        "current period's connection duration consumed", limitedResource.getCurrentValue()));
-                final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
-                        .map(limit -> limitedResource.getCurrentValue().compareTo(limit) >= 0)
-                        .orElse(false);
-                result.complete(isExceeded);
-            } catch (InterruptedException | ExecutionException e) {
-                // this means that the query could not be run successfully
-                TracingHelper.logError(span, e);
-                // fall back to default value
-                result.complete(Boolean.FALSE);
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        } else {
-            LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-            span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
+        try {
+            final var limitedResource = value.get();
+            TracingHelper.TAG_CACHE_HIT.set(span, true);
+            span.log(Map.of(
+                    "current period's connection duration limit", Optional.ofNullable(limitedResource.getCurrentLimit())
+                    .map(String::valueOf)
+                    .orElse("N/A"),
+                    "current period's connection duration consumed", limitedResource.getCurrentValue()));
+            final boolean isExceeded = Optional.ofNullable(limitedResource.getCurrentLimit())
+                    .map(limit -> limitedResource.getCurrentValue().compareTo(limit) >= 0)
+                    .orElse(false);
+            result.complete(isExceeded);
+        } catch (CancellationException | ExecutionException | InterruptedException e) {
+            // this means that the query could not be run successfully
+            TracingHelper.logError(span, e);
+            // fall back to default value
             result.complete(Boolean.FALSE);
+            if (e instanceof InterruptedException) {
+                LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
+                span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
+                Thread.currentThread().interrupt();
+            }
         }
         return result.future()
                 .onSuccess(b -> {
