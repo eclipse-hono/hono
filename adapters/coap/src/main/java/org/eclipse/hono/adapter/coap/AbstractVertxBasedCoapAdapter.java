@@ -20,7 +20,6 @@ import java.util.Set;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.network.Endpoint;
-import org.eclipse.californium.core.network.interceptors.MessageTracer;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
@@ -199,9 +198,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
                             .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
-                                if (getConfig().isMessageTracingLogEnabled()) {
-                                    ep.addInterceptor(new MessageTracer());
-                                }
                                 ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
                                 this.secureEndpoint = ep;
@@ -209,9 +205,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
                             .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
-                                if (getConfig().isMessageTracingLogEnabled()) {
-                                    ep.addInterceptor(new MessageTracer());
-                                }
                                 ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
                                 this.insecureEndpoint = ep;
