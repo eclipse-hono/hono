@@ -66,11 +66,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * that time, the status gets removed and a new request will fail.
      */
     public static final int DEFAULT_BLOCKWISE_STATUS_LIFETIME = 300000;
-    /**
-     * The default for message tracing log. When message tracing is enabled, the CoAP adapter
-     * will log all incoming and outgoing messages. This is useful for debugging purposes.
-     */
-    public static final boolean DEFAULT_MESSAGE_TRACING_LOG = false;
 
     static {
         DEFAULT_CONNECTOR_THREADS = 2;
@@ -96,7 +91,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int blockwiseStatusLifetime = DEFAULT_BLOCKWISE_STATUS_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
-    private boolean messageTracingLogEnabled = DEFAULT_MESSAGE_TRACING_LOG;
 
     /**
      * Creates properties using default values.
@@ -123,7 +117,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
         this.networkConfig = options.networkConfig().orElse(null);
         this.secureNetworkConfig = options.secureNetworkConfig().orElse(null);
         setTimeoutToAck(options.timeoutToAck());
-        this.messageTracingLogEnabled = options.messageTracingLogEnabled();
     }
 
     /**
@@ -472,28 +465,5 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
             throw new IllegalArgumentException("timeout to ack must be at least -1");
         }
         this.timeoutToAck = timeoutToAck;
-    }
-
-    /**
-     * Returns the current message tracing log mode.
-     * <p>
-     * When message tracing is enabled, the CoAP adapter will log all incoming and outgoing messages.
-     * <p>
-     * @return {@code true} if message tracing log is enabled, {@code false} if it's disabled.
-     */
-    public final boolean isMessageTracingLogEnabled() {
-        return messageTracingLogEnabled;
-    }
-
-    /**
-     * Sets the message tracing log mode.
-     * <p>
-     * When message tracing is enabled, the CoAP adapter will log all incoming and outgoing messages.
-     * Setting this property has effect only during the application startup.
-     * <p>
-     * @param messageTracingLog {@code true} enable message tracing log, {@code false} disable message tracing log.
-     */
-    public final void setMessageTracingLogEnabled(final boolean messageTracingLog) {
-        this.messageTracingLogEnabled = messageTracingLog;
     }
 }
