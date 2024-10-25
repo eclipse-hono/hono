@@ -33,6 +33,10 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
      */
     public static final long DEFAULT_CACHE_TIMEOUT = 60L;
     /**
+     * The default divisor value for cached data refresh time duration calculation.
+     */
+    public static final int DEFAULT_CACHE_REFRESH_DIVISOR = 2;
+    /**
      * The default number of milliseconds that the client waits for a connection to
      * the Prometheus server.
      */
@@ -46,6 +50,7 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
     private int cacheMinSize = DEFAULT_CACHE_MIN_SIZE;
     private long cacheMaxSize = DEFAULT_CACHE_MAX_SIZE;
     private long cacheTimeout = DEFAULT_CACHE_TIMEOUT;
+    private int cacheRefreshDivisor = DEFAULT_CACHE_REFRESH_DIVISOR;
     private long queryTimeout = DEFAULT_QUERY_TIMEOUT;
     private int connectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
@@ -73,6 +78,7 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
         this.cacheMaxSize = options.cacheMaxSize();
         this.cacheMinSize = options.cacheMinSize();
         this.cacheTimeout = options.cacheTimeout();
+        this.cacheRefreshDivisor = options.cacheRefreshDivisor();
         this.connectTimeout = options.connectTimeout();
         this.queryTimeout = options.queryTimeout();
     }
@@ -165,6 +171,32 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
             throw new IllegalArgumentException("default cache timeout must be greater than zero");
         }
         this.cacheTimeout = timeout;
+    }
+
+    /**
+     * Gets the divisor for cache refresh time duration calculation which is cache timeout duration divided by this divisor value.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_CACHE_REFRESH_DIVISOR}.
+     *
+     * @return The divisor value for cache refresh time duration calculation.
+     */
+    public int getCacheRefreshDivisor() {
+        return cacheRefreshDivisor;
+    }
+
+    /**
+     * Sets the divisor value for cache refresh time duration calculation after which cached responses are updated in the background.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_CACHE_REFRESH_DIVISOR}.
+     *
+     * @param divisor The refresh time divisor value.
+     * @throws IllegalArgumentException if divisor is &lt;= 0.
+     */
+    public void setCacheRefreshDivisor(final int divisor) {
+        if (divisor <= 0) {
+            throw new IllegalArgumentException("cache refresh divisor must be greater than zero");
+        }
+        this.cacheRefreshDivisor = divisor;
     }
 
     /**

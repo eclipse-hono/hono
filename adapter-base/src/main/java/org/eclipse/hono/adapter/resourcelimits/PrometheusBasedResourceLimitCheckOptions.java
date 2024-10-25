@@ -65,6 +65,14 @@ public interface PrometheusBasedResourceLimitCheckOptions {
     long cacheTimeout();
 
     /**
+     * Gets the divisor value for calculating cached data refresh time duration from cache timeout duration.
+     *
+     * @return The divisor value for calculating refresh time duration.
+     */
+    @WithDefault("2")
+    int cacheRefreshDivisor();
+
+    /**
      * Gets the period of time after which a request to a Prometheus server are closed.
      *
      * @return The timeout for the request to a remote server in milliseconds, zero or negative value is for disabled timeout.

@@ -646,6 +646,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
             final var webClient = WebClient.create(vertx, webClientOptions);
             final var cacheTimeout = Duration.ofSeconds(config.getCacheTimeout());
+            final var cacheRefreshDivisor = config.getCacheRefreshDivisor();
             final Caffeine<Object, Object> builder = Caffeine.newBuilder()
                     // make sure we run one Prometheus query at a time
                     .executor(Executors.newSingleThreadExecutor(r -> {
@@ -656,7 +657,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     .initialCapacity(config.getCacheMinSize())
                     .maximumSize(config.getCacheMaxSize())
                     .expireAfterWrite(cacheTimeout)
-                    .refreshAfterWrite(cacheTimeout.dividedBy(2));
+                    .refreshAfterWrite(cacheTimeout.dividedBy(cacheRefreshDivisor));
 
             return new PrometheusBasedResourceLimitChecks(
                     builder.buildAsync(new ConnectedDevicesAsyncCacheLoader(webClient, config, tracer)),
