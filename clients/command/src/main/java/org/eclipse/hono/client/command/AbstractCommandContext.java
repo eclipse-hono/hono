@@ -14,12 +14,14 @@ package org.eclipse.hono.client.command;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -36,7 +38,8 @@ import io.vertx.core.json.JsonObject;
  * in a Pub/Sub and Kafka based command context.
  * @param <T> The type of Command.
  */
-public abstract class AbstractCommandContext<T extends Command> extends MapBasedExecutionContext implements CommandContext {
+public abstract class AbstractCommandContext<T extends Command> extends MapBasedExecutionContext
+        implements CommandContext {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractCommandContext.class);
 
@@ -116,6 +119,15 @@ public abstract class AbstractCommandContext<T extends Command> extends MapBased
     }
 
     /**
+     * Checks if the command is an ack-required command.
+     *
+     * @return True if it is an ack-required command, false otherwise.
+     */
+    protected boolean isAckRequiredCommand() {
+        return command.isAckRequired();
+    }
+
+    /**
      * Sends a command response if the command response message represents an error message.
      *
      * @param status The HTTP status code indicating the outcome of processing the command.
@@ -157,24 +169,73 @@ public abstract class AbstractCommandContext<T extends Command> extends MapBased
         commandResponse.setAdditionalProperties(
                 Collections.unmodifiableMap(command.getDeliveryFailureNotificationProperties()));
 
-        return commandResponseSender.sendCommandResponse(
-                // try to retrieve tenant configuration from context
-                Optional.ofNullable(get(KEY_TENANT_CONFIG))
-                        .filter(TenantObject.class::isInstance)
-                        .map(TenantObject.class::cast)
-                        // and fall back to default configuration
-                        .orElseGet(() -> TenantObject.from(command.getTenant())),
-                new RegistrationAssertion(command.getDeviceId()),
-                commandResponse,
-                span.context())
-                .onFailure(thr -> {
-                    LOG.debug("failed to publish command response [{}]", commandResponse, thr);
-                    TracingHelper.logError(span, "failed to publish command response message", thr);
-                })
+        return sendCommandResponse(commandResponse, span)
                 .onSuccess(v -> {
                     LOG.debug("published error command response [{}, cause: {}]", commandResponse,
                             cause != null ? cause.getMessage() : error);
                     span.log("published error command response");
+                });
+    }
+
+    /**
+     * Sends a command response as a command acknowledgement.
+     *
+     * @param status The HTTP status code indicating the outcome of processing the command.
+     * @param successMessage The message for the response message body.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     * @param correlationId The correlation ID of the command that this is the response for.
+     * @param messagingType The type of the messaging system via which the command message was received.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the command response has been sent.
+     *         <p>
+     *         The future will be failed if the command response could not be sent.
+     */
+    public Future<Void> sendDeliverySuccessCommandResponseMessage(
+            final int status,
+            final String successMessage,
+            final Span span,
+            final String correlationId,
+            final MessagingType messagingType) {
+        if (correlationId == null) {
+            TracingHelper.logError(span, "can't send command response message - no correlation id set");
+            return Future.failedFuture("missing correlation id");
+        }
+        final JsonObject payloadJson = new JsonObject();
+        payloadJson.put("acknowledgement", successMessage != null ? successMessage : "");
+
+        final CommandResponse commandResponse = new CommandResponse(
+                command.getTenant(),
+                command.getDeviceId(),
+                payloadJson.toBuffer(),
+                CommandConstants.CONTENT_TYPE_DELIVERY_SUCCESS_NOTIFICATION,
+                status,
+                correlationId,
+                "",
+                messagingType);
+        commandResponse.setAdditionalProperties(Map.of(MessageHelper.SYS_PROPERTY_SUBJECT, command.getName()));
+
+        return sendCommandResponse(commandResponse, span)
+                .onSuccess(v -> {
+                    LOG.debug("published ack command response [{}]", commandResponse);
+                    span.log("published ack command response");
+                });
+    }
+
+    private Future<Void> sendCommandResponse(final CommandResponse commandResponse, final Span span) {
+        return commandResponseSender.sendCommandResponse(
+                        // try to retrieve tenant configuration from context
+                        Optional.ofNullable(get(KEY_TENANT_CONFIG))
+                                .filter(TenantObject.class::isInstance)
+                                .map(TenantObject.class::cast)
+                                // and fall back to default configuration
+                                .orElseGet(() -> TenantObject.from(command.getTenant())),
+                        new RegistrationAssertion(command.getDeviceId()),
+                        commandResponse,
+                        span.context())
+                .onFailure(thr -> {
+                    LOG.debug("failed to publish command response [{}]", commandResponse, thr);
+                    TracingHelper.logError(span, "failed to publish command response message", thr);
                 });
     }
 }
