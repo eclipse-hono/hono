@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 Contributors to the Eclipse Foundation
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.tests.mqtt;
+package org.eclipse.hono.tests.mqtt5;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -48,14 +48,20 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.hivemq.client.mqtt.datatypes.MqttClientIdentifier;
+import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext;
+import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedListener;
+import com.hivemq.client.mqtt.mqtt5.exceptions.Mqtt5ConnAckException;
+import com.hivemq.client.mqtt.mqtt5.message.connect.connack.Mqtt5ConnAckReasonCode;
+
 import io.jsonwebtoken.Jwts;
-import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -63,11 +69,9 @@ import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.mqtt.MqttClientOptions;
-import io.vertx.mqtt.MqttConnectionException;
 
 /**
- * Integration tests for checking MQTT 3.1.1 based connection to the MQTT adapter.
+ * Integration tests for checking MQTT 5.0 based connection to the MQTT adapter.
  *
  */
 @ExtendWith(VertxExtension.class)
@@ -107,9 +111,12 @@ public class MqttConnectionIT extends MqttTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 .compose(ok -> connectToAdapter(
                         tlsVersion,
-                        IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                        IntegrationTestSupport.getUsername(deviceId, tenantId),
+                        password,
+                        null,
+                        null))
                 .onComplete(ctx.succeeding(conAckMsg -> {
-                    ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                    ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                     ctx.completeNow();
                 }));
     }
@@ -146,7 +153,7 @@ public class MqttConnectionIT extends MqttTestBase {
             .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
             .compose(ok -> connectToAdapter("ignored", jws))
             .onComplete(ctx.succeeding(conAckMsg -> {
-                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                 ctx.completeNow();
             }));
     }
@@ -173,17 +180,14 @@ public class MqttConnectionIT extends MqttTestBase {
                 .expiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
                 .signWith(keyPair.getPrivate())
                 .compact();
-        final var options = new MqttClientOptions(defaultOptions)
-                .setUsername("ignored")
-                .setPassword(jws)
-                .setClientId("tenants/%s/devices/%s".formatted(tenantId, deviceId));
+        final var clientId = MqttClientIdentifier.of("tenants/%s/devices/%s".formatted(tenantId, deviceId));
 
         helper.registry.addTenant(tenantId)
             .compose(res -> helper.registry.registerDevice(tenantId, deviceId))
             .compose(res -> helper.registry.addCredentials(tenantId, deviceId, Set.of(rpkCredential)))
-            .compose(ok -> connectToAdapter(options, IntegrationTestSupport.MQTT_HOST))
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.TLS_VERSION_1_2, "ignored", jws, clientId, null))
             .onComplete(ctx.succeeding(conAckMsg -> {
-                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                 ctx.completeNow();
             }));
     }
@@ -203,7 +207,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
                 .onComplete(ctx.succeeding(conAckMsg -> {
-                    ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                    ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                     ctx.completeNow();
                 }));
     }
@@ -235,7 +239,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     IntegrationTestSupport.getSniHostname(IntegrationTestSupport.MQTT_HOST, tenantId)))
             .onComplete(ctx.succeeding(conAckMsg -> {
                 // THEN the connection attempt succeeds
-                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                 ctx.completeNow();
             }));
     }
@@ -272,7 +276,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     IntegrationTestSupport.getSniHostname(IntegrationTestSupport.MQTT_HOST, "test-alias")))
             .onComplete(ctx.succeeding(conAckMsg -> {
                 // THEN the connection attempt succeeds
-                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                 ctx.completeNow();
             }));
     }
@@ -310,9 +314,10 @@ public class MqttConnectionIT extends MqttTestBase {
             .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(MqttConnectionException.class);
-                    assertThat(((MqttConnectionException) t).code())
-                        .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                    final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                    assertThat(error.getReasonCode())
+                        .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
                 });
                 ctx.completeNow();
             }));
@@ -453,9 +458,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code())
-                                .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
                     });
                     ctx.completeNow();
                 }));
@@ -476,8 +482,10 @@ public class MqttConnectionIT extends MqttTestBase {
         .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
-                assertThat(t).isInstanceOf(MqttConnectionException.class);
-                assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                assertThat(error.getReasonCode())
+                    .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
             });
             ctx.completeNow();
         }));
@@ -499,8 +507,10 @@ public class MqttConnectionIT extends MqttTestBase {
         .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
-                assertThat(t).isInstanceOf(MqttConnectionException.class);
-                assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                assertThat(error.getReasonCode())
+                    .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
             });
             ctx.completeNow();
         }));
@@ -525,8 +535,10 @@ public class MqttConnectionIT extends MqttTestBase {
         .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
-                assertThat(t).isInstanceOf(MqttConnectionException.class);
-                assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                assertThat(error.getReasonCode())
+                    .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
             });
             ctx.completeNow();
         }));
@@ -551,8 +563,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
                     });
                     ctx.completeNow();
                 }));
@@ -584,8 +598,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
                     });
                     ctx.completeNow();
                 }));
@@ -610,8 +626,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.NOT_AUTHORIZED);
                     });
                     ctx.completeNow();
                 }));
@@ -637,8 +655,10 @@ public class MqttConnectionIT extends MqttTestBase {
             .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused with a NOT_AUTHORIZED code
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(MqttConnectionException.class);
-                    assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                    assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                    final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                    assertThat(error.getReasonCode())
+                        .isEqualTo(Mqtt5ConnAckReasonCode.NOT_AUTHORIZED);
                 });
                 ctx.completeNow();
             }));
@@ -667,9 +687,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code())
-                            .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.BAD_USER_NAME_OR_PASSWORD);
                     });
                     ctx.completeNow();
                 }));
@@ -702,9 +723,10 @@ public class MqttConnectionIT extends MqttTestBase {
                 .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(MqttConnectionException.class);
-                        assertThat(((MqttConnectionException) t).code())
-                            .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                        assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                        final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                        assertThat(error.getReasonCode())
+                            .isEqualTo(Mqtt5ConnAckReasonCode.NOT_AUTHORIZED);
                     });
                     ctx.completeNow();
                 }));
@@ -728,8 +750,10 @@ public class MqttConnectionIT extends MqttTestBase {
             .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused with a NOT_AUTHORIZED code
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOf(MqttConnectionException.class);
-                    assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                    assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                    final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                    assertThat(error.getReasonCode())
+                        .isEqualTo(Mqtt5ConnAckReasonCode.NOT_AUTHORIZED);
                 });
                 ctx.completeNow();
             }));
@@ -755,8 +779,10 @@ public class MqttConnectionIT extends MqttTestBase {
         .onComplete(ctx.failing(t -> {
             // THEN the connection is refused with a NOT_AUTHORIZED code
             ctx.verify(() -> {
-                assertThat(t).isInstanceOf(MqttConnectionException.class);
-                assertThat(((MqttConnectionException) t).code()).isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                assertThat(t).isInstanceOf(Mqtt5ConnAckException.class);
+                final var error = ((Mqtt5ConnAckException) t).getMqttMessage();
+                assertThat(error.getReasonCode())
+                    .isEqualTo(Mqtt5ConnAckReasonCode.NOT_AUTHORIZED);
             });
             ctx.completeNow();
         }));
@@ -830,14 +856,24 @@ public class MqttConnectionIT extends MqttTestBase {
             final Supplier<Future<?>> deviceRegistryChangeOperation) {
 
         final Promise<Void> connectionClosedPromise = Promise.promise();
+        final var disconnectedListener = new MqttClientDisconnectedListener() {
+            @Override
+            public void onDisconnected(@NotNull final MqttClientDisconnectedContext context) {
+                connectionClosedPromise.complete();
+            }
+        };
+
         // GIVEN a connected device
         helper.registry
                 .addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
                 .compose(ok -> connectToAdapter(
-                        IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                        IntegrationTestSupport.TLS_VERSION_1_2,
+                        IntegrationTestSupport.getUsername(deviceId, tenantId),
+                        password,
+                        null,
+                        disconnectedListener))
                 .compose(conAckMsg -> {
-                    ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
-                    mqttClient.closeHandler(remoteClose -> connectionClosedPromise.complete());
+                    ctx.verify(() -> assertThat(conAckMsg.getReasonCode()).isEqualTo(Mqtt5ConnAckReasonCode.SUCCESS));
                     // WHEN corresponding device/tenant is removed/disabled
                     return deviceRegistryChangeOperation.get();
                 })

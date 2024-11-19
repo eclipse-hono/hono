@@ -9,7 +9,7 @@ consumers and for receiving commands from applications and sending back response
 
 The MQTT adapter is **not** a general purpose MQTT broker. In particular the adapter
 
-* supports MQTT 3.1.1 only.
+* supports clients connecting using MQTT 3.1.1 or 5.0 only.
 * does not maintain session state for clients and thus always sets the *session present* flag in its CONNACK packet
   to `0`, regardless of the value  of the *clean session* flag provided in a client's CONNECT packet.
 * ignores any *Will* included in a client's CONNECT packet.
@@ -23,7 +23,7 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 ## Authentication
 
 The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection
-establishment. The adapter supports both the authentication based on the username/password provided in an MQTT CONNECT
+establishment. The adapter supports both authentication based on the username/password provided in an MQTT CONNECT
 packet as well as client certificate based authentication as part of a TLS handshake for that purpose.
 
 The adapter tries to authenticate the device using these mechanisms in the following order
@@ -46,7 +46,8 @@ in order to support this mechanism.
 
 The MQTT adapter supports authenticating clients based on credentials provided during MQTT connection establishment.
 This means that clients need to provide a *user* and a *password* field in their MQTT CONNECT packet as defined in
-[MQTT Version 3.1.1, Section 3.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028)
+[MQTT Version 3.1.1, Section 3.1.3](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031)
+and [MQTT Version 5.0, Section 3.1.3](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901058)
 when connecting to the MQTT adapter. The username provided in the *user* field must match the pattern
 *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
 
@@ -68,8 +69,9 @@ concepts.
 The MQTT adapter supports authenticating clients based on a signed 
 [JSON Web Token](https://www.rfc-editor.org/rfc/rfc7519) (JWT) provided during MQTT connection establishment. This requires
 a client to provide a *client identifier*, a *user* and a *password* field in its MQTT CONNECT packet as defined in
-[MQTT Version 3.1.1, Section 3.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718028)
-when connecting to the MQTT adapter. The JWT must be sent in the password field. The content of the *user* field is
+[MQTT Version 3.1.1, Section 3.1.3](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc398718031)
+and [MQTT Version 5.0, Section 3.1.3](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901058)
+when connecting to the MQTT adapter. The JWT must be sent in the *password* field. The content of the *user* field is
 ignored. The information about the tenant and the authentication identifier can be presented to the protocol adapter in
 one of two ways:
 
@@ -107,26 +109,38 @@ a client tries to connect and/or send a message to the adapter.
 
 ### Connection Limits
 
-The adapter rejects a client’s connection attempt with return code
+The adapter rejects a client’s attempt to connect using 
 
-* `0x03` (*Connection Refused: server unavailable*), if the maximum number of connections per protocol adapter instance
-  is reached
-* `0x05` (*Connection Refused: not authorized*), if the maximum number of simultaneously connected devices for the
-  tenant is reached.
+* MQTT 3.1.1 with return code `0x03` (*Server Unavailable*),
+* MQTT 5.0 with reason code `0x9C` (*Use Another Server*),
+
+if the maximum number of connections per protocol adapter instance is reached.
+
+The adapter rejects a client’s attempt to connect using
+
+* MQTT 3.1.1 with return code `0x05` (*Not Authorized*),
+* MQTT 5.0 with reason code `0x97` (*Quota Exceeded*),
+
+if the maximum number of simultaneously connected devices for the tenant is reached.
 
 ### Connection Duration Limits
 
-The adapter rejects a client’s connection attempt with return code `0x05` (*Connection Refused: not authorized*), if the
-[connection duration limit]({{< relref "/concepts/resource-limits#connection-duration-limit" >}}) that has been
-configured for the client’s tenant is exceeded.
+The adapter rejects a client’s attempt to connect using
+
+* MQTT 3.1.1 with return code `0x05` (*Not Authorized*)
+* MQTT 5.0 with reason code `0x97` (*Quota Exceeded*)
+
+if the [connection duration limit]({{< relref "/concepts/resource-limits#connection-duration-limit" >}})
+that has been configured for the client’s tenant is exceeded.
 
 ### Message Limits
 
 The adapter
 
-* rejects a client's connection attempt with return code `0x05` (*Connection Refused: not authorized*),
+* rejects a client's attempt to connect using MQTT 3.1.1 with return code `0x05` (*Not Authorized*),
+* rejects a client's attempt to connect using MQTT 5.0 with reason code `0x97` (*Quota Exceeded*),
 * discards any MQTT PUBLISH packet containing telemetry data or an event that is sent by a client and
-* rejects any AMQP 1.0 message containing a command sent by a north bound application
+* rejects any command messages sent by a north bound application
 
 if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device’s tenant
 is exceeded.

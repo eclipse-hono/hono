@@ -596,6 +596,12 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
 
       <!-- Testing -->
       <dependency>
+        <groupId>com.hivemq</groupId>
+        <artifactId>hivemq-mqtt-client</artifactId>
+        <version>1.3.3</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>core-test-utils</artifactId>
         <version>${project.version}</version>
