@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
- * Base class for MQTT adapter integration tests.
+ * Base class for MQTT adapter integration tests using MQTT 3.1.1.
  *
  */
 public abstract class MqttTestBase {
@@ -70,7 +70,7 @@ public abstract class MqttTestBase {
     protected Context context;
 
     /**
-     * Creates default AMQP client options.
+     * Creates default MQTT client options.
      */
     @BeforeAll
     public static void init() {

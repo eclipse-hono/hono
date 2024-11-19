@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,6 +41,9 @@ import javax.net.ssl.SSLSession;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AuthorizationException;
+import org.eclipse.hono.adapter.ConnectionDurationExceededException;
+import org.eclipse.hono.adapter.DataVolumeExceededException;
+import org.eclipse.hono.adapter.TenantConnectionsExceededException;
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
@@ -90,6 +93,7 @@ import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
@@ -518,7 +522,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     log.debug("rejecting connection request from client [clientId: {}], cause:",
                             endpoint.clientIdentifier(), t);
 
-                    final MqttConnectReturnCode code = getConnectReturnCode(t);
+                    final boolean isPreMqtt5 = ((int) MqttVersion.MQTT_5.protocolLevel()) > endpoint.protocolVersion();
+                    final var code = isPreMqtt5 ? getMqtt3ConnackReturnCode(t) : getMqtt5ConnackReasonCode(t);
                     rejectConnectionRequest(endpoint, code, span);
                     TracingHelper.logError(span, t);
                 }
@@ -1106,18 +1111,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return mqttDeviceEndpoint;
     }
 
-    private static MqttConnectReturnCode getConnectReturnCode(final Throwable e) {
-
-        if (e instanceof MqttConnectionException) {
-            return ((MqttConnectionException) e).code();
-        } else if (e instanceof AuthorizationException) {
-            if (e instanceof AdapterConnectionsExceededException) {
-                return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
-            } else {
-                return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
-            }
-        } else if (e instanceof ServiceInvocationException) {
-            switch (((ServiceInvocationException) e).getErrorCode()) {
+    private static MqttConnectReturnCode getMqtt3ConnackReturnCode(final Throwable e) {
+        if (e instanceof MqttConnectionException connectionException) {
+            return connectionException.code();
+        }
+        if (e instanceof AdapterConnectionsExceededException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
+        }
+        if (e instanceof AuthorizationException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+        }
+        if (e instanceof ServiceInvocationException exception) {
+            switch (exception.getErrorCode()) {
             case HttpURLConnection.HTTP_UNAUTHORIZED:
             case HttpURLConnection.HTTP_NOT_FOUND:
                 return MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD;
@@ -1126,9 +1131,39 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             default:
                 return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
             }
-        } else {
-            return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
         }
+
+        return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
+    }
+
+    private static MqttConnectReturnCode getMqtt5ConnackReasonCode(final Throwable e) {
+
+        if (e instanceof MqttConnectionException connectionException) {
+            return connectionException.code();
+        }
+        if (e instanceof AdapterConnectionsExceededException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_USE_ANOTHER_SERVER;
+        }
+        if (e instanceof TenantConnectionsExceededException
+                || e instanceof DataVolumeExceededException
+                || e instanceof ConnectionDurationExceededException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_QUOTA_EXCEEDED;
+        }
+        if (e instanceof AuthorizationException) {
+            return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED_5;
+        }
+        if (e instanceof ServiceInvocationException exception) {
+            switch (exception.getErrorCode()) {
+            case HttpURLConnection.HTTP_UNAUTHORIZED:
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USERNAME_OR_PASSWORD;
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE_5;
+            default:
+                return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED_5;
+            }
+        }
+        return MqttConnectReturnCode.CONNECTION_REFUSED_UNSPECIFIED_ERROR;
     }
 
     /**
