@@ -1,5 +1,5 @@
 @rem ***************************************************************************
-@rem Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+@rem Copyright (c) 2016 Contributors to the Eclipse Foundation
 @rem
 @rem See the NOTICE file(s) distributed with this work for additional
 @rem information regarding copyright ownership.
@@ -30,19 +30,19 @@ IF ERRORLEVEL 1 (
 cd homepage
 IF NOT "%~1"==""  (
   ECHO Going to build homepage in directory: %1
-  hugo -v -d %1
+  hugo -d %1
 ) ELSE (
   ECHO Going to build homepage in default directory...
-  hugo -v
+  hugo
 )
 cd ..
 
 cd documentation
 IF NOT "%~1"==""  (
   ECHO Going to build documentation in directory: %1\docs
-  hugo -v -d %1\docs
+  hugo -d %1\docs
 ) ELSE (
   ECHO Going to build documentation in default directory...
-  hugo -v
+  hugo
 )
 cd ..
