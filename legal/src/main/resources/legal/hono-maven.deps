@@ -1,6 +1,6 @@
 biz.paluch.logging:logstash-gelf:jar:1.15.1
-ch.qos.logback:logback-classic:jar:1.5.6
-ch.qos.logback:logback-core:jar:1.5.6
+ch.qos.logback:logback-classic:jar:1.5.12
+ch.qos.logback:logback-core:jar:1.5.12
 com.aayushatharva.brotli4j:brotli4j:jar:1.16.0
 com.aayushatharva.brotli4j:native-linux-x86_64:jar:1.16.0
 com.aayushatharva.brotli4j:service:jar:1.16.0
@@ -32,7 +32,7 @@ com.google.code.gson:gson:jar:2.10.1
 com.googlecode.juniversalchardet:juniversalchardet:jar:1.0.3
 com.google.errorprone:error_prone_annotations:jar:2.24.0
 com.google.guava:failureaccess:jar:1.0.1
-com.google.guava:guava:jar:32.1.2-jre
+com.google.guava:guava:jar:33.3.1-jre
 com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-gson:jar:1.43.3
 com.google.http-client:google-http-client:jar:1.43.3
@@ -96,9 +96,9 @@ io.grpc:grpc-services:jar:1.59.1
 io.grpc:grpc-stub:jar:1.59.1
 io.grpc:grpc-util:jar:1.59.1
 io.grpc:grpc-xds:jar:1.59.1
-io.jsonwebtoken:jjwt-api:jar:0.12.5
-io.jsonwebtoken:jjwt-impl:jar:0.12.5
-io.jsonwebtoken:jjwt-jackson:jar:0.12.5
+io.jsonwebtoken:jjwt-api:jar:0.12.6
+io.jsonwebtoken:jjwt-impl:jar:0.12.6
+io.jsonwebtoken:jjwt-jackson:jar:0.12.6
 io.micrometer:micrometer-commons:jar:1.12.2
 io.micrometer:micrometer-core:jar:1.12.2
 io.micrometer:micrometer-observation:jar:1.12.2
@@ -358,7 +358,7 @@ org.postgresql:postgresql:jar:42.7.2
 org.reactivestreams:reactive-streams:jar:1.0.4
 org.slf4j:slf4j-api:jar:2.0.6
 org.snakeyaml:snakeyaml-engine:jar:2.7
-org.springframework.security:spring-security-crypto:jar:6.1.4
+org.springframework.security:spring-security-crypto:jar:6.1.9
 org.threeten:threetenbp:jar:1.6.8
 org.wildfly.common:wildfly-common:jar:1.7.0.Final
 org.wildfly.security:wildfly-elytron-asn1:jar:2.2.3.Final
