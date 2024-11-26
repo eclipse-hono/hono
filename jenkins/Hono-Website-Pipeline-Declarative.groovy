@@ -34,13 +34,13 @@ pipeline {
               value: "/home/jenkins"
             resources:
               limits:
-                memory: "512Mi"
+                memory: "1Gi"
                 cpu: "1"
               requests:
-                memory: "512Mi"
+                memory: "1Gi"
                 cpu: "1"
           - name: "hugo"
-            image: "cibuilds/hugo:0.102"
+            image: "cibuilds/hugo:0.123.8"
             command:
             - cat
             tty: true
@@ -114,7 +114,7 @@ pipeline {
             # removing them, so they don't get deployed.
             rm themes/hugo-universal-theme/static/img/*
             echo "building home page..."
-            hugo -v -d "${WEBSITE_REPO_DIR}"
+            hugo -d "${WEBSITE_REPO_DIR}"
           '''
         }
       }
@@ -170,7 +170,7 @@ pipeline {
           sh '''#!/bin/bash
             echo "building documentation..."
             cd "${DOC_ASSEMBLY_DIR}"
-            hugo -v -d "${WEBSITE_REPO_DIR}/docs" --config config.toml,config_version.toml
+            hugo -d "${WEBSITE_REPO_DIR}/docs" --config config.toml,config_version.toml
           '''
         }
       }
