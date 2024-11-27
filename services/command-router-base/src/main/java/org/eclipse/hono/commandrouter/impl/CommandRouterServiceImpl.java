@@ -529,9 +529,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 context)
                 .onSuccess(s -> LOG.debug(
                         "successfully sent TTD notification [tenant: {}, device-id: {}, TTD: {}]",
-                        tenant, deviceId, ttd))
+                        tenant.getTenantId(), deviceId, ttd))
                 .onFailure(t -> LOG.debug(
                         "failed to send TTD notification [tenant: {}, device-id: {}, TTD: {}]",
-                        tenant, deviceId, ttd));
+                        tenant.getTenantId(), deviceId, ttd));
     }
 }
