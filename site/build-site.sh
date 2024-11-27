@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+# Copyright (c) 2016 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -12,17 +12,44 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
+target="public"
+hugo_cmd="hugo"
 
-if ! hugo version; then
-  echo "Please install \"hugo\" to be able to build the hono documentation. See readme.md for further details."
+print_usage() {
+  cmd_name=$(basename "$0")
+  cat <<EOF >&2 
+Usage: ${cmd_name} OPTIONS ...
+
+OPTIONS
+
+-h | --help          Display this usage information.
+-H | --hugo          The path to the Hugo executable to use for building the site. [$hugo_cmd]
+-t | --target PATH   The path to the folder to contain the site. [$target]
+
+EOF
+}
+
+while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
+  -h | --help )
+    print_usage
+    exit 1
+    ;;
+  -H | --hugo )
+    shift; hugo_cmd=$1
+    ;;
+  -t | --target )
+    shift; target=$1
+    ;;
+  *)
+    echo "Ignoring unknown option: $1"
+    echo "Run with flag -h for usage"
+    ;;
+esac; shift; done
+if [[ "$1" == '--' ]]; then shift; fi
+
+if ! $hugo_cmd version; then
+  echo "Could not find \"$hugo_cmd\" executable on your PATH. See readme.md for further details."
   exit 0
-fi
-
-if [ "$1" ]
-then
-  TARGET="$1"
-else
-  TARGET="public"
 fi
 
 if ! git submodule status; then
@@ -31,11 +58,11 @@ if ! git submodule status; then
 fi
 
 cd homepage || exit
-echo "Building homepage in directory: $TARGET"
-hugo -v -d $TARGET
+echo "Building homepage in directory: $target"
+$hugo_cmd -d $target
 cd .. 
 
 cd documentation || exit
-echo "Building documentation in directory: $TARGET/docs"
-hugo -v -d $TARGET/docs
+echo "Building documentation in directory: $target/docs"
+$hugo_cmd -d $target/docs
 cd ..
