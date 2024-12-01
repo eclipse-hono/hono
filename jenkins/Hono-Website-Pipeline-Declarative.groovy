@@ -46,10 +46,10 @@ pipeline {
             tty: true
             resources:
               limits:
-                memory: "512Mi"
+                memory: "1Gi"
                 cpu: "1"
               requests:
-                memory: "512Mi"
+                memory: "1Gi"
                 cpu: "1"
           volumes:
           - configMap:
