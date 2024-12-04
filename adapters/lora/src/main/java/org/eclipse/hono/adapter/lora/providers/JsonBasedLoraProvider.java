@@ -20,6 +20,7 @@ import org.eclipse.hono.adapter.lora.LoraCommand;
 import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.adapter.lora.UnknownLoraMessage;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.Strings;
@@ -51,7 +52,7 @@ public abstract class JsonBasedLoraProvider implements LoraProvider {
             case UPLINK:
                 return createUplinkMessage(ctx.request(), message);
             default:
-                throw new LoraProviderMalformedPayloadException(String.format("unsupported message type [%s]", type));
+                return createUnknownMessage(ctx.request(), message);
             }
         } catch (final RuntimeException e) {
             // catch generic exception in order to also cover any (runtime) exceptions
@@ -184,4 +185,26 @@ public abstract class JsonBasedLoraProvider implements LoraProvider {
         message.setAdditionalData(getAdditionalData(requestBody));
         return message;
     }
+
+    /**
+     * Creates an object representation of a Lora unknown message.
+     * <p>
+     * This method uses the {@link #getDevEui(JsonObject)}
+     * method to extract relevant information from the request body to add
+     * to the returned message.
+     *
+     * @param request The request sent by the provider's Network Server.
+     * @param requestBody The JSON object contained in the request's body.
+     * @return The message.
+     * @throws RuntimeException if the message cannot be parsed.
+     */
+    protected UnknownLoraMessage createUnknownMessage(final HttpServerRequest request, final JsonObject requestBody) {
+
+        Objects.requireNonNull(requestBody);
+
+        final UnknownLoraMessage message = new UnknownLoraMessage();
+        return message;
+    }
+
+
 }
