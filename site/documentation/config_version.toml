@@ -6,6 +6,7 @@ defaultContentLanguageInSubdir = "false"
 [Languages]
   [Languages.dev]
     title = "Eclipse Hono&trade; Vers.: dev"
+    contentDir = "content/dev"
     weight = 0
     languageName = "dev"
     [Languages.dev.params]
