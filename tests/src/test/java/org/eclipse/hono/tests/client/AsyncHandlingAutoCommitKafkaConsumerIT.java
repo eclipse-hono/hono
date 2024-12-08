@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,7 +31,9 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.MetricName;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
+import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessagingType;
@@ -49,6 +52,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.admin.KafkaAdminClient;
@@ -171,13 +175,13 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
 
         final var topicsToPublishTo = IntStream.range(0, numTopicsAndRecords)
                 .mapToObj(i -> "%s%d".formatted(patternPrefix, i))
-                .collect(Collectors.toList());
+                .toList();
 
         // create some matching topics - these shall be deleted after consumer start;
         // this shall make sure that topic deletion doesn't influence the test result
         final var otherTopics = IntStream.range(0, numTopicsAndRecords)
                 .mapToObj(i -> "%s%d_other".formatted(patternPrefix, i))
-                .collect(Collectors.toList());
+                .toList();
 
         final var recordsReceived = ctx.checkpoint(numTopicsAndRecords);
         final String recordKey = "addedAfterStartKey";
@@ -235,6 +239,99 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
         }
     }
 
+    /**
+     * Verifies that a topic-pattern based AsyncHandlingAutoCommitKafkaConsumer removes topic-related metrics
+     * once a topic that matches the topic-pattern gets deleted.
+     *
+     * NOTE: The logic for removing the metrics is located in HonoKafkaConsumer, therefore there should better be a test
+     *  in HonoKafkaConsumerIT. But this proves to be difficult with the current integration test Kafka setup, where
+     *  topic auto-creation is enabled in the broker config. For some reason, even when setting 'allow.auto.create.topics=false'
+     *  for the consumer and having ensured that offsets got committed before topic-deletion (along with disabled standard
+     *  auto-commit), the topic gets again auto-created some time after it got deleted, letting the test fail.
+     *  With the manual auto-commit handling of the AsyncHandlingAutoCommitKafkaConsumer, this isn't the case.
+     *
+     * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("partitionAssignmentStrategies")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testPatternBasedConsumerRemovesMetricsOfDeletedTopics(
+            final String partitionAssignmentStrategy,
+            final VertxTestContext ctx) {
+
+        // prepare consumer
+        final var consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        consumerConfig.put(ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "false");
+        consumerConfig.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "100");
+        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        consumerConfig.put(HonoKafkaConsumer.CONFIG_HONO_OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS, "200");
+
+        final Promise<Void> recordReceivedPromise = Promise.promise();
+        final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler = record -> {
+            LOG.debug("received record: {}", record);
+            recordReceivedPromise.complete();
+            return Future.succeededFuture();
+        };
+        final String topicPrefix = "test_" + UUID.randomUUID();
+        final String topic = topicPrefix + "_toBeDeleted";
+        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Pattern.compile(topicPrefix + ".*"),
+                recordHandler, consumerConfig);
+        // create topic and start consumer
+        final Promise<Void> consumerReadyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(consumerReadyTracker);
+        adminClient.createTopics(List.of(new NewTopic(topic, 1, REPLICATION_FACTOR)))
+                .compose(ok -> kafkaConsumer.start())
+                .compose(ok -> consumerReadyTracker.future())
+                .compose(ok -> {
+                    ctx.verify(() -> assertThat(recordReceivedPromise.future().isComplete()).isFalse());
+                    LOG.debug("consumer started, publishing record to be received by the consumer...");
+                    return Future.all(
+                            publish(topic, "recordKey", Buffer.buffer("testPayload")),
+                            recordReceivedPromise.future());
+                })
+                .compose(ok -> {
+                    LOG.debug("waiting for offset to be committed");
+                    final Promise<Void> offsetCommitCheckTracker = Promise.promise();
+                    final AtomicInteger checkCount = new AtomicInteger(0);
+                    vertx.setPeriodic(100, tid -> {
+                        if (!kafkaConsumer.isOffsetsCommitNeededForTopic(topic)) {
+                            vertx.cancelTimer(tid);
+                            offsetCommitCheckTracker.complete();
+                        } else if (checkCount.incrementAndGet() >= 10) {
+                            vertx.cancelTimer(tid);
+                            offsetCommitCheckTracker.fail("timeout waiting for offset commit");
+                        }
+                    });
+                    return offsetCommitCheckTracker.future();
+                })
+                .compose(ok -> {
+                    ctx.verify(() -> assertThat(getTopicRelatedMetricNames(topic)).isNotEmpty());
+                    LOG.debug("delete topic {}", topic);
+                    return adminClient.deleteTopics(List.of(topic));
+                })
+                .compose(ok -> {
+                    LOG.debug("waiting for metrics to be removed...");
+                    final Promise<Void> metricCheckTracker = Promise.promise();
+                    final AtomicInteger checkCount = new AtomicInteger(0);
+                    vertx.setPeriodic(200, tid -> {
+                        LOG.debug("topic-related metrics: {}", getTopicRelatedMetricNames(topic));
+                        if (getTopicRelatedMetricNames(topic).isEmpty()) {
+                            vertx.cancelTimer(tid);
+                            metricCheckTracker.complete();
+                        } else if (checkCount.incrementAndGet() >= 40) {
+                            vertx.cancelTimer(tid);
+                            metricCheckTracker.fail("timeout waiting for metrics to be removed");
+                        }
+                    });
+                    return metricCheckTracker.future();
+                })
+                .onComplete(ctx.succeeding(v -> ctx.completeNow()));
+    }
+
     private Future<Void> ensureTopicIsAmongSubscribedTopicPatternTopicsAndPublish(
             final VertxTestContext ctx,
             final String topic,
@@ -287,6 +384,13 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
             final String partitionAssignmentStrategy) {
         Optional.ofNullable(partitionAssignmentStrategy)
                 .ifPresent(s -> consumerConfig.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, s));
+    }
+
+    private List<String> getTopicRelatedMetricNames(final String topicName) {
+        return kafkaConsumer.metrics().keySet().stream()
+                .filter(metricName -> metricName.tags().containsValue(topicName))
+                .map(MetricName::name)
+                .collect(Collectors.toList());
     }
 }
 
