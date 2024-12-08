@@ -40,6 +40,11 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
+import org.apache.kafka.clients.consumer.internals.AsyncKafkaConsumer;
+import org.apache.kafka.clients.consumer.internals.ConsumerDelegate;
+import org.apache.kafka.clients.consumer.internals.LegacyKafkaConsumer;
+import org.apache.kafka.common.Metric;
+import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.metrics.Metrics;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
@@ -94,7 +99,13 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
      */
     public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
 
-    private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    /**
+     * The name of the configuration property to set the delay after which obsolete metrics for a deleted Kafka topic
+     * are removed from the metrics of the Kafka consumer.
+     */
+    public static final String CONFIG_HONO_OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = "hono.obsolete.metrics.removal.delay.millis";
+
+    private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS_DEFAULT = TimeUnit.SECONDS.toMillis(30);
     private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
     private static final Logger LOG = LoggerFactory.getLogger(HonoKafkaConsumer.class);
 
@@ -501,6 +512,16 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     }
 
     /**
+     * Get the metrics kept by the consumer.
+     *
+     * @return The metrics.
+     * @throws IllegalStateException if invoked before the KafkaConsumer is set via the {@link #start()} method.
+     */
+    public final Map<MetricName, ? extends Metric> metrics() {
+        return getUnderlyingConsumer().metrics();
+    }
+
+    /**
      * Gets the used vert.x KafkaConsumer.
      *
      * @return The Kafka consumer.
@@ -625,7 +646,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     /**
      * {@inheritDoc}
      * <p>
-     * This methods triggers the creation of a Kafka consumer in the background. A new attempt to create the
+     * This method triggers the creation of a Kafka consumer in the background. A new attempt to create the
      * consumer is made periodically until creation succeeds or the {@link #stop()} method has been invoked.
      * <p>
      * Client code may {@linkplain #addOnKafkaConsumerReadyHandler(Handler) register a dedicated handler}
@@ -893,9 +914,13 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                     .filter(t -> !subscribedTopicPatternTopics.contains(t))
                     .collect(Collectors.toSet());
             if (!deletedTopics.isEmpty()) {
+                LOG.debug("deleted topics: {}", deletedTopics);
                 // actual removal to be done with a delay, as there might still be unprocessed fetch response data
                 // regarding these topics, in which case metrics would get re-created after they were removed
-                runOnContext(v -> vertx.setTimer(OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS, tid -> {
+                final long obsoleteMetricsRemovalDelayMillis = Optional
+                        .ofNullable(consumerConfig.get(CONFIG_HONO_OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS))
+                        .map(Long::parseLong).orElse(OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS_DEFAULT);
+                runOnContext(v -> vertx.setTimer(obsoleteMetricsRemovalDelayMillis, tid -> {
                     runOnKafkaWorkerThread(v2 -> {
                         removeMetricsForDeletedTopics(deletedTopics.stream()
                                 .filter(t -> !subscribedTopicPatternTopics.contains(t)));
@@ -985,7 +1010,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
      * <p>
      * This default implementation does nothing. Subclasses may override this method.
      *
-     * @param partitionsSet The list of partitions that are not assigned to this consumer any more.
+     * @param partitionsSet The list of partitions that are not assigned to this consumer anymore.
      */
     protected void onPartitionsLostBlocking(final Set<TopicPartition> partitionsSet) {
         // do nothing by default
@@ -1050,7 +1075,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     /**
      * Runs the given handler on the Kafka polling thread.
      * <p>
-     * The invocation of the handler is skipped if the this consumer is already closed.
+     * The invocation of the handler is skipped if this consumer is already closed.
      *
      * @param handler The handler to invoke.
      * @throws IllegalStateException if the corresponding executor service isn't available because no subscription
@@ -1151,7 +1176,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             LOG.debug("ensureTopicIsAmongSubscribedTopics: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
-
+        LOG.debug("ensureTopicIsAmongSubscribedTopics: called for topic [{}]", topic);
         synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
             final var tracker = new SubscriptionUpdateTracker(topic);
 
@@ -1168,7 +1193,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
 
     private void triggerTopicPatternSubscriptionUpdate() {
         if (!subscriptionUpdateTriggered.compareAndSet(false, true)) {
-            LOG.debug("ensureTopicIsAmongSubscribedTopics: subscription update already triggered");
+            LOG.debug("triggerTopicPatternSubscriptionUpdate: subscription update already triggered");
             return;
         }
         runOnKafkaWorkerThread(v -> {
@@ -1198,7 +1223,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                     try {
                         LOG.info("triggering refresh of subscribed topic list ...");
                         getUnderlyingConsumer().subscribe(topicPattern, rebalanceListener);
-                        if (!metadataMaxAge.isPresent() || metadataMaxAge.get() > THRESHOLD_METADATA_MAX_AGE_MS) {
+                        if (metadataMaxAge.isEmpty() || metadataMaxAge.get() > THRESHOLD_METADATA_MAX_AGE_MS) {
                             // Partitions of newly created topics are being assigned by means of
                             // a rebalance. We make sure the rebalancing happens during the next poll()
                             // operation in order to not having to wait for the metadata to become stale
@@ -1217,35 +1242,46 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     }
 
     private void failAllSubscriptionUpdateTrackers(final Exception failure) {
-        final List<SubscriptionUpdateTracker> toBeFailedTrackers = new ArrayList<>();
+        final List<SubscriptionUpdateTracker> toBeFailedTrackers;
         synchronized (subscriptionUpdateTrackersForToBeAddedTopics) {
-            toBeFailedTrackers.addAll(subscriptionUpdateTrackersForToBeAddedTopics.values());
+            toBeFailedTrackers = new ArrayList<>(subscriptionUpdateTrackersForToBeAddedTopics.values());
             subscriptionUpdateTrackersForToBeAddedTopics.clear();
         }
-        toBeFailedTrackers.forEach(tracker -> {
-            runOnContext(v -> tracker.fail(failure));
-        });
+        toBeFailedTrackers.forEach(tracker -> runOnContext(v -> tracker.fail(failure)));
     }
 
     private void removeMetricsForDeletedTopics(final Stream<String> deletedTopics) {
         final Metrics metrics = getInternalMetricsObject(kafkaConsumer.unwrap());
         if (metrics != null) {
             deletedTopics.forEach(topic -> {
+                LOG.debug("removing metrics for deleted topic: {}", topic);
                 metrics.removeSensor("topic." + topic + ".bytes-fetched");
                 metrics.removeSensor("topic." + topic + ".records-fetched");
             });
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Metrics getInternalMetricsObject(final Consumer<String, V> consumer) {
         if (consumer instanceof org.apache.kafka.clients.consumer.KafkaConsumer) {
             try {
-                final Field field = org.apache.kafka.clients.consumer.KafkaConsumer.class.getDeclaredField("metrics");
-                field.setAccessible(true);
-                return (Metrics) field.get(consumer);
+                final Field delegateField = org.apache.kafka.clients.consumer.KafkaConsumer.class.getDeclaredField("delegate");
+                delegateField.setAccessible(true);
+                final ConsumerDelegate<String, V> delegate =  (ConsumerDelegate<String, V>) delegateField.get(consumer);
+                if (delegate instanceof AsyncKafkaConsumer) {
+                    final Field metricsField = AsyncKafkaConsumer.class.getDeclaredField("metrics");
+                    metricsField.setAccessible(true);
+                    return (Metrics) metricsField.get(delegate);
+                } else if (delegate instanceof LegacyKafkaConsumer) {
+                    final Field metricsField = LegacyKafkaConsumer.class.getDeclaredField("metrics");
+                    metricsField.setAccessible(true);
+                    return (Metrics) metricsField.get(delegate);
+                }
             } catch (final Exception e) {
                 LOG.warn("failed to get metrics object", e);
             }
+        } else {
+            LOG.warn("unsupported consumer type: {}", consumer.getClass().getName());
         }
         return null;
     }
@@ -1300,7 +1336,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         return worker;
     }
 
-    private final class SubscriptionUpdateTracker {
+    private static final class SubscriptionUpdateTracker {
         private final Promise<Void> outcome = Promise.promise();
         private final String topicName;
         private final AtomicInteger rebalancesLeft = new AtomicInteger(10);
