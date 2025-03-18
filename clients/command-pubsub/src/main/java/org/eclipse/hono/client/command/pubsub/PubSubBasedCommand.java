@@ -139,7 +139,7 @@ public final class PubSubBasedCommand implements Command {
         final boolean responseRequired = PubSubMessageHelper.isResponseRequired(attributes);
         final boolean ackRequired = PubSubMessageHelper.isAckRequired(attributes);
         if (responseRequired && ackRequired) {
-            validationErrorJoiner.add("response-required and ack-required must not both true");
+            validationErrorJoiner.add("response-required and ack-required must not both be true");
         }
         final String correlationId = PubSubMessageHelper.getCorrelationId(attributes)
                 .filter(id -> !id.isEmpty())

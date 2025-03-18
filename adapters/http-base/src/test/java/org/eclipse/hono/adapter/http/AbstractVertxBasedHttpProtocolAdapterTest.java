@@ -21,12 +21,14 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -36,8 +38,13 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.ProtocolAdapterCommandConsumer;
+import org.eclipse.hono.client.command.pubsub.PubSubBasedCommand;
+import org.eclipse.hono.client.command.pubsub.PubSubBasedCommandContext;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -51,6 +58,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -59,6 +67,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
+import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.PubsubMessage;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -233,7 +244,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newTelemetryRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         adapter.doUploadMessage(ctx, "my-tenant", "the-device");
 
@@ -282,7 +293,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = newTelemetryRequest();
         when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("5");
-        final HttpContext ctx = newHttpContext(payload, "application/text", request, response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", request, response, null);
 
         adapter.doUploadMessage(ctx, "my-tenant", "unknown-device");
 
@@ -322,7 +333,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes an event
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpContext ctx = newHttpContext(payload, "application/text", newEventRequest(), response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", newEventRequest(), response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -360,6 +371,158 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
     }
 
     /**
+     * Verifies that the adapter waits for an event with an associated command being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device.
+     */
+    @Test
+    public void testUploadEventWithCommandWaitsForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        givenAnAdapter(properties);
+        final Promise<Void> outcome = Promise.promise();
+        givenAnEventSenderForAnyTenant(outcome);
+
+        // WHEN a device publishes an event
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+
+        final String tenant = "tenant";
+        final String device = "device";
+        final String contentType = "application/text";
+
+        final PubSubBasedCommand command = mock(PubSubBasedCommand.class);
+        when(command.isAckRequired()).thenReturn(false);
+
+        final AbstractCommandContext<PubSubBasedCommand> abstractCommandContext = mock(AbstractCommandContext.class);
+        when(abstractCommandContext.getCommand()).thenReturn(command);
+        when(abstractCommandContext.getTracingSpan()).thenReturn(span);
+
+        final HttpContext ctx = newHttpContext(payload, contentType, newEventRequest(), response, abstractCommandContext);
+        when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(abstractCommandContext);
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.doUploadMessage(ctx, tenant, device);
+        assertEventHasBeenSentDownstream(tenant, device, contentType);
+        // THEN the device does not get a response
+        verify(response, never()).end();
+        // and the message is not reported as being processed
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any(MetricsTags.TtdStatus.class),
+                any());
+
+        // until the event has been accepted
+        outcome.complete();
+        verify(response).end();
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.EVENT),
+                eq(tenant),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                eq(MetricsTags.TtdStatus.NONE),
+                any());
+
+        verify(abstractCommandContext, times(2)).getCommand();
+        verify(abstractCommandContext).getTracingSpan();
+        verify(command).isAckRequired();
+    }
+
+    /**
+     * Verifies that the adapter waits for an event with an associated command (ackRequired=true) being settled and accepted
+     * by a downstream peer before responding with a 202 status to the device and sending a command response to the
+     * messaging infrastructure.
+     */
+    @Test
+    public void testUploadEventWithAckRequiredCommandWaitsForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream event consumer attached
+        givenAnAdapter(properties);
+        final Promise<Void> outcome = Promise.promise();
+        givenAnEventSenderForAnyTenant(outcome);
+
+        // WHEN a device publishes an event
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final SpanContext spanContext = mock(SpanContext.class);
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+
+        final String tenant = "tenant";
+        final String device = "device";
+        final String contentType = "application/text";
+        final PubsubMessage pubsubMessage = mock(PubsubMessage.class);
+        final Map<String, String> attributesMap = new HashMap<>();
+        attributesMap.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device);
+        attributesMap.put(MessageHelper.SYS_PROPERTY_SUBJECT, "subject");
+        attributesMap.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, "1234");
+        attributesMap.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType);
+        attributesMap.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, "false");
+        attributesMap.put(PubSubMessageHelper.PUBSUB_PROPERTY_ACK_REQUIRED, "true");
+        when(pubsubMessage.getAttributesMap()).thenReturn(attributesMap);
+        when(pubsubMessage.getData()).thenReturn(ByteString.copyFromUtf8(payload.toString()));
+        final PubSubBasedCommand command = PubSubBasedCommand.from(pubsubMessage, tenant);
+
+        final CommandResponseSender commandResponseSender = mock(CommandResponseSender.class);
+        when(commandResponseSender.sendCommandResponse(any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+
+        final PubSubBasedCommandContext commandContext = new PubSubBasedCommandContext(command, commandResponseSender, span);
+
+        final HttpContext ctx = newHttpContext(payload, contentType, newEventRequest(), response, commandContext);
+        when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(commandContext);
+        when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.doUploadMessage(ctx, tenant, device);
+        assertEventHasBeenSentDownstream(tenant, device, contentType);
+        // THEN the device does not get a response
+        verify(response, never()).end();
+        // and the message is not reported as being processed
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any(MetricsTags.TtdStatus.class),
+                any());
+
+        // until the event has been accepted
+        outcome.complete();
+        verify(response).end();
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.EVENT),
+                eq(tenant),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                eq(MetricsTags.TtdStatus.NONE),
+                any());
+
+        verify(commandResponseSender).sendCommandResponse(any(), any(), any(), any());
+        verify(pubsubMessage).getAttributesMap();
+        verify(pubsubMessage, times(2)).getData();
+    }
+
+    /**
      * Verifies that the adapter fails the upload of an event with a 400
      * result if it is rejected by the downstream peer.
      */
@@ -377,7 +540,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newEventRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         adapter.doUploadMessage(ctx, "tenant", "device");
         assertEventHasBeenSentDownstream("tenant", "device", "application/text");
@@ -412,7 +575,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = newEventRequest();
         when(request.getHeader(eq(Constants.HEADER_TIME_TO_LIVE))).thenReturn("10");
-        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
+        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -440,7 +603,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes a command response
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(), response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(), response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -486,7 +649,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes a command response with an empty payload
         final Buffer payload = null;
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(), response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(), response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -527,7 +690,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newCommandResponseRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
 
@@ -553,7 +716,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         givenAnAdapter(properties);
         final Buffer payload = Buffer.buffer("some payload");
         final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
         final TenantObject to = TenantObject.from("tenant", true);
 
         // Given an adapter that is enabled for a device's tenant
@@ -600,7 +763,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newCommandResponseRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
@@ -631,7 +794,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpContext ctx = newHttpContext(payload, "application/text", newTelemetryRequest(), response);
+        final HttpContext ctx = newHttpContext(payload, "application/text", newTelemetryRequest(), response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -678,7 +841,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = newTelemetryRequest();
         when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
-        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
+        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -732,7 +895,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = newTelemetryRequest();
         when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("40");
-        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
+        final HttpContext ctx = newHttpContext(payload, "text/plain", request, response, null);
 
         adapter.doUploadMessage(ctx, "tenant", "device");
 
@@ -766,7 +929,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newTelemetryRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -805,7 +968,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 payload,
                 "application/text",
                 newEventRequest(),
-                mock(HttpServerResponse.class));
+                mock(HttpServerResponse.class), null);
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -846,7 +1009,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpContext ctx = newHttpContext(payload, "application/text", newCommandResponseRequest(),
-                response);
+                response, null);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
@@ -923,7 +1086,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
             final Buffer payload,
             final String contentType,
             final HttpServerRequest request,
-            final HttpServerResponse response) {
+            final HttpServerResponse response, final CommandContext commandContext) {
 
         when(response.setStatusCode(anyInt())).thenReturn(response);
         when(response.closed()).thenReturn(false);
@@ -937,7 +1100,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(ctx.request()).thenReturn(request);
         when(ctx.get(HttpServerSpanHelper.ROUTING_CONTEXT_SPAN_KEY)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
-        when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(null);
+        when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(commandContext);
         when(ctx.get(MetricsTags.TtdStatus.class.getName())).thenReturn(MetricsTags.TtdStatus.NONE);
 
         if (contentType != null) {

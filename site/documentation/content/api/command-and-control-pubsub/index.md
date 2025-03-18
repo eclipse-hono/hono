@@ -84,23 +84,25 @@ project and `${tenant_id}` is the ID of the tenant that the client wants to send
 The Business Application can consume the corresponding command response by creating a subscription from the
 `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
 
-In contrast to a one-way command, a request/response command contains a *response-required* or an *ack-required*
-attribute with value `true` and a *correlation-id* attribute, providing the identifier that is used to correlate a
-response message to the original request.
+In contrast to a one-way command, a request/response command contains _either_ a *response-required* _or_ an 
+*ack-required* attribute with value `true` and a *correlation-id* attribute, providing the identifier that is used to
+correlate a response message to the original request.
 
 Devices can vary in their ability to respond to commands (e.g. firmware limitations). The Business Application can
 tailor its expectations based on this:
 
 1. **Device Response Expected:** For devices that can send a response, set `response-required` to true. This is the
 default behavior for sending request/response commands. The command is sent with the *correlation-id* to the device,
-which is than expected to send a corresponding command response.
+which is then expected to send a corresponding command response.
 
 2. **Acknowledgement Only:** For devices lacking response capability, set `ack-required` to true. The command is sent
-without the *correlation-id* to the device, and the protocol adapter sends an acknowledgement as a command response on
-behalf of the device upon receiving a transport layer confirmation (e.g., MQTT PUBACK) from the device.
+without the *correlation-id* to the device, and the protocol adapter sends a positive acknowledgement as a command
+response on behalf of the device upon receiving a transport layer confirmation (e.g., MQTT PUBACK) from the device.
 
-**Important Note:** Setting both `response-required` and `ack-required` to true is invalid and will result in command
-rejection.
+{{% notice warning %}}
+Setting both *response-required* and *ack-required* to `true` is invalid and will result in the command being rejected.
+{{% /notice %}}
+
 
 **Preconditions**
 
@@ -114,8 +116,8 @@ rejection.
 
 **Message Flow**
 
-Device sends response (*response-required* set to true):
-  1. The *Business Application* writes a command message with *response-required* set to true to the
+Device sends response (*response-required* set to `true`):
+  1. The *Business Application* writes a command message with *response-required* set to `true` to the
      `projects/${google_project_id}/topics/${tenant_id}.command` topic on *Pub/Sub*.
   2. Hono consumes the message from *Pub/Sub* and forwards it to the device, provided that the target device is
      connected and is accepting commands.
@@ -124,12 +126,12 @@ Device sends response (*response-required* set to true):
   4. The *Business Application* consumes the command response message from an independently created subscription to
      the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
 
-Protocol adapter sends response on behalf of device (*ack-required* set to true):
-  1. The *Business Application* writes a command message with *ack-required* set to true to the
+Protocol adapter sends response on behalf of device (*ack-required* set to `true`):
+  1. The *Business Application* writes a command message with *ack-required* set to `true` to the
      `projects/${google_project_id}/topics/${tenant_id}.command` topic on *Pub/Sub*.
   2. Hono consumes the message from *Pub/Sub* and forwards it to the device as a one-way command, provided that the
      target device is connected and is accepting commands.
-  3. The device acknowledges the command on the transport layer. Hono writes an acknowledgement message to
+  3. The device acknowledges reception of the command on the transport layer. Hono writes an acknowledgement message to
      the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic on *Pub/Sub*.
   4. The *Business Application* consumes the command response message from an independently created subscription to
      the `projects/${google_project_id}/topics/${tenant_id}.command_response` topic.
@@ -145,8 +147,8 @@ command message.
 |:---------------------------------------------|:---------:|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | *correlation-id*                             |    yes    | *string*  | The identifier used to correlate a response message to the original request. It is used as the *correlation-id* attribute in the response.                                                                                                                                                                                                                                                            |
 | *device_id*                                  |    yes    | *string*  | The identifier of the device that the command is targeted at.                                                                                                                                                                                                                                                                                                                                         |
-| *response-required*                          |    no     | *boolean* | Either *response-required* or *ack-required* MUST exclusively be set with a value of `true` (XOR). *response-required* set to `true` means that the device is required to send a response for the command.                                                                                                                                                                                            |
-| *ack-required*                               |    no     | *boolean* | Either *response-required* or *ack-required* MUST exclusively be set with a value of `true` (XOR). *ack-required* set to `true` means that the protocol adapter will try to send an acknowledgement response for the command on behalf of the device in case the command was successfully received by the device. This mechanism has some limitations which are described in the info field below.    |
+| *response-required*                          |    no     | *boolean* | `true` if the device is required to send a response for the command. *response-required* and *ack-required* MUST NOT both be set to `true` at the same time.                                                                                                                                                                                                                                          |
+| *ack-required*                               |    no     | *boolean* | `true` if the protocol adapter should send an acknowledgement response for the command on behalf of the device in case the command was successfully received by the device. This mechanism has some limitations which are described in the info field below. *response-required* and *ack-required* MUST NOT both be set to `true` at the same time.                                                  |
 | *subject*                                    |    yes    | *string*  | The name of the command to be executed by the device.                                                                                                                                                                                                                                                                                                                                                 |
 | *content-type*                               |    no     | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *delivery-failure-notification-metadata[\*]* |    no     | *string*  | Attributes with the *delivery-failure-notification-metadata* prefix are adopted for the error command response that is sent in case delivering the command to the device failed. In case of a successful command delivery, these attributes are ignored.                                                                                                                                              |
@@ -165,7 +167,7 @@ Currently, the acknowledgement mechanism only works with devices connected via t
 {{% /notice %}}
 
 An application can determine the overall outcome of the operation by means of the response to the command. The response
-is either sent back by the device (response-required) or the adapter (ack-required), or in case the command could not be
+is either sent back by the device (*response-required*) or the adapter (*ack-required*), or in case the command could not be
 successfully forwarded to the device, an error command response message is sent by the Hono protocol adapter or Command
 Router component.
 
