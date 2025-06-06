@@ -36,6 +36,7 @@ import io.netty.handler.codec.mqtt.MqttProperties;
 import io.opentracing.Span;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
+import org.eclipse.hono.adapter.mqtt.MqttConnectContext; // Added for MqttConnectContext
 
 /**
  * Verifies behavior of {@link MqttContext}.
@@ -165,5 +166,51 @@ public class MqttContextTest {
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn(String.format("%s/%s/%s", endpoint, tenant, device));
         return msg;
+    }
+
+    @Test
+    public void testCreateContextWithSessionExpiryInterval() {
+        final MqttEndpoint mockEndpoint = mock(MqttEndpoint.class);
+        final MqttProperties connectProperties = new MqttProperties();
+        final int expectedInterval = 3600;
+        connectProperties.add(new MqttProperties.IntegerProperty(MqttProperties.SESSION_EXPIRY_INTERVAL_IDENTIFIER, expectedInterval));
+
+        when(mockEndpoint.connectProperties()).thenReturn(connectProperties);
+
+        final MqttConnectContext contextWithInterval = MqttConnectContext.fromConnectPacket(mockEndpoint, span);
+        assertNotNull(contextWithInterval.getSessionExpiryInterval());
+        assertEquals(Long.valueOf(expectedInterval), contextWithInterval.getSessionExpiryInterval());
+
+        // Test case where property is not present
+        final MqttEndpoint mockEndpointNoProperty = mock(MqttEndpoint.class);
+        when(mockEndpointNoProperty.connectProperties()).thenReturn(new MqttProperties()); // Empty properties
+        final MqttConnectContext contextWithoutInterval = MqttConnectContext.fromConnectPacket(mockEndpointNoProperty, span);
+        assertNull(contextWithoutInterval.getSessionExpiryInterval());
+    }
+
+    @Test
+    public void testCreateContextWithMessageExpiryInterval() {
+        final MqttPublishMessage mockPublishMessage = mock(MqttPublishMessage.class);
+        final MqttEndpoint mockEndpoint = mock(MqttEndpoint.class);
+        final DeviceUser mockDeviceUser = mock(DeviceUser.class);
+        final MqttProperties publishProperties = new MqttProperties();
+        final int expectedInterval = 60;
+        publishProperties.add(new MqttProperties.IntegerProperty(MqttProperties.MESSAGE_EXPIRY_INTERVAL_IDENTIFIER, expectedInterval));
+
+        when(mockPublishMessage.properties()).thenReturn(publishProperties);
+        // Ensure topicName is not null to avoid NPE in PropertyBag creation if fromPublishPacket tries to access it
+        when(mockPublishMessage.topicName()).thenReturn("telemetry/tenant/device");
+
+
+        final MqttContext contextWithInterval = MqttContext.fromPublishPacket(mockPublishMessage, mockEndpoint, span, mockDeviceUser);
+        assertNotNull(contextWithInterval.getMessageExpiryInterval());
+        assertEquals(Long.valueOf(expectedInterval), contextWithInterval.getMessageExpiryInterval());
+
+        // Test case where property is not present
+        final MqttPublishMessage mockPublishMessageNoProperty = mock(MqttPublishMessage.class);
+        when(mockPublishMessageNoProperty.properties()).thenReturn(new MqttProperties()); // Empty properties
+        when(mockPublishMessageNoProperty.topicName()).thenReturn("telemetry/tenant/device");
+        final MqttContext contextWithoutInterval = MqttContext.fromPublishPacket(mockPublishMessageNoProperty, mockEndpoint, span, mockDeviceUser);
+        assertNull(contextWithoutInterval.getMessageExpiryInterval());
     }
 }

@@ -18,6 +18,7 @@ import java.util.OptionalInt;
 
 import org.eclipse.hono.util.MapBasedExecutionContext;
 
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.opentracing.Span;
 import io.vertx.mqtt.MqttEndpoint;
 
@@ -28,6 +29,7 @@ public final class MqttConnectContext extends MapBasedExecutionContext {
 
     private final MqttEndpoint deviceEndpoint;
     private OptionalInt traceSamplingPriority = OptionalInt.empty();
+    private Long sessionExpiryInterval;
 
     private MqttConnectContext(final Span span, final MqttEndpoint deviceEndpoint) {
         super(span);
@@ -43,7 +45,13 @@ public final class MqttConnectContext extends MapBasedExecutionContext {
      * @throws NullPointerException if endpoint or span is {@code null}.
      */
     public static MqttConnectContext fromConnectPacket(final MqttEndpoint endpoint, final Span span) {
-        return new MqttConnectContext(span, endpoint);
+        final MqttConnectContext context = new MqttConnectContext(span, endpoint);
+        final MqttProperties.IntegerProperty sessionExpiryIntervalProperty = (MqttProperties.IntegerProperty) endpoint.connectProperties()
+            .getProperty(MqttProperties.SESSION_EXPIRY_INTERVAL_IDENTIFIER);
+        if (sessionExpiryIntervalProperty != null) {
+            context.setSessionExpiryInterval(Long.valueOf(sessionExpiryIntervalProperty.value()));
+        }
+        return context;
     }
 
     /**
@@ -77,5 +85,23 @@ public final class MqttConnectContext extends MapBasedExecutionContext {
      */
     public void setTraceSamplingPriority(final OptionalInt traceSamplingPriority) {
         this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+    }
+
+    /**
+     * Gets the session expiry interval.
+     *
+     * @return The session expiry interval, or {@code null} if not provided.
+     */
+    public Long getSessionExpiryInterval() {
+        return sessionExpiryInterval;
+    }
+
+    /**
+     * Sets the session expiry interval.
+     *
+     * @param interval The interval to set.
+     */
+    public void setSessionExpiryInterval(final Long interval) {
+        this.sessionExpiryInterval = interval;
     }
 }

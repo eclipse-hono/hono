@@ -60,6 +60,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private ResourceIdentifier topic;
     private Buffer mappedPayload;
     private Sample timer;
+    private Long messageExpiryInterval;
 
     /**
      * Modes defining how to handle errors raised when a device publishes a message.
@@ -176,6 +177,13 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
                     result.timeToLive = determineTimeToLive(bag);
                 }
                 result.errorHandlingMode = ErrorHandlingMode.from(bag.getProperty(PARAM_ON_ERROR));
+
+                // Extract Message Expiry Interval
+                final MqttProperties.IntegerProperty messageExpiryIntervalProperty = (MqttProperties.IntegerProperty) publishedMessage.properties()
+                    .getProperty(MqttProperties.MESSAGE_EXPIRY_INTERVAL_IDENTIFIER);
+                if (messageExpiryIntervalProperty != null) {
+                    result.setMessageExpiryInterval(Long.valueOf(messageExpiryIntervalProperty.value()));
+                }
             });
         return result;
     }
@@ -496,5 +504,23 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     @Override
     public Optional<Duration> getTimeToLive() {
         return timeToLive;
+    }
+
+    /**
+     * Gets the message expiry interval.
+     *
+     * @return The message expiry interval, or {@code null} if not provided.
+     */
+    public Long getMessageExpiryInterval() {
+        return messageExpiryInterval;
+    }
+
+    /**
+     * Sets the message expiry interval.
+     *
+     * @param interval The interval to set.
+     */
+    void setMessageExpiryInterval(final Long interval) {
+        this.messageExpiryInterval = interval;
     }
 }

@@ -51,6 +51,19 @@ scraping the meter data. All Hono components that report metrics can be configur
 their [*Health Check* server]({{< relref "#health-check-server-configuration" >}}) which already exposes endpoints for
 determining the component's readiness and liveness status.
 
+### MQTT Adapter Metrics
+
+In addition to the common adapter metrics, the MQTT adapter provides specific metrics related to MQTT v5 features, particularly Session Expiry and Message Expiry:
+
+*   `hono.mqtt.sessions.persistent.active` (Gauge): This gauge provides an approximate count of MQTT sessions that are currently being tracked for expiry. It is incremented when a client, which specified a Session Expiry Interval greater than zero in its CONNECT packet, disconnects. It is decremented when such a session is (theoretically) resumed by a subsequent client connection or when the session's expiry interval elapses. *Note: As full server-side session persistence is not yet implemented, this metric reflects the tracking based on connect/disconnect events rather than actual persisted state.*
+*   `hono.mqtt.sessions.expired.total` (Counter): A counter for the total number of persistent sessions that have (theoretically) expired based on their specified Session Expiry Interval. This is incremented by the placeholder logic that would handle actual session expiry.
+*   `hono.mqtt.sessions.resumed.total` (Counter): A counter for the total number of persistent sessions that have been (theoretically) resumed. *Note: Full session resumption is a work in progress; this metric will become more meaningful as that feature is completed.*
+*   `hono.mqtt.messages.client.received.expiry.total` (Counter): This counter tracks the total number of PUBLISH messages received from MQTT clients that included a `Message Expiry Interval` property. This indicates how often clients are sending messages with expiry information.
+*   `hono.mqtt.commands.expired.total` (Counter): This counter tracks the total number of command messages destined for MQTT clients that were (theoretically) discarded by the adapter due to message expiry before they could be delivered. *Note: The logic for actively checking and discarding expired commands before delivery is currently a placeholder and not fully active.*
+*   `hono.mqtt.messages.commands.sent.with.expiry.total` (Counter): This counter tracks the total number of command messages sent to MQTT clients that included a `Message Expiry Interval` property. *Note: The ability for applications to set an expiry interval on commands is a planned feature and not yet available through the Command API; this metric reflects the adapter's capability to send the property if it were provided.*
+
+**Important Note on MQTT v5 Metrics:** Several of these metrics relate to features (like full session persistence and application-defined command expiry) that are still under development. As these features mature, the accuracy and relevance of these metrics will increase. They are provided now to offer insight into current interactions and future capabilities.
+
 ## Health Check Server Configuration
 
 All of Hono's service components and protocol adapters contain a *Health Check* server which can be configured to

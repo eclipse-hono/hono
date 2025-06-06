@@ -28,6 +28,41 @@ public interface MqttAdapterMetrics extends Metrics {
 
         private Noop() {
         }
+
+        @Override
+        public void incrementActivePersistentSessions() {
+            // NOOP
+        }
+
+        @Override
+        public void decrementActivePersistentSessions() {
+            // NOOP
+        }
+
+        @Override
+        public void reportSessionExpired() {
+            // NOOP
+        }
+
+        @Override
+        public void reportSessionResumed() {
+            // NOOP
+        }
+
+        @Override
+        public void reportClientMessageReceivedWithExpiry() {
+            // NOOP
+        }
+
+        @Override
+        public void reportCommandExpiredBeforeDelivery() {
+            // NOOP
+        }
+
+        @Override
+        public void reportCommandSentWithExpiry() {
+            // NOOP
+        }
     }
 
     /**
@@ -35,5 +70,38 @@ public interface MqttAdapterMetrics extends Metrics {
      */
     MqttAdapterMetrics NOOP = new Noop();
 
-    // empty for now
+    /**
+     * Increments the number of currently active persistent sessions.
+     */
+    void incrementActivePersistentSessions();
+
+    /**
+     * Decrements the number of currently active persistent sessions.
+     */
+    void decrementActivePersistentSessions();
+
+    /**
+     * Reports that a persistent session has expired.
+     */
+    void reportSessionExpired();
+
+    /**
+     * Reports that a persistent session has been resumed.
+     */
+    void reportSessionResumed();
+
+    /**
+     * Reports that a message with an expiry interval has been received from a client.
+     */
+    void reportClientMessageReceivedWithExpiry();
+
+    /**
+     * Reports that a command message has expired before it could be delivered to the client.
+     */
+    void reportCommandExpiredBeforeDelivery();
+
+    /**
+     * Reports that a command message with an expiry interval has been sent to a client.
+     */
+    void reportCommandSentWithExpiry();
 }

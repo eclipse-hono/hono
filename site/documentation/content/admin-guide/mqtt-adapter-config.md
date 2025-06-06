@@ -55,6 +55,33 @@ options:
 * [Common Protocol Adapter Options]({{< relref "common-config.md/#protocol-adapter-options" >}})
 * [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
 
+## MQTT v5 Support
+
+The Hono MQTT adapter includes support for certain MQTT v5 features, enhancing interoperability with MQTT v5 compliant clients.
+
+### Session Expiry Interval
+MQTT v5 clients can specify a *Session Expiry Interval* in their CONNECT packet. This interval indicates how long the server should maintain the client's session state (like subscriptions and queued messages) after the client disconnects.
+
+The Hono MQTT adapter:
+- Recognizes the `Session Expiry Interval` property from client CONNECT packets.
+- Will include the `Session Expiry Interval` property in the CONNACK packet sent back to the client. The value sent will typically be the one requested by the client. (Note: Server-side enforcement of a maximum interval is not currently implemented; the client's requested value is echoed).
+
+**Current Limitation:** While the adapter acknowledges the session expiry interval, **full server-side persistence of session state for the requested duration is not yet implemented.** The adapter currently behaves mostly as if `Clean Start = true` was set for all connections regarding the persistence of MQTT session state (subscriptions, etc.) across network disconnections. Development is ongoing to provide full persistent session support.
+
+### Message Expiry Interval
+
+#### From Client (Device Telemetry/Events)
+If an MQTT v5 client includes a `Message Expiry Interval` property in a PUBLISH packet (e.g., for telemetry or event data), the Hono MQTT adapter will:
+- Extract this interval.
+- Propagate it as a message property (e.g., `x-hono-msg-expiry-interval`) in the message that is forwarded to downstream messaging infrastructure (like AMQP or Kafka).
+
+Consumers of these messages from the downstream systems are responsible for interpreting and acting on this expiry information. Hono itself does not discard these messages based on this interval before forwarding them.
+
+#### To Client (Commands)
+The MQTT adapter is now capable of including a `Message Expiry Interval` property when publishing command messages to MQTT v5 clients.
+
+However, the ability for applications to specify a message expiry interval for a command destined for a device is **a planned future enhancement** and depends on updates to Hono's Command API. Placeholder logic for checking command expiry before attempting delivery to a client is present in the adapter but is not fully active pending these API changes.
+
 ## Port Configuration
 
 The MQTT protocol adapter can be configured to listen for connections on

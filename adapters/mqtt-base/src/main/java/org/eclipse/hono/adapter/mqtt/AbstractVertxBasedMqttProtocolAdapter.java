@@ -143,6 +143,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * calculation.
      */
     protected static final int MAX_MSG_SIZE_VARIABLE_HEADER_SIZE = 128;
+    private static final String PROPERTY_X_MSG_EXPIRY_INTERVAL = "x-msg-expiry-interval";
 
     private static final String EVENT_SENDING_PUBACK = "sending PUBACK";
     private static final int IANA_MQTT_PORT = 1883;
@@ -473,6 +474,24 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .onComplete(stopPromise);
     }
 
+    // Placeholder methods for session expiry management
+    private void scheduleSessionExpiry(final String clientId, final long expiryInterval) {
+        // TODO: Implement actual session expiry scheduling (e.g., using a timer)
+        log.info("Scheduling session expiry for client [clientId: {}] in {} seconds.", clientId, expiryInterval);
+    }
+
+    private void cancelScheduledSessionExpiry(final String clientId) {
+        // TODO: Implement cancellation of scheduled session expiry
+        log.info("Cancelling scheduled session expiry for client [clientId: {}].", clientId);
+    }
+
+    private void handleExpiredSession(final String clientId) {
+        // TODO: Implement logic to handle session expiry (e.g., clean up session state)
+        log.info("Session expired for client [clientId: {}].", clientId);
+        metrics.reportSessionExpired();
+        metrics.decrementActivePersistentSessions();
+    }
+
     /**
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
@@ -506,11 +525,40 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             connectionClosedPrematurely.set(true);
         });
 
+        final MqttConnectContext context = MqttConnectContext.fromConnectPacket(endpoint, span);
+
         handleConnectionRequest(endpoint, connectionClosedPrematurely, span)
             .compose(authenticatedDevice -> handleConnectionRequestResult(endpoint, authenticatedDevice, connectionClosedPrematurely, span))
             .onSuccess(authenticatedDevice -> {
-                // we NEVER maintain session state
-                endpoint.accept(false);
+                final Long sessionExpiryInterval = context.getSessionExpiryInterval();
+                log.debug("MQTT client [client-id: {}] connected with cleanSession: {}, sessionExpiryInterval: {}", endpoint.clientIdentifier(), endpoint.isCleanSession(), sessionExpiryInterval);
+
+                boolean sessionPresent = false;
+                final MqttProperties connackProperties = new MqttProperties();
+
+                if (endpoint.isCleanSession()) {
+                    sessionPresent = false;
+                } else {
+                    if (sessionExpiryInterval != null && sessionExpiryInterval > 0) {
+                        log.info("MQTT client [client-id: {}] requested to resume session with expiry interval: {}", endpoint.clientIdentifier(), sessionExpiryInterval);
+                        // TODO: Implement actual session loading logic here. For now, hardcoding sessionPresent to false.
+                        // If a session was loaded, sessionPresent should be true.
+                        sessionPresent = false; // TODO: This should be true if a session is actually loaded and resumed.
+                        if (sessionPresent) {
+                            metrics.reportSessionResumed();
+                            metrics.decrementActivePersistentSessions(); // Resumed session is now active, not just persistent
+                        }
+                        // Echo back the session expiry interval if the client sent one.
+                        connackProperties.add(new MqttProperties.IntegerProperty(MqttProperties.SESSION_EXPIRY_INTERVAL_IDENTIFIER, sessionExpiryInterval.intValue()));
+                        if (authenticatedDevice != null && sessionPresent) { // Potentially cancel scheduled expiry if session is resumed
+                            cancelScheduledSessionExpiry(authenticatedDevice.getDeviceId());
+                        }
+                    } else {
+                        sessionPresent = false;
+                    }
+                }
+
+                endpoint.accept(sessionPresent, connackProperties);
                 span.log("connection accepted");
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
@@ -946,6 +994,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return Future.all(tokenTracker, tenantValidationTracker).compose(ok -> {
 
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
+            final Long messageExpiryInterval = ctx.getMessageExpiryInterval();
+            if (messageExpiryInterval != null && messageExpiryInterval > 0) {
+                props.put(PROPERTY_X_MSG_EXPIRY_INTERVAL, messageExpiryInterval);
+                log.debug("Propagating message expiry interval [{}] for message [topic: {}]", messageExpiryInterval, ctx.getOrigAddress());
+                metrics.reportClientMessageReceivedWithExpiry();
+            }
             Optional.ofNullable(ctx.getRequestedQos())
                 .map(QoS::ordinal)
                 .ifPresent(qos -> props.put(MessageHelper.APP_PROPERTY_QOS, qos));
@@ -1182,6 +1236,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         private final PendingPubAcks pendingAcks = new PendingPubAcks(vertx);
 
         private Throwable protocolLevelException;
+        private Long sessionExpiryInterval; // Added to store session expiry for the endpoint
 
         /**
          * Creates a new MqttDeviceEndpoint.
@@ -1196,6 +1251,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             this.endpoint = Objects.requireNonNull(endpoint);
             this.authenticatedDevice = authenticatedDevice;
             this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+            // Capture sessionExpiryInterval from the connect context if available
+            final MqttConnectContext connectContext = MqttConnectContext.fromConnectPacket(endpoint, null); // Span can be null here as we only need properties
+            this.sessionExpiryInterval = connectContext.getSessionExpiryInterval();
         }
 
         /**
@@ -1578,7 +1636,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     ? String.format("gateway [%s], device [%s]", authenticatedDevice.getDeviceId(), context.deviceId())
                     : String.format("device [%s]", context.deviceId());
 
-            return publish(publishTopic, errorJson.toBuffer(), subscription.getQos())
+            return publish(publishTopic, errorJson.toBuffer(), subscription.getQos(), MqttProperties.NO_PROPERTIES)
                     .onSuccess(msgId -> {
                         log.debug("published error message [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
                                 msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
@@ -1708,11 +1766,42 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
                 : String.format("device [%s]", command.getDeviceId());
 
+            // TODO: Retrieve Message Expiry from Command properties when Command API supports it
+            Long messageExpiryIntervalSeconds = null; // Placeholder
+            // Example: if (command.getProperties().containsKey("message-expiry-interval")) {
+            // messageExpiryIntervalSeconds = Long.parseLong(command.getProperties().get("message-expiry-interval").toString());
+            // }
+            // Also need command creation timestamp from the command object.
+            // Long commandCreationTimestamp = command.getCreationTimestamp(); // Placeholder
+            final MqttProperties publishProperties = new MqttProperties();
+
+            if (false) { // Keep structure, but disable until Command API provides necessary data
+                // if (messageExpiryIntervalSeconds != null && commandCreationTimestamp != null) {
+                //     long currentTimeMillis = System.currentTimeMillis();
+                //     long expiryTimeMillis = commandCreationTimestamp + (messageExpiryIntervalSeconds * 1000);
+                //     if (currentTimeMillis >= expiryTimeMillis) {
+                //         log.info("Command [{}] for device [{}] expired. Discarding.", command.getCommandId(), subscription.getDeviceId());
+                //         metrics.reportCommandExpiredBeforeDelivery();
+                //         commandContext.reject(new ClientErrorException(HttpURLConnection.HTTP_GONE, "Command expired before delivery")); // Or another appropriate error
+                //         // Report metrics for expired command
+                //         // reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.EXPIRED); // (Need to add EXPIRED to ProcessingOutcome or handle differently)
+                //         return Future.succeededFuture(); // Stop further processing
+                //     }
+                //     // If not expired, calculate remaining expiry for outgoing MQTT message
+                //     long remainingExpirySeconds = Math.max(0, (expiryTimeMillis - currentTimeMillis) / 1000);
+                //     if (remainingExpirySeconds > 0) {
+                //        publishProperties.add(new MqttProperties.IntegerProperty(MqttProperties.MESSAGE_EXPIRY_INTERVAL_IDENTIFIER, (int) remainingExpirySeconds));
+                //        metrics.reportCommandSentWithExpiry();
+                //     }
+                // }
+            }
+
+
             return getCommandPayload(commandContext)
                     .map(mappedPayload -> Optional.ofNullable(mappedPayload).orElseGet(Buffer::buffer))
                     .onSuccess(payload -> {
                         // don't wait for the PUBACK from the device in order to complete the onCommandReceived result future here
-                        publish(publishTopic, payload, subscription.getQos())
+                        publish(publishTopic, payload, subscription.getQos(), publishProperties)
                                 .onSuccess(msgId -> {
                                     log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
                                             msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
@@ -1748,10 +1837,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     }).mapEmpty();
         }
 
-        private Future<Integer> publish(final String topic, final Buffer payload, final MqttQoS qosLevel) {
+        private Future<Integer> publish(final String topic, final Buffer payload, final MqttQoS qosLevel, final MqttProperties properties) {
             final Promise<Integer> publishSentPromise = Promise.promise();
             try {
-                endpoint.publish(topic, payload, qosLevel, false, false, publishSentPromise);
+                endpoint.publish(topic, payload, qosLevel, false, false, properties, publishSentPromise);
             } catch (final Exception e) {
                 publishSentPromise.fail(!endpoint.isConnected()
                         ? new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to device already closed")
@@ -1936,6 +2025,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             AbstractVertxBasedMqttProtocolAdapter.this.onBeforeEndpointClose(this);
             AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
             final Future<Void> removalDoneFuture = removeAllCommandSubscriptions(span, sendDisconnectedEvent, closeCommandConsumers);
+
+            if (this.sessionExpiryInterval != null && this.sessionExpiryInterval > 0) {
+                log.info("Client [client-id: {}] disconnected with sessionExpiryInterval: {}. Scheduling session expiry.", endpoint.clientIdentifier(), this.sessionExpiryInterval);
+                // TODO: Persist session state (subscriptions, etc.) here.
+                scheduleSessionExpiry(endpoint.clientIdentifier(), this.sessionExpiryInterval);
+                metrics.incrementActivePersistentSessions();
+            } else {
+                log.info("Client [client-id: {}] disconnected without session expiry.", endpoint.clientIdentifier());
+            }
+
             if (sendDisconnectedEvent) {
                 sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
             }
