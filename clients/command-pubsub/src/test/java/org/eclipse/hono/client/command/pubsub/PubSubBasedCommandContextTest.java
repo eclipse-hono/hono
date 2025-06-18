@@ -66,7 +66,7 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.reject(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST), "true", "false");
+                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST), true, false);
     }
 
     @Test
@@ -74,7 +74,7 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.reject(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST), "false", "true");
+                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST), false, true);
     }
 
     @Test
@@ -82,7 +82,7 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.release(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE), "true", "false");
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE), true, false);
     }
 
     @Test
@@ -90,7 +90,7 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.release(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST)),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE), "false", "true");
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE), false, true);
     }
 
     @Test
@@ -98,7 +98,7 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.modify(true, true),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND), "true", "false");
+                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND), true, false);
     }
 
     @Test
@@ -106,12 +106,12 @@ public class PubSubBasedCommandContextTest {
         testErrorIsSentOnCommandResponseTopic(
                 context -> context.modify(true, true),
                 commandResponse -> assertThat(commandResponse.getStatus())
-                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND), "false", "true");
+                        .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND), false, true);
     }
 
     @Test
     void testNoErrorIsSentOnCommandResponseTopicWhenContextWithResponseRequiredGetsAccepted() {
-        final var command = getCommand("true", "false");
+        final var command = getCommand(true, false);
         final Span span = TracingMockSupport.mockSpan();
         final var context = new PubSubBasedCommandContext(command, responseSender, span);
         context.accept();
@@ -120,7 +120,7 @@ public class PubSubBasedCommandContextTest {
 
     @Test
     void testNoErrorIsSentOnCommandResponseTopicWhenContextWithAckRequiredGetsAccepted() {
-        final var command = getCommand("false", "true");
+        final var command = getCommand(false, true);
         final Span span = TracingMockSupport.mockSpan();
         final var context = new PubSubBasedCommandContext(command, responseSender, span);
         context.accept();
@@ -130,7 +130,7 @@ public class PubSubBasedCommandContextTest {
     private void testErrorIsSentOnCommandResponseTopic(
             final Consumer<PubSubBasedCommandContext> contextHandler,
             final Consumer<CommandResponse> responseAssertions,
-            final String responseRequired, final String ackRequired) {
+            final boolean responseRequired, final boolean ackRequired) {
 
         final var command = getCommand(responseRequired, ackRequired);
         final var context = new PubSubBasedCommandContext(command, responseSender, NoopSpan.INSTANCE);
@@ -146,7 +146,7 @@ public class PubSubBasedCommandContextTest {
         responseAssertions.accept(commandResponse.getValue());
     }
 
-    private PubSubBasedCommand getCommand(final String responseRequired, final String ackRequired) {
+    private PubSubBasedCommand getCommand(final boolean responseRequired, final boolean ackRequired) {
 
         final String correlationId = "my-correlation-id";
         final String deviceId = "test-device";
@@ -157,8 +157,8 @@ public class PubSubBasedCommandContextTest {
         attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         attributes.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, responseRequired);
-        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_ACK_REQUIRED, ackRequired);
+        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, String.valueOf(responseRequired));
+        attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_ACK_REQUIRED, String.valueOf(ackRequired));
         attributes.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
 
         final PubsubMessage message = PubsubMessage.newBuilder().putAllAttributes(attributes).build();
