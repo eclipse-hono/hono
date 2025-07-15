@@ -61,8 +61,9 @@ public class PubSubBasedCommandTest {
      */
     @Test
     public void testFromMessageSucceedsForRequestResponseCommand() {
-        final String responseRequired = "true";
-        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, responseRequired,
+        final Boolean responseRequired = true;
+        final Boolean ackRequired = false;
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, responseRequired, ackRequired,
                 null);
 
         final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
@@ -76,14 +77,33 @@ public class PubSubBasedCommandTest {
     }
 
     /**
+     * Verifies that a command can be created from a valid PubsubMessage that represent an ack required command.
+     */
+    @Test
+    public void testFromMessageSucceedsForAckRequiredCommand() {
+        final Boolean ackRequired = true;
+        final Boolean responseRequired = false;
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, responseRequired, ackRequired,
+                null);
+
+        final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
+        assertTrue(command.isValid());
+        assertThat(command.getName()).isEqualTo(subject);
+        assertThat(command.getDeviceId()).isEqualTo(deviceId);
+        assertThat(command.getGatewayOrDeviceId()).isEqualTo(deviceId);
+        assertThat(command.getGatewayId()).isNull();
+        assertThat(command.getCorrelationId()).isEqualTo(correlationId);
+        assertTrue(command.isOneWay());
+    }
+
+    /**
      * Verifies that a command can be created from a valid PubsubMessage representing a routed command message with a
      * via attribute containing the gateway identifier.
      */
     @Test
     public void testFromRoutedMessageSucceeds() {
         final String gatewayId = "test-gateway";
-        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, null,
-                gatewayId);
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, null, gatewayId);
 
         final PubSubBasedCommand command = PubSubBasedCommand.fromRoutedCommandMessage(message);
         assertTrue(command.isValid());
@@ -100,8 +120,7 @@ public class PubSubBasedCommandTest {
      */
     @Test
     public void testFromRoutedMessageFailsForEmptyAttributes() {
-        final PubsubMessage message = getPubSubMessage(null, null, null, null, null,
-                null);
+        final PubsubMessage message = getPubSubMessage(null, null, null, null, null, null);
 
         assertThrows(IllegalArgumentException.class, () -> {
             PubSubBasedCommand.fromRoutedCommandMessage(message);
@@ -113,8 +132,7 @@ public class PubSubBasedCommandTest {
      */
     @Test
     public void testFromRoutedMessageFailsForMissingTenantId() {
-        final PubsubMessage message = getPubSubMessage(null, deviceId, subject, null, null,
-                null);
+        final PubsubMessage message = getPubSubMessage(null, deviceId, subject, null, null, null);
 
         assertThrows(IllegalArgumentException.class, () -> {
             PubSubBasedCommand.fromRoutedCommandMessage(message);
@@ -126,8 +144,7 @@ public class PubSubBasedCommandTest {
      */
     @Test
     public void testFromRoutedMessageFailsForMissingDeviceId() {
-        final PubsubMessage message = getPubSubMessage(tenantId, null, subject, null, null,
-                null);
+        final PubsubMessage message = getPubSubMessage(tenantId, null, subject, null, null, null);
 
         assertThrows(IllegalArgumentException.class, () -> {
             PubSubBasedCommand.fromRoutedCommandMessage(message);
@@ -140,14 +157,46 @@ public class PubSubBasedCommandTest {
      */
     @Test
     public void testFromMessageFailsForMissingCorrelationIdWithResponseRequired() {
-        final String responseRequired = "true";
-        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, null, responseRequired,
+        final Boolean responseRequired = true;
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, null, responseRequired, null);
+
+        final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
+
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason()).contains("correlation-id");
+    }
+
+    /**
+     * Verifies that an invalid command is created from a PubsubMessage that does not contain a correlation-id attribute
+     * but has ack-required set to true.
+     */
+    @Test
+    public void testFromMessageFailsForMissingCorrelationIdWithAckRequired() {
+        final Boolean ackRequired = true;
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, null, null, ackRequired,
                 null);
 
         final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
 
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason()).contains("correlation-id is not set");
+        assertThat(command.getInvalidCommandReason()).contains("correlation-id");
+    }
+
+    /**
+     * Verifies that an invalid command is created from a PubsubMessage that has response-require and ack-required set to true.
+     */
+    @Test
+    public void testFromMessageFailsForAckRequiredAndResponseRequiredBeingTrue() {
+        final Boolean responseRequired = true;
+        final Boolean ackRequired = true;
+        final PubsubMessage message = getPubSubMessage(tenantId, deviceId, subject, correlationId, responseRequired, ackRequired,
+                null);
+
+        final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
+
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason()).contains("response-required");
+        assertThat(command.getInvalidCommandReason()).contains("ack-required");
     }
 
     /**
@@ -161,20 +210,28 @@ public class PubSubBasedCommandTest {
         final PubSubBasedCommand command = PubSubBasedCommand.from(message, tenantId);
 
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason()).contains("subject not set");
+        assertThat(command.getInvalidCommandReason()).contains("subject");
     }
 
     private PubsubMessage getPubSubMessage(final String tenantId, final String deviceId, final String subject,
-            final String correlationId, final String responseRequired, final String via) {
+            final String correlationId, final Boolean responseRequired, final String via) {
+
+        return getPubSubMessage(tenantId, deviceId, subject, correlationId, responseRequired, null, via);
+    }
+
+    private PubsubMessage getPubSubMessage(final String tenantId, final String deviceId, final String subject,
+                                           final String correlationId, final Boolean responseRequired, final Boolean ackRequired, final String via) {
         final Map<String, String> attributes = new HashMap<>();
         Optional.ofNullable(deviceId)
                 .ifPresent(ok -> attributes.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
         Optional.ofNullable(tenantId)
-                .ifPresent(ok -> attributes.put( MessageHelper.APP_PROPERTY_TENANT_ID, tenantId));
+                .ifPresent(ok -> attributes.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId));
         Optional.ofNullable(subject)
                 .ifPresent(ok -> attributes.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject));
         Optional.ofNullable(responseRequired)
-                .ifPresent(ok -> attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, responseRequired));
+                .ifPresent(ok -> attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_RESPONSE_REQUIRED, String.valueOf(responseRequired)));
+        Optional.ofNullable(ackRequired)
+                .ifPresent(ok -> attributes.put(PubSubMessageHelper.PUBSUB_PROPERTY_ACK_REQUIRED, String.valueOf(ackRequired)));
         Optional.ofNullable(correlationId)
                 .ifPresent(ok -> attributes.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId));
         Optional.ofNullable(via)
