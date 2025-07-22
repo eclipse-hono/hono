@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import io.jsonwebtoken.Jwts;
@@ -75,7 +76,13 @@ class JwtAuthHandlerTest {
     private HttpServerRequest req;
     private HttpServerResponse resp;
 
-    private static String getJws(final String audience, final String tenant, final String subject) {
+    // Suppress deprecation warning because we need to test both old and new JWT audience formats for compatibility.
+    @SuppressWarnings("deprecation")
+    private static String getJws(
+            final String audience,
+            final String tenant,
+            final String subject,
+            final boolean useSingleValueAudience) {
         final Key key;
         try {
             final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
@@ -85,19 +92,24 @@ class JwtAuthHandlerTest {
             throw new RuntimeException(e);
         }
         final var builder = Jwts.builder().signWith(key);
-        Optional.ofNullable(audience).ifPresent(builder::setAudience);
+        Optional.ofNullable(audience).ifPresent(s -> {
+            if (useSingleValueAudience) {
+                builder.audience().single(s);
+            } else {
+                builder.audience().add(s);
+            }
+        });
         Optional.ofNullable(tenant).ifPresent(t -> builder.claim(CredentialsConstants.CLAIM_TENANT_ID, t));
-        Optional.ofNullable(subject).ifPresent(s -> builder.setSubject(s).setIssuer(s));
-        builder.setExpiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))));
+        Optional.ofNullable(subject).ifPresent(s -> builder.subject(s).issuer(s));
+        builder.expiration(Date.from(Instant.now().plus(Duration.ofMinutes(10))));
         return builder.compact();
     }
 
     private static Stream<String> testHandleFailsForMalformedUriOrClaims() {
         return Stream.of(
-                getJws(null, null, null),
-                getJws("hono-adapter", null, "device"),
-                getJws("hono-adapter", "tenant", null)
-        );
+                getJws(null, null, null, false),
+                getJws("hono-adapter", null, "device", false),
+                getJws("hono-adapter", "tenant", null, false));
     }
 
     @BeforeEach
@@ -117,7 +129,7 @@ class JwtAuthHandlerTest {
     @Test
     public void testHandleSucceedsWithDeviceUser() {
 
-        final String jws = getJws("not-hono-adapter", null, null);
+        final String jws = getJws("not-hono-adapter", null, null, true);
         final DeviceUser deviceUser = new DeviceUser("tenant", "device");
         // GIVEN an auth handler configured with an auth provider that
         // succeeds with a DeviceUser during authentication
@@ -147,8 +159,9 @@ class JwtAuthHandlerTest {
      * Verifies that the PreCredentialsValidationHandler given for the AuthHandler is invoked when authenticating.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    @Test
-    public void testPreCredentialsValidationHandlerGetsInvoked() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void testPreCredentialsValidationHandlerGetsInvoked(final boolean useSingleValueAudience) {
 
         final JwtCredentials deviceCredentials = mock(JwtCredentials.class);
         final DeviceUser deviceUser = new DeviceUser("tenant", "device");
@@ -173,7 +186,8 @@ class JwtAuthHandlerTest {
         final JwtAuthHandler authHandler = new JwtAuthHandler(authProvider, "test", preCredValidationHandler);
 
         // WHEN the auth handler handles a request
-        final String authorization = "Bearer " + getJws("hono-adapter", "tenant", "device");
+        final String authorization = "Bearer "
+                + getJws(CredentialsConstants.AUDIENCE_HONO_ADAPTER, "tenant", "device", useSingleValueAudience);
         final MultiMap headers = mock(MultiMap.class);
         when(headers.get(HttpHeaders.AUTHORIZATION)).thenReturn(authorization);
         when(req.headers()).thenReturn(headers);
@@ -199,7 +213,7 @@ class JwtAuthHandlerTest {
     @Test
     public void testHandleFailsWithStatusCodeFromAuthProvider() {
 
-        final String jws = getJws("hono-adapter", "DEFAULT_TENANT", "device1");
+        final String jws = getJws("hono-adapter", "DEFAULT_TENANT", "device1", false);
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
         final DeviceCredentialsAuthProvider<JwtCredentials> authProvider = mock(DeviceCredentialsAuthProvider.class);

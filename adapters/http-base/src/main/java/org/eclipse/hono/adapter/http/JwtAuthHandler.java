@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
+import java.util.LinkedList;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.HttpContext;
@@ -33,6 +34,7 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
@@ -44,7 +46,8 @@ import io.vertx.ext.web.handler.impl.HTTPAuthorizationHandler;
  * An auth handler for extracting an {@value CredentialsConstants#FIELD_AUTH_ID},
  * {@value CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} and JSON Web Token (JWT) from an HTTP context.
  */
-public final class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider> implements CredentialsParser {
+public final class JwtAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider>
+        implements CredentialsParser {
 
     private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
 
@@ -88,7 +91,18 @@ public final class JwtAuthHandler extends HTTPAuthorizationHandler<Authenticatio
             try {
                 final var claims = DefaultJwsValidator.getJwtClaims(token);
                 final JsonObject credentials;
-                if (Objects.equals(claims.getString(Claims.AUDIENCE), CredentialsConstants.AUDIENCE_HONO_ADAPTER)) {
+                final var audienceObject = claims.getValue(Claims.AUDIENCE);
+                final var audienceList = new LinkedList<String>();
+                if (audienceObject instanceof JsonArray array) {
+                    array.stream()
+                        .filter(String.class::isInstance)
+                        .map(String.class::cast)
+                        .forEach(audienceList::add);
+                } else if (audienceObject instanceof String audienceString) {
+                    audienceList.add(audienceString);
+                }
+
+                if (audienceList.contains(CredentialsConstants.AUDIENCE_HONO_ADAPTER)) {
                     // extract tenant, device ID and issuer from claims
                     credentials = parseCredentialsFromClaims(claims);
                 } else {
@@ -112,7 +126,8 @@ public final class JwtAuthHandler extends HTTPAuthorizationHandler<Authenticatio
                         .onComplete(handler);
 
             } catch (final MalformedJwtException e) {
-                handler.handle(Future.failedFuture(new HttpException(HttpURLConnection.HTTP_BAD_REQUEST, "Malformed token")));
+                handler.handle(
+                        Future.failedFuture(new HttpException(HttpURLConnection.HTTP_BAD_REQUEST, "Malformed token")));
             } catch (final ServiceInvocationException e) {
                 handler.handle(Future.failedFuture(new HttpException(HttpURLConnection.HTTP_BAD_REQUEST, e)));
             }
@@ -141,7 +156,8 @@ public final class JwtAuthHandler extends HTTPAuthorizationHandler<Authenticatio
      * Extracts the tenant-id and auth-id from a URI.
      *
      * @param uri A URI containing the tenant-id and auth-id.
-     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id") extracted from the URI.
+     * @return A JsonObject containing values for "tenant-id", "auth-id" and "iss" (same as "auth-id") extracted from
+     *         the URI.
      * @throws NullPointerException if the given string is {@code null}.
      * @throws ClientErrorException If tenant-id or auth-id cannot correctly be extracted from the URI.
      */

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -133,7 +133,7 @@ class JwtAuthProviderTest {
 
         when(claims.getExpiration()).thenReturn(Date.from(now.plusSeconds(3600 * 24)));
         when(claims.getIssuedAt()).thenReturn(Date.from(now));
-        when(claimsJws.getBody()).thenReturn(claims);
+        when(claimsJws.getPayload()).thenReturn(claims);
 
         when(tokenValidator.expand(anyString(), any(List.class), any(Duration.class)))
             .thenReturn(Future.succeededFuture(claimsJws));
