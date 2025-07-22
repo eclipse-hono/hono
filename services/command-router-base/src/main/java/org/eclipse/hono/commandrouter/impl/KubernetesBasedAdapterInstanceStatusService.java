@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -47,7 +48,6 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
@@ -412,22 +412,22 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         }
         if (needPodListRefresh) {
             final Promise<Set<String>> resultPromise = Promise.promise();
-            final Handler<Promise<Set<String>>> resultProvider = promise -> {
-                try {
-                    // get current pod list so that SUSPECTED_DEAD entries can be resolved
-                    refreshContainerLists(client.pods().inNamespace(namespace).list().getItems());
-                    final Set<String> deadAdapterInstances = adapterInstanceIds.stream()
-                            .filter(id -> getStatus(id) == AdapterInstanceStatus.DEAD)
-                            .collect(Collectors.toSet());
-                    promise.complete(deadAdapterInstances);
-                } catch (final Exception e) {
-                    promise.fail(e);
-                }
+            final Callable<Set<String>> resultProvider = () -> {
+                // get current pod list so that SUSPECTED_DEAD entries can be resolved
+                refreshContainerLists(client.pods().inNamespace(namespace).list().getItems());
+                return adapterInstanceIds.stream()
+                        .filter(id -> getStatus(id) == AdapterInstanceStatus.DEAD)
+                        .collect(Collectors.toSet());
             };
             Optional.ofNullable(Vertx.currentContext()).ifPresentOrElse(
                     ctx -> ctx.executeBlocking(resultProvider, false, resultPromise),
-                    () -> resultProvider.handle(resultPromise)
-            );
+                    () -> {
+                        try {
+                            resultPromise.complete(resultProvider.call());
+                        } catch (final Exception e) {
+                            resultPromise.fail(e);
+                        }
+                    });
             return resultPromise.future();
         } else {
             return Future.succeededFuture(resultSet);
