@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -331,7 +330,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     /**
      * Removes responses from the cache where the keys match the given predicate.
      * <p>
-     * The operation is executed on a worker thread (using {@link io.vertx.core.Vertx#executeBlocking(Handler)}).
+     * The operation is executed on a worker thread (using {@link io.vertx.core.Vertx#executeBlocking(java.util.concurrent.Callable)}).
      * <p>
      * If no cache is configured then this method does nothing.
      *
@@ -341,8 +340,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
     protected final void removeFromCacheByPattern(final Predicate<Object> keyPredicate) {
         if (isCachingEnabled()) {
             Objects.requireNonNull(keyPredicate);
-
-            connection.getVertx().executeBlocking(p -> {
+            connection.getVertx().executeBlocking(() -> {
                 final var matchingKeys = responseCache.asMap()
                         .keySet()
                         .stream()
@@ -353,6 +351,7 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
                     log.debug("removing {} responses from the cache", matchingKeys.size());
                     responseCache.invalidateAll(matchingKeys);
                 }
+                return null;
             });
         }
     }

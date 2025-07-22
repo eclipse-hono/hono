@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,10 +35,7 @@ import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.VertxInternal;
@@ -68,15 +65,6 @@ public class CachingKafkaProducerFactoryTest {
             return promiseInternal;
         }).when(context).promise();
         when(vertxMock.getOrCreateContext()).thenReturn(context);
-
-        doAnswer(invocation -> {
-            final Promise<Object> result = Promise.promise();
-            final Handler<Future<Object>> blockingCode = invocation.getArgument(0);
-            final Handler<AsyncResult<Object>> resultHandler = invocation.getArgument(1);
-            result.future().onComplete(resultHandler);
-            blockingCode.handle(result.future());
-            return null;
-        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
 
         final BiFunction<String, Map<String, String>, KafkaProducer<String, Buffer>> instanceSupplier = (n, c) -> {
             final MockProducer<String, Buffer> mockProducer = new MockProducer<>(true, new StringSerializer(),

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,7 +32,6 @@ import org.eclipse.hono.util.JsonHelper;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
@@ -133,18 +132,17 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
         if (currentContext == null) {
             return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
         } else {
-            final Promise<DeviceUser> result = Promise.promise();
-            currentContext.executeBlocking(blockingCodeHandler -> {
+            return currentContext.executeBlocking(() -> {
                 log.debug("validating password hash on vert.x worker thread [{}]", Thread.currentThread().getName());
                 final boolean isValid = credentialsOnRecord.getCandidateSecrets().stream()
-                        .anyMatch(candidateSecret -> pwdEncoder.matches(deviceCredentials.getPassword(), candidateSecret));
+                        .anyMatch(candidateSecret -> pwdEncoder.matches(deviceCredentials.getPassword(),
+                                candidateSecret));
                 if (isValid) {
-                    blockingCodeHandler.complete(new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()));
+                    return new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId());
                 } else {
-                    blockingCodeHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
+                    throw new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials");
                 }
-            }, false, result);
-            return result.future();
+            });
         }
     }
 }
