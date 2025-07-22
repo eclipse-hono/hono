@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -99,7 +99,7 @@ public class JwtAuthProvider extends CredentialsApiAuthProvider<JwtCredentials> 
 
         return tokenValidator.expand(deviceCredentials.getJws(), credentialsOnRecord.getCandidateSecrets(), ALLOWED_CLOCK_SKEW)
                 .map(claims -> {
-                    final var expirationTime = claims.getBody().getExpiration().toInstant().plus(ALLOWED_CLOCK_SKEW);
+                    final var expirationTime = claims.getPayload().getExpiration().toInstant().plus(ALLOWED_CLOCK_SKEW);
                     return new DeviceUser(deviceCredentials.getTenantId(), credentialsOnRecord.getDeviceId()) {
 
                         @Override
