@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -94,23 +93,12 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         }
         LOG.info("stopping cache");
         setCache(null);
-        final Promise<Void> result = Promise.promise();
-        vertx.executeBlocking(r -> {
-            try {
-                cacheManager.stop();
-                r.complete();
-            } catch (final Exception t) {
-                r.fail(t);
-            }
-        }, (AsyncResult<Void> stopAttempt) -> {
-            if (stopAttempt.succeeded()) {
-                LOG.info("connection(s) to cache stopped successfully");
-            } else {
-                LOG.info("error trying to stop connection(s) to cache", stopAttempt.cause());
-            }
-            result.handle(stopAttempt);
-        });
-        return result.future();
+        return vertx.executeBlocking(() -> {
+            cacheManager.stop();
+            return (Void) null;
+        })
+        .onSuccess(empty -> LOG.info("connection(s) to cache stopped successfully"))
+        .onFailure(error -> LOG.info("error trying to stop connection(s) to cache", error));
     }
 
     protected void setCache(final org.infinispan.commons.api.BasicCache<K, V> cache) {

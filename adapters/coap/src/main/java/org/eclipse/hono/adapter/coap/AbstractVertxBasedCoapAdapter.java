@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.Futures;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -161,7 +160,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 .orElseGet(this::createServer)
                 .compose(serverToStart -> preStartup().map(serverToStart))
                 .onSuccess(this::addResources)
-                .compose(serverToStart -> Futures.executeBlocking(vertx, () -> {
+                .compose(serverToStart -> vertx.executeBlocking(() -> {
                     serverToStart.start();
                     return serverToStart;
                 }))
@@ -257,7 +256,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             log.error("error in preShutdown", e);
         }
 
-        Futures.executeBlocking(vertx, () -> {
+        vertx.executeBlocking(() -> {
             if (server != null) {
                 server.stop();
             }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,25 +89,22 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
     }
 
     /**
-     * Shuts the publisher down and frees resources.
+     * Shuts down the publisher and frees resources.
      */
     @Override
     public void close() {
-        vertx.executeBlocking(result -> {
-            if (publisher == null) {
-                result.complete();
-            } else {
+        vertx.executeBlocking(() -> {
+            if (publisher != null) {
                 try {
                     publisher.shutdown();
                     publisher.awaitTermination(5, TimeUnit.SECONDS);
-                    result.complete();
                 } catch (final InterruptedException e) {
                     LOG.debug("timed out waiting for shut down of publisher", e);
                     Thread.currentThread().interrupt();
-                    result.fail(e);
                 }
             }
-        }, false);
+            return null;
+        });
     }
 
     /**

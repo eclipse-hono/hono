@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -381,14 +381,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         if (adminClient == null) {
             return Future.succeededFuture();
         }
-        final Promise<Void> adminClientClosePromise = Promise.promise();
         LOG.debug("stop: close admin client");
-        context.executeBlocking(future -> {
+        return context.executeBlocking(() -> {
             adminClient.close();
             LOG.debug("admin client closed");
-            future.complete();
-        }, adminClientClosePromise);
-        return adminClientClosePromise.future();
+            return null;
+        });
     }
 
     private Future<Void> stopConsumer() {

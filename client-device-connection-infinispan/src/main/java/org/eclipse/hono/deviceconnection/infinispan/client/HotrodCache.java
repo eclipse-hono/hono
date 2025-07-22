@@ -116,45 +116,35 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
     @Override
     protected Future<Void> connectToCache() {
 
-        final Promise<Void> result = Promise.promise();
-
         if (connecting.compareAndSet(false, true)) {
 
-            vertx.executeBlocking(r -> {
-                try {
-                    if (!cacheManager.isStarted()) {
-                        LOG.debug("trying to start cache manager");
-                        cacheManager.start();
-                        LOG.info("started cache manager, now connecting to remote cache");
-                    }
-                    LOG.debug("trying to connect to remote cache");
-                    @SuppressWarnings("unchecked")
-                    final var cache = (RemoteCache<K, V>) cacheManager.getCache(cacheName);
-                    if (cache == null) {
-                        r.fail(new IllegalStateException("remote cache [" + cacheName + "] does not exist"));
-                    } else {
-                        cache.start();
-                        setCache(cache);
-                        r.complete(cache);
-                    }
-                } catch (final Exception t) {
-                    r.fail(t);
+            return vertx.executeBlocking(() -> {
+                if (!cacheManager.isStarted()) {
+                    LOG.debug("trying to start cache manager");
+                    cacheManager.start();
+                    LOG.info("started cache manager, now connecting to remote cache");
                 }
-            }, attempt -> {
-                if (attempt.succeeded()) {
-                    LOG.info("successfully connected to remote cache");
-                    result.complete();
+                LOG.debug("trying to connect to remote cache");
+                @SuppressWarnings("unchecked")
+                final var cache = (RemoteCache<K, V>) cacheManager.getCache(cacheName);
+                if (cache == null) {
+                    final var msg = "remote cache [%s] does not exist".formatted(cacheName);
+                    LOG.debug("failed to connect to remote cache: {}", msg);
+                    throw new IllegalStateException(msg);
                 } else {
-                    LOG.debug("failed to connect to remote cache: {}", attempt.cause().getMessage());
-                    result.fail(attempt.cause());
+                    cache.start();
+                    setCache(cache);
+                    LOG.info("successfully connected to remote cache");
+                    return (Void) null;
                 }
+            })
+            .onComplete(ar -> {
                 connecting.set(false);
             });
         } else {
             LOG.info("already trying to establish connection to data grid");
-            result.fail("already trying to establish connection to data grid");
+            return Future.failedFuture("already trying to establish connection to data grid");
         }
-        return result.future();
     }
 
     @Override
