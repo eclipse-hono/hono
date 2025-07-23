@@ -360,6 +360,7 @@
           </dependencies>
           <executions>
             <execution>
+              <?m2e ignore?>
               <id>checkstyle-check</id>
               <phase>validate</phase>
               <goals>

@@ -97,6 +97,7 @@
         <artifactId>properties-maven-plugin</artifactId>
         <executions>
           <execution>
+            <?m2e execute onIncremental?>
             <phase>initialize</phase>
             <goals>
               <goal>set-system-properties</goal>
