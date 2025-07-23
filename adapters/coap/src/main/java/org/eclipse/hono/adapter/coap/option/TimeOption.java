@@ -17,23 +17,23 @@ import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.option.IntegerRangeOptionDefinition;
 
 /**
- * CoAP custom time option.
+ * A custom CoAP option for retrieving the server's current system time.
  * <p>
- * Used in CoAP request to indicate that the client wants to get the servers system-time in milliseconds.
- * Any value in the option as part of a request is ignored.
+ * Used in CoAP request to indicate that the client wants to get the servers system-time in milliseconds. Any value in
+ * the option as part of a request is ignored.
  * <p>
- * If the option is present in a request, the server adds also a time option to the response with the
- * servers system-time in milliseconds. Also, a client can request this option be included in a response via the
- * {@value #QUERY_PARAMETER_NAME} request parameter.
+ * If the option is present in a request, the server will also add a time option to the response with the server's
+ * current system time in milliseconds since UNIX epoch. Also, a client can request this option to be
+ * included in a response via the {@value #QUERY_PARAMETER_NAME} request parameter.
  * <p>
- * This option uses the same option number as is used in the Californium cloud-demo-server application
- * (<a href="https://github.com/boaks/californium/blob/add_cloud_demo_server/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java#L49">see here</a>).
- * TODO: update link once it's been merged into the eclipse-californium project.
+ * This option is modeled along the lines of the custom {@code TimeOption} used in <a href=
+ * "https://github.com/eclipse-californium/californium/blob/main/demo-apps/cf-cloud-demo-server/src/main/java/org/eclipse/californium/cloud/option/TimeOption.java">Eclipse
+ * Californium's cf-cloud-demo-server example application</a>.
  */
 public final class TimeOption extends Option {
 
     /**
-     * The COAP option number.
+     * The CoAP option number.
      * <p>
      * <b>NOTE:</b> this option number is in the "experimental" range and as such is not suitable for
      * interoperability with other CoAP implementations. This implementation should be changed if CoAP ever
