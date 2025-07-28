@@ -25,6 +25,20 @@ jobs:
   scan:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        artifactId:
+          - hono-adapter-amqp
+          - hono-adapter-coap
+          - hono-adapter-http
+          - hono-adapter-lora
+          - hono-adapter-mqtt
+          - hono-adapter-sigfox
+          - hono-service-auth
+          - hono-service-command-router-infinispan
+          - hono-service-device-registry-jdbc
+          - hono-service-device-registry-mongodb
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,29 +55,23 @@ jobs:
           java-version: "17"
           cache: "maven"
 
-      - name: Create Hono container images
+      - name: Create Container Image
         run: |
-          mvn clean install -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus
-
-      - name: Determine most recent Trivy version
-        run: |
-          echo "TRIVY_VERSION=$(wget -qO - 'https://api.github.com/repos/aquasecurity/trivy/releases/latest' | \
-            grep '\"tag_name\":' | sed -E 's/.*\"v([^\"]+)\".*/\1/')" >> $GITHUB_ENV
+          mvn clean install -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus -pl ":${{ matrix.artifactId }}"
+          docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/${{ matrix.artifactId }}"
 
       - name: Install Trivy
-        run: |
-          wget --no-verbose https://github.com/aquasecurity/trivy/releases/download/v${{ env.TRIVY_VERSION }}/trivy_${{ env.TRIVY_VERSION }}_Linux-64bit.tar.gz -O - | tar -zxvf -
+        uses: aquasecurity/setup-trivy@v0.2.3
 
       - name: Scan Docker images
         run: |
-          mkdir -p scans/eclipse
-          for IMAGE in $(docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/hono-*"); do
-            echo "Scanning image ${IMAGE} ..."
-            ./trivy image "${IMAGE}" --timeout 15m0s --ignore-unfixed --severity HIGH,CRITICAL --output "scans/$IMAGE.sarif" --format sarif
-          done
+          mkdir -p results
+          imageName=$(docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/${{ matrix.artifactId }}")
+          echo "Scanning image $imageName ..."
+          trivy image "$imageName" --timeout 15m0s --ignore-unfixed --severity HIGH,CRITICAL --format sarif --output "results/${{ matrix.artifactId }}.sarif"
 
       - name: Upload Docker image scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'scans/eclipse'
-          category: "Container Images"
+          sarif_file: "results/${{ matrix.artifactId }}.sarif"
+          category: "Container Image ${{ matrix.artifactId }}"
