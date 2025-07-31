@@ -11,8 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceregistry.mongodb.config;
+
+import java.util.Optional;
 
 import io.smallrye.config.WithDefault;
 import io.vertx.ext.auth.mongo.HashAlgorithm;
@@ -37,28 +38,38 @@ public interface MongoAuthProviderOptions {
     /**
      * Gets the strategy to use for determining the salt of a password.
      *
-     * @return The style or {@code null} if the provider should use the default value.
+     * @return The style or <em>empty</em> if the password hashes in the user collection's password field contain the
+     *         salt.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
-    @WithDefault("COLUMN")
-    HashSaltStyle saltStyle();
+    @Deprecated
+    Optional<HashSaltStyle> saltStyle();
 
     /**
      * Gets the algorithm used for creating password hashes.
      *
-     * @return The algorithm or {@code null} if the provider should use the default value.
+     * @return The algorithm or <em>empty</em> if the password hashes in the user collection's password field contain
+     *         the algorithm identifier.
+     * @deprecated This property should only be used with existing user collections that have been created with password
+     *             hashes that do not include an algorithm identifier. New collections should include the algorithm
+     *             identifier in the password hash stored in the password field.
      */
-    @WithDefault("PBKDF2")
-    HashAlgorithm hashAlgorithm();
+    @Deprecated
+    Optional<HashAlgorithm> hashAlgorithm();
 
     /**
      * Gets the name of the field that contains the salt used for an account's password hash.
-     * <p>
-     * The default value of this property is {@value MongoAuthentication#DEFAULT_SALT_FIELD}.
      *
-     * @return The field name or {@code null} if the provider should use the default value.
+     * @return The field name or <em>empty</em> if the password hashes in the user collection's password field contain
+     *         the salt.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
-    @WithDefault(MongoAuthentication.DEFAULT_SALT_FIELD)
-    String saltField();
+    @Deprecated
+    Optional<String> saltField();
 
     /**
      * Gets the name of the field that contains an account's user name.
