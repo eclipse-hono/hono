@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.net.HostAndPort;
 
 /**
  * Test verifying functionality of the {@link HttpUtils} class.
@@ -39,13 +40,14 @@ public class HttpUtilsTest {
     public void testGetAbsoluteURIReturnsNotNullForInvalidURI() {
         final String scheme = "http";
         final String host = "localhost";
+        final var authority = HostAndPort.authority(host);
         final String relativeUri = "/index.php?s=/Index/\\think";
         assertThrows(URISyntaxException.class, () -> new URI(relativeUri));
 
         final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.uri()).thenReturn(relativeUri);
         when(req.scheme()).thenReturn(scheme);
-        when(req.host()).thenReturn(host);
+        when(req.authority()).thenReturn(authority);
         final String absoluteURI = HttpUtils.getAbsoluteURI(req);
 
         assertThat(absoluteURI).isEqualTo(scheme + "://" + host + relativeUri);

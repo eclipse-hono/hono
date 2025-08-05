@@ -1091,7 +1091,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         private final Future<Void> waitForCommandFuture = responseReady.future()
                                 // always invoke closeCommandConsumer but ignore a failure there,
                                 // completing waitForCommandFuture with the responseReady.future() result/failure
-                                .eventually(v -> closeCommandConsumer());
+                                .eventually(() -> closeCommandConsumer());
 
                         @Override
                         public Future<Void> future() {

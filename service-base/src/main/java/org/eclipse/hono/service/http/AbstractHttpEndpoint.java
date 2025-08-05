@@ -385,7 +385,10 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @return The handler.
      */
     protected final CorsHandler createCorsHandler(final String allowedOrigin, final Set<HttpMethod> methods) {
-        return CorsHandler.create(allowedOrigin)
+        // restore old behavior
+        final var effectiveAllowedOrigin = "*".equals(allowedOrigin) ? ".*" : allowedOrigin;
+        return CorsHandler.create()
+                .addRelativeOrigin(effectiveAllowedOrigin)
                 .allowedMethods(methods)
                 .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
