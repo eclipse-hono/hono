@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,10 @@ import org.apache.kafka.clients.producer.Producer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.common.lang.NonNull;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.micrometer.core.lang.NonNull;
 
 /**
  * Micrometer based implementation to provide support for registering Kafka clients from which metrics are fetched.
@@ -180,5 +180,4 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
             boundMeterRegistries.add(registry);
         }
     }
-
 }
