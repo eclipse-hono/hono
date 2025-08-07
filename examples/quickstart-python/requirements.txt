@@ -10,4 +10,4 @@
 #  SPDX-License-Identifier: EPL-2.0
 kafka-python==2.0.2
 paho-mqtt==1.6.1
-requests==2.32.0
+requests==2.32.4
