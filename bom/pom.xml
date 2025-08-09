@@ -39,7 +39,7 @@
     <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.51</jaeger.image.name>
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.12.6</jjwt.version>
-    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
+    <kafka.image.name>apache/kafka:4.0.0</kafka.image.name>
     <logback.version>1.5.12</logback.version>
     <mongodb-image.name>docker.io/library/mongo:6.0</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
