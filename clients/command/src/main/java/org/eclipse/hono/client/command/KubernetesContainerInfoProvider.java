@@ -42,8 +42,8 @@ public class KubernetesContainerInfoProvider {
     /**
      * Name of the environment variable that contains the name of the container that this application is running in.
      * <br>
-     * Such an environment variable needs to be set to determine the container id if the pod that this application
-     * is running in contains multiple running containers.
+     * Such an environment variable needs to be set to determine the container id if the pod that this application is
+     * running in contains multiple running containers.
      */
     public static final String KUBERNETES_CONTAINER_NAME_ENV_VAR = "KUBERNETES_CONTAINER_NAME";
 
@@ -87,22 +87,21 @@ public class KubernetesContainerInfoProvider {
     /**
      * Determines the container id if running in a container in Kubernetes.
      * <p>
-     * First an attempt is made to get the container id by inspecting <code>/proc/self/cgroup</code>
-     * (via {@link CgroupV1KubernetesContainerUtil#getContainerId()}).
-     * If not found there, the container id is queried via the Kubernetes API.
+     * First an attempt is made to get the container id by inspecting <code>/proc/self/cgroup</code> (via
+     * {@link CgroupV1KubernetesContainerUtil#getContainerId()}). If not found there, the container id is queried via
+     * the Kubernetes API.
      * <p>
-     * NOTE: The service account of the application pod must have an RBAC role allowing "get" on the "pods" resource.
-     * If this application is running in a pod with multiple containers, the container that this application is running
-     * in must have an environment variable with the name specified in {@link #KUBERNETES_CONTAINER_NAME_ENV_VAR} set
-     * to the container name.
+     * NOTE: The service account of the application pod must have an RBAC role allowing "get" on the "pods" resource. If
+     * this application is running in a pod with multiple containers, the container that this application is running in
+     * must have an environment variable with the name specified in {@link #KUBERNETES_CONTAINER_NAME_ENV_VAR} set to
+     * the container name.
      *
      * @param context The vert.x context to run the code on to determine the container id via the K8s API.
-     * @return A future indicating the outcome of the operation.
-     *         The future will be succeeded with the container id or {@code null} if not running in Kubernetes.
-     *         In case of an error determining the container id, the future will be failed with either a
-     *         {@link IllegalStateException} if a precondition for getting the id isn't fulfilled (because of missing
-     *         permissions or because multiple pod containers exist and no KUBERNETES_CONTAINER_NAME env var is set),
-     *         or otherwise a {@link ServerErrorException}.
+     * @return A future indicating the outcome of the operation. The future will be succeeded with the container id or
+     *         {@code null} if not running in Kubernetes. In case of an error determining the container id, the future
+     *         will be failed with either a {@link IllegalStateException} if a precondition for getting the id isn't
+     *         fulfilled (because of missing permissions or because multiple pod containers exist and no
+     *         KUBERNETES_CONTAINER_NAME env var is set), or otherwise a {@link ServerErrorException}.
      * @throws NullPointerException if context is {@code null}.
      */
     public Future<String> getContainerId(final Context context) {
@@ -121,17 +120,13 @@ public class KubernetesContainerInfoProvider {
         final Promise<String> containerIdPromise = Promise.promise();
         if (!containerIdPromiseRef.compareAndSet(null, containerIdPromise)) {
             containerIdPromiseRef.get().future().onComplete(containerIdPromise);
-            LOG.debug("getContainerId result future will be completed with the result of an already ongoing invocation");
+            LOG.debug(
+                    "getContainerId result future will be completed with the result of an already ongoing invocation");
             return containerIdPromise.future();
         }
-        context.executeBlocking(codeHandler -> {
-            try {
-                containerId = getContainerIdViaK8sApi();
-                codeHandler.complete(containerId);
-            } catch (final Exception e) {
-                codeHandler.fail(e);
-            }
-        }, containerIdPromise);
+        containerIdPromise.handle(context.executeBlocking(() -> {
+            return getContainerIdViaK8sApi();
+        }));
         containerIdPromise.future().onComplete(ar -> containerIdPromiseRef.set(null));
         return containerIdPromise.future();
     }
@@ -182,9 +177,10 @@ public class KubernetesContainerInfoProvider {
                             KUBERNETES_CONTAINER_NAME_ENV_VAR, foundContainerNames, podName);
                     throw new IllegalStateException(
                             ("can't get container id via K8s API: multiple running containers found; " +
-                                    "the %s env variable needs to be set for the container this application is running in, " +
+                                    "the %s env variable needs to be set for the container this application is running in, "
+                                    +
                                     "having the container name as value")
-                                    .formatted(KUBERNETES_CONTAINER_NAME_ENV_VAR));
+                                            .formatted(KUBERNETES_CONTAINER_NAME_ENV_VAR));
                 }
                 LOG.info("multiple running containers found: {}", foundContainerNames);
                 LOG.info("using container name {} (derived from env var {}) to determine container id",
@@ -210,12 +206,15 @@ public class KubernetesContainerInfoProvider {
         } catch (final KubernetesClientException e) {
             // rethrow error concerning missing RBAC role assignment as IllegalStateException to skip retry
             // Error message looks like this:
-            // Forbidden!Configured service account doesn't have access. Service account may have been revoked. pods "XXX" is forbidden:
+            // Forbidden! Configured service account doesn't have access. Service account may have been revoked.
+            // pods "XXX" is forbidden:
             // User "XXX" cannot get resource "pods" in API group "" in the namespace "hono".
             if (e.getMessage().contains("orbidden")) {
-                LOG.error("Error getting container id via K8s API: \n{}", e.getMessage());
-                throw new IllegalStateException("error getting container id via K8s API: " +
-                        "application pod needs service account with role binding allowing 'get' on 'pods' resource");
+                LOG.error("Error getting container id via K8s API: {}{}", System.lineSeparator(), e.getMessage());
+                throw new IllegalStateException("""
+                    error getting container id via K8s API:
+                    application pod needs service account with role binding allowing 'get' on 'pods' resource
+                    """);
             }
             LOG.error("Error getting container id via K8s API", e);
             throw e;

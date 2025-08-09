@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,12 +19,13 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.Callable;
+
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -81,6 +82,10 @@ public final class VertxMockSupport {
             handler.handle(null);
             return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
+
+        // this is needed because
+        // io.vertx.kafka.client.producer.impl.KafkaWriteStreamImpl.close()
+        // still uses the deprecated executeBlocking method
         doAnswer(invocation -> {
             final Handler<Promise<Void>> handler = invocation.getArgument(0);
             final Promise<Void> prom = Promise.promise();
@@ -135,36 +140,22 @@ public final class VertxMockSupport {
      */
     public static void executeBlockingCodeImmediately(final Vertx vertx, final Context context) {
 
-        doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
-                .when(vertx).executeBlocking(anyHandler(), anyHandler());
-
         when(vertx.getOrCreateContext()).thenReturn(context);
 
-        doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
-                .when(context).executeBlocking(anyHandler(), any());
-
-        when(vertx.executeBlocking(anyHandler()))
-                .thenAnswer(VertxMockSupport::handleExecuteBlockingInvocationReturningFuture);
-
-        when(context.executeBlocking(anyHandler()))
-                .thenAnswer(VertxMockSupport::handleExecuteBlockingInvocationReturningFuture);
+        when(vertx.executeBlocking(anyCallable()))
+                .thenAnswer(VertxMockSupport::handleExecuteBlockingCallableInvocation);
+        when(context.executeBlocking(anyCallable()))
+                .thenAnswer(VertxMockSupport::handleExecuteBlockingCallableInvocation);
     }
 
-    private static Void handleExecuteBlockingInvocation(final InvocationOnMock invocation) {
-        final Promise<Void> result = Promise.promise();
-        final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
-        final Handler<AsyncResult<?>> resultHandler = invocation.getArgument(1);
-        blockingCodeHandler.handle(result);
-        if (resultHandler != null) {
-            resultHandler.handle(result.future());
-        }
-        return null;
-    }
-
-    private static <T> Future<T> handleExecuteBlockingInvocationReturningFuture(final InvocationOnMock invocation) {
+    private static <T> Future<T> handleExecuteBlockingCallableInvocation(final InvocationOnMock invocation) {
+        final Callable<T> callable = invocation.getArgument(0);
         final Promise<T> result = Promise.promise();
-        final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
-        blockingCodeHandler.handle(result);
+        try {
+            result.complete(callable.call());
+        } catch (final Exception e) {
+            result.fail(e);
+        }
         return result.future();
     }
 
@@ -177,6 +168,18 @@ public final class VertxMockSupport {
     public static <T> Handler<T> anyHandler() {
         @SuppressWarnings("unchecked")
         final Handler<T> result = ArgumentMatchers.any(Handler.class);
+        return result;
+    }
+
+    /**
+     * Matches any callable of given type, excluding nulls.
+     *
+     * @param <T> The callable's return type.
+     * @return The value returned by {@link ArgumentMatchers#any(Class)}.
+     */
+    public static <T> Callable<T> anyCallable() {
+        @SuppressWarnings("unchecked")
+        final Callable<T> result = ArgumentMatchers.any(Callable.class);
         return result;
     }
 

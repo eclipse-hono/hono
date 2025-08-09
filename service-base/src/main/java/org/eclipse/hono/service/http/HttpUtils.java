@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,6 +40,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.HostAndPort;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
@@ -342,7 +343,7 @@ public final class HttpUtils {
      * Gets the absolute URI of the given request.
      * <p>
      * In contrast to {@link HttpServerRequest#absoluteURI()} this method
-     * won't return {@code null} if the URI is invalid (at least not if {@link HttpServerRequest#host()} is set).
+     * won't return {@code null} if the URI is invalid (at least not if {@link HttpServerRequest#authority()} is set).
      *
      * @param req The request to get the absolute URI from.
      * @return The absolute URI.
@@ -354,13 +355,13 @@ public final class HttpUtils {
         if (uri.startsWith("http://") || uri.startsWith("https://")) {
             return uri;
         }
-        final String host = req.host();
-        if (host == null) {
+        final HostAndPort hostAndPort = req.authority();
+        if (hostAndPort == null) {
             // fall back to using the original method which will use the serverOrigin as host
             // see io.vertx.core.http.impl.HttpUtils.absoluteURI(String, HttpServerRequest)
             return req.absoluteURI();
         }
-        return req.scheme() + "://" + host + uri;
+        return "%s://%s%s".formatted(req.scheme(), hostAndPort, uri);
     }
 
     /**

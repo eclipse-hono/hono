@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -74,7 +75,9 @@ public final class Futures {
      * Interface representing blocking code to be executed.
      *
      * @param <T> The type of the result.
+     * @deprecated Use the standard {@link Callable} interface instead.
      */
+    @Deprecated(forRemoval = true)
     @FunctionalInterface
     public interface BlockingCode<T> {
 
@@ -95,7 +98,9 @@ public final class Futures {
      * @param blocking The blocking code.
      * @return The future, reporting the result.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @deprecated Use the standard {@link Vertx#executeBlocking(java.util.concurrent.Callable)} instead.
      */
+    @Deprecated(forRemoval = true)
     public static <T> Future<T> executeBlocking(final Vertx vertx, final BlockingCode<T> blocking) {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(blocking);
