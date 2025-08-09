@@ -62,6 +62,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -1773,8 +1774,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
                     log.debug("received PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
                             msgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
-                    commandContext.getTracingSpan().log("received PUBACK from device");
-                    commandContext.accept();
+                    final Span span = commandContext.getTracingSpan();
+                    span.log("received PUBACK from device");
+                    final Command command = commandContext.getCommand();
+                    if (command.isAckRequired() && command.isValid()
+                            && commandContext instanceof AbstractCommandContext<?> abstractCommandContext) {
+                        abstractCommandContext
+                                .sendDeliverySuccessCommandResponseMessage(HttpURLConnection.HTTP_ACCEPTED,
+                                        "Command successfully received", span, command.getCorrelationId(),
+                                        command.getMessagingType())
+                                .onComplete(v -> commandContext.accept());
+                    } else {
+                        commandContext.accept();
+                    }
                 };
 
                 final Handler<Void> onAckTimeoutHandler = v -> {

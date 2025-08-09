@@ -62,7 +62,7 @@ public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBase
         final ServiceInvocationException mappedError = StatusCodeMapper.toServerError(error);
         final int status = mappedError.getErrorCode();
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand() && !(error instanceof CommandAlreadyProcessedException)
+        if ((isRequestResponseCommand() || isAckRequiredCommand()) && !(error instanceof CommandAlreadyProcessedException)
                 && !(error instanceof CommandToBeReprocessedException)) {
             final String errorMessage = Optional
                     .ofNullable(ServiceInvocationException.getErrorMessageForExternalClient(mappedError))
@@ -90,7 +90,7 @@ public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBase
         TracingHelper.logError(span, String.format("command for device handled with outcome 'modified' %s %s",
                 deliveryFailedReason, undeliverableHereReason));
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand()) {
+        if (isRequestResponseCommand() || isAckRequiredCommand()) {
             final String error = String.format("command not processed %s %s", deliveryFailedReason,
                     undeliverableHereReason);
             final String correlationId = getCorrelationId();
@@ -112,7 +112,7 @@ public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBase
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command", error);
         final Span span = getTracingSpan();
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand()) {
+        if (isRequestResponseCommand() || isAckRequiredCommand()) {
             final String nonNullCause = Optional.ofNullable(error.getMessage()).orElse("Command message rejected");
             final String correlationId = getCorrelationId();
             sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span, null, correlationId,
