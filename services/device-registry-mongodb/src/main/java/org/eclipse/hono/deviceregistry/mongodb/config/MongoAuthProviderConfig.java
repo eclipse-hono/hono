@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,11 +26,11 @@ import io.vertx.ext.auth.mongo.MongoAuthentication;
 public final class MongoAuthProviderConfig {
 
     private String collectionName = MongoAuthentication.DEFAULT_COLLECTION_NAME;
-    private HashSaltStyle saltStyle = HashSaltStyle.COLUMN;
-    private String saltField = MongoAuthentication.DEFAULT_SALT_FIELD;
+    private HashSaltStyle saltStyle = null;
+    private String saltField = null;
     private String usernameField = MongoAuthentication.DEFAULT_USERNAME_FIELD;
     private String passwordField = MongoAuthentication.DEFAULT_PASSWORD_FIELD;
-    private HashAlgorithm hashAlgorithm = HashAlgorithm.PBKDF2;
+    private HashAlgorithm hashAlgorithm = null;
 
     /**
      * Creates default properties.
@@ -48,10 +48,10 @@ public final class MongoAuthProviderConfig {
     public MongoAuthProviderConfig(final MongoAuthProviderOptions options) {
         Objects.requireNonNull(options);
         setCollectionName(options.collectionName());
-        setHashAlgorithm(options.hashAlgorithm());
+        options.hashAlgorithm().ifPresent(this::setHashAlgorithm);
         setPasswordField(options.passwordField());
-        setSaltField(options.saltField());
-        setSaltStyle(options.saltStyle());
+        options.saltField().ifPresent(this::setSaltField);
+        options.saltStyle().ifPresent(this::setSaltStyle);
         setUsernameField(options.usernameField());
     }
 
@@ -81,10 +81,15 @@ public final class MongoAuthProviderConfig {
     /**
      * Gets the strategy to use for determining the salt of a password.
      * <p>
-     * The default value of this property is {@link HashSaltStyle#COLUMN}.
+     * The default value of this property is {@code null}.
      *
-     * @return The style.
+     * @return The style or {@code null} if the password hashes in the user collection's password field contain the
+     *         salt.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
+    @Deprecated
     public HashSaltStyle getSaltStyle() {
         return saltStyle;
     }
@@ -92,22 +97,30 @@ public final class MongoAuthProviderConfig {
     /**
      * Sets the strategy to use for determining the salt of a password.
      * <p>
-     * The default value of this property is {@link HashSaltStyle#COLUMN}.
+     * The default value of this property is {@code null}.
      *
      * @param strategy The strategy.
-     * @throws NullPointerException if style is {@code null}.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
+    @Deprecated
     public void setSaltStyle(final HashSaltStyle strategy) {
-        this.saltStyle = Objects.requireNonNull(strategy);
+        this.saltStyle = strategy;
     }
 
     /**
      * Gets the algorithm used for creating password hashes.
      * <p>
-     * The default value of this property is {@link HashAlgorithm#PBKDF2}.
+     * The default value of this property is {@code null}.
      *
-     * @return The algorithm.
+     * @return The algorithm or {@code null} if the password hashes in the user collection's password field contain the
+     *         algorithm identifier.
+     * @deprecated This property should only be used with existing user collections that have been created with password
+     *             hashes that do not include an algorithm identifier. New collections should include the algorithm
+     *             identifier in the password hash stored in the password field.
      */
+    @Deprecated
     public HashAlgorithm getHashAlgorithm() {
         return hashAlgorithm;
     }
@@ -115,22 +128,30 @@ public final class MongoAuthProviderConfig {
     /**
      * Sets the algorithm to use for creating password hashes.
      * <p>
-     * The default value of this property is {@link HashAlgorithm#PBKDF2}.
+     * The default value of this property is {@code null}.
      *
      * @param algorithm The algorithm.
-     * @throws NullPointerException if algorithm is {@code null}.
+     * @deprecated This property should only be used with existing user collections that have been created with password
+     *             hashes that do not include an algorithm identifier. New collections should include the algorithm
+     *             identifier in the password hash stored in the password field.
      */
+    @Deprecated
     public void setHashAlgorithm(final HashAlgorithm algorithm) {
-        this.hashAlgorithm = Objects.requireNonNull(algorithm);
+        this.hashAlgorithm = algorithm;
     }
 
     /**
      * Gets the name of the field that contains the salt used for an account's password hash.
      * <p>
-     * The default value of this property is {@value MongoAuthentication#DEFAULT_SALT_FIELD}.
+     * The default value of this property is {@code null}.
      *
-     * @return The field name or {@code null} if the provider should use the default value.
+     * @return The field name or {@code null} if the password hashes in the user collection's password field contain the
+     *         salt.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
+    @Deprecated
     public String getSaltField() {
         return saltField;
     }
@@ -140,13 +161,16 @@ public final class MongoAuthProviderConfig {
      * <p>
      * This property is only relevant if the salt style has been set to {@link HashSaltStyle#COLUMN}.
      * <p>
-     * The default value of this property is {@value MongoAuthentication#DEFAULT_SALT_FIELD}.
+     * The default value of this property is {@code null}.
      *
      * @param name The name of the field.
-     * @throws NullPointerException if name is {@code null}.
+     * @deprecated This property should only be used with existing user collections that have been created with a
+     *             dedicated salt field. New collections should include the salt in the password hash stored in the
+     *             password field.
      */
+    @Deprecated
     public void setSaltField(final String name) {
-        this.saltField = Objects.requireNonNull(name);
+        this.saltField = name;
     }
 
     /**

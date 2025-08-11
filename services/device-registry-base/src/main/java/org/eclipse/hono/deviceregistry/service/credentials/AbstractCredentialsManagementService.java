@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,6 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
@@ -211,7 +210,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
                     // Check if we need to encode passwords
                     if (isEncodingOfSecretsRequired(credentials)) {
                         // ... yes, encode passwords asynchronously
-                        return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
+                        return this.vertx.executeBlocking(() -> checkCredentials(credentials));
                     } else {
                         try {
                             // ... no, so don't fork off a worker task, but inline work

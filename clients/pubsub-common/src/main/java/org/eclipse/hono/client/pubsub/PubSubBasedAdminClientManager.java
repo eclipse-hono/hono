@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.api.gax.core.CredentialsProvider;
-import com.google.api.gax.rpc.ApiException;
 import com.google.api.gax.rpc.NotFoundException;
 import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
@@ -32,7 +31,6 @@ import com.google.pubsub.v1.ExpirationPolicy;
 import com.google.pubsub.v1.PushConfig;
 import com.google.pubsub.v1.Subscription;
 import com.google.pubsub.v1.SubscriptionName;
-import com.google.pubsub.v1.Topic;
 import com.google.pubsub.v1.TopicName;
 
 import io.vertx.core.Future;
@@ -130,29 +128,17 @@ public class PubSubBasedAdminClientManager {
     }
 
     private Future<String> getTopic(final TopicName topicName, final TopicAdminClient client) {
-        return vertx.executeBlocking(promise -> {
-            try {
-                final Topic topic = client.getTopic(topicName);
-                promise.complete(topic.getName());
-            } catch (ApiException e) {
-                promise.fail(e);
-            }
+        return vertx.executeBlocking(() -> {
+            return client.getTopic(topicName).getName();
         });
     }
 
     private Future<String> createTopic(final TopicName topicName, final TopicAdminClient client) {
-        final Future<String> createdTopic = vertx
-                .executeBlocking(promise -> {
-                    try {
-                        final Topic topic = client.createTopic(topicName);
-                        promise.complete(topic.getName());
-                    } catch (ApiException e) {
-                        promise.fail(e);
-                    }
-                });
-        createdTopic.onSuccess(top -> LOG.debug("Topic {} created successfully.", topicName))
-                .onFailure(thr -> LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topicName, projectId));
-        return createdTopic;
+        return vertx.executeBlocking(() -> {
+            return client.createTopic(topicName).getName();
+        })
+        .onSuccess(top -> LOG.debug("Topic {} created successfully.", topicName))
+        .onFailure(thr -> LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topicName, projectId));
     }
 
     /**
@@ -181,20 +167,18 @@ public class PubSubBasedAdminClientManager {
                         }));
     }
 
-    private Future<String> getSubscription(final SubscriptionName subscriptionName,
-            final SubscriptionAdminClient client) {
-        return vertx.executeBlocking(promise -> {
-            try {
-                final Subscription subscription = client.getSubscription(subscriptionName);
-                promise.complete(subscription.getName());
-            } catch (ApiException e) {
-                promise.fail(e);
-            }
+    private Future<String> getSubscription(
+        final SubscriptionName subscriptionName,
+        final SubscriptionAdminClient client) {
+        return vertx.executeBlocking(() -> {
+            return client.getSubscription(subscriptionName).getName();
         });
     }
 
-    private Future<String> createSubscription(final SubscriptionName subscriptionName, final TopicName topicName,
-            final SubscriptionAdminClient client) {
+    private Future<String> createSubscription(
+        final SubscriptionName subscriptionName,
+        final TopicName topicName,
+        final SubscriptionAdminClient client) {
         final Subscription request = Subscription.newBuilder()
                 .setName(subscriptionName.toString())
                 .setTopic(topicName.toString())
@@ -203,20 +187,13 @@ public class PubSubBasedAdminClientManager {
                 .setMessageRetentionDuration(Durations.fromMillis(MESSAGE_RETENTION))
                 .setExpirationPolicy(ExpirationPolicy.getDefaultInstance())
                 .build();
-        final Future<String> createdSubscription = vertx
-                .executeBlocking(promise -> {
-                    try {
-                        final Subscription subscription = client.createSubscription(request);
-                        promise.complete(subscription.getName());
-                    } catch (ApiException e) {
-                        promise.fail(e);
-                    }
-                });
-        createdSubscription.onSuccess(sub -> LOG.debug("Subscription {} created successfully.", subscriptionName))
-                .onFailure(
-                        thr -> LOG.debug("Creating subscription failed [subscription: {}, topic: {}, project: {}]",
-                                subscriptionName, topicName, projectId));
-        return createdSubscription;
+        return vertx.executeBlocking(() -> {
+            return client.createSubscription(request).getName();
+        })
+        .onSuccess(sub -> LOG.debug("Subscription {} created successfully.", subscriptionName))
+        .onFailure(thr -> LOG.debug(
+            "Creating subscription failed [subscription: {}, topic: {}, project: {}]",
+                    subscriptionName, topicName, projectId));
     }
 
     /**
@@ -228,8 +205,11 @@ public class PubSubBasedAdminClientManager {
         if (topicAdminClient == null && subscriptionAdminClient == null) {
             return;
         }
-        closeSubscriptionAdminClient();
-        closeTopicAdminClient();
+        vertx.executeBlocking(() -> {
+            closeSubscriptionAdminClient();
+            closeTopicAdminClient();
+            return null;
+        });
     }
 
     private void closeSubscriptionAdminClient() {
