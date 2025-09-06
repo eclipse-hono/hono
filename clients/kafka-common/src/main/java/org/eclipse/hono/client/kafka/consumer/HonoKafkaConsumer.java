@@ -550,6 +550,31 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     }
 
     /**
+     * Get the offset position of the given topic partition.
+     *
+     * NOTE: this method must only be invoked on the Kafka polling thread, not the vert.x event
+     * loop thread!
+     *
+     * @param topicPartition The topic partition to get the position for.
+     * @return The position of the topic partition, or {@code null} if the topic partition does not exist.
+     */
+    protected final Long getPositionIfTopicExists(final org.apache.kafka.common.TopicPartition topicPartition) {
+        LOG.trace("getting position for partition {}", topicPartition);
+        try {
+            // there may be a timeout here in case the topic partition does not exist;
+            // the default API timeout is 60 seconds - using a shorter timeout here instead
+            return getUnderlyingConsumer().position(topicPartition, Duration.ofSeconds(2));
+        } catch (org.apache.kafka.common.errors.TimeoutException e) {
+            if (getUnderlyingConsumer().partitionsFor(topicPartition.topic()).stream()
+                    .noneMatch(tp -> tp.partition() == topicPartition.partition())) {
+                LOG.info("can't get position: topic partition {} doesn't exist", topicPartition);
+                return null;
+            }
+            throw e;
+        }
+    }
+
+    /**
      * Gets the client identifier of this consumer.
      *
      * @return The client identifier.
@@ -815,15 +840,17 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 final List<org.apache.kafka.common.TopicPartition> outOfRangeOffsetPartitions = new ArrayList<>();
                 final var beginningOffsets = getUnderlyingConsumer().beginningOffsets(partitions);
                 partitions.forEach(partition -> {
-                    final long position = getUnderlyingConsumer().position(partition);
-                    final Long beginningOffset = beginningOffsets.get(partition);
-                    // check if position is valid
-                    // (a check if position is larger than endOffset isn't done here, skipping the extra endOffset() invocation for this uncommon scenario and letting the KafkaConsumer consumer itself apply the latest offset later on)
-                    if (beginningOffset != null && position < beginningOffset) {
-                        LOG.debug("committed offset {} for [{}] is smaller than beginning offset, resetting it to the beginning offset {}",
-                                position, partition, beginningOffset);
-                        getUnderlyingConsumer().seek(partition, beginningOffset);
-                        outOfRangeOffsetPartitions.add(partition);
+                    final Long position = getPositionIfTopicExists(partition);
+                    if (position != null) {
+                        final Long beginningOffset = beginningOffsets.get(partition);
+                        // check if position is valid
+                        // (a check if position is larger than endOffset isn't done here, skipping the extra endOffset() invocation for this uncommon scenario and letting the KafkaConsumer consumer itself apply the latest offset later on)
+                        if (beginningOffset != null && position < beginningOffset) {
+                            LOG.debug("committed offset {} for [{}] is smaller than beginning offset, resetting it to the beginning offset {}",
+                                    position, partition, beginningOffset);
+                            getUnderlyingConsumer().seek(partition, beginningOffset);
+                            outOfRangeOffsetPartitions.add(partition);
+                        }
                     }
                 });
                 if (!outOfRangeOffsetPartitions.isEmpty() && LOG.isInfoEnabled()) {
@@ -950,7 +977,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                     .onSuccess(partitions -> {
                         if (partitions.isEmpty()) {
                             // either auto-creation of topics is disabled or the (manually) created topic isn't reflected in the result yet
-                            LOG.info("subscription topic doesn't exist as of now: {} [client-id: {}]", topic, getClientId());
+                            LOG.info("initSubscriptionAndWaitForRebalance: subscription topic doesn't exist as of now: {} [client-id: {}]",
+                                    topic, getClientId());
                         }
                     }));
             kafkaConsumer.subscribe(topics, subscribeDonePromise);
