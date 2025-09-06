@@ -143,11 +143,13 @@ public class HonoKafkaConsumerIT {
      */
     @AfterAll
     public static void shutDown(final VertxTestContext ctx) {
+        LOG.debug("shutdown; deleting topics created during tests");
         adminClient.deleteTopics(topicsToDeleteAfterTests)
             .onFailure(thr -> {
                 LOG.info("error deleting topics", thr);
             })
             .onComplete(ar -> {
+                LOG.debug("topics deleted, closing Kafka admin client and vert.x instance");
                 topicsToDeleteAfterTests.clear();
                 topicsToDeleteAfterTests = null;
                 adminClient.close();

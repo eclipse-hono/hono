@@ -120,6 +120,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
     @AfterEach
     void closeConsumer(final VertxTestContext ctx) {
         if (kafkaConsumer != null) {
+            LOG.debug("AfterEach: closing consumer");
             kafkaConsumer.stop().onComplete(ctx.succeedingThenComplete());
         }
     }
@@ -131,7 +132,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
      */
     @AfterAll
     public static void shutDown(final VertxTestContext ctx) {
-
+        LOG.debug("shutting down test fixture");
         kafkaProducer.close()
             .recover(t -> {
                 LOG.info("failed to close producer", t);
@@ -139,7 +140,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
             })
             .compose(ok -> adminClient.deleteTopics(topicsToDeleteAfterTests))
             .onFailure(thr -> {
-                LOG.info("error deleting topics", thr);
+                LOG.error("error deleting topics {}", topicsToDeleteAfterTests, thr);
+                ctx.failNow("error deleting topics after all tests");
             })
             .onComplete(ar -> {
                 topicsToDeleteAfterTests.clear();
@@ -164,7 +166,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if test execution gets interrupted.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("partitionAssignmentStrategies")
     public void testConsumerReadsAllRecordsForDynamicallyCreatedTopics(
             final String partitionAssignmentStrategy,
@@ -174,13 +176,15 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
         final int numTopicsAndRecords = 6; // has to be an even number
 
         final var topicsToPublishTo = IntStream.range(0, numTopicsAndRecords)
-                .mapToObj(i -> "%s%d".formatted(patternPrefix, i))
+                .mapToObj(i -> "%s_pub_%d".formatted(patternPrefix, i))
                 .toList();
+        final var publishedMessageTopics = new ArrayList<>();
+        final var receivedMessageTopics = new ArrayList<>();
 
         // create some matching topics - these shall be deleted after consumer start;
         // this shall make sure that topic deletion doesn't influence the test result
         final var otherTopics = IntStream.range(0, numTopicsAndRecords)
-                .mapToObj(i -> "%s%d_other".formatted(patternPrefix, i))
+                .mapToObj(i -> "%s_other_%d".formatted(patternPrefix, i))
                 .toList();
 
         final var recordsReceived = ctx.checkpoint(numTopicsAndRecords);
@@ -195,12 +199,12 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
                 final var consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
                 applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
                 consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-                consumerConfig.put(ConsumerConfig.DEFAULT_API_TIMEOUT_MS_CONFIG, "8000");
 
                 final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler = record -> {
                     ctx.verify(() -> {
                         assertThat(record.key()).isEqualTo(recordKey);
                     });
+                    receivedMessageTopics.add(record.topic());
                     recordsReceived.flag();
                     return Future.succeededFuture();
                 };
@@ -210,7 +214,11 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
                 final Promise<Void> readyTracker = Promise.promise();
                 kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
                 return kafkaConsumer.start()
-                    .compose(started -> readyTracker.future());
+                        .compose(started -> readyTracker.future())
+                        // ensure consumer is subscribed to all previously created topics (this may require multiple rebalances)
+                        .compose(ready -> Future.all(otherTopics.stream()
+                                .map(t -> kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(t))
+                                .toList()));
             })
             .onComplete(setup.succeeding(ok -> {
                 LOG.debug("consumer started, create new topics implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
@@ -229,13 +237,26 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
             // use delay between handling topics with odd and even index (waiting for the result) - there should be multiple rebalances involved here
             deleteTopicIfPossible(otherTopic)
                     .compose(v2 -> ensureTopicIsAmongSubscribedTopicPatternTopicsAndPublish(ctx, topic, recordKey))
+                    .andThen(v2 -> publishedMessageTopics.add(topic))
                     .onFailure(ctx::failNow);
         }
 
-        if (!ctx.awaitCompletion(numTopicsAndRecords * 2, TimeUnit.SECONDS)) {
-            ctx.failNow(new IllegalStateException(String.format(
-                    "timeout waiting for expected number of records (%d) to be received",
-                    numTopicsAndRecords)));
+        if (!ctx.awaitCompletion(numTopicsAndRecords * 3, TimeUnit.SECONDS)) {
+            final var notPublishedMessageTopics = topicsToPublishTo.stream()
+                    .filter(t -> !publishedMessageTopics.contains(t)).toList();
+            final var notReceivedMessageTopics = topicsToPublishTo.stream()
+                    .filter(t -> !receivedMessageTopics.contains(t)).toList();
+            if (!notPublishedMessageTopics.isEmpty()) {
+                LOG.error("records not published in time for topics: {}", notPublishedMessageTopics);
+                ctx.failNow("timeout waiting for %d records to be published (%d are missing)"
+                        .formatted(numTopicsAndRecords, notPublishedMessageTopics.size()));
+            } else if (!notReceivedMessageTopics.isEmpty()) {
+                LOG.error("records not received in time for topics: {}", notReceivedMessageTopics);
+                ctx.failNow("timeout waiting for %d records to be received (%d are missing)"
+                        .formatted(numTopicsAndRecords, notReceivedMessageTopics.size()));
+            } else {
+                ctx.failNow("test timeout");
+            }
         }
     }
 
@@ -336,11 +357,10 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
             final VertxTestContext ctx,
             final String topic,
             final String recordKey) {
-
         return kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic)
                 .onFailure(ctx::failNow)
                 .compose(v -> {
-                    LOG.debug("publish record to be received by the consumer");
+                    LOG.debug("publish record to be received by the consumer; topic: {}, recordKey: {}", topic, recordKey);
                     return publish(topic, recordKey, Buffer.buffer("testPayload"));
                 })
                 .mapEmpty();
@@ -348,6 +368,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerIT {
 
     private Future<Void> deleteTopicIfPossible(final String topicName) {
         if (!kafkaConsumer.isOffsetsCommitNeededForTopic(topicName)) {
+            LOG.debug("deleteTopicIfPossible: No offsets commit needed for topic {}, deleting it", topicName);
+            topicsToDeleteAfterTests.remove(topicName);
             return adminClient.deleteTopics(List.of(topicName));
         }
         return Future.succeededFuture();
