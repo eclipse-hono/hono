@@ -384,15 +384,17 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
                 .filter(partition -> !offsetsMap.containsKey(partition))
                 .forEach(partition -> {
                     try {
-                        final long position = getUnderlyingConsumer().position(partition);
-                        final boolean positionCommitted = Optional
-                                .ofNullable(lastKnownCommittedOffsets.get(partition))
-                                .map(committedPos -> committedPos.equals(position)).orElse(false);
-                        if (!positionCommitted) {
-                            partitionsForNextCommit.add(partition);
+                        final Long position = getPositionIfTopicExists(partition);
+                        if (position != null) {
+                            final boolean positionCommitted = Optional
+                                    .ofNullable(lastKnownCommittedOffsets.get(partition))
+                                    .map(committedPos -> committedPos.equals(position)).orElse(false);
+                            if (!positionCommitted) {
+                                partitionsForNextCommit.add(partition);
+                            }
+                            offsetsMap.put(partition,
+                                    new TopicPartitionOffsets(partition, position, positionCommitted));
                         }
-                        offsetsMap.put(partition,
-                                new TopicPartitionOffsets(partition, position, positionCommitted));
                     } catch (final Exception ex) {
                         LOG.warn("error fetching position for newly assigned partition [{}] [client-id: {}]", partition,
                                 getClientId(), ex);
@@ -567,11 +569,20 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
      * Checks whether offset commits are currently needed for the partitions of the given topic.
      * <p>
      * This may be used to check whether a topic can safely be deleted if no further incoming records are expected.
+     * <br>
+     * NOTE: This method should only be called after the topic partitions have been assigned to this consumer.
+     * In case assignment isn't completed yet and offsets haven't been fetched, this method will return {@code true}
+     * even if no offsets will need to be committed eventually.
      *
      * @param topic The topic to check.
      * @return {@code true} if offsets need to be committed.
      */
-    public boolean isOffsetsCommitNeededForTopic(final String topic) {
+    public synchronized boolean isOffsetsCommitNeededForTopic(final String topic) {
+        if (offsetsMap.keySet().stream().noneMatch(tp -> tp.topic().equals(topic))) {
+            LOG.info("isOffsetsCommitNeededForTopic: no offsets stored for topic {} (yet); offset commit may be needed after having fetched positions",
+                    topic);
+            return true;
+        }
         return getOffsetsToCommit().keySet().stream().anyMatch(tp -> tp.topic().equals(topic));
     }
 
