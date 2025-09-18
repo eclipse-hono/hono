@@ -81,7 +81,9 @@ public class DefaultJwsValidator implements JwsValidator {
      * @throws MalformedJwtException if the JWT's payload can not be parsed into a JSON object.
      */
     public static JsonObject getJwtClaims(final String jws) {
-        return parseSection(jws, 1);
+        final var claimsSection = parseSection(jws, 1);
+        LOG.debug("extracted claims from token: {}", claimsSection.encodePrettily());
+        return claimsSection;
     }
 
     /**
@@ -94,7 +96,9 @@ public class DefaultJwsValidator implements JwsValidator {
      * @throws MalformedJwtException if the JWT's payload can not be parsed into a JSON object.
      */
     public static JsonObject getJwtHeader(final String jws) {
-        return parseSection(jws, 0);
+        final var headerSection = parseSection(jws, 0);
+        LOG.debug("extracted headers from token: {}", headerSection.encodePrettily());
+        return headerSection;
     }
 
     private PublicKey convertPublicKeyByteArrayToPublicKey(

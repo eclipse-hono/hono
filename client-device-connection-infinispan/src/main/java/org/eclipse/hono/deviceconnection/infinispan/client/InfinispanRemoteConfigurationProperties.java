@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,7 +46,6 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
      *
      * @param options The options to copy.
      */
-    @SuppressWarnings("deprecation")
     public InfinispanRemoteConfigurationProperties(final InfinispanRemoteConfigurationOptions options) {
         super();
 
@@ -62,7 +61,6 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
         setDefaultExecutorFactory(options.defaultExecutorFactory());
 
         options.keyAlias().ifPresent(this::setKeyAlias);
-        options.keyStoreCertificatePassword().ifPresent(this::setKeyStoreCertificatePassword);
         options.keyStoreFileName().ifPresent(this::setKeyStoreFileName);
         options.keyStorePassword().ifPresent(this::setKeyStorePassword);
         options.keyStoreType().ifPresent(this::setKeyStoreType);
@@ -75,7 +73,6 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
         options.trustStoreFileName().ifPresent(this::setTrustStoreFileName);
         options.trustStorePassword().ifPresent(this::setTrustStorePassword);
-        options.trustStorePath().ifPresent(this::setTrustStorePath);
         options.trustStoreType().ifPresent(this::setTrustStoreType);
 
         setUseSSL(options.useSsl());
@@ -150,15 +147,6 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
     }
 
     // ------- Getters/setters missing in the parent ConfigurationProperties class -------
-
-    /**
-     * Gets the keystore certificate password.
-     *
-     * @return The password.
-     */
-    public String getKeyStoreCertificatePassword() {
-        return getProperties().getProperty(KEY_STORE_CERTIFICATE_PASSWORD);
-    }
 
     /**
      * Gets the SSL ciphers.

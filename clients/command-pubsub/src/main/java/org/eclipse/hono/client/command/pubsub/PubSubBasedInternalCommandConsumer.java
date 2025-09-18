@@ -149,9 +149,9 @@ public class PubSubBasedInternalCommandConsumer implements InternalCommandConsum
                         CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))
                 .compose(t -> adminClientManager.getOrCreateSubscription(CommandConstants.INTERNAL_COMMAND_ENDPOINT,
                         adapterInstanceId))
-                .onComplete(v -> vertx.executeBlocking(promise -> {
+                .onComplete(v -> vertx.executeBlocking(() -> {
                     adminClientManager.closeAdminClients();
-                    promise.complete();
+                    return null;
                 }))
                 .onFailure(thr -> log.error("Could not create subscription for endpoint {} and {}",
                         CommandConstants.INTERNAL_COMMAND_ENDPOINT, adapterInstanceId, thr))

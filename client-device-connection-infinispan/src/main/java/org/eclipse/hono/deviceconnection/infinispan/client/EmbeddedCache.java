@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
@@ -64,40 +63,30 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
     @Override
     protected Future<Void> connectToCache() {
 
-        final Promise<Void> result = Promise.promise();
-
         if (connecting.compareAndSet(false, true)) {
 
-            vertx.executeBlocking(r -> {
-                try {
-                    LOG.debug("trying to start cache manager");
-                    cacheManager.start();
-                    LOG.info("started cache manager");
-                    LOG.debug("trying to get cache");
-                    setCache(cacheManager.getCache(cacheName));
-                    if (isStarted()) {
-                        r.complete(getCache());
-                    } else {
-                        r.fail(new IllegalStateException("cache [" + cacheName + "] is not configured"));
-                    }
-                } catch (final Exception e) {
-                    r.fail(e);
-                }
-            }, attempt -> {
-                if (attempt.succeeded()) {
+            return vertx.executeBlocking(() -> {
+                LOG.debug("trying to start cache manager");
+                cacheManager.start();
+                LOG.info("started cache manager");
+                LOG.debug("trying to get cache");
+                setCache(cacheManager.getCache(cacheName));
+                if (isStarted()) {
                     LOG.info("successfully connected to cache");
-                    result.complete();
+                    return (Void) null;
                 } else {
-                    LOG.debug("failed to connect to cache: {}", attempt.cause().getMessage());
-                    result.fail(attempt.cause());
+                    final var msg = "cache [%s] is not configured".formatted(cacheName);
+                    LOG.debug("failed to connect to cache: {}", msg);
+                    throw new IllegalStateException(msg);
                 }
+            })
+            .onComplete(r -> {
                 connecting.set(false);
             });
         } else {
             LOG.info("already trying to establish connection to cache");
-            result.fail("already trying to establish connection to cache");
+            return Future.failedFuture("already trying to establish connection to cache");
         }
-        return result.future();
     }
 
     @Override
@@ -111,5 +100,4 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
             return Future.failedFuture("not connected to cache");
         }
     }
-
 }

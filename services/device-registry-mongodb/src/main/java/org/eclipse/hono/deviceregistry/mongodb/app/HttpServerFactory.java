@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import java.util.Optional;
@@ -20,9 +19,14 @@ import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.ext.auth.authentication.AuthenticationProvider;
+import io.vertx.ext.auth.mongo.HashAlgorithm;
+import io.vertx.ext.auth.mongo.HashSaltStyle;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
 import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
@@ -51,28 +55,40 @@ public class HttpServerFactory extends AbstractHttpServerFactory {
         return httpServerProperties;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected void customizeServer(final DeviceRegistryHttpServer server) {
         if (httpServerProperties.isAuthenticationRequired()) {
             final var authConfig = httpServerProperties.getAuth();
-            LOG.debug("creating AuthenticationHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
+            LOG.debug(
+                    "creating AuthenticationHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
                     System.lineSeparator(), authConfig);
             final var mongoAuthOptions = new MongoAuthenticationOptions();
             mongoAuthOptions.setCollectionName(authConfig.getCollectionName());
             mongoAuthOptions.setUsernameField(authConfig.getUsernameField());
             mongoAuthOptions.setPasswordField(authConfig.getPasswordField());
-            final var hashStrategy = new DefaultHashStrategy();
-            Optional.ofNullable(authConfig.getHashAlgorithm())
-                .ifPresent(hashStrategy::setAlgorithm);
-            Optional.ofNullable(authConfig.getSaltStyle())
-                .ifPresent(hashStrategy::setSaltStyle);
-            final var mongoAuth = new MongoAuthenticationImpl(
-                    mongoClient,
-                    hashStrategy,
-                    authConfig.getSaltField(),
-                    mongoAuthOptions);
+            final AuthenticationProvider authenticationProvider;
+            if (Strings.isNullOrEmpty(authConfig.getSaltField())
+                    && authConfig.getHashAlgorithm() == null
+                    && authConfig.getSaltStyle() == null) {
+                authenticationProvider = MongoAuthentication.create(mongoClient, mongoAuthOptions);
+            } else {
+                // use legacy password hashing
+                final var hashStrategy = new DefaultHashStrategy();
+                hashStrategy.setAlgorithm(Optional.ofNullable(authConfig.getHashAlgorithm())
+                        .orElse(HashAlgorithm.PBKDF2));
+                hashStrategy.setSaltStyle(Optional.ofNullable(authConfig.getSaltStyle())
+                        .orElse(HashSaltStyle.COLUMN));
+                final var saltField = Optional.ofNullable(authConfig.getSaltField())
+                        .orElse(MongoAuthentication.DEFAULT_SALT_FIELD);
+                authenticationProvider = new MongoAuthenticationImpl(
+                        mongoClient,
+                        hashStrategy,
+                        saltField,
+                        mongoAuthOptions);
+            }
             server.setAuthHandler(BasicAuthHandler.create(
-                    mongoAuth,
+                    authenticationProvider,
                     httpServerProperties.getRealm()));
         }
     }
