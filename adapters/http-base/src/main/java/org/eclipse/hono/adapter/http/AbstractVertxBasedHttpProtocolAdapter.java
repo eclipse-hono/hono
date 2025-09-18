@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -706,13 +707,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             endpoint, tenant, deviceId);
                     if (commandContext != null) {
                         commandContext.getTracingSpan().log("forwarded command to device in HTTP response body");
-                        commandContext.accept();
+                        final Command command = commandContext.getCommand();
+                        if (command.isAckRequired() && command.isValid()
+                                && commandContext instanceof AbstractCommandContext<?> abstractCommandContext) {
+                            abstractCommandContext
+                                    .sendDeliverySuccessCommandResponseMessage(HttpURLConnection.HTTP_ACCEPTED,
+                                            "Command successfully forwarded to device",
+                                            currentSpan,
+                                            command.getCorrelationId(),
+                                            command.getMessagingType())
+                                    .onComplete(v -> commandContext.accept());
+                        } else {
+                            commandContext.accept();
+                        }
                         metrics.reportCommand(
-                                commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
                                 tenantTracker.result(),
                                 ProcessingOutcome.FORWARDED,
-                                commandContext.getCommand().getPayloadSize(),
+                                command.getPayloadSize(),
                                 getMicrometerSample(commandContext));
                     }
                     currentSpan.finish();

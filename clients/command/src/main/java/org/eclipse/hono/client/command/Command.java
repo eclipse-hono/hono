@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,6 +34,13 @@ public interface Command {
      * @return {@code true} if this is a one-way command.
      */
     boolean isOneWay();
+
+    /**
+     * Checks if an acknowledgement of this command should be sent to the messaging infrastructure.
+     *
+     * @return {@code true} if an acknowledgement is required.
+     */
+    boolean isAckRequired();
 
     /**
      * Checks if this command contains all required information.
