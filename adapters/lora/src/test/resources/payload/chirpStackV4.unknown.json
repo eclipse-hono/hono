@@ -1,0 +1,18 @@
+{
+  "deduplicationId": "c9dbe358-2578-4fb7-b295-66b44edc45a6",
+  "time": "2022-07-18T09:33:28.823500726+00:00",
+  "deviceInfo": {
+    "tenantId": "52f14cd4-c6f1-4fbd-8f87-4025e1d49242",
+    "tenantName": "ChirpStack",
+    "applicationId": "17c82e96-be03-4f38-aef3-f83d48582d97",
+    "applicationName": "Test application",
+    "deviceProfileId": "14855bf7-d10d-4aee-b618-ebfcb64dc7ad",
+    "deviceProfileName": "Test device-profile",
+    "deviceName": "Test device",
+    "devEui": "0101010101010101",
+    "tags": {
+      "key": "value"
+    }
+  },
+  "devAddr": "00189440"
+}
