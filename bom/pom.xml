@@ -116,7 +116,7 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
     <kafka-client.producer.delivery-timeout-ms>6000</kafka-client.producer.delivery-timeout-ms>
 
     <quarkus.application-dev.properties>
-hono.auth=${hono.auth}
+hono.authType=${hono.authType}
 hono.auth.host=${docker.host.address:localhost}
 hono.auth.port=${fixed.auth.amqps.port}
 hono.auth.name=${app.id}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,7 @@ import jakarta.inject.Singleton;
  *
  */
 @ApplicationScoped
-@IfBuildProperty(name = "hono.auth", stringValue = "delegating")
+@IfBuildProperty(name = "hono.authType", stringValue = "delegating")
 public class DelegatingAuthenticationServiceProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(DelegatingAuthenticationServiceProducer.class);

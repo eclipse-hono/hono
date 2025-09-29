@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+    Copyright (c) 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -25,7 +25,7 @@
 
   <properties>
     <!-- do not delegate verification of credentials to Authentication server -->
-    <hono.auth>implementation</hono.auth>
+    <hono.authType>implementation</hono.authType>
   </properties>
 
   <dependencies>
