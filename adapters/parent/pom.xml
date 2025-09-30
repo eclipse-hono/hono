@@ -30,7 +30,7 @@
     <!-- 
       hono.authType poperty is needed while quarkus resolve dev properties (it
       contains hono.authType=${hono.authType}). That's why we specify here.
-      For services it is delegating, whle here we just desable hono auth  
+      For services it is delegating. For adapters, hono auth is disabled  
     -->
     <hono.authType>n/a</hono.authType>
 
