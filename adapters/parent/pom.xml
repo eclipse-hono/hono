@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -28,11 +28,11 @@
 
   <properties>
     <!-- 
-      hono.auth poperty is needed while quarkus resolve dev properties (it 
-      contains hono.auth=${hono.auth}). That's why we specify here. 
-      For services it is delegating, whle here we just desable hono auth  
+      hono.authType poperty is needed while quarkus resolve dev properties (it
+      contains hono.authType=${hono.authType}). That's why we specify here.
+      For services it is delegating. For adapters, hono auth is disabled  
     -->
-    <hono.auth>n/a</hono.auth>
+    <hono.authType>n/a</hono.authType>
 
     <quarkus.adapter.application-dev.properties>
 hono.kafka.telemetry.producerConfig."max.block.ms"=${kafka-client.producer.max-block-ms}

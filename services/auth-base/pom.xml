@@ -24,7 +24,7 @@
 
   <properties>
     <!-- do not delegate verification of credentials to Authentication server -->
-    <hono.auth>implementation</hono.auth>
+    <hono.authType>implementation</hono.authType>
   </properties>
 
   <dependencies>

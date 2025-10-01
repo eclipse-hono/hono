@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+    Copyright (c) 2021 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -27,7 +27,7 @@
 
   <properties>
     <!-- delegate verification of credentials to Authentication server by default -->
-    <hono.auth>delegating</hono.auth>
+    <hono.authType>delegating</hono.authType>
   </properties>
 
   <dependencies>
@@ -104,8 +104,8 @@
             <configuration>
               <properties>
                 <property>
-                  <name>hono.auth</name>
-                  <value>${hono.auth}</value>
+                  <name>hono.authType</name>
+                  <value>${hono.authType}</value>
                 </property>
               </properties>
             </configuration>
