@@ -26,9 +26,16 @@ import org.eclipse.hono.util.MessageHelper;
 
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
+import com.google.api.gax.grpc.GrpcTransportChannel;
+import com.google.api.gax.rpc.FixedTransportChannelProvider;
+import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
 import com.google.pubsub.v1.PubsubMessage;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
 /**
  * Utility methods for working with Pub/Sub.
@@ -44,7 +51,8 @@ public final class PubSubMessageHelper {
      */
     public static final String PUBSUB_PROPERTY_RESPONSE_REQUIRED = "response-required";
     /**
-     * The name of the Pub/Sub message property indicating whether an acknowledgement to the message is expected/required.
+     * The name of the Pub/Sub message property indicating whether an acknowledgement to the message is
+     * expected/required.
      */
     public static final String PUBSUB_PROPERTY_ACK_REQUIRED = "ack-required";
 
@@ -60,12 +68,16 @@ public final class PubSubMessageHelper {
     /**
      * Gets the provider for credentials to use for authenticating to the Pub/Sub service.
      *
+     * @param pubSubConfigProperties If emulator host is configured, take NoCredentialsProvider, otherwise take FixedCredentialsProvider
      * @return An optional containing a CredentialsProvider to use for authenticating to the Pub/Sub service or an empty
      *         optional if the given GoogleCredentials is {@code null}.
      */
-    public static Optional<CredentialsProvider> getCredentialsProvider() {
-        return Optional.ofNullable(getCredentials())
-                .map(FixedCredentialsProvider::create);
+    public static Optional<CredentialsProvider> getCredentialsProvider(
+            final PubSubConfigProperties pubSubConfigProperties) {
+        if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+            return Optional.of(NoCredentialsProvider.create());
+        }
+        return Optional.ofNullable(getCredentials()).map(FixedCredentialsProvider::create);
     }
 
     private static GoogleCredentials getCredentials() {
@@ -75,6 +87,20 @@ public final class PubSubMessageHelper {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    /**
+     * creates the transport channel provider for the given emulator host.
+     *
+     * @param pubSubConfigProperties contains the emulator host, e.g. localhost:8085
+     * @return the transport channel provider.
+     */
+    public static TransportChannelProvider getTransportChannelProvider(final PubSubConfigProperties pubSubConfigProperties) {
+        final ManagedChannel channel = ManagedChannelBuilder
+                .forTarget(pubSubConfigProperties.getEmulatorHost())
+                .usePlaintext()
+                .build();
+        return FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
     }
 
     /**
@@ -109,7 +135,8 @@ public final class PubSubMessageHelper {
      * Gets the subtopics from the orig_address attribute of the message.
      *
      * @param origAddress The orig_address attribute.
-     * @return An immutable list containing all the subtopics in hierarchical order or an empty immutable list if the topic has no subtopics.
+     * @return An immutable list containing all the subtopics in hierarchical order or an empty immutable list if the
+     *         topic has no subtopics.
      */
     public static List<String> getSubtopics(final String origAddress) {
         final String trimmedOrigAddress = origAddress.startsWith("/") ? origAddress.substring(1) : origAddress;

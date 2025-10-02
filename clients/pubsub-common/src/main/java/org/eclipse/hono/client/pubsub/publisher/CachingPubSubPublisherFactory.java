@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 
 import com.google.api.gax.core.CredentialsProvider;
@@ -34,7 +35,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
 
     private final Vertx vertx;
     private final Map<String, PubSubPublisherClient> activePublishers = new ConcurrentHashMap<>();
-    private final String projectId;
+    private final PubSubConfigProperties pubSubConfigProperties;
     private final CredentialsProvider credentialsProvider;
     private Supplier<PubSubPublisherClient> clientSupplier;
 
@@ -42,17 +43,18 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
      * Creates a new factory for {@link PubSubPublisherClient} instances.
      *
      * @param vertx The Vert.x instance that this factory runs on.
-     * @param projectId The identifier of the Google Cloud Project to connect to.
+     * @param pubSubConfigProperties The Pub/Sub configuration properties.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
      * @throws NullPointerException if any of the parameter is {@code null}.
      */
     public CachingPubSubPublisherFactory(
             final Vertx vertx,
-            final String projectId,
+            final PubSubConfigProperties pubSubConfigProperties,
             final CredentialsProvider credentialsProvider) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.projectId = Objects.requireNonNull(projectId);
+        this.pubSubConfigProperties = Objects.requireNonNull(pubSubConfigProperties);
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
+        Objects.requireNonNull(pubSubConfigProperties.getProjectId());
     }
 
     /**
@@ -102,7 +104,7 @@ public final class CachingPubSubPublisherFactory implements PubSubPublisherFacto
     private PubSubPublisherClient getPubSubPublisherClient(final String topic) {
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
-                .orElseGet(() -> new PubSubPublisherClientImpl(vertx, projectId, topic, credentialsProvider));
+                .orElseGet(() -> new PubSubPublisherClientImpl(vertx, pubSubConfigProperties, topic, credentialsProvider));
     }
 
     private Future<Void> removePublisher(final String topicName) {

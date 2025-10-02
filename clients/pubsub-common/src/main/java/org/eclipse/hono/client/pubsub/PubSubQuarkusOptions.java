@@ -17,14 +17,14 @@ import java.util.Optional;
 import io.smallrye.config.ConfigMapping;
 
 /**
- * Common options for configuring a Google Pub/Sub client.
+ * Common options for configuring a Quarkus Google Cloud client.
  * <p>
- * We are using the prefix and naming strategy to match the property name(s) defined by
- * the <a href="https://quarkiverse.github.io/quarkiverse-docs/quarkus-google-cloud-services/main/index.html">
- * Quarkus Google Cloud Services extension</a>
+ * We are using the prefix and naming strategy to match the property name(s) defined by the
+ * <a href="https://quarkiverse.github.io/quarkiverse-docs/quarkus-google-cloud-services/main/index.html"> Quarkus
+ * Google Cloud Services extension</a>
  */
 @ConfigMapping(prefix = "quarkus.google.cloud", namingStrategy = ConfigMapping.NamingStrategy.KEBAB_CASE)
-public interface PubSubPublisherOptions {
+public interface PubSubQuarkusOptions {
 
     /**
      * Gets the Google Cloud Project identifier.
@@ -32,4 +32,24 @@ public interface PubSubPublisherOptions {
      * @return The identifier.
      */
     Optional<String> projectId();
+
+    /**
+     * Gets the Pub Sub configuration.
+     *
+     * @return The Pub Sub configuration.
+     */
+    PubSubConfig pubsub();
+
+    /**
+     * The Pub Sub configuration.
+     */
+    @ConfigMapping(prefix = "pubsub")
+    interface PubSubConfig {
+        /**
+         * Gets the Pub Sub Emulator Host.
+         *
+         * @return The host.
+         */
+        Optional<String> emulatorHost();
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,13 @@
 package org.eclipse.hono.client.pubsub.publisher;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Optional;
 
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +49,9 @@ public class CachingPubSubPublisherFactoryTest {
         topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         client = mock(PubSubPublisherClient.class);
         final CredentialsProvider credentialsProvider = mock(CredentialsProvider.class);
-        factory = new CachingPubSubPublisherFactory(vertx, PROJECT_ID, credentialsProvider);
+        final PubSubConfigProperties pubSubConfigProperties = mock(PubSubConfigProperties.class);
+        when(pubSubConfigProperties.getProjectId()).thenReturn(PROJECT_ID);
+        factory = new CachingPubSubPublisherFactory(vertx, pubSubConfigProperties, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }
 

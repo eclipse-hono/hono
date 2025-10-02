@@ -31,6 +31,7 @@
   <url>https://www.eclipse.org/hono</url>
 
   <properties>
+    <container.version>${project.version}</container.version>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
@@ -431,7 +432,7 @@
           <name>CI</name>
         </property>
       </activation>
-      <!-- 
+      <!--
         relax timeouts when running on CI environment in order to account for (very) limited
         CPU resources.
        -->
@@ -734,7 +735,7 @@
         <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
-    
+
     <profile>
       <id>local</id>
       <activation>
@@ -853,7 +854,7 @@
               <images>
                 <!-- ##### Infinispan server for Command Router ##### -->
                 <image>
-                  <name>${docker.repository}/hono-infinispan-test:${project.version}</name>
+                  <name>${docker.repository}/hono-infinispan-test:${container.version}</name>
                   <build>
                     <skip>${hono.infinispan.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
@@ -913,7 +914,7 @@
                 </image>
                 <!-- ##### Jaeger tracing component ##### -->
                 <image>
-                  <name>${docker.repository}/hono-jaeger-test:${project.version}</name>
+                  <name>${docker.repository}/hono-jaeger-test:${container.version}</name>
                   <build>
                     <skip>${jaeger.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
@@ -978,11 +979,11 @@
                 </image>
                 <!-- ##### Authentication service ##### -->
                 <image>
-                  <name>${docker.repository}/hono-service-auth-test:${project.version}</name>
+                  <name>${docker.repository}/hono-service-auth-test:${container.version}</name>
                   <build>
                     <skip>${hono.service-auth.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.auth-server.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.auth-server.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1071,7 +1072,7 @@
                 </image>
                 <!-- ##### ActiveMQ Artemis message broker ##### -->
                 <image>
-                  <name>${docker.repository}/hono-artemis-test:${project.version}</name>
+                  <name>${docker.repository}/hono-artemis-test:${container.version}</name>
                   <build>
                     <skip>${hono.amqp-messaging.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
@@ -1136,7 +1137,7 @@
                 </image>
                 <!-- ##### Qpid Dispatch Router ##### -->
                 <image>
-                  <name>${docker.repository}/hono-dispatch-router-test:${project.version}</name>
+                  <name>${docker.repository}/hono-dispatch-router-test:${container.version}</name>
                   <build>
                     <skip>${hono.amqp-messaging.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
@@ -1254,7 +1255,7 @@
                 </image>
                 <!-- ##### Mongo DB instance for the device registry ##### -->
                 <image>
-                  <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
+                  <name>${docker.repository}/hono-mongodb-test:${container.version}</name>
                   <build>
                     <skip>${hono.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
@@ -1309,11 +1310,11 @@
                 </image>
                 <!-- ##### MongoDB based Device Registration service ##### -->
                 <image>
-                  <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
+                  <name>${docker.repository}/hono-service-device-registry-test:${container.version}</name>
                   <build>
                     <skip>${hono.deviceregistry.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.deviceregistry.mongodb.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.deviceregistry.mongodb.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1415,11 +1416,11 @@
                 </image>
                 <!-- ##### JDBC based Device Registration service ##### -->
                 <image>
-                  <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
+                  <name>${docker.repository}/hono-service-device-registry-test:${container.version}</name>
                   <build>
                     <skip>${hono.deviceregistry.jdbc.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.deviceregistry.jdbc.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.deviceregistry.jdbc.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1492,11 +1493,11 @@
                 </image>
                 <!-- ##### Command Router service ##### -->
                 <image>
-                  <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
+                  <name>${docker.repository}/hono-service-command-router-test:${container.version}</name>
                   <build>
                     <skip>${hono.command-router.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.command-router.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.command-router.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1573,11 +1574,11 @@
                 </image>
                 <!-- ##### HTTP adapter ##### -->
                 <image>
-                  <name>${docker.repository}/hono-adapter-http-test:${project.version}</name>
+                  <name>${docker.repository}/hono-adapter-http-test:${container.version}</name>
                   <build>
                     <skip>${hono.http-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.http-adapter.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.http-adapter.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1660,11 +1661,11 @@
                 </image>
                 <!-- ##### MQTT adapter ##### -->
                 <image>
-                  <name>${docker.repository}/hono-adapter-mqtt-test:${project.version}</name>
+                  <name>${docker.repository}/hono-adapter-mqtt-test:${container.version}</name>
                   <build>
                     <skip>${hono.mqtt-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.mqtt-adapter.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.mqtt-adapter.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1736,11 +1737,11 @@
                 </image>
                 <!-- ##### AMQP adapter ##### -->
                 <image>
-                  <name>${docker.repository}/hono-adapter-amqp-test:${project.version}</name>
+                  <name>${docker.repository}/hono-adapter-amqp-test:${container.version}</name>
                   <build>
                     <skip>${hono.amqp-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.amqp-adapter.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.amqp-adapter.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1813,11 +1814,11 @@
                 </image>
                 <!-- ##### CoAP adapter ##### -->
                 <image>
-                  <name>${docker.repository}/hono-adapter-coap-test:${project.version}</name>
+                  <name>${docker.repository}/hono-adapter-coap-test:${container.version}</name>
                   <build>
                     <skip>${hono.coap-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.coap-adapter.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.coap-adapter.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1889,11 +1890,11 @@
                 </image>
                 <!-- ##### Lora adapter ##### -->
                 <image>
-                  <name>${docker.repository}/hono-adapter-lora-test:${project.version}</name>
+                  <name>${docker.repository}/hono-adapter-lora-test:${container.version}</name>
                   <build>
                     <skip>${hono.lora-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.lora-adapter.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.lora-adapter.image}:${container.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
