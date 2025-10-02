@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherClient;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
+import org.eclipse.hono.client.pubsub.tracing.PubSubTracingHelper;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -181,6 +182,7 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         }
 
         final Map<String, String> pubSubAttributes = encodePropertiesAsPubSubAttributes(properties, currentSpan);
+        PubSubTracingHelper.injectSpanContext(tracer, pubSubAttributes, currentSpan.context());
         final PubsubMessage.Builder builder = PubsubMessage.newBuilder()
                 .putAllAttributes(pubSubAttributes)
                 .setOrderingKey(deviceId);
