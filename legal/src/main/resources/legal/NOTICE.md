@@ -551,7 +551,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/mongodb/mongo-java-driver)
 
-### Netty ${netty.version}
+### Netty
 
 This product includes software developed by [The Netty project](http://netty.io/).
 
@@ -673,16 +673,6 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/qpid-proton-j).
 
-### Protoparser
-
-This product includes software developed by the [Protoparser project](https://github.com/square/protoparser).
-
-Your use of *Protoparser* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/square/protoparser/).
-
 ### ProtoStream
 
 This product includes software developed by the [Infinispan project](https://infinispan.org).
@@ -802,7 +792,7 @@ Your use of *ThreeTen* is subject to the terms and conditions defined in the fil
 
 The source code is available from [GitHub](https://github.com/ThreeTen/threetenbp).
 
-### vert.x Auth Common ${vertx.version}
+### vert.x Auth Common
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -812,7 +802,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
 
-### vert.x Auth JDBC ${vertx.version}
+### vert.x Auth JDBC
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -822,7 +812,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
 
-### vert.x Auth Mongo ${vertx.version}
+### vert.x Auth Mongo
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -832,7 +822,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
 
-### vert.x Bridge Common ${vertx.version}
+### vert.x Bridge Common
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -842,7 +832,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-bridge-common).
 
-### vert.x gRPC ${vertx.version}
+### vert.x gRPC
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -852,7 +842,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-grpc).
 
-### vert.x Health Check ${vertx.version}
+### vert.x Health Check
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -862,7 +852,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-health-check).
 
-### vert.x JDBC client ${vertx.version}
+### vert.x JDBC client
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -872,7 +862,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-jdbc-client).
 
-### vert.x Kafka Client ${vertx.version}
+### vert.x Kafka Client
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -882,7 +872,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-kafka-client).
 
-### vert.x Micrometer Metrics ${vertx.version}
+### vert.x Micrometer Metrics
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -892,7 +882,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-micrometer-metrics).
 
-### vert.x Mongo Client ${vertx.version}
+### vert.x Mongo Client
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -902,7 +892,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-mongo-client).
 
-### vert.x MQTT ${vertx.version}
+### vert.x MQTT
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -912,7 +902,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-mqtt).
 
-### vert.x Proton ${vertx.version}
+### vert.x Proton
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -922,7 +912,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-proton).
 
-### vert.x SQL Client ${vertx.version}
+### vert.x SQL Client
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
@@ -932,7 +922,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/eclipse-vertx/vertx-sql-client).
 
-### vert.x Web ${vertx.version}
+### vert.x Web
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 

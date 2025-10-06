@@ -26,10 +26,13 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
             org.infinispan.CoreModuleImpl.class,
             org.infinispan.client.hotrod.impl.async.DefaultAsyncExecutorFactory.class,
             org.infinispan.client.hotrod.impl.consistenthash.SegmentConsistentHash.class,
+            org.infinispan.commons.jdkspecific.ClasspathURLStreamHandlerProvider.class,
+            org.infinispan.configuration.parsing.CacheParser.class,
             org.infinispan.configuration.parsing.Parser.class,
             org.infinispan.configuration.parsing.SFSToSIFSConfigurationBuilder.class,
             org.infinispan.distribution.ch.impl.HashFunctionPartitioner.class,
             org.infinispan.persistence.file.SingleFileStore.class,
+            org.infinispan.protostream.annotations.impl.processor.AutoProtoSchemaBuilderAnnotationProcessor.class,
             org.infinispan.protostream.types.java.CommonContainerTypesSchema.class,
             org.infinispan.protostream.types.java.CommonTypesSchema.class,
             org.infinispan.protostream.types.protobuf.AnySchemaImpl.class,
@@ -59,6 +62,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
             org.wildfly.security.sasl.scram.WildFlyElytronSaslScramProvider.class
         },
         classNames = {
+            "java.time.ZoneRegion",
             "java.util.Arrays$ArrayList",
             "java.util.Collections$UnmodifiableRandomAccessList",
             "java.util.Collections$EmptyList",
@@ -68,11 +72,13 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
             "java.util.Collections$SingletonMap",
             "java.util.Collections$SingletonSet",
             "java.util.Collections$SynchronizedSet",
-            "java.util.Collections$UnmodifiableSet"
+            "java.util.Collections$UnmodifiableSet",
+            "java.util.ImmutableCollections$List12",
+            "java.util.ImmutableCollections$ListN",
+            "java.util.ImmutableCollections$Map1",
+            "java.util.ImmutableCollections$MapN",
+            "java.util.ImmutableCollections$Set12",
+            "java.util.ImmutableCollections$SetN"
         })
-class QuarkusReflectionRegistration {
-
-    private QuarkusReflectionRegistration() {
-        // prevent instantiation
-    }
+final class QuarkusReflectionRegistration {
 }
