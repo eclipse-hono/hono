@@ -865,7 +865,13 @@
                         <id>config</id>
                         <fileSet>
                           <directory>${project.build.directory}/resources/infinispan</directory>
-                          <outputDirectory>opt/infinispan/server/conf</outputDirectory>
+                          <!--
+                            We put the custom configuration files into a dedicated folder other than
+                            the default one in order to not interfere with the default configuration
+                            shipped with the Infinispan image and to not overwrite the default folder
+                            permissions (Infinispan image runs as non-root user).
+                          -->
+                          <outputDirectory>opt/hono/infinispan</outputDirectory>
                           <includes>
                             <include>*</include>
                           </includes>
@@ -875,17 +881,9 @@
                   </build>
                   <run>
                     <skip>${hono.infinispan.disabled}</skip>
-                    <entrypoint>
-                      <arg>/opt/infinispan/bin/server.sh</arg>
-                    </entrypoint>
                     <cmd>
                       <arg>-c</arg>
-                      <arg>hono-data-grid.xml</arg>
-                      <arg>-Dquarkus.log.category."org.infinispan.AUDIT".level=WARN</arg>
-                      <arg>-Dquarkus.log.category."org.infinispan.CONFIG".level=INFO</arg>
-                      <arg>-Dquarkus.log.category."org.infinispan.CONTAINER".level=INFO</arg>
-                      <arg>-Dquarkus.log.category."org.infinispan.SECURITY".level=INFO</arg>
-                      <arg>-Dquarkus.log.category."org.infinispan.SERVER".level=INFO</arg>
+                      <arg>/opt/hono/infinispan/hono-data-grid.xml</arg>
                     </cmd>
                     <ports>
                       <!--
@@ -894,30 +892,22 @@
                       -->
                       <port>hono.infinispan.port:${hono.infinispan.port}</port>
                     </ports>
-                    <env>
-                      <!-- 
-                        In order to support running on a rootless Docker daemon which uses cgroups v2 for
-                        enforcing resource limits, and because the Infinispan native server image has been
-                        created using Java 11 (which doesn't support cgroups v2), we need to (also) explicitly limit
-                        memory using Java options here. Otherwise the VM would use a max heap space of 1/4 of the
-                        host's memory which is probably much more than the 120mb we specify for the container ...
-                       -->
-                      <JAVA_OPTIONS>-Xms70m -Xmx80m</JAVA_OPTIONS>
-                    </env>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <memorySwap>120000000</memorySwap>
-                    <memory>120000000</memory>
+                    <memorySwap>256000000</memorySwap>
+                    <memory>256000000</memory>
                     <log>
                       <prefix>INFINISPAN</prefix>
                       <color>${log.color.hono-services}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*(Infinispan Server .* started).*</log>
+                      <http>
+                        <url>http://${docker.host.address}:${hono.infinispan.port}/rest/v2/container/health/status</url>
+                      </http>
                     </wait>
                   </run>
                 </image>

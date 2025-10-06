@@ -17,7 +17,6 @@ hono:
       remote:
         serverList: "${hono.infinispan.host}:${hono.infinispan.port}"
         authServerName: "${hono.infinispan.host}"
-        authRealm: "ApplicationRealm"
         authUsername: "${hono.infinispan.username}"
         authPassword: "${hono.infinispan.password}"
         saslMechanism: "SCRAM-SHA-512"
