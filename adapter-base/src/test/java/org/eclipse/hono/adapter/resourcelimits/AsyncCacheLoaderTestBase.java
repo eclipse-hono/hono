@@ -18,31 +18,27 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
 import org.eclipse.hono.test.TracingMockSupport;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
 
 /**
@@ -74,7 +70,6 @@ abstract class AsyncCacheLoaderTestBase {
 
         bufferReq = mock(HttpRequest.class);
         when(bufferReq.addQueryParam(anyString(), anyString())).thenReturn(bufferReq);
-        when(bufferReq.expect(any(ResponsePredicate.class))).thenReturn(bufferReq);
         when(bufferReq.basicAuthentication(anyString(), anyString())).thenReturn(bufferReq);
         when(bufferReq.timeout(anyLong())).thenReturn(bufferReq);
         when(bufferReq.as(any(BodyCodec.class))).thenReturn(jsonRequest);
@@ -103,23 +98,20 @@ abstract class AsyncCacheLoaderTestBase {
         givenResponseWithValue(consumedMinutes);
     }
 
-    @SuppressWarnings("unchecked")
     protected void givenResponseWithValue(final Integer value) {
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
+        when(jsonRequest.send()).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
             final HttpResponse<JsonObject> response = mock(HttpResponse.class);
+            when(response.statusCode()).thenReturn(HttpURLConnection.HTTP_OK);
             when(response.body()).thenReturn(createPrometheusResponse(value));
-            responseHandler.handle(Future.succeededFuture(response));
-            return null;
-        }).when(jsonRequest).send(VertxMockSupport.anyHandler());
+            return Future.succeededFuture(response);
+        });
     }
 
     protected void givenFailResponseWithTimeoutException() {
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
-            responseHandler.handle(Future.failedFuture(new TimeoutException()));
-            return null;
-        }).when(jsonRequest).send(VertxMockSupport.anyHandler());
+        when(jsonRequest.send()).thenAnswer(invocation -> {
+            return Future.failedFuture(new TimeoutException());
+        });
     }
 
     protected static JsonObject createPrometheusResponse(final Integer value) {
@@ -143,5 +135,4 @@ abstract class AsyncCacheLoaderTestBase {
         verify(request).addQueryParam(eq("timeout"), eq(String.valueOf(expectedQueryTimeoutMillis) + "ms"));
         verify(request).timeout(expectedRequestTimeoutMillis);
     }
-
 }

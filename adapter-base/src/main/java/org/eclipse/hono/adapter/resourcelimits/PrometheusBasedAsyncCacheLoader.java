@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,13 +39,11 @@ import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.codec.BodyCodec;
 
 /**
@@ -127,32 +125,30 @@ abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCacheLoader
                 Fields.MESSAGE, "running Prometheus query",
                 "query", query));
 
-        final Promise<HttpResponse<JsonObject>> result = Promise.promise();
-        newQueryRequest(query).send(result);
-        return result.future()
-                .onFailure(t -> {
-                    TracingHelper.logError(span, Map.of(
-                            Fields.MESSAGE, "failed to run Prometheus query",
-                            Fields.ERROR_KIND, "Exception",
-                            Fields.ERROR_OBJECT, t));
-                    LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
-                            url, query, t.getMessage());
-                })
-                .map(response -> {
-                    Tags.HTTP_STATUS.set(span, response.statusCode());
-                    return extractLongValue(response.body(), span);
-                })
-                .onComplete(r -> {
-                    span.finish();
-                    spanScope.close();
-                });
+        return newQueryRequest(query).send()
+            .expecting(HttpResponseExpectation.SC_OK)
+            .onFailure(t -> {
+                TracingHelper.logError(span, Map.of(
+                        Fields.MESSAGE, "failed to run Prometheus query",
+                        Fields.ERROR_KIND, "Exception",
+                        Fields.ERROR_OBJECT, t));
+                LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
+                        url, query, t.getMessage());
+            })
+            .map(response -> {
+                Tags.HTTP_STATUS.set(span, response.statusCode());
+                return extractLongValue(response.body(), span);
+            })
+            .onComplete(r -> {
+                span.finish();
+                spanScope.close();
+            });
     }
 
     private HttpRequest<JsonObject> newQueryRequest(final String query) {
 
         final HttpRequest<?> request = client.post(QUERY_URI)
-                .addQueryParam("query", query)
-                .expect(ResponsePredicate.SC_OK);
+                .addQueryParam("query", query);
 
         if (config.getQueryTimeout() > 0) {
             // limit query execution time on Prometheus

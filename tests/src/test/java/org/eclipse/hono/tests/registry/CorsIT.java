@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import java.net.HttpURLConnection;
 import java.util.Optional;
 
 import org.eclipse.hono.tests.CrudHttpClient;
@@ -28,7 +27,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -197,7 +196,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
-                ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
+                HttpResponseExpectation.SC_NO_CONTENT)
             .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
                     assertAccessControlHeaders(response.headers(), method);

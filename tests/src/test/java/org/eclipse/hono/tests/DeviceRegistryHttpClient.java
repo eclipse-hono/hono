@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,11 +45,11 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
-import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
 
 /**
  * A client for accessing the Device Registry's HTTP resources for the Device Registration, Credentials and Tenant API.
@@ -288,7 +288,7 @@ public final class DeviceRegistryHttpClient {
                 uri,
                 Optional.ofNullable(requestPayload).map(JsonObject::toBuffer).orElse(null),
                 getRequestHeaders(contentType),
-                ResponsePredicate.status(expectedStatusCode));
+                HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -316,7 +316,7 @@ public final class DeviceRegistryHttpClient {
     public Future<HttpResponse<Buffer>> getTenant(final String tenantId, final int expectedStatusCode) {
 
         final String uri = tenantInstanceUri(tenantId);
-        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(uri, getRequestHeaders(), HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -337,7 +337,7 @@ public final class DeviceRegistryHttpClient {
                 uri,
                 payload.toBuffer(),
                 getRequestHeaders(CONTENT_TYPE_APPLICATION_JSON),
-                ResponsePredicate.status(expectedStatusCode));
+                HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -380,7 +380,7 @@ public final class DeviceRegistryHttpClient {
      *         expected status code. Otherwise the future will fail.
      */
     public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final int expectedStatusCode) {
-        return removeTenant(tenantId, ResponsePredicate.status(expectedStatusCode));
+        return removeTenant(tenantId, HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -392,7 +392,7 @@ public final class DeviceRegistryHttpClient {
      * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
      *         expected status code. Otherwise the future will fail.
      */
-    public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final ResponsePredicate ... successPredicates) {
+    public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final HttpResponseExpectation ... successPredicates) {
         final String uri = tenantInstanceUri(tenantId);
         return httpClient.delete(uri, getRequestHeaders(), successPredicates);
     }
@@ -428,7 +428,7 @@ public final class DeviceRegistryHttpClient {
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
-        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, (ResponsePredicate[]) null);
+        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, (HttpResponseExpectation[]) null);
     }
 
     /**
@@ -464,7 +464,8 @@ public final class DeviceRegistryHttpClient {
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
-        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, 
+                HttpResponseExpectation.status(expectedStatusCode));
     }
     // device registration
 
@@ -596,7 +597,7 @@ public final class DeviceRegistryHttpClient {
                 uri,
                 Optional.ofNullable(device).map(JsonObject::toBuffer).orElse(null),
                 getRequestHeaders(contentType),
-                ResponsePredicate.status(expectedStatus));
+                HttpResponseExpectation.status(expectedStatus));
     }
 
     /**
@@ -642,7 +643,7 @@ public final class DeviceRegistryHttpClient {
                 requestUri,
                 data.toBuffer(),
                 getRequestHeaders(contentType),
-                ResponsePredicate.status(expectedStatus));
+                HttpResponseExpectation.status(expectedStatus));
     }
 
     /**
@@ -675,7 +676,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
-        return httpClient.get(requestUri, getRequestHeaders(), ResponsePredicate.status(expectedStatus));
+        return httpClient.get(requestUri, getRequestHeaders(), HttpResponseExpectation.status(expectedStatus));
     }
 
     /**
@@ -693,15 +694,15 @@ public final class DeviceRegistryHttpClient {
         return httpClient.delete(
                 requestUri,
                 getRequestHeaders(),
-                ResponsePredicate.create(response -> {
-            if (response.statusCode() == HttpURLConnection.HTTP_NO_CONTENT ||
-                    response.statusCode() == HttpURLConnection.HTTP_NOT_IMPLEMENTED) {
-                return ResponsePredicateResult.success();
-            } else {
-                return ResponsePredicateResult.failure(
-                        String.format("expected status code 204 or 501 but got %d", response.statusCode()));
-            }
-        }));
+                response -> {
+                    if (response.statusCode() == HttpURLConnection.HTTP_NO_CONTENT ||
+                            response.statusCode() == HttpURLConnection.HTTP_NOT_IMPLEMENTED) {
+                        return true;
+                    } else {
+                        LOG.error("expected status code 204 or 501 but got %d", response.statusCode());
+                        return false;
+                    }
+                });
     }
 
     /**
@@ -732,7 +733,7 @@ public final class DeviceRegistryHttpClient {
             final String deviceId,
             final int expectedStatus) {
 
-        return deregisterDevice(tenantId, deviceId, ResponsePredicate.status(expectedStatus));
+        return deregisterDevice(tenantId, deviceId, HttpResponseExpectation.status(expectedStatus));
 
     }
 
@@ -768,7 +769,7 @@ public final class DeviceRegistryHttpClient {
     public Future<HttpResponse<Buffer>> deregisterDevice(
             final String tenantId,
             final String deviceId,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
@@ -816,7 +817,8 @@ public final class DeviceRegistryHttpClient {
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
         isGateway.ifPresent(b -> queryParams.add(RegistryManagementConstants.PARAM_IS_GATEWAY, b.toString()));
 
-        return httpClient.get(requestUri, getRequestHeaders(), queryParams, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(requestUri, getRequestHeaders(), queryParams, 
+                HttpResponseExpectation.status(expectedStatusCode));
     }
 
     // credentials management
@@ -881,7 +883,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
-        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        return httpClient.get(uri, getRequestHeaders(), HttpResponseExpectation.SC_OK)
                 .compose(httpResponse -> {
 
                     // new list of secrets
@@ -899,7 +901,7 @@ public final class DeviceRegistryHttpClient {
                             uri,
                             payload,
                             getRequestHeaders(contentType),
-                            ResponsePredicate.status(expectedStatusCode));
+                            HttpResponseExpectation.status(expectedStatusCode));
                 });
 
     }
@@ -933,7 +935,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
-        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(uri, getRequestHeaders(), HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -985,7 +987,7 @@ public final class DeviceRegistryHttpClient {
         // encode array not list, workaround for vert.x issue
         final var payload = Json.encodeToBuffer(credentialsSpec.toArray(CommonCredential[]::new));
 
-        return httpClient.update(uri, payload, headers, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.update(uri, payload, headers, HttpResponseExpectation.status(expectedStatusCode));
     }
 
     /**
@@ -1063,7 +1065,7 @@ public final class DeviceRegistryHttpClient {
                 uri,
                 payload,
                 getRequestHeaders(contentType),
-                ResponsePredicate.status(expectedStatusCode));
+                HttpResponseExpectation.status(expectedStatusCode));
     }
 
     // convenience methods
@@ -1270,17 +1272,18 @@ public final class DeviceRegistryHttpClient {
                 .compose(ok -> addCredentials(tenantId, deviceId, List.of(pskCredentials)));
     }
 
-    private static ResponsePredicate okOrIgnoreMissing(final boolean ignoreMissing) {
+    private static HttpResponseExpectation okOrIgnoreMissing(final boolean ignoreMissing) {
         if (ignoreMissing) {
             return response -> {
                 if (response.statusCode() == HttpURLConnection.HTTP_NO_CONTENT || response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND ) {
-                    return ResponsePredicateResult.success();
+                    return true;
                 } else {
-                    return ResponsePredicateResult.failure("Response code must be either 204 or 404: was " + response.statusCode());
+                    LOG.error("Response code must be either 204 or 404: was " + response.statusCode());
+                    return false;
                 }
             };
         } else {
-            return ResponsePredicate.SC_NO_CONTENT;
+            return HttpResponseExpectation.SC_NO_CONTENT;
         }
     }
 

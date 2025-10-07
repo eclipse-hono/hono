@@ -43,9 +43,9 @@ import io.jsonwebtoken.security.JwkSet;
 import io.jsonwebtoken.security.Jwks;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -107,9 +107,9 @@ public class AuthServerAmqpIT {
                 IntegrationTestSupport.AUTH_HOST,
                 AuthenticationServerClientOptions.DEFAULT_JWKS_ENDPOINT_URI)
             .timeout(3000L)
-            .expect(ResponsePredicate.SC_OK)
-            .expect(ResponsePredicate.contentType("application/jwk-set+json"))
             .send()
+            .expecting(HttpResponseExpectation.SC_OK)
+            .expecting(HttpResponseExpectation.contentType("application/jwk-set+json"))
             .onSuccess(response -> {
                 LOG.debug("response from Authentication Server:{}{}", System.lineSeparator(), response.body().toString());
             })

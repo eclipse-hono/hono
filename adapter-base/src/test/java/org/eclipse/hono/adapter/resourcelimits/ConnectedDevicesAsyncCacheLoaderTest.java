@@ -22,7 +22,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
@@ -82,7 +81,7 @@ public class ConnectedDevicesAsyncCacheLoaderTest extends AsyncCacheLoaderTestBa
                 assertThat(value.getCurrentLimit()).isNull();
             } else {
                 assertRequestParamsSet(bufferReq, getExpectedConnectionNumberQuery(tenant.getTenantId()), QUERY_TIMEOUT, REQUEST_TIMEOUT);
-                verify(jsonRequest).send(VertxMockSupport.anyHandler());
+                verify(jsonRequest).send();
                 assertThat(value.getCurrentLimit()).isEqualTo(expectedLimit);
             }
         } catch (InterruptedException | ExecutionException e) {
@@ -158,9 +157,8 @@ public class ConnectedDevicesAsyncCacheLoaderTest extends AsyncCacheLoaderTestBa
 
         assertThat(result.isDone()).isTrue();
         assertRequestParamsSet(bufferReq, getExpectedConnectionNumberQuery(TENANT_ID), QUERY_TIMEOUT, REQUEST_TIMEOUT);
-        verify(jsonRequest).send(VertxMockSupport.anyHandler());
+        verify(jsonRequest).send();
 
         assertThrows(ExecutionException.class, () -> result.get());
     }
-
 }
