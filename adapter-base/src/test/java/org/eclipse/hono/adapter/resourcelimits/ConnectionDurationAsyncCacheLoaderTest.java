@@ -26,7 +26,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
@@ -97,7 +96,7 @@ public class ConnectionDurationAsyncCacheLoaderTest extends AsyncCacheLoaderTest
                         getExpectedConnectionDurationQuery(tenant.getTenantId(), accountPeriodDurationMinutes),
                         QUERY_TIMEOUT,
                         REQUEST_TIMEOUT);
-                verify(jsonRequest).send(VertxMockSupport.anyHandler());
+                verify(jsonRequest).send();
                 assertThat(value.getCurrentLimit()).isEqualTo(expectedLimit);
             }
         } catch (InterruptedException | ExecutionException e) {
@@ -157,7 +156,7 @@ public class ConnectionDurationAsyncCacheLoaderTest extends AsyncCacheLoaderTest
         assertRequestParamsSet(
                 bufferReq,
                 getExpectedConnectionDurationQuery(TENANT_ID, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
-        verify(jsonRequest).send(VertxMockSupport.anyHandler());
+        verify(jsonRequest).send();
 
         assertThrows(ExecutionException.class, () -> result.get());
     }

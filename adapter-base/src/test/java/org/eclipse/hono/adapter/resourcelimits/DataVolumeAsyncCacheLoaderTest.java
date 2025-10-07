@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
@@ -96,7 +95,7 @@ public class DataVolumeAsyncCacheLoaderTest extends AsyncCacheLoaderTestBase {
                         getExpectedDataVolumeQuery(tenant.getTenantId(), accountPeriodDurationMinutes),
                         QUERY_TIMEOUT,
                         REQUEST_TIMEOUT);
-                verify(jsonRequest).send(VertxMockSupport.anyHandler());
+                verify(jsonRequest).send();
                 assertThat(value.getCurrentLimit()).isEqualTo(expectedLimit);
             }
         } catch (InterruptedException | ExecutionException e) {
