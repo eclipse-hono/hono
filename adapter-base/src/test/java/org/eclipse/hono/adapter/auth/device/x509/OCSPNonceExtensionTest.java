@@ -60,8 +60,7 @@ class OCSPNonceExtensionTest {
     void testEncodeWritesParsableDerObject() throws IOException {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             nonceExtension.encode(out);
-            try (ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray())) {
-                final ASN1InputStream asnInputStream = new ASN1InputStream(in);
+            try (ASN1InputStream asnInputStream = new ASN1InputStream(new ByteArrayInputStream(out.toByteArray()))) {
                 final ASN1Primitive asn1 = asnInputStream.readObject();
                 assertThat(asn1).isInstanceOf(DLSequence.class);
                 assertThat(((DLSequence) asn1).size()).isEqualTo(2);

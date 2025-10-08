@@ -1580,8 +1580,7 @@ public abstract class HttpTestBase {
 
         final Promise<Void> result = Promise.promise();
         final String allowedOrigin = response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN.toString());
-        final boolean hasValidOrigin = allowedOrigin != null
-                && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
+        final boolean hasValidOrigin = ORIGIN_WILDCARD.equals(allowedOrigin) || ORIGIN_URI.equals(allowedOrigin);
 
         if (!hasValidOrigin) {
             result.fail(new IllegalArgumentException("response contains invalid allowed origin: " + allowedOrigin));

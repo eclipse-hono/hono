@@ -15,6 +15,8 @@ package org.eclipse.hono.service.tracing;
 import java.util.List;
 import java.util.Objects;
 
+import javax.annotation.Nonnull;
+
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Context;
@@ -44,8 +46,13 @@ public class DropBySpanNamePrefixSampler implements Sampler {
     }
 
     @Override
-    public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName,
-            final SpanKind spanKind, final Attributes attributes, final List<LinkData> parentLinks) {
+    public SamplingResult shouldSample(
+            @Nonnull final Context parentContext,
+            @Nonnull final String traceId,
+            @Nonnull final String spanName,
+            @Nonnull final SpanKind spanKind,
+            @Nonnull final Attributes attributes,
+            @Nonnull final List<LinkData> parentLinks) {
 
         for (final String spanNamePrefix : spanNamePrefixList) {
             if (spanName.startsWith(spanNamePrefix)) {

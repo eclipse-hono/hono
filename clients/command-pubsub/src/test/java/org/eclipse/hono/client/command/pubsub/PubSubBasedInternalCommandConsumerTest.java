@@ -67,13 +67,13 @@ import io.vertx.core.Vertx;
  */
 public class PubSubBasedInternalCommandConsumerTest {
 
-    private final String deviceId = "test-device";
-    private final String tenantId = "test-tenant";
-    private final String subject = "test-subject";
+    private static final String deviceId = "test-device";
+    private static final String tenantId = "test-tenant";
+    private static final String subject = "test-subject";
 
-    private final String adapterInstanceId = "test-adapter";
+    private static final String adapterInstanceId = "test-adapter";
 
-    private final String topicAndSubscription = String.format("%s.%s", adapterInstanceId,
+    private static final String topicAndSubscription = String.format("%s.%s", adapterInstanceId,
             CommandConstants.INTERNAL_COMMAND_ENDPOINT);
 
     private PubSubSubscriberClient subscriber;
@@ -156,6 +156,7 @@ public class PubSubBasedInternalCommandConsumerTest {
     @Test
     public void testHandleCommandMessageSendErrorResponse() {
         final PubsubMessage message = getPubSubMessage(subject, "true");
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -168,8 +169,8 @@ public class PubSubBasedInternalCommandConsumerTest {
         verify(ackReplyConsumer).ack();
         verify(commandHandler, never()).apply(any(PubSubBasedCommandContext.class));
         verify(commandResponseSender).sendCommandResponse(
-                argThat(t -> t.getTenantId().equals(tenantId)),
-                argThat(r -> r.getDeviceId().equals(deviceId)),
+                argThat(t -> tenantId.equals(t.getTenantId())),
+                argThat(r -> deviceId.equals(r.getDeviceId())),
                 argThat(cr -> cr.getStatus() == HttpURLConnection.HTTP_UNAVAILABLE),
                 any());
     }
@@ -181,6 +182,7 @@ public class PubSubBasedInternalCommandConsumerTest {
     @Test
     public void testHandleCommandMessageWithInvalidAttribute() {
         final PubsubMessage message = getPubSubMessage(null, "true");
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -203,6 +205,7 @@ public class PubSubBasedInternalCommandConsumerTest {
     @Test
     public void testHandleCommandMessageWithHandlerForDevice() {
         final PubsubMessage message = getPubSubMessage(subject, "false");
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -223,14 +226,15 @@ public class PubSubBasedInternalCommandConsumerTest {
     @Test
     public void testHandleCommandMessageWithNoHandlerForDevice() {
         final PubsubMessage message = getPubSubMessage(subject, "true");
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
 
         internalCommandConsumer.handleCommandMessage(message, ackReplyConsumer);
         verify(ackReplyConsumer).ack();
         verify(commandHandler, never()).apply(any(PubSubBasedCommandContext.class));
         verify(commandResponseSender).sendCommandResponse(
-                argThat(t -> t.getTenantId().equals(tenantId)),
-                argThat(r -> r.getDeviceId().equals(deviceId)),
+                argThat(t -> tenantId.equals(t.getTenantId())),
+                argThat(r -> deviceId.equals(r.getDeviceId())),
                 argThat(cr -> cr.getStatus() == HttpURLConnection.HTTP_UNAVAILABLE),
                 any());
     }
@@ -242,6 +246,7 @@ public class PubSubBasedInternalCommandConsumerTest {
     @Test
     public void testHandleCommandMessageFailedWhenMessageContainsNoAttributes() {
         final PubsubMessage message = PubsubMessage.newBuilder().putAllAttributes(Collections.emptyMap()).build();
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
