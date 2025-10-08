@@ -1,0 +1,26 @@
+[
+    {
+        "condition": {
+            "typeReachable": "com.github.benmanes.caffeine.cache.SSMSA"
+        },
+        "name": "com.github.benmanes.caffeine.cache.SSMSA"
+    },
+    {
+        "condition": {
+            "typeReachable": "com.github.benmanes.caffeine.cache.SSMSWR"
+        },
+        "name": "com.github.benmanes.caffeine.cache.SSMSWR"
+    },
+    {
+        "condition": {
+            "typeReachable": "com.github.benmanes.caffeine.cache.PSWMS"
+        },
+        "name": "com.github.benmanes.caffeine.cache.PSWMS"
+    },
+    {
+        "condition": {
+            "typeReachable": "com.github.benmanes.caffeine.cache.PSWRMW"
+        },
+        "name": "com.github.benmanes.caffeine.cache.PSWRMW"
+    }
+]

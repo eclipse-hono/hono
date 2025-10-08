@@ -25,19 +25,10 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
 /**
  * A helper class for creating Caffeine based cache instances.
  *
  */
-@RegisterForReflection(
-        classNames = {
-            "com.github.benmanes.caffeine.cache.SSMSA",
-            "com.github.benmanes.caffeine.cache.SSMSWR",
-            "com.github.benmanes.caffeine.cache.PSWMS",
-            "com.github.benmanes.caffeine.cache.PSWRMW"
-        })
 public final class Caches {
 
     private Caches() {
