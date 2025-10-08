@@ -710,6 +710,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         final CommandResponseSender commandResponseSender = mock(CommandResponseSender.class);
         when(commandResponseSender.sendCommandResponse(any(), any(), any(), any())).thenReturn(Future.succeededFuture());
 
+        @SuppressWarnings("unchecked")
         final AbstractCommandContext<PubSubBasedCommand> abstractCommandContext = mock(AbstractCommandContext.class);
         when(abstractCommandContext.getCommand()).thenReturn(command);
         when(abstractCommandContext.getTracingSpan()).thenReturn(span);
@@ -788,6 +789,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(pubsubMessage.getData()).thenReturn(ByteString.copyFromUtf8(payload.toString()));
         final PubSubBasedCommand command = PubSubBasedCommand.from(pubsubMessage, tenant);
 
+        @SuppressWarnings("unchecked")
         final AbstractCommandContext<PubSubBasedCommand> abstractCommandContext = mock(AbstractCommandContext.class);
         when(abstractCommandContext.getCommand()).thenReturn(command);
         when(abstractCommandContext.getTracingSpan()).thenReturn(span);
@@ -911,7 +913,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // and the downstream message contains the configured max TTD
         verify(telemetrySender).sendTelemetry(
                 eq(tenant),
-                argThat(assertion -> assertion.getDeviceId().equals("device")),
+                argThat(assertion -> "device".equals(assertion.getDeviceId())),
                 eq(org.eclipse.hono.util.QoS.AT_MOST_ONCE),
                 eq("text/plain"),
                 any(Buffer.class),
@@ -1191,6 +1193,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
             @Override
             protected void addRoutes(final Router router) {
+                // intentionally left blank
             }
 
             @Override

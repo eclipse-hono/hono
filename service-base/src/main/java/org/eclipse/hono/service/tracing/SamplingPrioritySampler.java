@@ -15,6 +15,8 @@ package org.eclipse.hono.service.tracing;
 import java.util.List;
 import java.util.Optional;
 
+import javax.annotation.Nonnull;
+
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.SpanKind;
@@ -43,12 +45,12 @@ public class SamplingPrioritySampler implements Sampler {
 
     @Override
     public SamplingResult shouldSample(
-            final Context parentContext,
-            final String traceId,
-            final String name,
-            final SpanKind spanKind,
-            final Attributes attributes,
-            final List<LinkData> parentLinks) {
+            @Nonnull final Context parentContext,
+            @Nonnull final String traceId,
+            @Nonnull final String name,
+            @Nonnull final SpanKind spanKind,
+            @Nonnull final Attributes attributes,
+            @Nonnull final List<LinkData> parentLinks) {
 
         return Optional.ofNullable(attributes.get(AttributeKey.longKey(SAMPLING_PRIORITY_TAG)))
                 .map(samplingPriority -> {

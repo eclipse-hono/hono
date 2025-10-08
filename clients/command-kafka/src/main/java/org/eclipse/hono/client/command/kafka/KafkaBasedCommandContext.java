@@ -21,7 +21,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
-import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -36,7 +35,7 @@ import io.opentracing.tag.Tags;
  * A context for passing around parameters relevant for processing a {@code Command} used in a Kafka based
  * client.
  */
-public class KafkaBasedCommandContext extends AbstractCommandContext<KafkaBasedCommand> implements CommandContext {
+public class KafkaBasedCommandContext extends AbstractCommandContext<KafkaBasedCommand> {
 
     private static final String PROPERTY_NAME_DELIVERY_FAILURE_RESPONSES_DISABLED = "HONO_DISABLE_KAFKA_COMMAND_DELIVERY_FAILURE_RESPONSES";
     private static final boolean DELIVERY_FAILURE_RESPONSES_DISABLED = Boolean

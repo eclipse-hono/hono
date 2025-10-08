@@ -20,7 +20,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.AbstractCommandContext;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
-import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
@@ -34,7 +33,7 @@ import io.opentracing.tag.Tags;
 /**
  * A context for passing around parameters relevant for processing a {@code Command} used in a Pub/Sub based client.
  */
-public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBasedCommand> implements CommandContext {
+public class PubSubBasedCommandContext extends AbstractCommandContext<PubSubBasedCommand> {
 
     /**
      * Creates a new command context.

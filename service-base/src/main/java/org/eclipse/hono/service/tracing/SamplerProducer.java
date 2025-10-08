@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,13 @@ package org.eclipse.hono.service.tracing;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.annotation.Nonnull;
 
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -84,7 +87,7 @@ public final class SamplerProducer {
 
 
         @Override
-        public String getString(final String name) {
+        public String getString(@Nonnull final String name) {
             switch (name) {
             case PROPERTY_OTEL_SERVICE_NAME:
                 return otelServiceName;
@@ -96,7 +99,7 @@ public final class SamplerProducer {
         }
 
         @Override
-        public Map<String, String> getMap(final String name) {
+        public Map<String, String> getMap(@Nonnull final String name) {
             switch (name) {
             case PROPERTY_OTEL_TRACES_SAMPLER_ARG:
                 return Optional.ofNullable(otelTracesSamplerArg)
@@ -118,32 +121,32 @@ public final class SamplerProducer {
         }
 
         @Override
-        public Long getLong(final String name) {
+        public Long getLong(@Nonnull final String name) {
             return null;
         }
 
         @Override
-        public List<String> getList(final String name) {
+        public List<String> getList(@Nonnull final String name) {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public Integer getInt(@Nonnull final String name) {
             return null;
         }
 
         @Override
-        public Integer getInt(final String name) {
+        public Duration getDuration(@Nonnull final String name) {
             return null;
         }
 
         @Override
-        public Duration getDuration(final String name) {
+        public Double getDouble(@Nonnull final String name) {
             return null;
         }
 
         @Override
-        public Double getDouble(final String name) {
-            return null;
-        }
-
-        @Override
-        public Boolean getBoolean(final String name) {
+        public Boolean getBoolean(@Nonnull final String name) {
             return null;
         }
     }

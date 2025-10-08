@@ -122,6 +122,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String deviceId = "4711";
         final String subject = "subject";
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
         when(tenantClient.get(eq("myTenant"), any())).thenReturn(
@@ -134,8 +135,8 @@ public class KafkaBasedInternalCommandConsumerTest {
 
         verify(commandHandler, never()).apply(any(KafkaBasedCommandContext.class));
         verify(commandResponseSender).sendCommandResponse(
-                argThat(t -> t.getTenantId().equals("myTenant")),
-                argThat(r -> r.getDeviceId().equals("4711")),
+                argThat(t -> "myTenant".equals(t.getTenantId())),
+                argThat(r -> "4711".equals(r.getDeviceId())),
                 argThat(cr -> cr.getStatus() == tenantServiceErrorCode),
                 any());
     }
@@ -156,6 +157,7 @@ public class KafkaBasedInternalCommandConsumerTest {
                 KafkaRecordHelper.createOriginalOffsetHeader(0L));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -183,6 +185,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 0L));
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -212,6 +215,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 5L));
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
@@ -245,6 +249,7 @@ public class KafkaBasedInternalCommandConsumerTest {
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, gatewayId, null, commandHandler, context);
@@ -274,6 +279,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 0L));
 
+        @SuppressWarnings("unchecked")
         final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, gatewayId, commandHandler, context);

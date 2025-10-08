@@ -14,6 +14,8 @@ package org.eclipse.hono.service.tracing;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.context.Context;
@@ -44,8 +46,13 @@ public class RateLimitingSampler implements Sampler {
     }
 
     @Override
-    public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName,
-            final SpanKind spanKind, final Attributes attributes, final List<LinkData> parentLinks) {
+    public SamplingResult shouldSample(
+            @Nonnull final Context parentContext,
+            @Nonnull final String traceId,
+            @Nonnull final String spanName,
+            @Nonnull final SpanKind spanKind,
+            @Nonnull final Attributes attributes,
+            @Nonnull final List<LinkData> parentLinks) {
 
         // try to spend one credit (representing one tracing span) of the rate-limiter's current balance
         if (!rateLimiter.trySpend(1.0)) {
