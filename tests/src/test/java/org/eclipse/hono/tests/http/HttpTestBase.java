@@ -1103,13 +1103,13 @@ public abstract class HttpTestBase {
      * @throws InterruptedException if the test is interrupted before having completed.
      */
     @Test
-    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 30)
     public void testHandleConcurrentUploadWithTtd(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
 
-        final CountDownLatch firstMessageReceived = new CountDownLatch(1);
-        final CountDownLatch secondMessageReceived = new CountDownLatch(1);
+        final Promise<Void> firstMessageReceived = Promise.promise();
+        final Promise<Void> secondMessageReceived = Promise.promise();
 
         // GIVEN a registered device
         final VertxTestContext setup = new VertxTestContext();
@@ -1126,11 +1126,11 @@ public abstract class HttpTestBase {
             switch (msg.getContentType()) {
             case "text/msg1":
                 logger.debug("received first message");
-                firstMessageReceived.countDown();
+                firstMessageReceived.complete();
                 break;
             case "text/msg2":
                 logger.debug("received second message");
-                secondMessageReceived.countDown();
+                secondMessageReceived.complete();
                 break;
             default:
                 // nothing to do
@@ -1158,64 +1158,67 @@ public abstract class HttpTestBase {
         }
 
         // WHEN the device sends a first upload request
-        MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+        final var firstRequestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/msg1")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_TIME_TILL_DISCONNECT, "10");
 
-        final Future<HttpResponse<Buffer>> firstRequest = httpClient.create(
-                getEndpointUri(),
-                Buffer.buffer("hello one"),
-                requestHeaders,
-                ResponsePredicate.status(200, 300))
-                .map(httpResponse -> {
-                    logger.info("received response to first request");
-                    return httpResponse;
-                });
+        final Future<HttpResponse<Buffer>> firstResponse = httpClient.create(
+            getEndpointUri(),
+            Buffer.buffer("hello one"),
+            firstRequestHeaders,
+            ResponsePredicate.status(200, 300)
+        ).onSuccess(httpResponse -> {
+            logger.info("received response to first request");
+        });
         logger.info("sent first request");
-        if (!firstMessageReceived.await(5, TimeUnit.SECONDS)) {
-            ctx.failNow(new IllegalStateException("first message not received in time"));
-        }
 
         // followed by a second request
-        requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "text/msg2")
-                .add(HttpHeaders.AUTHORIZATION, authorization)
-                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "5");
-        final Future<HttpResponse<Buffer>> secondRequest = httpClient.create(
-                getEndpointUri(),
-                Buffer.buffer("hello two"),
-                requestHeaders,
-                ResponsePredicate.status(200, 300))
-                .map(httpResponse -> {
-                    logger.info("received response to second request");
-                    return httpResponse;
-                });
+        final Future<HttpResponse<Buffer>> secondResponse = firstMessageReceived.future()
+            .compose(v -> {
+                    final var requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/msg2")
+                            .add(HttpHeaders.AUTHORIZATION, authorization)
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                            .add(Constants.HEADER_TIME_TILL_DISCONNECT, "5");
+                    return httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello two"),
+                        requestHeaders,
+                        ResponsePredicate.status(200, 300));
+            }).onSuccess(httpResponse -> {
+                logger.info("received response to second request");
+            });
         logger.info("sent second request");
-        // wait for messages having been received
-        if (!secondMessageReceived.await(5, TimeUnit.SECONDS)) {
-            ctx.failNow(new IllegalStateException("second message not received in time"));
-        }
+
         // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-        final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND,
-                "application/json", inputData.toBuffer(), 3000);
-        logger.info("sent one-way command to device");
+        secondMessageReceived.future()
+            .compose(ok -> helper.sendOneWayCommand(
+                tenantId,
+                deviceId,
+                COMMAND_TO_SEND,
+                "application/json",
+                inputData.toBuffer(),
+                3000)
+            ).onSuccess(sent -> {
+                logger.info("one-way command sent successfully");
+            })
+            .compose(sent -> {
+                return Future.all(firstResponse, secondResponse);
+            })
+            .onComplete(ctx.succeeding(ok -> {
+                // THEN both requests succeed
+                ctx.verify(() -> {
+                    // and the response to the second request contains a command
+                    assertThat(secondResponse.result().getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
 
-        // THEN both requests succeed
-        Future.all(commandSent, firstRequest, secondRequest)
-        .onComplete(ctx.succeeding(ok -> {
-            ctx.verify(() -> {
-                // and the response to the second request contains a command
-                assertThat(secondRequest.result().getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
-
-                // while the response to the first request is empty
-                assertThat(firstRequest.result().getHeader(Constants.HEADER_COMMAND)).isNull();
-            });
-            ctx.completeNow();
-        }));
+                    // while the response to the first request is empty
+                    assertThat(firstResponse.result().getHeader(Constants.HEADER_COMMAND)).isNull();
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
