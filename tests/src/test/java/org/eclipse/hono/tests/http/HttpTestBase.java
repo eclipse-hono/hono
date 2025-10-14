@@ -1222,64 +1222,56 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Verifies that the HTTP adapter returns empty responses when sending consecutive requests
-     * for uploading telemetry data or events with a TTD but no command is pending for the device.
+     * Verifies that the HTTP adapter returns empty responses when sending a request
+     * for uploading telemetry data or an event with a TTD but no command is pending for the device.
      *
      * @param ctx The test context.
-     * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final VertxTestContext ctx) throws InterruptedException {
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testUploadMessagesWithTtdThatDoNotReplyWithCommand(final VertxTestContext ctx) {
 
-        final VertxTestContext setup = new VertxTestContext();
-        final Tenant tenant = new Tenant();
-        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.AUTHORIZATION, authorization)
-                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
+        final var downstreamMessageReceived = ctx.checkpoint();
+        final var emptyResponseReceived = ctx.checkpoint();
+        final int ttdSeconds = 4;
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.succeedingThenComplete());
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-            return;
-        }
-
-        testUploadMessages(ctx, tenantId,
-                msg -> {
-                    // do NOT send a command, but let the HTTP adapter's timer expire
-                    logger.trace("received message");
-                    return msg.getTimeUntilDisconnectNotification()
-                    .map(notification -> {
+        helper.registry.addDeviceForTenant(tenantId, 
+                new Tenant(), deviceId, PWD)
+            .compose(ok -> createConsumer(tenantId, msg -> {
+                logger.trace("received message");
+                msg.getTimeUntilDisconnectNotification()
+                    .ifPresent(notification -> {
                         ctx.verify(() -> {
-                            assertThat(notification.getTtd()).isEqualTo(2);
+                            assertThat(notification.getTtd()).isEqualTo(ttdSeconds);
                             assertThat(notification.getTenantId()).isEqualTo(tenantId);
                             assertThat(notification.getDeviceId()).isEqualTo(deviceId);
                         });
-                        return Future.<Void>succeededFuture();
-                    })
-                    .orElseGet(() -> Future.<Void>succeededFuture());
-                },
-                count -> {
-                    return httpClient.create(
-                            getEndpointUri(),
-                            Buffer.buffer("hello " + count),
-                            requestHeaders,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                            .map(responseHeaders -> {
-                                ctx.verify(() -> {
-                                    // assert that the response does not contain a command nor a request ID nor a payload
-                                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND)).isNull();
-                                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
-                                    assertThat(responseHeaders.getHeader(HttpHeaders.CONTENT_LENGTH.toString())).isEqualTo("0");
-                                });
-                                return responseHeaders;
-                            });
-                },
-                5,
-                null);
+                        // do NOT send a command, but let the HTTP adapter's timer expire
+                        downstreamMessageReceived.flag();
+                    });
+            }))
+            .compose(ok -> {
+                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                        .add(HttpHeaders.AUTHORIZATION, authorization)
+                        .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                        .add(Constants.HEADER_TIME_TILL_DISCONNECT, String.valueOf(ttdSeconds));
+                return httpClient.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+            })
+            .onComplete(ctx.succeeding(responseHeaders -> {
+                logger.info("received response to upload request");
+                ctx.verify(() -> {
+                    // assert that the response does not contain a command nor a request ID nor a payload
+                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND)).isNull();
+                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
+                    assertThat(responseHeaders.getHeader(HttpHeaders.CONTENT_LENGTH.toString())).isEqualTo("0");
+                });
+                emptyResponseReceived.flag();
+            }));
     }
 
     /**
@@ -1300,8 +1292,10 @@ public abstract class HttpTestBase {
         testUploadMessagesWithTtdThatReplyWithCommand(endpointConfig, tenant, ctx);
     }
 
-    private void testUploadMessagesWithTtdThatReplyWithCommand(final HttpCommandEndpointConfiguration endpointConfig,
-            final Tenant tenant, final VertxTestContext ctx) throws InterruptedException {
+    private void testUploadMessagesWithTtdThatReplyWithCommand(
+            final HttpCommandEndpointConfiguration endpointConfig,
+            final Tenant tenant,
+            final VertxTestContext ctx) throws InterruptedException {
         final VertxTestContext setup = new VertxTestContext();
 
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
@@ -1337,7 +1331,11 @@ public abstract class HttpTestBase {
 
                     return msg.getTimeUntilDisconnectNotification()
                             .map(notification -> {
-                                logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                                if (logger.isTraceEnabled()) {
+                                    logger.trace(
+                                        "received piggy backed message [ttd: {}]: {}",
+                                        notification.getTtd(), msg);
+                                }
                                 ctx.verify(() -> {
                                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
                                     assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);

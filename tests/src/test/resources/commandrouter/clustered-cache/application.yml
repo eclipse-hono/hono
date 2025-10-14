@@ -20,8 +20,13 @@ hono:
         authUsername: "${hono.infinispan.username}"
         authPassword: "${hono.infinispan.password}"
         saslMechanism: "SCRAM-SHA-512"
-        socketTimeout: 5000
-        connectTimeout: 5000
+        socketTimeout: 3000
+        connectTimeout: 3000
+        connectionPool:
+          maxActive: 30
+          minIdle: 5
+          maxPendingRequests: 3
+          exhaustedAction: EXCEPTION
   messaging:
     name: 'Hono Command Router'
     host: "${hono.amqp-network.host}"
