@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        device-registry-name: [file,jdbc,mongodb-5.0,mongodb-6.0,mongodb-7.0]
+        device-registry-name: [file,jdbc,mongodb-6.0,mongodb-7.0]
         include:
         # Use Quarkus JVM images: file registry, AMQP messaging, Command Router with embedded cache
         - device-registry-name: file
@@ -57,12 +57,7 @@ jobs:
           commandrouting-cache: embedded
           messaging-type: kafka
           mongodb-image-name: mongo:6.0
-        # Use Quarkus JVM images: mongodb registry Kafka messaging, Command Router with data grid
-        - device-registry-name: mongodb-5.0
-          device-registry: mongodb
-          commandrouting-cache: server
-          messaging-type: kafka
-          mongodb-image-name: mongo:5.0
+        # Use Quarkus JVM images: mongodb registry, Kafka messaging, Command Router with data grid
         - device-registry-name: mongodb-6.0
           device-registry: mongodb
           commandrouting-cache: server
