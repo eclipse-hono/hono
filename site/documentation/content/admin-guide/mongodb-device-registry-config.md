@@ -18,14 +18,17 @@ either directly from the command line or by means of starting the corresponding
 
 The registry is compatible and known to work with the following MongoDB versions:
 
-* [MongoDB 5.0](https://www.mongodb.com/docs/v5.0/release-notes/5.0/)
 * [MongoDB 6.0](https://www.mongodb.com/docs/v6.0/release-notes/6.0/)
 * [MongoDB 7.0](https://www.mongodb.com/docs/v7.0/release-notes/7.0/)
 
+{{% notice info %}}
+Support for Mongo DB 5.0 has been removed from Hono after it had reached its [end of life](https://www.mongodb.com/support-policy/lifecycles) in Oct 2024. 
+{{% /notice %}}
+
 {{% notice warning %}}
 According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
-for Mongo DB 5.0 will end Oct 2024. Consequently, support for Mongo 5.0 in Hono has been deprecated and will be removed
-in a future version altogether. Users are encouraged to migrate to Mongo DB 6.0 or later.
+for Mongo DB 6.0 has ended Jul 2025. Consequently, support for Mongo 6.0 in Hono has been deprecated and will be removed
+in a future version altogether. Users are encouraged to migrate to Mongo DB 7.0. Note that Hono currently does not support Mongo DB 8.0 because of the driver version being employed by the underlying Quarkus framework.
 {{% /notice %}}
 
 ## Service Configuration
