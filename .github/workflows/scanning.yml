@@ -46,10 +46,10 @@ jobs:
       - name: Set up Maven
         uses: stCarolas/setup-maven@v5
         with:
-          maven-version: 3.8.8
+          maven-version: 3.9.11
 
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "17"
@@ -57,11 +57,11 @@ jobs:
 
       - name: Create Container Image
         run: |
-          mvn clean install -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus -pl ":${{ matrix.artifactId }}"
+          mvn -B -e -DCI=$CI -DskipTests -Pbuild-docker-image,metrics-prometheus --projects ":${{ matrix.artifactId }}" --also-make clean install
           docker image ls --format "{{.Repository}}:{{.Tag}}" "eclipse/${{ matrix.artifactId }}"
 
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.3
+        uses: aquasecurity/setup-trivy@v0.2.4
 
       - name: Scan Docker images
         run: |
