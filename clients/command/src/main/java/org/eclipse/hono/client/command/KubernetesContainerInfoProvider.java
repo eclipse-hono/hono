@@ -124,9 +124,7 @@ public class KubernetesContainerInfoProvider {
                     "getContainerId result future will be completed with the result of an already ongoing invocation");
             return containerIdPromise.future();
         }
-        containerIdPromise.handle(context.executeBlocking(() -> {
-            return getContainerIdViaK8sApi();
-        }));
+        context.executeBlocking(this::getContainerIdViaK8sApi, containerIdPromise);
         containerIdPromise.future().onComplete(ar -> containerIdPromiseRef.set(null));
         return containerIdPromise.future();
     }
