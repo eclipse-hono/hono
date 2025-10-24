@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
 package org.eclipse.hono.service.base.jdbc.store.device;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,16 +49,19 @@ import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 
+/**
+ * Tests the handling of device data in the database.
+ */
 class TableAdapterStoreTest {
 
-    private Span span = mock(Span.class);
-    private SpanContext spanContext = mock(SpanContext.class);
-    private io.vertx.sqlclient.SqlConnection sqlConnection = mock(io.vertx.sqlclient.SqlConnection.class);
-    private RowSet<Row> rowSet = mock(RowSet.class);
-    private Row row = mock(Row.class);
-    private Tracer.SpanBuilder spanBuilder = mock(Tracer.SpanBuilder.class);
-    private Tracer tracer = mock(Tracer.class);
-    private JDBCPool client = mock(JDBCPool.class);
+    private final Span span = mock(Span.class);
+    private final SpanContext spanContext = mock(SpanContext.class);
+    private final io.vertx.sqlclient.SqlConnection sqlConnection = mock(io.vertx.sqlclient.SqlConnection.class);
+    private final RowSet<Row> rowSet = mock(RowSet.class);
+    private final Row row = mock(Row.class);
+    private final Tracer.SpanBuilder spanBuilder = mock(Tracer.SpanBuilder.class);
+    private final Tracer tracer = mock(Tracer.class);
+    private final JDBCPool client = mock(JDBCPool.class);
 
     private TableAdapterStore store;
     private static final String TENANT_ID = "test-tenant";
@@ -67,7 +83,7 @@ class TableAdapterStoreTest {
      * @param deviceJson The JSON string of the device data (can be null)
      * @param version The version string
      */
-    private void mockSingleRow(String deviceJson, String version) {
+    private void mockSingleRow(final String deviceJson, final String version) {
         // Setup row data
         when(row.size()).thenReturn(2);
         when(row.getValue(0)).thenReturn(deviceJson);
