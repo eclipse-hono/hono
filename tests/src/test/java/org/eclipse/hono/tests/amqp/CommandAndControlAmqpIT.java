@@ -92,10 +92,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";
     private static final int COMMANDS_TO_SEND = 60;
     private static final Duration TTL_COMMAND_RESPONSE = Duration.ofSeconds(20L);
+    private static final String PASSWORD = "secret";
 
     private String tenantId;
     private String deviceId;
-    private final String password = "secret";
 
     static Stream<AmqpCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
@@ -162,7 +162,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint notificationReceived = setup.checkpoint();
 
-        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, deviceId, PASSWORD, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
@@ -287,7 +287,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         assertThat(msg.getAddress())
                                 .isEqualTo(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
                     });
-                    log.debug("received command [name: {}]", msg.getSubject());
+                    log.debug(
+                        "received command [name: {}]: {}",
+                        msg.getSubject(), AmqpUtils.getPayload(msg));
                     ProtonHelper.accepted(delivery, true);
                     cmdReceiver.flow(1);
                     commandsReceived.flag();
@@ -472,17 +474,17 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
-            final int currentMessage = commandsSent.incrementAndGet();
+            final int currentMessageNo = commandsSent.incrementAndGet();
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                final Buffer payload = Buffer.buffer("value: " + currentMessage);
+                final Buffer payload = Buffer.buffer("message#: " + currentMessageNo);
                 commandSender.apply(payload).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        log.debug("error sending command {}", currentMessage, sendAttempt.cause());
+                        log.info("error sending command {}", currentMessageNo, sendAttempt.cause());
                     } else {
                         lastReceivedTimestamp.set(System.currentTimeMillis());
                         commandsSucceeded.countDown();
-                        log.debug("sent command no {}", currentMessage);
+                        log.debug("sent command no {}", currentMessageNo);
                         if (commandsSucceeded.getCount() % 20 == 0) {
                             log.info("commands succeeded: {}", totalNoOfCommandsToSend - commandsSucceeded.getCount());
                         }
@@ -492,8 +494,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             });
 
             commandSent.await();
-            if (currentMessage % 20 == 0) {
-                log.info("commands sent: " + currentMessage);
+            if (currentMessageNo % 20 == 0) {
+                log.info("commands sent: " + currentMessageNo);
             }
         }
 
@@ -538,7 +540,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint preconditions = setup.checkpoint(2);
 
-        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+        connectToAdapter(tenantId, deviceId, PASSWORD, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType())
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
@@ -645,7 +647,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(
                 tenantId,
                 deviceId,
-                password,
+                PASSWORD,
                 () -> createEventConsumer(tenantId, msg -> {
                     // expect empty notification with TTD -1
                     setup.verify(() -> assertThat(msg.getContentType())
@@ -740,7 +742,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(
                 tenantId,
                 deviceId,
-                password,
+                PASSWORD,
                 () -> createEventConsumer(tenantId, msg -> {
                     // expect empty notification with TTD -1
                     setup.verify(() -> assertThat(msg.getContentType())
@@ -840,8 +842,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        connectToAdapter(tenantId, otherDeviceId, password, (Supplier<Future<MessageConsumer>>) null)
-                .compose(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
+        connectToAdapter(tenantId, otherDeviceId, PASSWORD, (Supplier<Future<MessageConsumer>>) null)
+                .compose(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, PASSWORD))
                 // subscribe using otherDeviceId so that the Command Router creates the tenant-specific consumer
                 .compose(con -> subscribeToCommands(endpointConfig, tenantId, otherDeviceId)
                         .onSuccess(recv -> recv.handler((delivery, msg) -> ctx.failNow(
@@ -1129,9 +1131,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final String otherDeviceId = helper.getRandomDeviceId(tenantId);
         helper.registry
-                .addDeviceToTenant(tenantId, deviceId, password)
-                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, otherDeviceId, password))
-                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .addDeviceToTenant(tenantId, deviceId, PASSWORD)
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, otherDeviceId, PASSWORD))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), PASSWORD))
                 .compose(conAck -> {
                     final Promise<Void> result = Promise.promise();
                     context.runOnContext(go -> {

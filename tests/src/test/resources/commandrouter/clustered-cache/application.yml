@@ -23,9 +23,9 @@ hono:
         socketTimeout: 3000
         connectTimeout: 3000
         connectionPool:
-          maxActive: 30
-          minIdle: 5
-          maxPendingRequests: 3
+          maxActive: 100
+          minIdle: 10
+          maxPendingRequests: 5
           exhaustedAction: EXCEPTION
   messaging:
     name: 'Hono Command Router'
