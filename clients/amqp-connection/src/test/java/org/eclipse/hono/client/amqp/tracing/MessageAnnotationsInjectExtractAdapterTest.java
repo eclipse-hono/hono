@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,13 +39,16 @@ import io.vertx.proton.ProtonHelper;
  */
 public class MessageAnnotationsInjectExtractAdapterTest {
 
-    final String propertiesMapName = "map";
+    static final String propertiesMapName = "map";
 
     /**
      * Verifies that the same entries injected via the {@code MessageAnnotationsInjectAdapter} are extracted via the
      * {@code MessageAnnotationsExtractAdapter}.
-     * Also verifies that there are no errors during encoding/decoding of the message with the injected entries.
+     * <p>
+     * Also verifies that there are no errors during encoding/decoding of the
+     * message with the injected entries.
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void testInjectAndExtract() {
         final Map<String, String> testEntries = new HashMap<>();
@@ -54,7 +57,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
 
         final Message message = ProtonHelper.message();
         // inject the properties
-        final MessageAnnotationsInjectAdapter injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
+        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
         testEntries.forEach(injectAdapter::put);
 
         // encode the message
@@ -65,17 +68,16 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         final Message decodedMessage = ProtonHelper.message();
         decodedMessage.decode(buffer.toReadableBuffer());
         // extract the properties from the decoded message
-        final MessageAnnotationsExtractAdapter extractAdapter = new MessageAnnotationsExtractAdapter(decodedMessage, propertiesMapName);
+        final var extractAdapter = new MessageAnnotationsExtractAdapter(decodedMessage, propertiesMapName);
         extractAdapter.iterator().forEachRemaining(extractedEntry -> {
             assertThat(extractedEntry.getValue()).isEqualTo(testEntries.get(extractedEntry.getKey()));
         });
     }
 
-
     /**
-     * Verifies that the OpenTelemetry Tracer shim can successfully use the adapter to inject and extract
-     * a SpanContext.
+     * Verifies that the OpenTelemetry Tracer shim can successfully use the adapter to inject and extract a SpanContext.
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void testTracerShimCanUseAdapter() {
         final OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
@@ -85,10 +87,11 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         final Span span = tracer.buildSpan("do").start();
 
         final Message message = ProtonHelper.message();
-        final MessageAnnotationsInjectAdapter injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
+        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
         tracer.inject(span.context(), Format.Builtin.TEXT_MAP, injectAdapter);
 
-        final SpanContext context = tracer.extract(Format.Builtin.TEXT_MAP, new MessageAnnotationsExtractAdapter(message, propertiesMapName));
+        final SpanContext context = tracer.extract(Format.Builtin.TEXT_MAP,
+                new MessageAnnotationsExtractAdapter(message, propertiesMapName));
         assertThat(context.toSpanId()).isEqualTo(span.context().toSpanId());
     }
 }

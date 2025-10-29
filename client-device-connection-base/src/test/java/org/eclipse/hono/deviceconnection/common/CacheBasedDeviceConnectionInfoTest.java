@@ -41,10 +41,10 @@ import java.util.stream.Stream;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.deviceconnection.DeviceConnectionConstants;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

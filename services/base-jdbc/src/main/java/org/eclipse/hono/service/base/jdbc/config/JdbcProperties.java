@@ -31,6 +31,7 @@ import io.agroal.api.security.SimplePassword;
 import io.agroal.pool.DataSource;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.jdbc.spi.DataSourceProvider;
 import io.vertx.jdbcclient.JDBCPool;
 
 /**
@@ -214,11 +215,12 @@ public class JdbcProperties {
                                 .principal(username)
                                 .credential(password)));
 
-        return JDBCPool.pool(vertx, new DataSource(configuration.get()),
-                new JsonObject()
-                        .put("jdbcUrl", dataSourceProperties.getUrl())
-                        .put("username", Optional.ofNullable(dataSourceProperties.getUsername()).orElse(""))
-                        .put("database", "")
-                        .put("maxPoolSize", dataSourceProperties.getMaximumPoolSize()));
+        return JDBCPool.pool(vertx, DataSourceProvider.create(
+            new DataSource(configuration.get()),
+            new JsonObject()
+                    .put("jdbcUrl", dataSourceProperties.getUrl())
+                    .put("username", Optional.ofNullable(dataSourceProperties.getUsername()).orElse(""))
+                    .put("database", "")
+                    .put("maxPoolSize", dataSourceProperties.getMaximumPoolSize())));
     }
 }
