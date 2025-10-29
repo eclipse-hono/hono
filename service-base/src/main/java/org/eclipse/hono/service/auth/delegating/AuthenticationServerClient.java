@@ -66,9 +66,6 @@ public final class AuthenticationServerClient {
 
     /**
      * Verifies a Subject DN with a remote authentication server using SASL EXTERNAL.
-     * <p>
-     * This method currently always fails the handler because there is no way (yet) in vertx-proton
-     * to perform a SASL EXTERNAL exchange including an authorization id.
      *
      * @param authzid The identity to act as.
      * @param subjectDn The Subject DN.
@@ -76,10 +73,23 @@ public final class AuthenticationServerClient {
      *                                    the result contains a JWT with the authenticated user's claims.
      */
     public Future<HonoUser> verifyExternal(final String authzid, final String subjectDn) {
-        // unsupported mechanism (until we get better control over client SASL params in vertx-proton)
-        return Future.failedFuture(new ClientErrorException(
-                HttpURLConnection.HTTP_BAD_REQUEST,
-                "unsupported mechanism"));
+        final ProtonClientOptions options = new ProtonClientOptions();
+        options.setReconnectAttempts(3).setReconnectInterval(50);
+        options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_EXTERNAL);
+        options.setAuthorizationId(AuthenticationConstants.getCommonName(subjectDn));
+
+        final var connectAttempt = factory.connect(options, null, null);
+
+        return connectAttempt
+                .compose(openCon -> getToken(openCon))
+                .recover(t -> Future.failedFuture(mapConnectionFailureToServiceInvocationException(t)))
+                .onComplete(s -> {
+                    Optional.ofNullable(connectAttempt.result())
+                            .ifPresent(con -> {
+                                LOG.debug("closing connection to Authentication service");
+                                con.close();
+                            });
+                });
     }
 
     /**
