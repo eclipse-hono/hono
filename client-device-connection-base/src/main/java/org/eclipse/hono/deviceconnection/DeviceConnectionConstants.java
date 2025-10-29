@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,11 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.deviceconnection;
+
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 /**
  * Constants used for dealing with the device connection data.
- * TODO These constants should be moved elsewhere.
  */
 public final class DeviceConnectionConstants extends RequestResponseApiConstants {
 
