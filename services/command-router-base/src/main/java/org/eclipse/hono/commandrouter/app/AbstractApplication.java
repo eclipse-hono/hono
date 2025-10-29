@@ -34,7 +34,7 @@ import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProper
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
-import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
+import org.eclipse.hono.client.pubsub.PubSubQuarkusOptions;
 import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
 import org.eclipse.hono.client.pubsub.subscriber.CachingPubSubSubscriberFactory;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -133,8 +133,8 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
     private PubSubConfigProperties pubSubConfigProperties;
 
     @Inject
-    void setPubSubClientOptions(final PubSubPublisherOptions options) {
-        this.pubSubConfigProperties = new PubSubConfigProperties(options);
+    void setPubSubClientOptions(final PubSubQuarkusOptions pubSubQuarkusOptions) {
+        this.pubSubConfigProperties = new PubSubConfigProperties(pubSubQuarkusOptions);
     }
 
     @Inject
@@ -305,8 +305,8 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
                 amqpServerDeploymentTracker,
                 notificationReceiverTracker,
                 topicCleanUpServiceDeploymentTracker)
-            .map(deploymentResult)
-            .onComplete(deploymentCheck);
+                .map(deploymentResult)
+                .onComplete(deploymentCheck);
     }
 
     private CommandRouterAmqpServer amqpServer() {
@@ -411,17 +411,17 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
                     SendMessageSampler.Factory.noop()));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            PubSubMessageHelper.getCredentialsProvider()
+            PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties)
                     .ifPresentOrElse(provider -> {
                         LOG.debug("Configuring Pub/Sub based command consumer factory");
 
                         final var publisherFactory = new CachingPubSubPublisherFactory(
                                 vertx,
-                                pubSubConfigProperties.getProjectId(),
+                                pubSubConfigProperties,
                                 provider);
                         final var subscriberFactory = new CachingPubSubSubscriberFactory(
                                 vertx,
-                                pubSubConfigProperties.getProjectId(),
+                                pubSubConfigProperties,
                                 provider);
                         commandConsumerFactoryProvider.setClient(new PubSubBasedCommandConsumerFactoryImpl(
                                 vertx,
@@ -460,11 +460,11 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
                     false));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            PubSubMessageHelper.getCredentialsProvider()
+            PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties)
                     .ifPresentOrElse(provider -> {
                         final var pubSubFactory = new CachingPubSubPublisherFactory(
                                 vertx,
-                                pubSubConfigProperties.getProjectId(),
+                                pubSubConfigProperties,
                                 provider);
 
                         eventSenderProvider.setClient(new PubSubBasedDownstreamSender(

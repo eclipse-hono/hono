@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -263,12 +263,12 @@ public abstract class AbstractAmqpServerFactory {
             result.setClient(new KafkaBasedEventSender(vertx, factory, eventKafkaProducerConfig, true, tracer));
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-            PubSubMessageHelper.getCredentialsProvider()
+            PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties)
                     .ifPresent(provider -> {
                         final var factory = new CachingPubSubPublisherFactory(
-                                        vertx,
-                                        pubSubConfigProperties.getProjectId(),
-                                        provider);
+                                vertx,
+                                pubSubConfigProperties,
+                                provider);
                         result.setClient(new PubSubBasedDownstreamSender(
                                 vertx,
                                 factory,

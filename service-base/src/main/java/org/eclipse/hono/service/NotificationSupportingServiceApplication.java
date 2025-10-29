@@ -46,7 +46,8 @@ public abstract class NotificationSupportingServiceApplication extends AbstractS
      * @param amqpNotificationConfig The AMQP 1.0 connection properties.
      * @param pubSubConfigProperties The Pub/Sub connection properties.
      * @return the receiver.
-     * @throws IllegalStateException if both AMQP and Kafka based messaging have been disabled explicitly.
+     * @throws IllegalStateException if both AMQP and Kafka based messaging have been disabled and pubsub is not set up
+     * properly.
      */
     protected NotificationReceiver notificationReceiver(
             final NotificationKafkaConsumerConfigProperties kafkaNotificationConfig,
@@ -61,13 +62,13 @@ public abstract class NotificationSupportingServiceApplication extends AbstractS
             notificationReceiver = new ProtonBasedNotificationReceiver(
                     HonoConnection.newConnection(vertx, notificationConfig, tracer));
         } else {
-            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties);
             if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()
                     && credentialsProvider.isPresent()) {
                 final var factory = new CachingPubSubSubscriberFactory(
                         vertx,
-                        pubSubConfigProperties.getProjectId(),
-                        credentialsProvider.get());
+                        pubSubConfigProperties, credentialsProvider.get()
+                );
                 notificationReceiver = new PubSubBasedNotificationReceiver(factory);
             } else {
                 throw new IllegalStateException("at least one of Kafka, AMQP or Pub/Sub messaging must be configured");

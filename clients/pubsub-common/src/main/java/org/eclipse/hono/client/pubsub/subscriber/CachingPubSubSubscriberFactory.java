@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 
 import com.google.api.gax.core.CredentialsProvider;
@@ -35,25 +36,25 @@ public class CachingPubSubSubscriberFactory implements PubSubSubscriberFactory {
 
     private final Vertx vertx;
     private final Map<String, PubSubSubscriberClient> activeSubscribers = new ConcurrentHashMap<>();
-    private final String projectId;
+    private final PubSubConfigProperties pubSubConfigProperties;
     private final CredentialsProvider credentialsProvider;
     private Supplier<PubSubSubscriberClient> clientSupplier;
 
     /**
      * Creates a new factory for {@link PubSubSubscriberClient} instances.
      *
-     * @param vertx The Vert.x instance that this factory runs on.
-     * @param projectId The identifier of the Google Cloud Project to connect to.
-     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
+     * @param vertx                  The Vert.x instance that this factory runs on.
+     * @param pubSubConfigProperties The Pub/Sub configuration properties.
+     * @param credentialsProvider    The provider for credentials to use for authenticating to the Pub/Sub service.
      * @throws NullPointerException If any of the parameters is {@code null}.
      */
     public CachingPubSubSubscriberFactory(
             final Vertx vertx,
-            final String projectId,
-            final CredentialsProvider credentialsProvider) {
+            final PubSubConfigProperties pubSubConfigProperties, final CredentialsProvider credentialsProvider) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.projectId = Objects.requireNonNull(projectId);
+        this.pubSubConfigProperties = Objects.requireNonNull(pubSubConfigProperties);
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
+        Objects.requireNonNull(pubSubConfigProperties.getProjectId());
     }
 
     /**
@@ -99,7 +100,7 @@ public class CachingPubSubSubscriberFactory implements PubSubSubscriberFactory {
                                                           final MessageReceiver receiver) {
         return Optional.ofNullable(clientSupplier)
                 .map(Supplier::get)
-                .orElseGet(() -> new PubSubSubscriberClientImpl(vertx, projectId, subscriptionId, receiver, credentialsProvider));
+                .orElseGet(() -> new PubSubSubscriberClientImpl(vertx, pubSubConfigProperties, subscriptionId, receiver, credentialsProvider));
     }
 
     private Future<Void> removeSubscriber(final String subscriptionId) {
