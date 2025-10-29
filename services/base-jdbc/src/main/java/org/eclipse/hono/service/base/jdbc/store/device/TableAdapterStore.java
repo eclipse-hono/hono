@@ -103,27 +103,25 @@ public class TableAdapterStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        return this.client.getConnection().compose(connection -> {
-            return readDevice(connection, key, span)
-
-                    .<Optional<DeviceReadResult>>flatMap(r -> {
-                        final var entries = r.getRows(true);
-                        switch (entries.size()) {
-                            case 0:
-                                return Future.succeededFuture(Optional.empty());
-                            case 1:
-                                final var entry = entries.get(0);
-                                final var device = Json.decodeValue(entry.getString("data"), Device.class);
-                                final var version = Optional.ofNullable(entry.getString("version"));
-                                return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
-                            default:
+        return this.client.getConnection().compose(connection -> readDevice(connection, key, span)
+                .<Optional<DeviceReadResult>> flatMap(r -> {
+                    final var entries = r.getRows(true);
+                    switch (entries.size()) {
+                    case 0:
+                        return Future.succeededFuture(Optional.empty());
+                    case 1:
+                        final var entry = entries.get(0);
+                        final var deviceJson = entry.getString("data") != null ? entry.getString("data") : "{}";
+                        final var device = Json.decodeValue(deviceJson, Device.class);
+                        final var version = Optional.ofNullable(entry.getString("version"));
+                        return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));
+                    default:
                                 return Future.failedFuture(new IllegalStateException("Found multiple entries for a single device"));
-                        }
-                    })
+                    }
+                })
 
-                    .onComplete(x -> connection.close())
-                    .onComplete(x -> span.finish());
-        });
+                .onComplete(x -> connection.close())
+                .onComplete(x -> span.finish()));
 
     }
 
