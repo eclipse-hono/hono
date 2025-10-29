@@ -44,7 +44,7 @@
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <gpg.skip>true</gpg.skip>
-    <quarkus.package.type>uber-jar</quarkus.package.type>
+    <quarkus.package.jar.type>uber-jar</quarkus.package.jar.type>
     <quarkus.package.runner-suffix>-exec</quarkus.package.runner-suffix>
   </properties>
 
@@ -173,15 +173,13 @@
         This profile can be used to build a native executable from the hono-cli jar file.
       -->
       <properties>
-        <quarkus.package.type>native</quarkus.package.type>
+        <quarkus.native.enabled>true</quarkus.native.enabled>
         <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
         <!--
           By default, use container based build which does not require local installation of the GraalVM SDK
           and native-image compiler.
         -->
         <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
-        <!--  include all JSSE related classes -->
-        <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
         <quarkus.native.resources.includes>hono-cli-build.properties</quarkus.native.resources.includes>
         <quarkus.native.additional-build-args>--initialize-at-run-time=org.jline.nativ</quarkus.native.additional-build-args>
       </properties>

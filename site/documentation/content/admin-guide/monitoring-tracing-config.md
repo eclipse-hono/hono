@@ -131,7 +131,7 @@ Hono supports configuration of the trace exporter by means of the following conf
 
 | OS Environment Variable<br>Java System Property | Type      | Default Value | Description  |
 | :---------------------------------------------- | :-------- | :------------ | :------------|
-| `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | `-` | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
+| `QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.otel.exporter.otlp.endpoint` | *string* | `-` | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
 
 Please refer to the
 [Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry#quarkus-opentelemetry-exporter-otlp_configuration)
