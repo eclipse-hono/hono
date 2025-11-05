@@ -26,7 +26,7 @@
     </security>
     <local-cache name="command-router" simple-cache="true">
       <encoding media-type="application/x-protostream" />
-      <memory max-count="200" storage="OFF_HEAP" when-full="REMOVE"></memory>
+      <memory max-size="20MB" storage="OFF_HEAP" when-full="REMOVE"></memory>
       <security>
         <authorization enabled="true" />
       </security>

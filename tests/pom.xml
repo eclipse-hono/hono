@@ -897,8 +897,8 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <memorySwap>256000000</memorySwap>
-                    <memory>256000000</memory>
+                    <memorySwap>320000000</memorySwap>
+                    <memory>320000000</memory>
                     <log>
                       <prefix>INFINISPAN</prefix>
                       <color>${log.color.hono-services}</color>
