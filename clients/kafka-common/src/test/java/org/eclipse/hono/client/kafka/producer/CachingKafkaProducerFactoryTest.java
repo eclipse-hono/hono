@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -61,9 +60,7 @@ public class CachingKafkaProducerFactoryTest {
         final ContextInternal context = VertxMockSupport.mockContextInternal(vertxMock);
         final PromiseInternal<Void> promiseInternal = VertxMockSupport.promiseInternal();
         when(promiseInternal.future()).thenReturn(Future.succeededFuture());
-        doAnswer(invocation -> {
-            return promiseInternal;
-        }).when(context).promise();
+        when(context.promise()).thenAnswer(invocation -> promiseInternal);
         when(vertxMock.getOrCreateContext()).thenReturn(context);
 
         final BiFunction<String, Map<String, String>, KafkaProducer<String, Buffer>> instanceSupplier = (n, c) -> {
@@ -117,7 +114,6 @@ public class CachingKafkaProducerFactoryTest {
         // ...AND the second producers is still present and open
         assertThat(factory.getProducer(producerName2).isPresent()).isTrue();
         assertThat(((MockProducer<String, Buffer>) producer2.unwrap()).closed()).isFalse();
-
     }
 
     /**
