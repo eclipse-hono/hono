@@ -36,7 +36,7 @@
     <guava.version>33.5.0-jre</guava.version>
     <infinispan.version>15.0.5.Final</infinispan.version>
     <infinispan-image.name>quay.io/infinispan/server:15.2.6.Final</infinispan-image.name>
-    <jaeger.image.name>docker.io/jaegertracing/all-in-one:1.51</jaeger.image.name>
+    <jaeger.image.name>cr.jaegertracing.io/jaegertracing/all-in-one:1.74.0</jaeger.image.name>
     <java-base-image.name>docker.io/library/eclipse-temurin:17-jre-jammy</java-base-image.name>
     <jjwt.version>0.12.7</jjwt.version>
     <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
