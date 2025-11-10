@@ -77,10 +77,10 @@ public interface CommandTargetMapper {
      * gateway and adapter instance where that gateway has subscribed for commands.
      * <p>
      * The value of the returned future is a JSON object with the fields
-     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
-     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values.
+     * {@link org.eclipse.hono.deviceconnection.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
+     * {@link org.eclipse.hono.deviceconnection.DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values.
      * If the command is not mapped to a gateway here, the
-     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
+     * {@link org.eclipse.hono.deviceconnection.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
      * id itself.
      *
      * @param tenantId The tenant identifier.
