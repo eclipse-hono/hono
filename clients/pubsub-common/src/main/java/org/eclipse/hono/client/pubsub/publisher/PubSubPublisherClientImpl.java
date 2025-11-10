@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +30,7 @@ import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.pubsub.v1.PubsubMessage;
@@ -39,7 +42,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
- * A client for publishing messages to Pub/Sub
+ * A client for publishing messages to Pub/Sub.
  * <p>
  * Wraps a Pub/Sub publisher.
  * </p>
@@ -55,28 +58,37 @@ final class PubSubPublisherClientImpl implements PubSubPublisherClient {
      * based on a created TopicName, which follows the format: projects/projectId/topics/topic.
      *
      * @param vertx The Vert.x instance that this publisher runs on.
-     * @param projectId The Google project id to use.
+     * @param pubSubConfigProperties The Pub/Sub configuration properties.
      * @param topic The topic to create the publisher for.
-     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service
-     *                            or {@code null} if the default provider should be used.
+     * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
+     *            If the emulator is used, provider will be overwritten.
+     *            If {@code null} the default provider should be used.
      * @throws ClientErrorException if the initialization of the Publisher failed.
      * @throws NullPointerException if any of project ID or topic are {@code null}.
      */
     PubSubPublisherClientImpl(
             final Vertx vertx,
-            final String projectId,
+            final PubSubConfigProperties pubSubConfigProperties,
             final String topic,
             final CredentialsProvider credentialsProvider) throws ClientErrorException {
 
         this.vertx = Objects.requireNonNull(vertx);
-        Objects.requireNonNull(projectId);
         Objects.requireNonNull(topic);
+        Objects.requireNonNull(pubSubConfigProperties);
+        Objects.requireNonNull(pubSubConfigProperties.getProjectId());
 
         try {
-            final TopicName topicName = TopicName.of(projectId, topic);
-            final var builder = Publisher.newBuilder(topicName)
-                    .setEnableMessageOrdering(true);
-            Optional.ofNullable(credentialsProvider).ifPresent(builder::setCredentialsProvider);
+            final TopicName topicName = TopicName.of(pubSubConfigProperties.getProjectId(), topic);
+            final var builder = Publisher.newBuilder(topicName).setEnableMessageOrdering(true);
+
+            if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+                final var channelProvider = PubSubMessageHelper.getTransportChannelProvider(pubSubConfigProperties);
+                builder
+                    .setChannelProvider(channelProvider)
+                    .setCredentialsProvider(NoCredentialsProvider.create());
+            } else {
+                Optional.ofNullable(credentialsProvider).ifPresent(builder::setCredentialsProvider);
+            }
             this.publisher = builder.build();
         } catch (final IOException e) {
             this.publisher = null;

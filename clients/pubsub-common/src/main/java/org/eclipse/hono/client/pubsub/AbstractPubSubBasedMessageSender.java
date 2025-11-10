@@ -193,11 +193,14 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
                 .ifPresent(builder::setData);
 
         final PubsubMessage pubsubMessage = builder.build();
-
-        log.debug("sending message to Pub/Sub [topic: {}, registry: {}, deviceId: {}]", topic, tenantId, deviceId);
+        final String sendingMessageLog = String.format(
+                "Sending message to Pub/Sub [topic: %s, registry: %s, deviceId: %s]", topic, tenantId, deviceId);
+        log.debug(sendingMessageLog);
         logPubSubMessage(currentSpan, pubsubMessage, topic, tenantId);
 
-        return getOrCreatePublisher(topic).publish(pubsubMessage)
+        final PubSubPublisherClient publisher = getOrCreatePublisher(topic);
+        currentSpan.log("Got PubSub Publisher. " + sendingMessageLog);
+        return publisher.publish(pubsubMessage)
                 .onSuccess(recordMessage -> logPubSubMessageId(currentSpan, topic, recordMessage))
                 .recover(t -> retrySendToFallbackTopic(topic, currentSpan, tenantId, deviceId, t, pubsubMessage))
                 .mapEmpty();
@@ -220,7 +223,9 @@ public abstract class AbstractPubSubBasedMessageSender implements MessagingClien
         publisherFactory.closePublisher(topic);
 
         final String fallbackTopic = PubSubMessageHelper.getTopicName(fallback, tenantId);
-        log.debug("Retry sending message to Pub/Sub using the fallback topic [{}]", fallbackTopic);
+        final String logMessage = String.format("Retry sending message to Pub/Sub using the fallback topic [%s]", fallbackTopic);
+        log.debug(logMessage);
+        currentSpan.log(logMessage);
         // retry publish on fallback topic
         return getOrCreatePublisher(fallbackTopic).publish(pubsubMessage)
                 .onSuccess(recordMessage -> logPubSubMessageId(currentSpan, fallbackTopic, recordMessage))

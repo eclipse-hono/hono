@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.rpc.NotFoundException;
 import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
@@ -53,6 +54,7 @@ public class PubSubBasedAdminClientManager {
     private final Vertx vertx;
     private SubscriptionAdminClient subscriptionAdminClient;
     private TopicAdminClient topicAdminClient;
+    private final PubSubConfigProperties pubSubConfigProperties;
 
     /**
      * Creates a new PubSubBasedAdminClientManager.
@@ -66,6 +68,11 @@ public class PubSubBasedAdminClientManager {
             final CredentialsProvider credentialsProvider, final Vertx vertx) {
         Objects.requireNonNull(pubSubConfigProperties);
         this.projectId = Objects.requireNonNull(pubSubConfigProperties.getProjectId());
+        this.pubSubConfigProperties = pubSubConfigProperties;
+
+        if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+            LOG.debug("Using pubsub emulator.");
+        }
         this.credentialsProvider = Objects.requireNonNull(credentialsProvider);
         this.vertx = Objects.requireNonNull(vertx);
     }
@@ -75,15 +82,12 @@ public class PubSubBasedAdminClientManager {
             return Future.succeededFuture(topicAdminClient);
         }
         try {
-            final TopicAdminSettings adminSettings = TopicAdminSettings
-                    .newBuilder()
-                    .setCredentialsProvider(credentialsProvider)
-                    .build();
+            final TopicAdminSettings adminSettings = getTopicAdminSettings();
             topicAdminClient = TopicAdminClient.create(adminSettings);
             return Future.succeededFuture(topicAdminClient);
         } catch (IOException e) {
             LOG.debug("Error initializing topic admin client: {}", e.getMessage());
-            return Future.failedFuture("Error creating client");
+            return Future.failedFuture("Error creating topic admin client");
         }
     }
 
@@ -92,16 +96,43 @@ public class PubSubBasedAdminClientManager {
             return Future.succeededFuture(subscriptionAdminClient);
         }
         try {
-            final SubscriptionAdminSettings adminSettings = SubscriptionAdminSettings
-                    .newBuilder()
-                    .setCredentialsProvider(credentialsProvider)
-                    .build();
+            final SubscriptionAdminSettings adminSettings = getSubscriptionAdminSettings();
             subscriptionAdminClient = SubscriptionAdminClient.create(adminSettings);
             return Future.succeededFuture(subscriptionAdminClient);
         } catch (IOException e) {
             LOG.debug("Error initializing subscription admin client: {}", e.getMessage());
-            return Future.failedFuture("Error creating client");
+            return Future.failedFuture("Error creating subscription admin client");
         }
+    }
+
+    private TopicAdminSettings getTopicAdminSettings() throws IOException {
+        final TopicAdminSettings.Builder builder = TopicAdminSettings.newBuilder();
+
+        if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+            final var channelProvider = PubSubMessageHelper.getTransportChannelProvider(pubSubConfigProperties);
+            builder
+                    .setTransportChannelProvider(channelProvider)
+                    .setCredentialsProvider(NoCredentialsProvider.create());
+        } else {
+            builder.setCredentialsProvider(credentialsProvider);
+        }
+
+        return builder.build();
+    }
+
+    private SubscriptionAdminSettings getSubscriptionAdminSettings() throws IOException {
+        final SubscriptionAdminSettings.Builder builder = SubscriptionAdminSettings.newBuilder();
+
+        if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+            final var channelProvider = PubSubMessageHelper.getTransportChannelProvider(pubSubConfigProperties);
+            builder
+                    .setTransportChannelProvider(channelProvider)
+                    .setCredentialsProvider(NoCredentialsProvider.create());
+        } else {
+            builder.setCredentialsProvider(credentialsProvider);
+        }
+
+        return builder.build();
     }
 
     /**
@@ -137,8 +168,8 @@ public class PubSubBasedAdminClientManager {
         return vertx.executeBlocking(() -> {
             return client.createTopic(topicName).getName();
         })
-        .onSuccess(top -> LOG.debug("Topic {} created successfully.", topicName))
-        .onFailure(thr -> LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topicName, projectId));
+                .onSuccess(top -> LOG.debug("Topic {} created successfully.", topicName))
+                .onFailure(thr -> LOG.debug("Creating topic failed [topic: {}, projectId: {}]", topicName, projectId));
     }
 
     /**
@@ -168,17 +199,17 @@ public class PubSubBasedAdminClientManager {
     }
 
     private Future<String> getSubscription(
-        final SubscriptionName subscriptionName,
-        final SubscriptionAdminClient client) {
+            final SubscriptionName subscriptionName,
+            final SubscriptionAdminClient client) {
         return vertx.executeBlocking(() -> {
             return client.getSubscription(subscriptionName).getName();
         });
     }
 
     private Future<String> createSubscription(
-        final SubscriptionName subscriptionName,
-        final TopicName topicName,
-        final SubscriptionAdminClient client) {
+            final SubscriptionName subscriptionName,
+            final TopicName topicName,
+            final SubscriptionAdminClient client) {
         final Subscription request = Subscription.newBuilder()
                 .setName(subscriptionName.toString())
                 .setTopic(topicName.toString())
@@ -190,15 +221,15 @@ public class PubSubBasedAdminClientManager {
         return vertx.executeBlocking(() -> {
             return client.createSubscription(request).getName();
         })
-        .onSuccess(sub -> LOG.debug("Subscription {} created successfully.", subscriptionName))
-        .onFailure(thr -> LOG.debug(
-            "Creating subscription failed [subscription: {}, topic: {}, project: {}]",
-                    subscriptionName, topicName, projectId));
+                .onSuccess(sub -> LOG.debug("Subscription {} created successfully.", subscriptionName))
+                .onFailure(thr -> LOG.debug(
+                        "Creating subscription failed [subscription: {}, topic: {}, project: {}]",
+                        subscriptionName, topicName, projectId));
     }
 
     /**
      * Closes the TopicAdminClient and the SubscriptionAdminClient if they exist. This method is expected to be invoked
-     * as soon as the TopicAdminClient and the SubscriptionAdminClient is no longer needed. This method will block the
+     * as soon as the TopicAdminClient and the SubscriptionAdminClient are no longer needed. This method will block the
      * current thread for up to 10 seconds!
      */
     public void closeAdminClients() {
@@ -213,26 +244,28 @@ public class PubSubBasedAdminClientManager {
     }
 
     private void closeSubscriptionAdminClient() {
-        if (subscriptionAdminClient != null) {
-            subscriptionAdminClient.shutdown();
-            try {
-                subscriptionAdminClient.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                LOG.debug("Resources are not freed properly, error", e);
-                Thread.currentThread().interrupt();
-            }
+        if (subscriptionAdminClient == null) {
+            return;
+        }
+        subscriptionAdminClient.shutdown();
+        try {
+            subscriptionAdminClient.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            LOG.debug("Resources are not freed properly, error", e);
+            Thread.currentThread().interrupt();
         }
     }
 
     private void closeTopicAdminClient() {
-        if (topicAdminClient != null) {
-            topicAdminClient.shutdown();
-            try {
-                topicAdminClient.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                LOG.debug("Resources are not freed properly, error", e);
-                Thread.currentThread().interrupt();
-            }
+        if (topicAdminClient == null) {
+            return;
+        }
+        topicAdminClient.shutdown();
+        try {
+            topicAdminClient.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            LOG.debug("Resources are not freed properly, error", e);
+            Thread.currentThread().interrupt();
         }
     }
 }

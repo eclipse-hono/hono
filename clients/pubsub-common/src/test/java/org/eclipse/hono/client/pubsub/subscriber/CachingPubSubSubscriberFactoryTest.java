@@ -13,11 +13,13 @@
 package org.eclipse.hono.client.pubsub.subscriber;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Optional;
 
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,10 +48,12 @@ public class CachingPubSubSubscriberFactoryTest {
     void setUp() {
         final Vertx vertx = mock(Vertx.class);
         final CredentialsProvider credentialsProvider = mock(CredentialsProvider.class);
+        final PubSubConfigProperties pubSubConfigProperties = mock(PubSubConfigProperties.class);
+        when(pubSubConfigProperties.getProjectId()).thenReturn(PROJECT_ID);
         topic = String.format("%s.%s", TENANT_ID, TOPIC_NAME);
         receiver = mock(MessageReceiver.class);
         client = mock(PubSubSubscriberClient.class);
-        factory = new CachingPubSubSubscriberFactory(vertx, PROJECT_ID, credentialsProvider);
+        factory = new CachingPubSubSubscriberFactory(vertx, pubSubConfigProperties, credentialsProvider);
         factory.setClientSupplier(() -> client);
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -62,7 +62,7 @@ import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfi
 import org.eclipse.hono.client.pubsub.PubSubBasedAdminClientManager;
 import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
 import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
-import org.eclipse.hono.client.pubsub.PubSubPublisherOptions;
+import org.eclipse.hono.client.pubsub.PubSubQuarkusOptions;
 import org.eclipse.hono.client.pubsub.publisher.CachingPubSubPublisherFactory;
 import org.eclipse.hono.client.pubsub.publisher.PubSubPublisherFactory;
 import org.eclipse.hono.client.pubsub.subscriber.CachingPubSubSubscriberFactory;
@@ -166,8 +166,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     void setCommandConsumerClientOptions(
-            @ConfigMapping(prefix = "hono.command")
-            final ClientOptions options) {
+            @ConfigMapping(prefix = "hono.command") final ClientOptions options) {
 
         final var props = new ClientConfigProperties(options);
         props.setServerRoleIfUnknown("Command & Control");
@@ -187,8 +186,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     @Inject
-    void setPubSubClientOptions(final PubSubPublisherOptions options) {
-        this.pubSubConfigProperties = new PubSubConfigProperties(options);
+    void setPubSubClientOptions(final PubSubQuarkusOptions pubSubQuarkusOptions) {
+        this.pubSubConfigProperties = new PubSubConfigProperties(pubSubQuarkusOptions);
     }
 
     @Inject
@@ -308,7 +307,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             })
             .onFailure(t -> LOG.error("failed to deploy adapter verticle(s)", t));
 
-        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, downstreamSenderConfig, pubSubConfigProperties);
+        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, downstreamSenderConfig,
+                pubSubConfigProperties);
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationReceiver))
             .onSuccess(ok -> {
@@ -376,11 +376,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         }
         if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
             LOG.info("Pub/Sub client configuration present, adding Pub/Sub messaging clients");
-            PubSubMessageHelper.getCredentialsProvider()
+            PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties)
                     .ifPresentOrElse(provider -> {
                         final var pubSubFactory = new CachingPubSubPublisherFactory(
                                 vertx,
-                                pubSubConfigProperties.getProjectId(),
+                                pubSubConfigProperties,
                                 provider);
 
                         telemetrySenderProvider
@@ -432,7 +432,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             }
 
             if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()) {
-                PubSubMessageHelper.getCredentialsProvider()
+                PubSubMessageHelper.getCredentialsProvider(pubSubConfigProperties)
                         .ifPresentOrElse(provider -> {
                             final var pubsubCommandResponseSender = messagingClientProviders
                                     .getCommandResponseSenderProvider()
@@ -440,7 +440,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             if (pubsubCommandResponseSender != null) {
                                 final var subscriberFactory = new CachingPubSubSubscriberFactory(
                                         vertx,
-                                        pubSubConfigProperties.getProjectId(),
+                                        pubSubConfigProperties,
                                         provider);
                                 final var pubSubBasedAdminClientManager = new PubSubBasedAdminClientManager(
                                         pubSubConfigProperties,
@@ -480,8 +480,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     /**
-     * Creates a component that the adapter should use for reporting
-     * devices connecting/disconnecting to/from the adapter.
+     * Creates a component that the adapter should use for reporting devices connecting/disconnecting to/from the
+     * adapter.
      *
      * @return The component or {@code null} if the configured producer type is <em>none</em> or unsupported.
      */

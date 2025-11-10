@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -84,12 +84,13 @@ public class NotificationSenderProducer {
                     downstreamSenderConfig,
                     tracer));
         } else {
-            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper.getCredentialsProvider();
+            final Optional<CredentialsProvider> credentialsProvider = PubSubMessageHelper
+                    .getCredentialsProvider(pubSubConfigProperties);
             if (!appConfig.isPubSubMessagingDisabled() && pubSubConfigProperties.isProjectIdConfigured()
                     && credentialsProvider.isPresent()) {
                 final PubSubPublisherFactory factory = new CachingPubSubPublisherFactory(
                         vertx,
-                        pubSubConfigProperties.getProjectId(),
+                        pubSubConfigProperties,
                         credentialsProvider.get());
                 notificationSender = new PubSubBasedNotificationSender(
                         factory,
