@@ -39,7 +39,7 @@ import io.vertx.proton.ProtonHelper;
  */
 public class MessageAnnotationsInjectExtractAdapterTest {
 
-    static final String propertiesMapName = "map";
+    static final String PROPERTIES_MAP_NAME = "map";
 
     /**
      * Verifies that the same entries injected via the {@code MessageAnnotationsInjectAdapter} are extracted via the
@@ -57,7 +57,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
 
         final Message message = ProtonHelper.message();
         // inject the properties
-        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
+        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, PROPERTIES_MAP_NAME);
         testEntries.forEach(injectAdapter::put);
 
         // encode the message
@@ -68,7 +68,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         final Message decodedMessage = ProtonHelper.message();
         decodedMessage.decode(buffer.toReadableBuffer());
         // extract the properties from the decoded message
-        final var extractAdapter = new MessageAnnotationsExtractAdapter(decodedMessage, propertiesMapName);
+        final var extractAdapter = new MessageAnnotationsExtractAdapter(decodedMessage, PROPERTIES_MAP_NAME);
         extractAdapter.iterator().forEachRemaining(extractedEntry -> {
             assertThat(extractedEntry.getValue()).isEqualTo(testEntries.get(extractedEntry.getKey()));
         });
@@ -87,11 +87,11 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         final Span span = tracer.buildSpan("do").start();
 
         final Message message = ProtonHelper.message();
-        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
+        final var injectAdapter = new MessageAnnotationsInjectAdapter(message, PROPERTIES_MAP_NAME);
         tracer.inject(span.context(), Format.Builtin.TEXT_MAP, injectAdapter);
 
         final SpanContext context = tracer.extract(Format.Builtin.TEXT_MAP,
-                new MessageAnnotationsExtractAdapter(message, propertiesMapName));
+                new MessageAnnotationsExtractAdapter(message, PROPERTIES_MAP_NAME));
         assertThat(context.toSpanId()).isEqualTo(span.context().toSpanId());
     }
 }
