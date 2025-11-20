@@ -15,7 +15,6 @@ package org.eclipse.hono.tests.lora;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -63,10 +62,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -284,7 +283,7 @@ public class LoraIT {
                             loraRequest.endpointUri,
                             requestBody,
                             requestHeaders,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)));
+                            HttpResponseExpectation.SC_ACCEPTED));
     }
 
     /**
@@ -329,7 +328,7 @@ public class LoraIT {
                     loraRequest.endpointUri,
                     requestBody,
                     requestHeaders,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)));
+                    HttpResponseExpectation.SC_ACCEPTED));
     }
 
     /**
@@ -370,7 +369,7 @@ public class LoraIT {
                         ENDPOINT_URI_LORIOT,
                         loriotRequestBody,
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)));
+                        HttpResponseExpectation.SC_ACCEPTED));
     }
 
     /**
@@ -526,10 +525,10 @@ public class LoraIT {
                 final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                         .add(HttpHeaders.CONTENT_TYPE, "application/json");
                 return httpClientWithClientCert.create(
-                        ENDPOINT_URI_LORIOT,
-                        loriotRequestBody,
-                        requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
+                    ENDPOINT_URI_LORIOT,
+                    loriotRequestBody,
+                    requestHeaders,
+                    HttpResponseExpectation.SC_UNAUTHORIZED);
             })
             // THEN the request fails with a 401
             .onComplete(ctx.succeedingThenComplete());
@@ -559,7 +558,7 @@ public class LoraIT {
                             ENDPOINT_URI_LORIOT,
                             loriotRequestBody,
                             requestHeaders,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
+                            HttpResponseExpectation.SC_UNAUTHORIZED);
                 })
                 // THEN the request fails with a 401
                 .onComplete(ctx.succeedingThenComplete());
@@ -589,7 +588,7 @@ public class LoraIT {
                             ENDPOINT_URI_LORIOT,
                             loriotRequestBody,
                             requestHeaders,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
+                            HttpResponseExpectation.SC_UNAUTHORIZED);
                 })
                 // THEN the request fails with a 401
                 .onComplete(ctx.succeedingThenComplete());
@@ -622,7 +621,7 @@ public class LoraIT {
                         ENDPOINT_URI_LORIOT,
                         loriotRequestBody,
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
+                        HttpResponseExpectation.SC_FORBIDDEN);
             })
             // THEN the message gets rejected by the Lora adapter with a 403
             .onComplete(ctx.succeedingThenComplete());
@@ -657,7 +656,7 @@ public class LoraIT {
                         // TODO does not feel right to get back a 404 here because the
                         // resource actually exists, it is the payload that contains the
                         // offending data, so a 400 might be more appropriate
-                        ResponsePredicate.status(HttpURLConnection.HTTP_NOT_FOUND));
+                            HttpResponseExpectation.SC_NOT_FOUND);
             })
             // THEN the message gets rejected by the Lora adapter with a 404
             .onComplete(ctx.succeedingThenComplete());
@@ -692,7 +691,7 @@ public class LoraIT {
                         // TODO does not feel right to get back a 404 here because the
                         // resource actually exists, it is the payload that contains the
                         // offending data, so a 400 might be more appropriate
-                        ResponsePredicate.status(HttpURLConnection.HTTP_NOT_FOUND));
+                        HttpResponseExpectation.SC_NOT_FOUND);
             })
             // THEN the message gets rejected by the adapter with a 404
             .onComplete(ctx.succeedingThenComplete());
@@ -726,7 +725,7 @@ public class LoraIT {
                         ENDPOINT_URI_LORIOT,
                         loriotRequestBody,
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
+                        HttpResponseExpectation.SC_FORBIDDEN);
 
             })
             // THEN the message gets rejected by the adapter with a 403

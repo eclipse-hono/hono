@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -32,7 +33,6 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 
 /**
  * A vert.x based HTTP client for invoking generic CRUD operations on HTTP APIs.
@@ -77,12 +77,15 @@ public final class CrudHttpClient {
         this.context = vertx.getOrCreateContext();
     }
 
-    private static void addResponsePredicates(final HttpRequest<?> request, final ResponsePredicate ... successPredicates) {
+    private static <T> Future<HttpResponse<T>> applyResponsePredicates(
+        final Future<HttpResponse<T>> response,
+        final HttpResponseExpectation ... successPredicates) {
         Optional.ofNullable(successPredicates).ifPresent(predicates -> {
-            for (final ResponsePredicate predicate : predicates) {
-                request.expect(predicate);
+            for (final var predicate : predicates) {
+                response.expecting(predicate);
             }
         });
+        return response;
     }
 
     /**
@@ -101,7 +104,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> options(
             final String uri,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
         return options(createRequestOptions().setURI(uri), requestHeaders, successPredicates);
@@ -123,7 +126,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> options(
             final RequestOptions requestOptions,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -132,8 +135,8 @@ public final class CrudHttpClient {
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.OPTIONS, requestOptions);
             Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
-            addResponsePredicates(req, successPredicates);
-            req.send(result);
+            final var response = req.send();
+            applyResponsePredicates(response, successPredicates).onComplete(result);
         });
         return result.future();
     }
@@ -156,7 +159,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> create(
             final String uri,
             final JsonObject body,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
         return create(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
@@ -178,7 +181,7 @@ public final class CrudHttpClient {
             final String uri,
             final JsonObject body,
             final String contentType,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         return create(uri,
                 Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null),
@@ -204,7 +207,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final String contentType,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         final MultiMap requestHeaders = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, contentType))
@@ -234,7 +237,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
 
@@ -260,7 +263,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> create(
             final RequestOptions requestOptions,
             final Buffer body,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -268,12 +271,8 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.POST, requestOptions);
-            addResponsePredicates(req, successPredicates);
-            if (body == null) {
-                req.send(result);
-            } else {
-                req.sendBuffer(body, result);
-            }
+            final var response = body == null ? req.send() : req.sendBuffer(body);
+            applyResponsePredicates(response, successPredicates).onComplete(result);
         });
         return result.future();
     }
@@ -296,7 +295,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> update(
             final String uri,
             final JsonObject body,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
         return update(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
@@ -318,7 +317,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> update(
             final String uri,
             final JsonArray body,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
         return update(uri, body, CONTENT_TYPE_JSON, successPredicates);
     }
 
@@ -340,7 +339,7 @@ public final class CrudHttpClient {
             final String uri,
             final JsonObject body,
             final String contentType,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
         return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicates);
 
     }
@@ -363,7 +362,7 @@ public final class CrudHttpClient {
             final String uri,
             final JsonArray body,
             final String contentType,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
         return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicates);
 
     }
@@ -386,7 +385,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final String contentType,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, ct))
@@ -413,7 +412,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
 
@@ -439,7 +438,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> update(
             final RequestOptions requestOptions,
             final Buffer body,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -447,12 +446,8 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.PUT, requestOptions);
-            addResponsePredicates(req, successPredicates);
-            if (body == null) {
-                req.send(result);
-            } else {
-                req.sendBuffer(body, result);
-            }
+            final var response = body == null ? req.send() : req.sendBuffer(body);
+            applyResponsePredicates(response, successPredicates).onComplete(result);
         });
         return result.future();
     }
@@ -469,7 +464,7 @@ public final class CrudHttpClient {
      *         predicate.
      * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<HttpResponse<Buffer>> get(final String uri, final ResponsePredicate ... successPredicates) {
+    public Future<HttpResponse<Buffer>> get(final String uri, final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
         return get(createRequestOptions().setURI(uri), successPredicates);
@@ -491,7 +486,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> get(
             final String uri,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
         return get(createRequestOptions().setURI(uri).setHeaders(requestHeaders), successPredicates);
@@ -515,7 +510,7 @@ public final class CrudHttpClient {
             final String uri,
             final MultiMap requestHeaders,
             final MultiMap queryParams,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
         return get(createRequestOptions().setURI(uri).setHeaders(requestHeaders), queryParams, successPredicates);
@@ -534,7 +529,7 @@ public final class CrudHttpClient {
      */
     public Future<HttpResponse<Buffer>> get(
             final RequestOptions requestOptions,
-            final ResponsePredicate... successPredicates) {
+            final HttpResponseExpectation... successPredicates) {
 
         return get(requestOptions, null, successPredicates);
     }
@@ -555,7 +550,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> get(
             final RequestOptions requestOptions,
             final MultiMap queryParams,
-            final ResponsePredicate... successPredicates) {
+            final HttpResponseExpectation... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -563,10 +558,10 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.GET, requestOptions);
-            addResponsePredicates(req, successPredicates);
             Optional.ofNullable(queryParams)
                     .ifPresent(params -> req.queryParams().addAll(queryParams));
-            req.send(result);
+            final var response = req.send();
+            applyResponsePredicates(response, successPredicates).onComplete(result);
         });
 
         return result.future();
@@ -584,7 +579,7 @@ public final class CrudHttpClient {
      *         predicate.
      * @throws NullPointerException if URI is {@code null}.
      */
-    public Future<HttpResponse<Buffer>> delete(final String uri, final ResponsePredicate ... successPredicates) {
+    public Future<HttpResponse<Buffer>> delete(final String uri, final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
 
@@ -607,7 +602,7 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> delete(
             final String uri,
             final MultiMap requestHeaders,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(uri);
 
@@ -628,7 +623,7 @@ public final class CrudHttpClient {
      */
     public Future<HttpResponse<Buffer>> delete(
             final RequestOptions requestOptions,
-            final ResponsePredicate ... successPredicates) {
+            final HttpResponseExpectation ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 
@@ -636,8 +631,8 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.DELETE, requestOptions);
-            addResponsePredicates(req, successPredicates);
-            req.send(result);
+            final var response = req.send();
+            applyResponsePredicates(response, successPredicates).onComplete(result);
         });
 
         return result.future();

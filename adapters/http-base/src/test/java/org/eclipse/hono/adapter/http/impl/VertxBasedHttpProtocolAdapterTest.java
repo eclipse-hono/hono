@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -65,13 +65,12 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
-import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -200,8 +199,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.succeedingThenComplete());
+                .send()
+                .expecting(HttpResponseExpectation.SC_UNAUTHORIZED)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -217,8 +217,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.succeedingThenComplete());
+                .send()
+                .expecting(HttpResponseExpectation.SC_UNAUTHORIZED)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -239,8 +240,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE))
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJson(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -260,9 +262,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJson(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -286,9 +289,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                .sendJson(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(b -> {
                     ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
                             QoS.AT_MOST_ONCE,
                             "DEFAULT_TENANT",
@@ -325,9 +329,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(expectedErrorCode))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.status(expectedErrorCode))
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(b -> {
                     ctx.verify(() -> assertNoTelemetryMessageHasBeenSentDownstream());
                     ctx.completeNow();
                 }));
@@ -348,9 +353,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(2))
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
-
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -370,9 +375,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
                             QoS.AT_LEAST_ONCE, "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
@@ -400,9 +406,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(b -> {
                     ctx.verify(() -> {
                         assertEventHasBeenSentDownstream("DEFAULT_TENANT", "device_1", "application/json");
                     });
@@ -436,9 +443,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(expectedErrorCode))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.status(expectedErrorCode))
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(b -> {
                     ctx.verify(() -> assertNoEventHasBeenSentDownstream());
                     ctx.completeNow();
                 }));
@@ -459,9 +467,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
                             QoS.AT_MOST_ONCE, "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
@@ -483,9 +492,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-                .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .expecting(this::assertCorsHeaders)
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> assertEventHasBeenSentDownstream(
                             "DEFAULT_TENANT", "device_1", "application/json"));
                     ctx.completeNow();
@@ -521,19 +531,22 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+                .sendJsonObject(new JsonObject())
                 // THEN the response contains the pending command
-                .expect(ResponsePredicate.SC_OK)
-                .expect(this::assertCorsHeaders)
-                .expect(response -> {
+                .expecting(HttpResponseExpectation.SC_OK)
+                .expecting(this::assertCorsHeaders)
+                .expecting(response -> {
                     if (!"doThis".equals(response.getHeader(Constants.HEADER_COMMAND))) {
-                        return ResponsePredicateResult.failure("response does not contain expected hono-command header");
+                        LOG.error("response does not contain expected hono-command header");
+                        return false;
                     }
                     if (response.getHeader(Constants.HEADER_COMMAND_REQUEST_ID) == null) {
-                        return ResponsePredicateResult.failure("response does not contain hono-cmd-req-id header");
+                        LOG.error("response does not contain hono-cmd-req-id header");
+                        return false;
                     }
-                    return ResponsePredicateResult.success();
+                    return true;
                 })
-                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                                 eq(false), any(), any(), any());
@@ -570,10 +583,11 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
             .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
             .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
             .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+            .sendJsonObject(new JsonObject())
             // THEN the response fails with 503 - error thrown by sending telemetry
-            .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
-            .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+            .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE)
+            .expecting(this::assertCorsHeaders)
+            .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
                                 eq(false), any(), any(), any());
@@ -608,8 +622,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_ACCEPTED)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -639,8 +654,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.status(expectedErrorCode))
-                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.status(expectedErrorCode))
+                .onComplete(ctx.succeeding(b -> {
                     ctx.verify(() -> assertNoCommandResponseHasBeenSentDownstream());
                     ctx.completeNow();
                 }));
@@ -662,8 +678,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -682,8 +699,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -701,8 +719,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_BAD_REQUEST)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -724,8 +743,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_SERVICE_UNAVAILABLE)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -748,8 +768,9 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
-                .expect(ResponsePredicate.SC_ACCEPTED)
-                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+                .sendJsonObject(new JsonObject())
+                .expecting(HttpResponseExpectation.SC_ACCEPTED)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     private String getCommandResponsePath(final String wrongCommandRequestId) {
@@ -764,21 +785,25 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         }).when(usernamePasswordAuthProvider).authenticate(any(UsernamePasswordCredentials.class), any(), VertxMockSupport.anyHandler());
     }
 
-    private ResponsePredicateResult assertCorsHeaders(final HttpResponse<?> response) {
+    private boolean assertCorsHeaders(final HttpResponse<?> response) {
         final MultiMap headers = response.headers();
         final String exposedHeaders = headers.get(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS);
         if (exposedHeaders == null) {
-            return ResponsePredicateResult.failure("response does not contain Access-Control-Expose-Headers header");
+            LOG.error("response does not contain Access-Control-Expose-Headers header");
+            return false;
         }
         if (!exposedHeaders.contains(Constants.HEADER_COMMAND)) {
-            return ResponsePredicateResult.failure("Access-Control-Expose-Headers does not include hono-command");
+            LOG.error("Access-Control-Expose-Headers does not include hono-command");
+            return false;
         }
         if (!exposedHeaders.contains(Constants.HEADER_COMMAND_REQUEST_ID)) {
-            return ResponsePredicateResult.failure("Access-Control-Expose-Headers does not include hono-cmd-req-id");
+            LOG.error("Access-Control-Expose-Headers does not include hono-cmd-req-id");
+            return false;
         }
         if (!"*".equals(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))) {
-            return ResponsePredicateResult.failure("response does not contain proper Access-Control-Allow-Origin header");
+            LOG.error("response does not contain proper Access-Control-Allow-Origin header");
+            return false;
         }
-        return ResponsePredicateResult.success();
+        return true;
     }
 }
