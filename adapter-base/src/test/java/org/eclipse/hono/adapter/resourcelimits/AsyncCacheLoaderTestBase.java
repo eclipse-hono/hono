@@ -106,24 +106,12 @@ abstract class AsyncCacheLoaderTestBase {
             when(response.body()).thenReturn(createPrometheusResponse(value));
             return Future.succeededFuture(response);
         });
-        // doAnswer(invocation -> {
-        //     final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
-        //     final HttpResponse<JsonObject> response = mock(HttpResponse.class);
-        //     when(response.body()).thenReturn(createPrometheusResponse(value));
-        //     responseHandler.handle(Future.succeededFuture(response));
-        //     return null;
-        // }).when(jsonRequest).send(VertxMockSupport.anyHandler());
     }
 
     protected void givenFailResponseWithTimeoutException() {
         when(jsonRequest.send()).thenAnswer(invocation -> {
             return Future.failedFuture(new TimeoutException());
         });
-        // doAnswer(invocation -> {
-        //     final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
-        //     responseHandler.handle(Future.failedFuture(new TimeoutException()));
-        //     return null;
-        // }).when(jsonRequest).send(VertxMockSupport.anyHandler());
     }
 
     protected static JsonObject createPrometheusResponse(final Integer value) {
