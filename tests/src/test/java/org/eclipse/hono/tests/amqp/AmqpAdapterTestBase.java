@@ -130,15 +130,15 @@ public abstract class AmqpAdapterTestBase {
         final Promise<ProtonConnection> connectionTracker = Promise.promise();
 
         if (connection == null || connection.isDisconnected()) {
-            connectionTracker.complete();
+            connectionTracker.complete(connection);
         } else {
             context.runOnContext(go -> {
                 if (connection.isDisconnected()) {
-                    connectionTracker.complete();
+                    connectionTracker.complete(connection);
                 } else {
                     connection.closeHandler(connectionTracker);
                     connection.disconnectHandler(con -> {
-                        if (connectionTracker.tryComplete()) {
+                        if (connectionTracker.tryComplete(connection)) {
                             log.debug("connection to AMQP adapter disconnected without CLOSE frame having been received");
                         }
                     });
@@ -148,15 +148,16 @@ public abstract class AmqpAdapterTestBase {
         }
 
         connectionTracker.future()
-                .onComplete(con -> {
-                    Optional.ofNullable(connection).ifPresent(v -> log.info("connection to AMQP adapter closed"));
-                    context = null;
-                    connection = null;
-                    sender = null;
-                    // cleanup device registry - done after the adapter connection is closed because otherwise
-                    // the adapter would close the connection from its end after having received the device deletion notification 
-                    helper.deleteObjects(ctx);
-                });
+            .onSuccess(closedConnection -> Optional.ofNullable(closedConnection)
+                .ifPresent(v -> log.info("connection to AMQP adapter closed")))
+            .onComplete(ar -> {
+                context = null;
+                connection = null;
+                sender = null;
+                // cleanup device registry - done after the adapter connection is closed because otherwise
+                // the adapter would close the connection from its end after having received the device deletion notification 
+                helper.deleteObjects(ctx);
+            });
     }
 
     /**

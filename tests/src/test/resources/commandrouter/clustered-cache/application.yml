@@ -23,8 +23,8 @@ hono:
         socketTimeout: 3000
         connectTimeout: 3000
         connectionPool:
-          maxActive: 30
-          minIdle: 5
+          maxActive: 150
+          minIdle: 20
           maxPendingRequests: 3
           exhaustedAction: EXCEPTION
   messaging:

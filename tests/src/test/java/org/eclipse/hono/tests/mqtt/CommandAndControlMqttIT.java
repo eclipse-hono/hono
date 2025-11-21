@@ -167,7 +167,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         final AtomicInteger counter = new AtomicInteger();
         testSendCommandSucceeds(ctx, commandTargetDeviceId, msg -> {
-            LOGGER.trace("received one-way command [topic: {}]", msg.topicName());
+            LOGGER.info(
+                "received one-way command [topic: {}]: {}",
+                msg.topicName(),
+                msg.payload().toString());
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
             ctx.verify(() -> {
                 endpointConfig.assertCommandPublishTopicStructure(topic, commandTargetDeviceId, true, "setValue");
@@ -289,7 +292,6 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
         helper.registry
                 .addDeviceToTenant(tenantId, deviceId, password)
-                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 .compose(ok -> createConsumer(tenantId, msg -> {
                     // expect empty notification with TTD -1
                     setup.verify(() -> assertThat(msg.getContentType())
@@ -302,6 +304,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                         ready.flag();
                     }
                 }))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
                 .onComplete(setup.succeeding(ok -> ready.flag()));
 
@@ -320,17 +323,17 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                commandsSent.incrementAndGet();
-                final Buffer msg = commandsSent.get() % 2 == 0
-                        ? Buffer.buffer("value: " + commandsSent.get())
+                final var commandNo = commandsSent.incrementAndGet();
+                final Buffer msg = commandNo % 2 == 0
+                        ? Buffer.buffer("value: " + commandNo)
                         : null; // use 'null' payload for half the commands, ensuring such commands also get forwarded
                 commandSender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        LOGGER.info("error sending command {}", commandsSent.get(), sendAttempt.cause());
+                        LOGGER.info("error sending command {}", commandNo, sendAttempt.cause());
                     }
                     lastSentTimestamp.set(System.currentTimeMillis());
-                    if (commandsSent.get() % 20 == 0) {
-                        LOGGER.info("commands sent: " + commandsSent.get());
+                    if (commandNo % 20 == 0) {
+                        LOGGER.info("commands sent: " + commandNo);
                     }
                     commandSent.countDown();
                 });

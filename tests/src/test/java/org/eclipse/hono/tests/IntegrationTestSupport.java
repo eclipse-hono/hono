@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -607,7 +607,7 @@ public final class IntegrationTestSupport {
      * @return The messaging system type.
      */
     public static MessagingType getConfiguredMessagingType() {
-        if (Strings.isNullOrEmpty(IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS)) {
+        if (Strings.isNullOrEmpty(DOWNSTREAM_BOOTSTRAP_SERVERS)) {
             return MessagingType.amqp;
         } else {
             return MessagingType.kafka;
@@ -656,11 +656,14 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static MessagingKafkaConsumerConfigProperties getKafkaConsumerConfig() {
-        LOGGER.info("Kafka Consumers are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        LOGGER.info(
+            "Kafka Consumers are configured to connect to broker(s) at {}",
+            DOWNSTREAM_BOOTSTRAP_SERVERS);
         final var configProps = new MessagingKafkaConsumerConfigProperties();
         configProps.setConsumerConfig(Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, DOWNSTREAM_BOOTSTRAP_SERVERS,
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
+                ConsumerConfig.ALLOW_AUTO_CREATE_TOPICS_CONFIG, "true",
                 ConsumerConfig.GROUP_ID_CONFIG, "its-" + UUID.randomUUID()));
         return configProps;
     }
@@ -671,10 +674,12 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static MessagingKafkaProducerConfigProperties getKafkaProducerConfig() {
-        LOGGER.info("Kafka Producers are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        LOGGER.info(
+            "Kafka Producers are configured to connect to broker(s) at {}",
+            DOWNSTREAM_BOOTSTRAP_SERVERS);
         final var configProps = new MessagingKafkaProducerConfigProperties();
         configProps.setProducerConfig(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, DOWNSTREAM_BOOTSTRAP_SERVERS));
         return configProps;
     }
 
@@ -684,11 +689,14 @@ public final class IntegrationTestSupport {
      * @return The properties.
      */
     public static KafkaAdminClientConfigProperties getKafkaAdminClientConfig() {
-        LOGGER.info("Kafka Admin Clients are configured to connect to broker(s) at {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
+        LOGGER.info(
+            "Kafka Admin Clients are configured to connect to broker(s) at {}",
+            DOWNSTREAM_BOOTSTRAP_SERVERS);
+        final var requestTimeoutMillis = 1500 * getTimeoutMultiplicator();
         final KafkaAdminClientConfigProperties adminClientConfig = new KafkaAdminClientConfigProperties();
         adminClientConfig.setAdminClientConfig(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
-                ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000"));
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, DOWNSTREAM_BOOTSTRAP_SERVERS,
+                ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, String.valueOf(requestTimeoutMillis)));
         return adminClientConfig;
     }
 
@@ -701,11 +709,7 @@ public final class IntegrationTestSupport {
      */
     public static ClientConfigProperties getAmqpAdapterProperties(final String username, final String password) {
 
-        final var props = getClientConfigProperties(
-                IntegrationTestSupport.AMQP_HOST,
-                IntegrationTestSupport.AMQPS_PORT,
-                username,
-                password);
+        final var props = getClientConfigProperties(AMQP_HOST, AMQPS_PORT, username, password);
         props.setTrustStorePath(TRUST_STORE_PATH);
         props.setHostnameVerificationRequired(false);
         props.setSecureProtocols(List.of("TLSv1.3"));
@@ -722,8 +726,8 @@ public final class IntegrationTestSupport {
     public static ClientConfigProperties getDeviceRegistryProperties(final String username, final String password) {
 
         return getClientConfigProperties(
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
+                HONO_DEVICEREGISTRY_HOST,
+                HONO_DEVICEREGISTRY_AMQP_PORT,
                 username,
                 password);
     }
@@ -737,9 +741,9 @@ public final class IntegrationTestSupport {
      * @return The header value or {@code null} if no credentials have been set.
      */
     public static String getRegistryManagementApiAuthHeader() {
-        return Optional.ofNullable(IntegrationTestSupport.HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME)
+        return Optional.ofNullable(HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME)
                 .map(username -> {
-                    final String credentials = username + ":" + IntegrationTestSupport.HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD;
+                    final String credentials = username + ":" + HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD;
                     return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
                 })
                 .orElse(null);
@@ -898,8 +902,8 @@ public final class IntegrationTestSupport {
 
         registry = new DeviceRegistryHttpClient(
                 vertx,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
+                HONO_DEVICEREGISTRY_HOST,
+                HONO_DEVICEREGISTRY_HTTP_PORT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
         );
     }

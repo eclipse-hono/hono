@@ -897,8 +897,8 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <memorySwap>256000000</memorySwap>
-                    <memory>256000000</memory>
+                    <memorySwap>320000000</memorySwap>
+                    <memory>320000000</memory>
                     <log>
                       <prefix>INFINISPAN</prefix>
                       <color>${log.color.hono-services}</color>
@@ -1219,8 +1219,8 @@
                       <name>${custom.network.name}</name>
                       <alias>kafka</alias>
                     </network>
-                    <memorySwap>1500000000</memorySwap>
-                    <memory>1500000000</memory>
+                    <memorySwap>3000000000</memorySwap>
+                    <memory>3000000000</memory>
                     <log>
                       <prefix>Kafka</prefix>
                       <color>${log.color.kafka}</color>
@@ -1236,6 +1236,7 @@
                       <KAFKA_CONTROLLER_QUORUM_VOTERS>1@127.0.0.1:9093</KAFKA_CONTROLLER_QUORUM_VOTERS>
                       <KAFKA_NODE_ID>1</KAFKA_NODE_ID>
                       <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
+                      <KAFKA_HEAP_OPTS>-Xms1600M -Xmx1600M</KAFKA_HEAP_OPTS>
                       <KAFKA_INTER_BROKER_LISTENER_NAME>DOCKER_INTERNAL</KAFKA_INTER_BROKER_LISTENER_NAME>
                       <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
                       <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>CONTROLLER:PLAINTEXT,DOCKER_INTERNAL:PLAINTEXT,DOCKER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>

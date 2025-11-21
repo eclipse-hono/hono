@@ -43,7 +43,6 @@ abstract class JsonBackedValueObject {
      * @return The properties.
      */
     @JsonAnyGetter
-    @SuppressWarnings("unused")
     private Map<String, Object> getPropertiesAsMap() {
         return json.getMap();
     }
