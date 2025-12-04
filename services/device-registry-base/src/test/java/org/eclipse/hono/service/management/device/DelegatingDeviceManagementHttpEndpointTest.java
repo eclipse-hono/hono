@@ -15,7 +15,6 @@
 package org.eclipse.hono.service.management.device;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -469,7 +468,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         final HttpServerRequestInternal request = mock(HttpServerRequestInternal.class);
         when(request.absoluteURI()).thenReturn(relativeURI);
         when(request.authority()).thenReturn(authority);
-        when(request.authority(anyBoolean())).thenReturn(authority);
         when(request.isValidAuthority()).thenReturn(true);
         when(request.method()).thenReturn(method);
         when(request.scheme()).thenReturn("http");
