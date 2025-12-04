@@ -41,8 +41,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.consumer.internals.AsyncKafkaConsumer;
+import org.apache.kafka.clients.consumer.internals.ClassicKafkaConsumer;
 import org.apache.kafka.clients.consumer.internals.ConsumerDelegate;
-import org.apache.kafka.clients.consumer.internals.LegacyKafkaConsumer;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.metrics.Metrics;
@@ -1300,8 +1300,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                     final Field metricsField = AsyncKafkaConsumer.class.getDeclaredField("metrics");
                     metricsField.setAccessible(true);
                     return (Metrics) metricsField.get(delegate);
-                } else if (delegate instanceof LegacyKafkaConsumer) {
-                    final Field metricsField = LegacyKafkaConsumer.class.getDeclaredField("metrics");
+                } else if (delegate instanceof ClassicKafkaConsumer) {
+                    final Field metricsField = ClassicKafkaConsumer.class.getDeclaredField("metrics");
                     metricsField.setAccessible(true);
                     return (Metrics) metricsField.get(delegate);
                 }
