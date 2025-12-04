@@ -34,20 +34,21 @@
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>33.5.0-jre</guava.version>
-    <infinispan.version>15.0.13.Final</infinispan.version>
+    <!-- this needs to be kept in sync with the infinispan version defined in the Quarkus platform-bom -->
+    <infinispan.version>15.0.19.Final</infinispan.version>
     <infinispan-image.name>quay.io/infinispan/server:15.2.6.Final</infinispan-image.name>
     <jaeger.image.name>cr.jaegertracing.io/jaegertracing/all-in-one:1.74.0</jaeger.image.name>
     <java-base-image.name>docker.io/library/eclipse-temurin:21-jre-ubi9-minimal</java-base-image.name>
     <jjwt.version>0.12.7</jjwt.version>
-    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.5.0</kafka.image.name>
+    <kafka.image.name>docker.io/confluentinc/cp-kafka:7.9.5</kafka.image.name>
     <logback.version>1.5.19</logback.version>
     <mongodb-image.name>docker.io/library/mongo:7.0</mongodb-image.name>
-    <native.image.name>quay.io/quarkus/quarkus-micro-image:2.0</native.image.name>
+    <native.image.name>quay.io/quarkus/ubi9-quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <opentracing.version>0.33.0</opentracing.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.15.0</qpid-jms.version>
-    <quarkus.platform.version>3.18.4</quarkus.platform.version>
+    <quarkus.platform.version>3.20.4</quarkus.platform.version>
     <slf4j.version>2.0.16</slf4j.version>
     <spring-security-crypto.version>6.5.2</spring-security-crypto.version>
     <truth.version>1.4.5</truth.version>
@@ -605,7 +606,7 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
         <version>${infinispan.version}</version>
       </dependency>
 
-            <!-- Testing -->
+      <!-- Testing -->
       <dependency>
         <groupId>com.hivemq</groupId>
         <artifactId>hivemq-mqtt-client</artifactId>
