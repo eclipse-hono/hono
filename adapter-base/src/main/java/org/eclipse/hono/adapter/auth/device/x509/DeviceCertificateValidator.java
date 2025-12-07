@@ -90,7 +90,6 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
                 return null;
             }, false);
         } else {
-            LOG.warn("No Vert.x context available, performing synchronous certificate validation (likely in tests).");
             try {
                 validateAnchors(chain, trustAnchors);
                 return Future.succeededFuture();
