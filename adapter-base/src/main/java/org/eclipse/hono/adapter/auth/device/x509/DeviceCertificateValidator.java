@@ -114,7 +114,7 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         for (TrustAnchor anchor : trustAnchors) {
             try {
                 validateSingleAnchor(chain, anchor);
-                return; // success
+                return;
             } catch (CertPathValidatorException e) {
                 lastException = e;
                 if (e.getReason() == BasicReason.REVOKED || e.getReason() == BasicReason.UNDETERMINED_REVOCATION_STATUS) {
