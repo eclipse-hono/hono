@@ -36,8 +36,9 @@ import org.eclipse.hono.util.RevocableTrustAnchor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 
 /**
@@ -75,20 +76,48 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
             throw new IllegalArgumentException("trust anchor list must not be empty");
         }
 
-        final Promise<Void> result = Promise.promise();
+        final Context ctx = Vertx.currentContext();
+        if (isOcspEnabled(trustAnchors) && ctx != null) {
+            // OCSP check may block event loop, run it on a worker thread
+            return ctx.owner().<Void>executeBlocking(() -> {
+                try {
+                    validateAnchors(chain, trustAnchors);
+                } catch (CertificateException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new CertificateException("validation of device certificate failed", e);
+                }
+                return null;
+            }, false);
+        } else {
+            LOG.warn("No Vert.x context available, performing synchronous certificate validation (likely in tests).");
+            try {
+                validateAnchors(chain, trustAnchors);
+                return Future.succeededFuture();
+            } catch (CertificateException e) {
+                return Future.failedFuture(e);
+            } catch (Exception e) {
+                return Future.failedFuture(new CertificateException("validation of device certificate failed", e));
+            }
+        }
+    }
 
+    private boolean isOcspEnabled(final Set<TrustAnchor> trustAnchors) {
+        return trustAnchors.stream()
+                .filter(a -> a instanceof RevocableTrustAnchor)
+                .map(a -> (RevocableTrustAnchor) a)
+                .anyMatch(RevocableTrustAnchor::isOcspEnabled);
+    }
+
+    private void validateAnchors(final List<X509Certificate> chain, final Set<TrustAnchor> trustAnchors) throws CertificateException {
         Exception lastException = null;
-        // Need to validate each anchor separately to be able to configure specific revocation check settings
         for (TrustAnchor anchor : trustAnchors) {
             try {
                 validateSingleAnchor(chain, anchor);
-                // Successfully validated using this anchor
-                result.complete();
-                return result.future();
+                return; // success
             } catch (CertPathValidatorException e) {
                 lastException = e;
                 if (e.getReason() == BasicReason.REVOKED || e.getReason() == BasicReason.UNDETERMINED_REVOCATION_STATUS) {
-                    // Certificate trusted but revoked, exit now
                     LOG.warn("Certificate [subject DN: {}] revocation check failed.",
                             chain.get(0).getSubjectX500Principal().getName(), e);
                     break;
@@ -100,11 +129,10 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         LOG.debug("validation of device certificate [subject DN: {}] failed",
                 chain.get(0).getSubjectX500Principal().getName(), lastException);
         if (lastException instanceof CertificateException) {
-            result.fail(lastException);
+            throw (CertificateException) lastException;
         } else {
-            result.fail(new CertificateException("validation of device certificate failed", lastException));
+            throw new CertificateException("validation of device certificate failed", lastException);
         }
-        return result.future();
     }
 
     private void validateSingleAnchor(final List<X509Certificate> chain, final TrustAnchor anchor)
