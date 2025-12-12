@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -66,7 +67,6 @@ class TableAdapterStoreTest {
     private TableAdapterStore store;
     private final String TENANT_ID = "test-tenant";
     private final String DEVICE_ID = "device-1";
-    private final String VERSION = "v1";
 
     /**
      * Creates a test device with default values.
@@ -156,33 +156,36 @@ class TableAdapterStoreTest {
     @Test
     void testReadDeviceSuccess() {
         // Given
+        final var version = "v1";
         final var device = createTestDevice();
         final var deviceJson = JsonObject.mapFrom(device).encode();
-        mockSingleRow(deviceJson, VERSION);
+        mockSingleRow(deviceJson, version);
 
         // When
         final var result = store.readDevice(DeviceKey.from(TENANT_ID, DEVICE_ID), spanContext).result();
 
         // Then
-        assertTrue(result.isPresent());
-        final var deviceResult = result.get();
-        assertTrue(deviceResult.getDevice().isEnabled());
-        assertEquals(VERSION, deviceResult.getResourceVersion().orElse(""));
+        validateReadDeviceResult(result, version);
     }
 
     @Test
     void testReadDeviceSuccess_dataNull() {
         // Given
-        mockSingleRow(null, VERSION);
+        final var version = "v2";
+        mockSingleRow(null, version);
 
         // When
         final var result = store.readDevice(DeviceKey.from(TENANT_ID, DEVICE_ID), spanContext).result();
 
         // Then
+        validateReadDeviceResult(result, version);
+    }
+
+    private void validateReadDeviceResult(final Optional<DeviceReadResult> result, final String version) {
         assertTrue(result.isPresent());
         final var deviceResult = result.get();
         assertTrue(deviceResult.getDevice().isEnabled());
-        assertEquals(VERSION, deviceResult.getResourceVersion().orElse(""));
+        assertEquals(version, deviceResult.getResourceVersion().orElse(""));
     }
 
     @Test
@@ -216,7 +219,8 @@ class TableAdapterStoreTest {
         // Mock multiple rows
         when(row.size()).thenReturn(2);
         when(row.getValue(0)).thenReturn(deviceJson);
-        when(row.getValue(1)).thenReturn(VERSION);
+        final var version = "v3";
+        when(row.getValue(1)).thenReturn(version);
         when(rowSet.columnsNames()).thenReturn(List.of("data", "version"));
         when(rowSet.size()).thenReturn(2);
 
