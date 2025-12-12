@@ -64,6 +64,7 @@ class TableAdapterStoreTest {
     private final Tracer tracer = mock(Tracer.class);
     private final JDBCPool client = mock(JDBCPool.class);
 
+    private String deviceJson;
     private TableAdapterStore store;
     private final String TENANT_ID = "test-tenant";
     private final String DEVICE_ID = "device-1";
@@ -81,35 +82,17 @@ class TableAdapterStoreTest {
      * Mocks a single row of device data.
      *
      * @param deviceJson The JSON string of the device data (can be null)
-     * @param version The version string
+     * @param versions The versions the mocked rows contain
      */
-    private void mockSingleRow(final String deviceJson, final String version) {
+    private void mockRows(final String deviceJson, final String[] versions) {
         // Setup row data
-        when(row.size()).thenReturn(2);
-        when(row.getValue(0)).thenReturn(deviceJson);
-        when(row.getValue(1)).thenReturn(version);
+        for (String version : versions) {
+            when(row.size()).thenReturn(2);
+            when(row.getValue(0)).thenReturn(deviceJson);
+            when(row.getValue(1)).thenReturn(version);
+        }
 
-        // Setup row set
-        when(rowSet.columnsNames()).thenReturn(List.of("data", "version"));
-        when(rowSet.size()).thenReturn(1);
-
-        // Setup iterator
-        final var iterator = mock(RowIterator.class);
-        when(rowSet.iterator()).thenReturn(iterator);
-        when(iterator.hasNext()).thenReturn(true).thenReturn(false);
-        when(iterator.next()).thenReturn(row);
-
-        // Mock forEach
-        doAnswer(invocation -> {
-            final Consumer<Row> consumer = invocation.getArgument(0);
-            consumer.accept(row);
-            return null;
-        }).when(rowSet).forEach(any());
-
-        // Mock prepared query
-        final var preparedQueryMock = mock(io.vertx.sqlclient.PreparedQuery.class);
-        when(preparedQueryMock.execute(any(Tuple.class))).thenReturn(Future.succeededFuture(rowSet));
-        when(sqlConnection.preparedQuery(anyString())).thenReturn(preparedQueryMock);
+        mockRowSet(versions.length);
 
         // Mock direct query
         doAnswer(invocation -> {
@@ -117,6 +100,30 @@ class TableAdapterStoreTest {
             handler.handle(Future.succeededFuture(rowSet));
             return null;
         }).when(sqlConnection).query(anyString());
+    }
+
+    private void mockRowSet(final int numRows) {
+        final var iterator = mock(RowIterator.class);
+        when(rowSet.iterator()).thenReturn(iterator);
+        when(rowSet.columnsNames()).thenReturn(List.of("data", "version"));
+        when(rowSet.size()).thenReturn(numRows);
+        doAnswer(invocation -> {
+            final Consumer<Row> consumer = invocation.getArgument(0);
+            for (int i = 0; i < numRows; i++) {
+                consumer.accept(row);
+            }
+            return null;
+        }).when(rowSet).forEach(any());
+        for (int i = 0; i < numRows; i++) {
+            when(iterator.hasNext()).thenReturn(true);
+        }
+        when(iterator.hasNext()).thenReturn(false);
+        when(iterator.next()).thenReturn(row);
+
+        // Return rowSet in query:
+        final var preparedQueryMock = mock(io.vertx.sqlclient.PreparedQuery.class);
+        when(preparedQueryMock.execute(any(Tuple.class))).thenReturn(Future.succeededFuture(rowSet));
+        when(sqlConnection.preparedQuery(anyString())).thenReturn(preparedQueryMock);
     }
 
     @BeforeEach
@@ -137,6 +144,8 @@ class TableAdapterStoreTest {
         final var statementConfig = StatementConfiguration.empty().overrideWith(getStatementsAsInputStream(), true);
 
         store = new TableAdapterStore(client, tracer, statementConfig, null);
+        final var device = createTestDevice();
+        deviceJson = JsonObject.mapFrom(device).encode();
     }
 
     private static @NotNull ByteArrayInputStream getStatementsAsInputStream() {
@@ -157,9 +166,7 @@ class TableAdapterStoreTest {
     void testReadDeviceSuccess() {
         // Given
         final var version = "v1";
-        final var device = createTestDevice();
-        final var deviceJson = JsonObject.mapFrom(device).encode();
-        mockSingleRow(deviceJson, version);
+        mockRows(deviceJson, new String[]{version});
 
         // When
         final var result = store.readDevice(DeviceKey.from(TENANT_ID, DEVICE_ID), spanContext).result();
@@ -172,7 +179,7 @@ class TableAdapterStoreTest {
     void testReadDeviceSuccess_dataNull() {
         // Given
         final var version = "v2";
-        mockSingleRow(null, version);
+        mockRows(null, new String[]{version});
 
         // When
         final var result = store.readDevice(DeviceKey.from(TENANT_ID, DEVICE_ID), spanContext).result();
@@ -192,59 +199,26 @@ class TableAdapterStoreTest {
     void testReadDeviceNotFound() {
         // Given
         final var key = DeviceKey.from(TENANT_ID, "non-existent-device");
-
-        // Mock empty result set
-        when(rowSet.iterator()).thenReturn(mock(RowIterator.class));
-        when(rowSet.size()).thenReturn(0);
-        doAnswer(invocation -> null).when(rowSet).forEach(any());
-
-        // Mock queries
-        final var preparedQueryMock = mock(io.vertx.sqlclient.PreparedQuery.class);
-        when(preparedQueryMock.execute(any(Tuple.class))).thenReturn(Future.succeededFuture(rowSet));
-        when(sqlConnection.preparedQuery(anyString())).thenReturn(preparedQueryMock);
+        mockRows(deviceJson, new String[]{});
 
         // When
-        final var result = store.readDevice(key, spanContext).result();
+        final var future = store.readDevice(key, spanContext);
 
         // Then
-        assertTrue(result.isEmpty());
+        assertTrue(future.succeeded());
+        assertTrue(future.result().isEmpty());
     }
 
     @Test
     void testReadDeviceMultipleEntries() {
         // Given
-        final var device = createTestDevice();
-        final var deviceJson = JsonObject.mapFrom(device).encode();
+        final var key = DeviceKey.from(TENANT_ID, "duplicate-device");
+        mockRows(deviceJson, new String[]{"v3", "v4"});
 
-        // Mock multiple rows
-        when(row.size()).thenReturn(2);
-        when(row.getValue(0)).thenReturn(deviceJson);
-        final var version = "v3";
-        when(row.getValue(1)).thenReturn(version);
-        when(rowSet.columnsNames()).thenReturn(List.of("data", "version"));
-        when(rowSet.size()).thenReturn(2);
+        // When
+        final var future = store.readDevice(key, spanContext);
 
-        // Setup iterator for multiple rows
-        final var iterator = mock(RowIterator.class);
-        when(rowSet.iterator()).thenReturn(iterator);
-        when(iterator.hasNext()).thenReturn(true, true, false);
-        when(iterator.next()).thenReturn(row);
-
-        // Mock forEach for multiple rows
-        doAnswer(invocation -> {
-            final Consumer<Row> consumer = invocation.getArgument(0);
-            consumer.accept(row);
-            consumer.accept(row);
-            return null;
-        }).when(rowSet).forEach(any());
-
-        // Mock queries
-        final var preparedQueryMock = mock(io.vertx.sqlclient.PreparedQuery.class);
-        when(preparedQueryMock.execute(any(Tuple.class))).thenReturn(Future.succeededFuture(rowSet));
-        when(sqlConnection.preparedQuery(anyString())).thenReturn(preparedQueryMock);
-
-        // When/Then
-        final var future = store.readDevice(DeviceKey.from(TENANT_ID, "duplicate-device"), spanContext);
+        // Then
         assertTrue(future.failed());
         assertEquals("Found multiple entries for a single device", future.cause().getMessage());
     }
