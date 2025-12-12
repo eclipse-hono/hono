@@ -48,7 +48,9 @@ import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
 
 /**
  * A service for validating X.509 client certificates against
@@ -71,24 +73,29 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     /**
      * Creates a new instance for a Tenant service client.
      *
+     * @param vertx The Vert.x instance to use.
      * @param tenantClient The client to use for accessing the Tenant service.
      */
-    public TenantServiceBasedX509Authentication(final TenantClient tenantClient) {
+    public TenantServiceBasedX509Authentication(
+            final Vertx vertx,
+            final TenantClient tenantClient) {
 
-        this(tenantClient, NoopTracerFactory.create());
+        this(vertx, tenantClient, NoopTracerFactory.create());
     }
 
     /**
      * Creates a new instance for a Tenant service client.
      *
+     * @param vertx The Vert.x instance to use.
      * @param tenantClient The client to use for accessing the Tenant service.
      * @param tracer The <em>OpenTracing</em> tracer to use for tracking the process of
      *               authenticating the client.
      */
     public TenantServiceBasedX509Authentication(
+            final Vertx vertx,
             final TenantClient tenantClient,
             final Tracer tracer) {
-        this(tenantClient, tracer, new DeviceCertificateValidator());
+        this(tenantClient, tracer, new DeviceCertificateValidator(vertx));
     }
 
     /**

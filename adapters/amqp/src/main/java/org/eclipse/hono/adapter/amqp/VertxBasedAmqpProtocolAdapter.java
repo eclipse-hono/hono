@@ -193,7 +193,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 new UsernamePasswordAuthProvider(getCredentialsClient(), tracer),
                                 this::handleBeforeCredentialsValidation),
                         new SaslExternalAuthHandler(
-                                new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
+                                new TenantServiceBasedX509Authentication(vertx, getTenantClient(), tracer),
                                 new X509AuthProvider(getCredentialsClient(), tracer),
                                 this::handleBeforeCredentialsValidation));
             }

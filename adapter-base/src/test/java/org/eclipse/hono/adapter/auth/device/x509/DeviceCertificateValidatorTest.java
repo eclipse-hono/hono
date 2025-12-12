@@ -18,7 +18,6 @@ import java.security.cert.TrustAnchor;
 import java.util.List;
 
 import org.eclipse.hono.test.VertxTools;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -35,15 +34,6 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 class DeviceCertificateValidatorTest {
 
-    private DeviceCertificateValidator validator;
-
-    /**
-     */
-    @BeforeEach
-    void setUp() {
-        validator = new DeviceCertificateValidator();
-    }
-
     /**
      * Verifies that the validator succeeds to verify a certificate chain
      * using a trust anchor that has been created with a name and public key
@@ -54,7 +44,7 @@ class DeviceCertificateValidatorTest {
      */
     @Test
     void testValidateSucceedsForTrustAnchorBasedOnPublicKey(final Vertx vertx, final VertxTestContext ctx) {
-
+        final DeviceCertificateValidator validator = new DeviceCertificateValidator(vertx);
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create("iot.eclipse.org");
         VertxTools.getCertificate(vertx, deviceCert.certificatePath())
             .compose(cert -> {

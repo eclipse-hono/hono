@@ -36,7 +36,6 @@ import org.eclipse.hono.util.RevocableTrustAnchor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
@@ -48,6 +47,18 @@ import io.vertx.core.Vertx;
 public class DeviceCertificateValidator implements X509CertificateChainValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceCertificateValidator.class);
+
+    private final Vertx vertx;
+
+    /**
+     * Creates a new device certificate validator.
+     *
+     * @param vertx The Vert.x instance to use.
+     */
+    public DeviceCertificateValidator(final Vertx vertx) {
+        Objects.requireNonNull(vertx);
+        this.vertx = vertx;
+    }
 
     /**
      * {@inheritDoc}
@@ -76,36 +87,16 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
             throw new IllegalArgumentException("trust anchor list must not be empty");
         }
 
-        final Context ctx = Vertx.currentContext();
-        if (isOcspEnabled(trustAnchors) && ctx != null) {
-            // OCSP check may block event loop, run it on a worker thread
-            return ctx.owner().<Void>executeBlocking(() -> {
-                try {
-                    validateAnchors(chain, trustAnchors);
-                } catch (CertificateException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new CertificateException("validation of device certificate failed", e);
-                }
-                return null;
-            }, false);
-        } else {
+        return vertx.executeBlocking(() -> {
             try {
                 validateAnchors(chain, trustAnchors);
-                return Future.succeededFuture();
             } catch (CertificateException e) {
-                return Future.failedFuture(e);
+                throw e;
             } catch (Exception e) {
-                return Future.failedFuture(new CertificateException("validation of device certificate failed", e));
+                throw new CertificateException("validation of device certificate failed", e);
             }
-        }
-    }
-
-    private boolean isOcspEnabled(final Set<TrustAnchor> trustAnchors) {
-        return trustAnchors.stream()
-                .filter(a -> a instanceof RevocableTrustAnchor)
-                .map(a -> (RevocableTrustAnchor) a)
-                .anyMatch(RevocableTrustAnchor::isOcspEnabled);
+            return null;
+        }, false);
     }
 
     private void validateAnchors(final List<X509Certificate> chain, final Set<TrustAnchor> trustAnchors) throws CertificateException {
