@@ -452,7 +452,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.3.0</version>
+        <version>3.6.2</version>
         <executions>
           <execution>
             <!-- Make sure that only non-snapshot versions are used for the dependencies.
@@ -483,6 +483,7 @@
                 <requireJavaVersion>
                   <version>17</version>
                 </requireJavaVersion>
+                <dependencyConvergence />
               </rules>
             </configuration>
           </execution>
