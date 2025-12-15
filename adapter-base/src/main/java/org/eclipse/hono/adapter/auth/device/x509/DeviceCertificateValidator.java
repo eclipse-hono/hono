@@ -119,7 +119,8 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         LOG.debug("validation of device certificate [subject DN: {}] failed",
                 chain.get(0).getSubjectX500Principal().getName(), lastException);
         if (lastException instanceof CertificateException) {
-            throw (CertificateException) lastException;
+    if (lastException instanceof CertificateException certException) {
+            throw certException;
         } else {
             throw new CertificateException("validation of device certificate failed", lastException);
         }
