@@ -88,13 +88,7 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         }
 
         return vertx.executeBlocking(() -> {
-            try {
-                validateAnchors(chain, trustAnchors);
-            } catch (CertificateException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new CertificateException("validation of device certificate failed", e);
-            }
+            validateAnchors(chain, trustAnchors);
             return null;
         }, false);
     }
