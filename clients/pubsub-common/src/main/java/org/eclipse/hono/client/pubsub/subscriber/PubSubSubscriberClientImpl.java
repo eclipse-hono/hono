@@ -14,10 +14,13 @@ package org.eclipse.hono.client.pubsub.subscriber;
 
 import java.util.Objects;
 
+import org.eclipse.hono.client.pubsub.PubSubConfigProperties;
+import org.eclipse.hono.client.pubsub.PubSubMessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.api.gax.core.CredentialsProvider;
+import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.pubsub.v1.ProjectSubscriptionName;
@@ -38,16 +41,16 @@ public class PubSubSubscriberClientImpl implements PubSubSubscriberClient {
      * The number of milliseconds to wait before retrying to subscribe to a subscription.
      */
     private static final int SUBSCRIBE_RETRY_DELAY_MILLIS = 60000;
-    private final Logger log = LoggerFactory.getLogger(PubSubSubscriberClientImpl.class);
-    private final Subscriber subscriber;
+    private static final Logger LOG = LoggerFactory.getLogger(PubSubSubscriberClientImpl.class);
     private final Vertx vertx;
+    private final Subscriber subscriber;
 
     /**
      * Creates a new instance of PubSubSubscriberClientImpl where a Pub/Sub Subscriber is initialized. The Subscriber is
      * based on a created subscription, which follows the format: projects/{project}/subscriptions/{subscription}
      *
      * @param vertx The Vert.x instance that this subscriber runs on.
-     * @param projectId The identifier of the Google Cloud Project to connect to.
+     * @param pubSubConfigProperties The Pub/Sub configuration properties.
      * @param subscriptionId The name of the subscription to create the subscriber for.
      * @param receiver The message receiver used to process the received message.
      * @param credentialsProvider The provider for credentials to use for authenticating to the Pub/Sub service.
@@ -55,21 +58,31 @@ public class PubSubSubscriberClientImpl implements PubSubSubscriberClient {
      */
     public PubSubSubscriberClientImpl(
             final Vertx vertx,
-            final String projectId,
+            final PubSubConfigProperties pubSubConfigProperties,
             final String subscriptionId,
             final MessageReceiver receiver,
             final CredentialsProvider credentialsProvider) {
         this.vertx = Objects.requireNonNull(vertx);
-        Objects.requireNonNull(projectId);
         Objects.requireNonNull(subscriptionId);
         Objects.requireNonNull(receiver);
         Objects.requireNonNull(credentialsProvider);
+        Objects.requireNonNull(pubSubConfigProperties);
+        Objects.requireNonNull(pubSubConfigProperties.getProjectId());
 
-        final ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
-        this.subscriber = Subscriber
-                .newBuilder(subscriptionName, receiver)
-                .setCredentialsProvider(credentialsProvider)
-                .build();
+        final ProjectSubscriptionName subscriptionName = ProjectSubscriptionName
+                .of(pubSubConfigProperties.getProjectId(), subscriptionId);
+        final var builder = Subscriber.newBuilder(subscriptionName, receiver);
+
+        if (pubSubConfigProperties.isEmulatorHostConfigured()) {
+            final var channelProvider = PubSubMessageHelper.getTransportChannelProvider(pubSubConfigProperties);
+            builder
+                    .setChannelProvider(channelProvider)
+                    .setCredentialsProvider(NoCredentialsProvider.create());
+        } else {
+            builder.setCredentialsProvider(credentialsProvider);
+
+        }
+        this.subscriber = builder.build();
     }
 
     /**
@@ -88,15 +101,15 @@ public class PubSubSubscriberClientImpl implements PubSubSubscriberClient {
     private void subscribeWithRetries(final Promise<Void> resultPromise, final boolean keepTrying) {
         try {
             subscriber.startAsync().awaitRunning();
-            log.info("Successfully subscribing on: {}", subscriber.getSubscriptionNameString());
+            LOG.info("Successfully subscribing on: {}", subscriber.getSubscriptionNameString());
             resultPromise.complete();
         } catch (Exception e) {
             if (keepTrying) {
-                log.info("Error subscribing message from Pub/Sub, will retry in {}ms: ", SUBSCRIBE_RETRY_DELAY_MILLIS,
+                LOG.info("Error subscribing message from Pub/Sub, will retry in {}ms: ", SUBSCRIBE_RETRY_DELAY_MILLIS,
                         e);
                 vertx.setTimer(SUBSCRIBE_RETRY_DELAY_MILLIS, tid -> subscribeWithRetries(resultPromise, keepTrying));
             } else {
-                log.error("Error subscribing message from Pub/Sub", e);
+                LOG.error("Error subscribing message from Pub/Sub", e);
                 resultPromise.fail(e);
             }
         }

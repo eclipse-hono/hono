@@ -36,6 +36,7 @@
     <dependency>
       <groupId>io.quarkiverse.googlecloudservices</groupId>
       <artifactId>quarkus-google-cloud-pubsub</artifactId>
+        <version>${quarkiverse.googlecloudservices.version}</version>
       <exclusions>
         <exclusion>
           <groupId>commons-logging</groupId>

@@ -48,6 +48,7 @@
     <opentracing.version>0.33.0</opentracing.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.15.0</qpid-jms.version>
+    <quarkiverse.googlecloudservices.version>2.18.0</quarkiverse.googlecloudservices.version>
     <quarkus.platform.version>3.20.4</quarkus.platform.version>
     <slf4j.version>2.0.16</slf4j.version>
     <spring-security-crypto.version>6.5.2</spring-security-crypto.version>
@@ -195,6 +196,8 @@ quarkus.log.category."io.quarkus.vertx.core.runtime".level=DEBUG
 quarkus.log.category."org.eclipse.hono".level=${hono.debug.level:INFO}
 # Max exec time
 quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
+quarkus.google.cloud.pubsub.emulator-host=${google.cloud.emulator-host:localhost:8085}
+quarkus.google.cloud.project-id=${google.cloud.project-id:local-test-project}
     </quarkus.application-dev.properties>
   </properties>
 
