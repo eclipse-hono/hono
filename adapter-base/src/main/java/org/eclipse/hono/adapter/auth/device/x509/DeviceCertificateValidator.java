@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 
 /**
@@ -47,6 +47,18 @@ import io.vertx.core.Promise;
 public class DeviceCertificateValidator implements X509CertificateChainValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceCertificateValidator.class);
+
+    private final Vertx vertx;
+
+    /**
+     * Creates a new device certificate validator.
+     *
+     * @param vertx The Vert.x instance to use.
+     */
+    public DeviceCertificateValidator(final Vertx vertx) {
+        Objects.requireNonNull(vertx);
+        this.vertx = vertx;
+    }
 
     /**
      * {@inheritDoc}
@@ -75,20 +87,21 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
             throw new IllegalArgumentException("trust anchor list must not be empty");
         }
 
-        final Promise<Void> result = Promise.promise();
+        return vertx.executeBlocking(() -> {
+            validateAnchors(chain, trustAnchors);
+            return null;
+        }, false);
+    }
 
+    private void validateAnchors(final List<X509Certificate> chain, final Set<TrustAnchor> trustAnchors) throws CertificateException {
         Exception lastException = null;
-        // Need to validate each anchor separately to be able to configure specific revocation check settings
         for (TrustAnchor anchor : trustAnchors) {
             try {
                 validateSingleAnchor(chain, anchor);
-                // Successfully validated using this anchor
-                result.complete();
-                return result.future();
+                return;
             } catch (CertPathValidatorException e) {
                 lastException = e;
                 if (e.getReason() == BasicReason.REVOKED || e.getReason() == BasicReason.UNDETERMINED_REVOCATION_STATUS) {
-                    // Certificate trusted but revoked, exit now
                     LOG.warn("Certificate [subject DN: {}] revocation check failed.",
                             chain.get(0).getSubjectX500Principal().getName(), e);
                     break;
@@ -99,12 +112,11 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         }
         LOG.debug("validation of device certificate [subject DN: {}] failed",
                 chain.get(0).getSubjectX500Principal().getName(), lastException);
-        if (lastException instanceof CertificateException) {
-            result.fail(lastException);
+        if (lastException instanceof CertificateException certException) {
+            throw certException;
         } else {
-            result.fail(new CertificateException("validation of device certificate failed", lastException));
+            throw new CertificateException("validation of device certificate failed", lastException);
         }
-        return result.future();
     }
 
     private void validateSingleAnchor(final List<X509Certificate> chain, final TrustAnchor anchor)

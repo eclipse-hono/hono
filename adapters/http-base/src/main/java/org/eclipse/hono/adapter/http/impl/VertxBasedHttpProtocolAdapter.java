@@ -117,7 +117,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             final ChainAuthHandler authHandler = ChainAuthHandler.any();
             authHandler.add(new X509AuthHandler(
-                    new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
+                    new TenantServiceBasedX509Authentication(vertx, getTenantClient(), tracer),
                     Optional.ofNullable(clientCertAuthProvider)
                         .orElseGet(() -> new X509AuthProvider(getCredentialsClient(), tracer)),
                     this::handleBeforeCredentialsValidation));

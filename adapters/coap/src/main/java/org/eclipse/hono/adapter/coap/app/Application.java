@@ -70,7 +70,7 @@ public class Application extends AbstractProtocolAdapterApplication<CoapAdapterP
 
         final var endpointFactory = new ConfigBasedCoapEndpointFactory(vertx, protocolAdapterProperties);
         endpointFactory.setPskStore(new DeviceRegistryBasedPskStore(adapter, tracer));
-        endpointFactory.setCertificateVerifier(new DeviceRegistryBasedCertificateVerifier(adapter, tracer));
+        endpointFactory.setCertificateVerifier(new DeviceRegistryBasedCertificateVerifier(vertx, adapter, tracer));
 
         adapter.setCoapEndpointFactory(endpointFactory);
 
