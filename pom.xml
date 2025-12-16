@@ -25,7 +25,7 @@
     Eclipse Hono provides remote service interfaces for connecting large numbers of IoT devices to a back end and
     interacting with them in a uniform way regardless of the device communication protocol.
   </description>
-  <url>https://www.eclipse.org/hono</url>
+  <url>https://eclipse.dev/hono</url>
   <inceptionYear>2016</inceptionYear>
 
   <organization>
@@ -75,10 +75,8 @@
     <developer>
       <id>khudalla</id>
       <name>Kai Hudalla</name>
-      <email>kai.hudalla@bosch.io</email>
+      <email>sophokles.kh@gmail.com</email>
       <url>https://github.com/sophokles73</url>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
       <roles>
         <role>Lead</role>
         <role>Committer</role>
@@ -96,9 +94,9 @@
     <developer>
       <id>calohmn</id>
       <name>Carsten Lohmann</name>
-      <email>carsten.lohmann@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
+      <email>carsten.lohmann@bosch.com</email>
+      <organization>Robert Bosch GmbH</organization>
+      <organizationUrl>https://www.bosch-digital.com</organizationUrl>
       <roles>
         <role>Committer</role>
       </roles>
@@ -106,9 +104,9 @@
     <developer>
       <id>kaniyan</id>
       <name>Kartheeswaran Kalidass</name>
-      <email>Kartheeswaran.Kalidass@bosch.io</email>
-      <organization>Bosch.IO GmbH</organization>
-      <organizationUrl>https://www.bosch.io</organizationUrl>
+      <email>Kartheeswaran.Kalidass@bosch.com</email>
+      <organization>Robert Bosch GmbH</organization>
+      <organizationUrl>https://www.bosch-digital.com</organizationUrl>
       <roles>
         <role>Committer</role>
       </roles>
