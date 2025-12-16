@@ -50,21 +50,23 @@ jobs:
           device-registry: file
           commandrouting-cache: embedded
           messaging-type: amqp
+          kafka-image-name: 'docker.io/confluentinc/cp-kafka:7.9.5'
           mongodb-image-name: mongo:6.0
-        # Use Quarkus JVM images: jdbc registry, Kafka messaging, Command Router with embedded cache
+        # Use Quarkus JVM images: JDBC registry, Kafka 4.0 messaging, Command Router with embedded cache
         - device-registry-name: jdbc
           device-registry: jdbc
           commandrouting-cache: embedded
           messaging-type: kafka
           kafka-image-name: 'docker.io/confluentinc/cp-kafka:8.0.3'
           mongodb-image-name: mongo:7.0
-        # Use Quarkus JVM images: mongodb registry, Kafka messaging, Command Router with data grid
+        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 3.9 messaging, Command Router with data grid
         - device-registry-name: mongodb-6.0
           device-registry: mongodb
           mongodb-image-name: mongo:6.0
           commandrouting-cache: server
           messaging-type: kafka
           kafka-image-name: 'docker.io/confluentinc/cp-kafka:7.9.5'
+        # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.1 messaging, Command Router with data grid
         - device-registry-name: mongodb-7.0
           device-registry: mongodb
           mongodb-image-name: mongo:7.0
