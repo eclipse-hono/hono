@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -464,9 +464,11 @@ public class DelegatingDeviceManagementHttpEndpointTest {
             final MultiMap requestParams,
             final HttpServerResponse response) {
 
+        final var authority = HostAndPort.authority("localhost", 8080);
         final HttpServerRequestInternal request = mock(HttpServerRequestInternal.class);
         when(request.absoluteURI()).thenReturn(relativeURI);
-        when(request.authority()).thenReturn(HostAndPort.authority("localhost"));
+        when(request.authority()).thenReturn(authority);
+        when(request.isValidAuthority()).thenReturn(true);
         when(request.method()).thenReturn(method);
         when(request.scheme()).thenReturn("http");
         when(request.uri()).thenReturn(relativeURI);

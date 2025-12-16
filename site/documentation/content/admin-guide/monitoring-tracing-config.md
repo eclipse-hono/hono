@@ -85,19 +85,25 @@ specific default value that differs from the Quarkus default:
 By default, all Hono components will log to the system console and can be configured using environment
 variables with the `QUARKUS_LOG_CONSOLE_` prefix or using corresponding system properties. Logging to a
 file and syslog is also available. See the
-[configuration reference](https://quarkus.io/guides/logging#quarkus-log-logging-log-config_quarkus.log.console-console-logging)
+[configuration reference](https://quarkus.io/guides/logging#quarkus-core_section_quarkus-log-console)
 for details.
 
 Log formatting can be configured by either setting `QUARKUS_LOG_CONSOLE_FORMAT`, or, to enable logging in
-JSON format, by setting `QUARKUS_LOG_CONSOLE_JSON` to `true`. Follow the
-[Quarkus documentation](https://quarkus.io/guides/logging#quarkus-logging-json_quarkus.log.console-json-console-logging)
-for more details.
+JSON format, by setting `QUARKUS_LOG_CONSOLE_JSON_ENABLED` to `true`. Please refer to the
+[Quarkus documentation](https://quarkus.io/guides/logging#json-logging) for details.
 
-Additionally, the Hono components contain support for sending log messages to a centralized log
-management system like Graylog, Logstash or Fluentd. This is done by means of the
+{{% notice warning %}}
+Support for using the `QUARKUS_LOG_CONSOLE_JSON` environment variable for enabling JSON logging has been deprecated in the underlying
+Quarkus framework and support for it will be removed altogether in a future version of Hono. Please update your configuration to use
+the `QUARKUS_LOG_CONSOLE_JSON_ENABLED` variable instead.
+{{% /notice %}}
+
+Additionally, the Hono components support the sending of log messages to a centralized log management system like
+Graylog, Logstash or Fluentd. This is done by means of the
 [*quarkus-logging-gelf* extension](https://quarkus.io/guides/centralized-log-management),
-using TCP or UDP to send logs in the Graylog Extended Log Format (GELF). This can also be enabled using environment variables with the `QUARKUS_LOG_HANDLER_GELF_` prefix or using corresponding system properties.
-See the [configuration reference](https://quarkus.io/guides/centralized-log-management#configuration-reference)
+using TCP or UDP to send logs in the Graylog Extended Log Format (GELF). This can also be enabled using environment variables
+with the `QUARKUS_LOG_HANDLER_GELF_` prefix or using corresponding system properties.
+Please refer to Quarkus' [configuration reference](https://quarkus.io/guides/centralized-log-management#configuration-reference)
 for details.
 
 ## Tracing
@@ -131,11 +137,9 @@ Hono supports configuration of the trace exporter by means of the following conf
 
 | OS Environment Variable<br>Java System Property | Type      | Default Value | Description  |
 | :---------------------------------------------- | :-------- | :------------ | :------------|
-| `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | `-` | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
+| `QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.otel.exporter.otlp.endpoint` | *string* | `-` | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
 
-Please refer to the
-[Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry#quarkus-opentelemetry-exporter-otlp_configuration)
-for further configuration options for the tracer exporter.
+Please refer to the [Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry-tracing) for further configuration options for the tracer exporter.
 
 The sampler can be configured using the following
 [OpenTelemetry SDK](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration)

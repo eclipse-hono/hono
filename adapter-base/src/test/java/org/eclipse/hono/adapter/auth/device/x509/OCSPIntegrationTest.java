@@ -115,8 +115,8 @@ class OCSPIntegrationTest {
     /**
      */
     @BeforeEach
-    void setUp() {
-        validator = new DeviceCertificateValidator();
+    void setUp(final Vertx vertx) {
+        validator = new DeviceCertificateValidator(vertx);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.hono.tests.http;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -49,9 +48,9 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -116,7 +115,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)),
+                    HttpResponseExpectation.SC_ACCEPTED),
                 MESSAGES_TO_SEND,
                 QoS.AT_LEAST_ONCE);
     }
@@ -148,7 +147,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer(IntegrationTestSupport.getPayload(4096)),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_ENTITY_TOO_LARGE));
+                            HttpResponseExpectation.SC_REQUEST_ENTITY_TOO_LARGE);
 
             })
             // THEN the message gets rejected by the HTTP adapter with a 413
@@ -182,7 +181,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                             Buffer.buffer("hello"),
                             requestHeaders,
                             // THEN the message gets rejected by the HTTP adapter with a 503
-                            ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE));
+                            HttpResponseExpectation.SC_SERVICE_UNAVAILABLE);
 
                 })
                 .onComplete(ctx.succeeding(response -> {
@@ -260,7 +259,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 Buffer.buffer("hello"),
                 requestHeaders,
                 // THEN the message gets rejected by the HTTP adapter with a 503
-                ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE));
+                HttpResponseExpectation.SC_SERVICE_UNAVAILABLE);
 
         httpResponseFuture
                 .onComplete(ctx.succeeding(response -> {
@@ -338,7 +337,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 count -> httpClientWithClientCert.create(
                         options,
                         Buffer.buffer("hello " + count),
-                        ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)),
+                        HttpResponseExpectation.SC_ACCEPTED),
                 10,
                 QoS.AT_MOST_ONCE);
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.tests.http;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -71,11 +70,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -299,7 +298,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     null,
                     requestHeaders,
-                    ResponsePredicate.SC_ACCEPTED))
+                    HttpResponseExpectation.SC_ACCEPTED))
             .onFailure(ctx::failNow);
     }
 
@@ -326,7 +325,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     null,
                     requestHeaders,
-                    ResponsePredicate.SC_BAD_REQUEST))
+                    HttpResponseExpectation.SC_BAD_REQUEST))
             .onComplete(ctx.succeedingThenComplete());
 
     }
@@ -362,7 +361,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("some payload"),
                     requestHeaders,
-                    ResponsePredicate.SC_ACCEPTED))
+                    HttpResponseExpectation.SC_ACCEPTED))
             .onFailure(ctx::failNow);
 
     }
@@ -392,7 +391,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("some payload"),
                     requestHeaders,
-                    ResponsePredicate.SC_BAD_REQUEST))
+                    HttpResponseExpectation.SC_BAD_REQUEST))
             .onComplete(ctx.succeedingThenComplete());
 
     }
@@ -437,7 +436,7 @@ public abstract class HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             count % 2 == 0 ? requestHeaders : requestHeadersWithEncodedCredentials,
-                                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                                    HttpResponseExpectation.SC_ACCEPTED)
                         .compose(this::verifyAccessControlExposedHeaders);
                 });
     }
@@ -505,7 +504,7 @@ public abstract class HttpTestBase {
                             uri,
                             Buffer.buffer("hello " + count),
                             headers,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                            HttpResponseExpectation.SC_ACCEPTED);
                 });
     }
 
@@ -544,7 +543,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello " + count),
                     requestHeaders,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                    HttpResponseExpectation.SC_ACCEPTED)
                 .compose(this::verifyAccessControlExposedHeaders);
         });
     }
@@ -587,7 +586,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello " + count),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                        HttpResponseExpectation.SC_ACCEPTED)
                     .compose(this::verifyAccessControlExposedHeaders),
                 5,
                 null);
@@ -620,7 +619,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
+                        HttpResponseExpectation.SC_UNAUTHORIZED);
             })
             // THEN the connection is refused
             .onComplete(ctx.succeedingThenComplete());
@@ -801,9 +800,9 @@ public abstract class HttpTestBase {
             .compose(cert -> {
 
                 final Tenant tenant = Tenants.createTenantForTrustAnchor(
-                        cert.getIssuerX500Principal().getName(X500Principal.RFC2253),
-                        keyPair.getPublic().getEncoded(),
-                        keyPair.getPublic().getAlgorithm());
+                    cert.getIssuerX500Principal().getName(X500Principal.RFC2253),
+                    keyPair.getPublic().getEncoded(),
+                    keyPair.getPublic().getAlgorithm());
 
                 return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
             })
@@ -818,7 +817,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
+                        HttpResponseExpectation.SC_UNAUTHORIZED);
             })
             // THEN the request fails with a 401
             .onComplete(ctx.succeedingThenComplete());
@@ -858,7 +857,7 @@ public abstract class HttpTestBase {
                 getEndpointUri(),
                 Buffer.buffer("hello"),
                 requestHeaders,
-                ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
+                HttpResponseExpectation.SC_UNAUTHORIZED)
                 // THEN the request fails with a 401
                 .onComplete(ctx.succeedingThenComplete());
     }
@@ -897,7 +896,7 @@ public abstract class HttpTestBase {
                 getEndpointUri(),
                 Buffer.buffer("hello"),
                 requestHeaders,
-                ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
+                HttpResponseExpectation.SC_UNAUTHORIZED)
                 // THEN the request fails with a 401
                 .onComplete(ctx.succeedingThenComplete());
     }
@@ -929,7 +928,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
+                        HttpResponseExpectation.SC_FORBIDDEN);
             })
             // THEN the message gets rejected by the HTTP adapter with a 403
             .onComplete(ctx.succeedingThenComplete());
@@ -961,7 +960,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_NOT_FOUND));
+                        HttpResponseExpectation.SC_NOT_FOUND);
             })
             // THEN the message gets rejected by the HTTP adapter with a 404
             .onComplete(ctx.succeedingThenComplete());
@@ -998,7 +997,7 @@ public abstract class HttpTestBase {
                         String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
+                        HttpResponseExpectation.SC_FORBIDDEN);
 
             })
             // THEN the message gets rejected by the HTTP adapter with a 403
@@ -1035,14 +1034,14 @@ public abstract class HttpTestBase {
                         String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN))
+                        HttpResponseExpectation.SC_FORBIDDEN)
                     .map(requestHeaders);
             })
             .compose(requestHeaders -> httpClient.update(
                         String.format("%s//%s", getEndpointUri(), deviceId),
                         Buffer.buffer("hello"),
                         requestHeaders,
-                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN)))
+                        HttpResponseExpectation.SC_FORBIDDEN))
             // THEN the message gets rejected by the HTTP adapter with a 403
             .onComplete(ctx.succeedingThenComplete());
     }
@@ -1079,7 +1078,7 @@ public abstract class HttpTestBase {
                                 uri,
                                 Buffer.buffer("hello"),
                                 requestHeaders,
-                                ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                                HttpResponseExpectation.SC_ACCEPTED);
                 })
                 .compose(ok -> provisioningNotificationReceived.future())
                 .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
@@ -1148,7 +1147,7 @@ public abstract class HttpTestBase {
                     .add(HttpHeaders.AUTHORIZATION, authorization)
                     .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                     .add(Constants.HEADER_QOS_LEVEL, "1"),
-                ResponsePredicate.status(200, 300));
+                HttpResponseExpectation.status(200, 300));
         }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
@@ -1168,7 +1167,7 @@ public abstract class HttpTestBase {
             getEndpointUri(),
             Buffer.buffer("hello one"),
             firstRequestHeaders,
-            ResponsePredicate.status(200, 300)
+            HttpResponseExpectation.status(200, 300)
         ).onSuccess(httpResponse -> {
             logger.info("received response to first request");
         });
@@ -1186,7 +1185,7 @@ public abstract class HttpTestBase {
                         getEndpointUri(),
                         Buffer.buffer("hello two"),
                         requestHeaders,
-                        ResponsePredicate.status(200, 300));
+                        HttpResponseExpectation.status(200, 300));
             }).onSuccess(httpResponse -> {
                 logger.info("received response to second request");
             });
@@ -1260,7 +1259,7 @@ public abstract class HttpTestBase {
                     getEndpointUri(),
                     Buffer.buffer("hello"),
                     requestHeaders,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                    HttpResponseExpectation.SC_ACCEPTED);
             })
             .onComplete(ctx.succeeding(responseHeaders -> {
                 logger.info("received response to upload request");
@@ -1400,10 +1399,10 @@ public abstract class HttpTestBase {
                                 if (endpointConfig.isSubscribeAsGateway()) {
                                     // GW uses PUT when acting on behalf of a device
                                     result = httpClient.update(responseUri, body, cmdResponseRequestHeaders,
-                                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                                        HttpResponseExpectation.SC_ACCEPTED);
                                 } else {
                                     result = httpClient.create(responseUri, body, cmdResponseRequestHeaders,
-                                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                                        HttpResponseExpectation.SC_ACCEPTED);
                                 }
                                 return result.recover(thr -> {
                                     // wrap exception, making clear it occurred when sending the command response,
@@ -1518,10 +1517,10 @@ public abstract class HttpTestBase {
         if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
             // GW uses PUT when acting on behalf of a device
             return httpClient.update(uriEncoder.toString(), payload, requestHeadersToUse,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK));
+                HttpResponseExpectation.SC_OK);
         } else {
             return httpClient.create(uriEncoder.toString(), payload, requestHeadersToUse,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK));
+                HttpResponseExpectation.SC_OK);
         }
     }
 

@@ -74,6 +74,7 @@ public class AmqpMessageInjectExtractAdapterTest {
      * {@code AmqpMessageExtractAdapter}, when having provided the name of the message annotations map.
      * Also verifies that there are no errors during encoding/decoding of the message with the injected entries.
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void testInjectAndExtractUsingLegacyFormat() {
         final String legacyMessageAnnotationsPropertiesMapName = "map";
@@ -83,7 +84,7 @@ public class AmqpMessageInjectExtractAdapterTest {
 
         final Message message = ProtonHelper.message();
         // inject the properties using the legacy format
-        final MessageAnnotationsInjectAdapter injectAdapter = new MessageAnnotationsInjectAdapter(message,
+        final var injectAdapter = new MessageAnnotationsInjectAdapter(message,
                 legacyMessageAnnotationsPropertiesMapName);
         testEntries.forEach(injectAdapter::put);
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.hono.tests.http;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.net.HttpURLConnection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -37,7 +36,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -102,7 +101,7 @@ public class EventHttpIT extends HttpTestBase {
                 getEndpointUri(),
                 Buffer.buffer("hello"),
                 requestHeaders,
-                ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
+                HttpResponseExpectation.SC_BAD_REQUEST)
                 .onComplete(ctx.succeedingThenComplete());
     }
 
@@ -136,7 +135,7 @@ public class EventHttpIT extends HttpTestBase {
                 getEndpointUri(),
                 Buffer.buffer(messagePayload),
                 requestHeaders,
-                ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                HttpResponseExpectation.SC_ACCEPTED)
                 .onSuccess(eventSent -> {
                     // THEN create a consumer once the event message has been successfully sent
                     createConsumer(tenantId, msg -> {

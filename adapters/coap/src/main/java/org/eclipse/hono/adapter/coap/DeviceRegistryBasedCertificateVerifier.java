@@ -58,6 +58,7 @@ import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 /**
  * A certificate verifier that uses Hono's Tenant and Credentials services to
@@ -87,17 +88,19 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
     /**
      * Creates a new resolver.
      *
+     * @param vertx The Vert.x instance to use.
      * @param adapter The protocol adapter to use for accessing Hono services.
      * @param tracer The OpenTracing tracer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public DeviceRegistryBasedCertificateVerifier(
+            final Vertx vertx,
             final CoapProtocolAdapter adapter,
             final Tracer tracer) {
 
         this.adapter = Objects.requireNonNull(adapter);
         this.tracer = Objects.requireNonNull(tracer);
-        this.auth = new TenantServiceBasedX509Authentication(adapter.getTenantClient(), tracer);
+        this.auth = new TenantServiceBasedX509Authentication(vertx, adapter.getTenantClient(), tracer);
         this.authProvider = new X509AuthProvider(adapter.getCredentialsClient(), tracer);
     }
 

@@ -69,7 +69,7 @@ public class RevocableTrustAnchor extends TrustAnchor {
 
     private void setRevocationProperties(final JsonObject keyProps) {
         ocspEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false);
-        ocspNonceEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_REVOCATION_ENABLED, Boolean.class, false);
+        ocspNonceEnabled = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_NONCE_ENABLED, Boolean.class, false);
         final String ocspResponderUriString = JsonHelper.getValue(keyProps, TenantConstants.FIELD_OCSP_RESPONDER_URI, String.class, null);
         if (ocspResponderUriString != null) {
             ocspResponderUri = URI.create(ocspResponderUriString);

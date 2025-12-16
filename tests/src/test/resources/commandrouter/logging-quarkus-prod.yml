@@ -5,5 +5,7 @@ quarkus:
         level: WARN
       "org.eclipse.hono":
         level: INFO
+      "org.eclipse.hono.commandrouter.impl.kafka":
+        level: INFO
       "org.eclipse.hono.client.impl.HonoConnectionImpl":
         level: ERROR

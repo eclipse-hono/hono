@@ -211,7 +211,7 @@
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
-          <version>0.43.4</version>
+          <version>0.48.0</version>
           <executions>
             <execution>
               <id>build_images</id>
@@ -298,6 +298,8 @@
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
               <vertx.json.base64>legacy</vertx.json.base64>
               <hono.skipDockerTests>${skipDockerTests}</hono.skipDockerTests>
+              <!-- use Docker Client API 1.44 to make sure we can run testcontainers based tests with Docker 29 -->
+              <api.version>1.44</api.version>
             </systemPropertyVariables>
             <properties>
               <configurationParameters>
@@ -450,7 +452,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.3.0</version>
+        <version>3.6.2</version>
         <executions>
           <execution>
             <!-- Make sure that only non-snapshot versions are used for the dependencies.
@@ -481,6 +483,7 @@
                 <requireJavaVersion>
                   <version>17</version>
                 </requireJavaVersion>
+                <dependencyConvergence />
               </rules>
             </configuration>
           </execution>
