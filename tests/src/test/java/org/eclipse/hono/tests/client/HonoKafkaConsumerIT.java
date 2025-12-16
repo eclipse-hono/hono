@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -117,7 +118,7 @@ public class HonoKafkaConsumerIT {
     void initProducer() {
         final Map<String, String> producerConfig = IntegrationTestSupport.getKafkaProducerConfig()
                 .getProducerConfig("test");
-        producerConfig.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, "10000");
+        producerConfig.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, "100000");
         producerConfig.put(ProducerConfig.BATCH_SIZE_CONFIG, "6000");
         producerConfig.put(ProducerConfig.METADATA_MAX_AGE_CONFIG, "300");
         kafkaProducer = KafkaProducer.create(vertx, producerConfig);
@@ -245,7 +246,7 @@ public class HonoKafkaConsumerIT {
         // prepare topics
         final String topicPattern = "test_%%s_%s".formatted(UUID.randomUUID());
         final Set<String> topics = IntStream.range(0, numTopics)
-                .mapToObj(i -> topicPattern.formatted(i))
+                .mapToObj(topicPattern::formatted)
                 .collect(Collectors.toSet());
         final String publishTestTopic = topics.iterator().next();
 
@@ -254,7 +255,8 @@ public class HonoKafkaConsumerIT {
                 TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
                 TopicConfig.RETENTION_MS_CONFIG, "5000",
                 TopicConfig.SEGMENT_MS_CONFIG, "3000",
-                TopicConfig.SEGMENT_BYTES_CONFIG, "1000");
+                TopicConfig.SEGMENT_BYTES_CONFIG, "1100000");
+                // TopicConfig.SEGMENT_BYTES_CONFIG, "1000");
         createTopics(topics, numPartitions, topicsConfig)
                 .onComplete(setup.succeedingThenComplete());
 
@@ -736,18 +738,26 @@ public class HonoKafkaConsumerIT {
     }
 
     private Future<Void> publishRecords(final int numTestRecordsPerTopic, final String keyPrefix, final Set<String> topics) {
-        final List<Future<Void>> resultFutures = new ArrayList<>();
+        final List<Future<Void>> resultFutures = new ArrayList<>(topics.size());
         topics.forEach(topic -> resultFutures.add(publishRecords(numTestRecordsPerTopic, keyPrefix, topic)));
         return Future.all(resultFutures).map((Void) null);
     }
 
+    private Buffer createRandomPayload(final int size) {
+        final var random = new Random();
+        final byte[] bytes = new byte[size];
+        random.nextBytes(bytes);
+        return Buffer.buffer(bytes);
+    }
+
     private Future<Void> publishRecords(final int numRecords, final String keyPrefix, final String topic) {
+        final var payload = createRandomPayload(60_000);
         return kafkaProducer.partitionsFor(topic)
                 .compose(info -> {
                     LOG.debug("partition info for topic {} is {}empty", topic, info.isEmpty() ? "" : "not ");
-                    final List<Future<Void>> resultFutures = new ArrayList<>();
+                    final List<Future<Void>> resultFutures = new ArrayList<>(numRecords);
                     IntStream.range(0, numRecords).forEach(i -> {
-                        resultFutures.add(publish(topic, keyPrefix + i, Buffer.buffer("testPayload")).mapEmpty());
+                        resultFutures.add(publish(topic, keyPrefix + i, payload).mapEmpty());
                     });
                     return Future.all(resultFutures).map((Void) null);
                 });
