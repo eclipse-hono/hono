@@ -1207,7 +1207,7 @@
                 </image>
                 <!-- ##### Kafka ##### -->
                 <image>
-                  <name>${kafka.image.name}</name>
+                  <name>${kafka-image.name}</name>
                   <alias>hono-kafka-test</alias>
                   <run>
                     <skip>${hono.kafka-messaging.disabled}</skip>
