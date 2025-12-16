@@ -56,18 +56,21 @@ jobs:
           device-registry: jdbc
           commandrouting-cache: embedded
           messaging-type: kafka
-          mongodb-image-name: mongo:6.0
+          kafka-image-name: 'docker.io/confluentinc/cp-kafka:8.0.3'
+          mongodb-image-name: mongo:7.0
         # Use Quarkus JVM images: mongodb registry, Kafka messaging, Command Router with data grid
         - device-registry-name: mongodb-6.0
           device-registry: mongodb
+          mongodb-image-name: mongo:6.0
           commandrouting-cache: server
           messaging-type: kafka
-          mongodb-image-name: mongo:6.0
+          kafka-image-name: 'docker.io/confluentinc/cp-kafka:7.9.5'
         - device-registry-name: mongodb-7.0
           device-registry: mongodb
+          mongodb-image-name: mongo:7.0
           commandrouting-cache: server
           messaging-type: kafka
-          mongodb-image-name: mongo:7.0
+          kafka-image-name: 'docker.io/apache/kafka:4.1.1'
 
     name: "Use ${{ matrix.device-registry-name }} registry, ${{ matrix.messaging-type }} messaging with ${{ matrix.commandrouting-cache }} cache"
     steps:
@@ -75,7 +78,7 @@ jobs:
     - name: Set up Maven
       uses: stCarolas/setup-maven@v5
       with:
-        maven-version: 3.8.8
+        maven-version: 3.9.11
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
@@ -90,4 +93,5 @@ jobs:
         -Dhono.messaging-infra.type=${{ matrix.messaging-type }} \
         -Dhono.commandrouting.cache=${{ matrix.commandrouting-cache }} \
         -Dmongodb-image.name=${{ matrix.mongodb-image-name }} \
+        -Dkafka-image.name=${{ matrix.kafka-image-name }} \
         -Pbuild-docker-image,jaeger,run-tests
