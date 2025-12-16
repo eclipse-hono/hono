@@ -257,21 +257,21 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.11.0</version>
+          <version>3.14.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.1.4</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-resources-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>3.4.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.5.0</version>
           <configuration>
             <skipIfEmpty>true</skipIfEmpty>
             <archive>
@@ -284,7 +284,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.5.0</version>
+          <version>3.12.0</version>
           <configuration>
             <doclint>all,-accessibility</doclint>
           </configuration>
@@ -292,7 +292,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.5.4</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
@@ -313,7 +313,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.5.4</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
@@ -328,7 +328,7 @@
            -->
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.5.0</version>
+          <version>3.9.0</version>
           <executions>
             <execution>
               <id>copy_legal_docs</id>
@@ -347,7 +347,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-checkstyle-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.6.0</version>
           <dependencies>
             <dependency>
               <groupId>org.eclipse.hono</groupId>
@@ -357,7 +357,7 @@
             <dependency>
               <groupId>com.puppycrawl.tools</groupId>
               <artifactId>checkstyle</artifactId>
-              <version>10.4</version>
+              <version>12.3.0</version>
             </dependency>
           </dependencies>
           <executions>
@@ -379,7 +379,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
-          <version>1.2.0</version>
+          <version>1.2.1</version>
         </plugin>
         <plugin>
           <groupId>com.internetitem</groupId>
@@ -389,7 +389,7 @@
         <plugin>
           <groupId>io.smallrye</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
-          <version>3.1.6</version>
+          <version>3.5.3</version>
           <executions>
             <execution>
               <id>make-index</id>
@@ -402,7 +402,7 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.10</version>
+          <version>0.8.14</version>
           <executions>
             <execution>
               <id>default-prepare-agent</id>
@@ -443,7 +443,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-gpg-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.8</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -492,7 +492,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.2.1</version>
+        <version>3.4.0</version>
         <executions>
           <execution>
             <id>attach-sources</id>
