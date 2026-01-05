@@ -32,7 +32,7 @@ public interface ServiceClient {
      *
      * @param readinessHandler The handler to register the checks with.
      */
-    default void registerReadinessChecks(HealthCheckHandler readinessHandler) {
+    default void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         // do not register anything by default
     }
 
@@ -46,7 +46,7 @@ public interface ServiceClient {
      *
      * @param livenessHandler The handler to register the checks with.
      */
-    default void registerLivenessChecks(HealthCheckHandler livenessHandler) {
+    default void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
         // do not register anything by default
     }
 }

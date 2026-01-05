@@ -69,7 +69,9 @@ public interface ResourceLimitChecks {
      *         if the check could not be performed.
      * @throws NullPointerException if the tenant object is null.
      */
-    default Future<Boolean> isConnectionDurationLimitReached(TenantObject tenantObject, SpanContext spanContext) {
+    default Future<Boolean> isConnectionDurationLimitReached(
+        final TenantObject tenantObject,
+        final SpanContext spanContext) {
         return Future.succeededFuture(Boolean.FALSE);
     }
 }
