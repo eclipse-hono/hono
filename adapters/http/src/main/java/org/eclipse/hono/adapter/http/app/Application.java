@@ -26,18 +26,8 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class Application extends AbstractProtocolAdapterApplication<HttpProtocolAdapterProperties> {
 
-    private static final String CONTAINER_ID = "Hono HTTP Adapter";
-
     @Inject
     HttpAdapterMetrics metrics;
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getComponentName() {
-        return CONTAINER_ID;
-    }
 
     /**
      * {@inheritDoc}

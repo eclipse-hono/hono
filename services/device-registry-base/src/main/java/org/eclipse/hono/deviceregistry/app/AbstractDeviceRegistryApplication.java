@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,7 +54,7 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
             throw new IllegalStateException("Authentication service must be a vert.x Verticle");
         }
 
-        log.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
+        log.info("deploying {} {} instances ...", appConfig.getMaxInstances(), componentName);
         final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)

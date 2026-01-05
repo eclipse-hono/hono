@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,8 +33,6 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class Application extends AbstractProtocolAdapterApplication<HttpProtocolAdapterProperties> {
 
-    private static final String CONTAINER_ID = "Hono Lora Adapter";
-
     @Inject
     HttpAdapterMetrics metrics;
 
@@ -48,18 +46,10 @@ public class Application extends AbstractProtocolAdapterApplication<HttpProtocol
      * {@inheritDoc}
      */
     @Override
-    public String getComponentName() {
-        return CONTAINER_ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected LoraProtocolAdapter adapter() {
 
         final List<LoraProvider> providers = new ArrayList<>();
-        loraProviders.forEach(handler -> providers.add(handler));
+        loraProviders.forEach(providers::add);
 
         final LoraProtocolAdapter adapter = new LoraProtocolAdapter(WebClient.create(vertx));
         adapter.setConfig(protocolAdapterProperties);

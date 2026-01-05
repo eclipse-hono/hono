@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,11 +21,4 @@ import jakarta.enterprise.context.ApplicationScoped;
  */
 @ApplicationScoped
 public class Application extends AbstractDeviceRegistryApplication {
-
-    private static final String COMPONENT_NAME = "Hono MongoDB Device Registry";
-
-    @Override
-    public String getComponentName() {
-        return COMPONENT_NAME;
-    }
 }

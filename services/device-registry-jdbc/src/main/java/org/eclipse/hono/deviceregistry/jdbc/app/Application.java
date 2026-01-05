@@ -21,11 +21,4 @@ import jakarta.enterprise.context.ApplicationScoped;
  */
 @ApplicationScoped
 public class Application extends AbstractDeviceRegistryApplication {
-
-    private static final String COMPONENT_NAME = "Hono JDBC Device Registry";
-
-    @Override
-    public String getComponentName() {
-        return COMPONENT_NAME;
-    }
 }
