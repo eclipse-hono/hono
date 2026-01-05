@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,6 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class Application extends AbstractServiceApplication {
 
-    private static final String COMPONENT_NAME = "Hono Authentication Server";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
     @Inject
@@ -55,14 +54,11 @@ public class Application extends AbstractServiceApplication {
     ServiceConfigProperties amqpProps;
 
     @Override
-    public String getComponentName() {
-        return COMPONENT_NAME;
-    }
-
-    @Override
     protected void doStart() {
 
-        LOG.info("deploying {} ...", getComponentName());
+        if (LOG.isInfoEnabled()) {
+            LOG.info("starting {} ...", componentName);
+        }
         final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)

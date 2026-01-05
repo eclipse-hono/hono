@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,18 +37,8 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class Application extends AbstractProtocolAdapterApplication<CoapAdapterProperties> {
 
-    private static final String CONTAINER_ID = "Hono CoAP Adapter";
-
     @Inject
     CoapAdapterMetrics metrics;
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getComponentName() {
-        return CONTAINER_ID;
-    }
 
     /**
      * {@inheritDoc}

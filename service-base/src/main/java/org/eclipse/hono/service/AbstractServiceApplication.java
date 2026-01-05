@@ -17,9 +17,9 @@ package org.eclipse.hono.service;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +40,15 @@ import jakarta.inject.Inject;
  * A base class for implementing Quarkus based services.
  *
  */
-public abstract class AbstractServiceApplication implements ComponentNameProvider {
+public abstract class AbstractServiceApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractServiceApplication.class);
+
+    /**
+     * The name of the component.
+     */
+    @ConfigProperty(name = "quarkus.application.name")
+    protected String componentName;
 
     /**
      * The vert.x instance managed by Quarkus.
@@ -115,7 +121,9 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     @Deprecated
     protected final void registerHealthchecks(final HealthCheckProvider provider) {
         Optional.ofNullable(provider).ifPresent(p -> {
-            LOG.debug("registering legacy health checks [provider: {}]", p.getClass().getName());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("registering legacy health checks [provider: {}]", p.getClass().getName());
+            }
             healthCheckServer.registerHealthCheckResources(p);
         });
     }
@@ -151,7 +159,11 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
                                 element.getFileName(),
                                 element.getLineNumber()))
                         .collect(Collectors.joining(System.lineSeparator()));
-                LOG.warn("managed vert.x instance has been closed unexpectedly{}{}", System.lineSeparator(), s);
+                if (LOG.isWarnEnabled()) {
+                    LOG.warn(
+                        "managed vert.x instance has been closed unexpectedly{}{}",
+                        System.lineSeparator(), s);
+                }
                 completion.complete();
             };
             vertxInternal.addCloseHook(closeHook);
@@ -201,18 +213,11 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      * @param ev The event indicating shutdown.
      */
     public void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down {}", getComponentName());
-        if (addedVertxCloseHook != null && vertx instanceof VertxInternal vertxInternal) {
-            vertxInternal.removeCloseHook(addedVertxCloseHook);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("shutting down {}", componentName);
         }
-        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        vertx.close(attempt -> {
-            if (attempt.succeeded()) {
-                shutdown.complete(null);
-            } else {
-                shutdown.completeExceptionally(attempt.cause());
-            }
-        });
-        shutdown.join();
+        if (vertx instanceof VertxInternal vertxInternal) {
+            Optional.ofNullable(addedVertxCloseHook).ifPresent(vertxInternal::removeCloseHook);
+        }
     }
 }

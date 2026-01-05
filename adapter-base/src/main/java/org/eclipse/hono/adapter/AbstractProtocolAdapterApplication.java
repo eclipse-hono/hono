@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -171,7 +171,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final var props = new ClientConfigProperties(options);
         props.setServerRoleIfUnknown("Command & Control");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.commandConsumerConfig = props;
     }
 
@@ -182,7 +182,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final var props = new ClientConfigProperties(options);
         props.setServerRoleIfUnknown("Downstream");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.downstreamSenderConfig = props;
     }
 
@@ -197,7 +197,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Tenant");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.tenantClientConfig = props;
     }
 
@@ -207,7 +207,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Device Registration");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.deviceRegistrationClientConfig = props;
     }
 
@@ -217,7 +217,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Credentials");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.credentialsClientConfig = props;
     }
 
@@ -227,7 +227,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Command Router");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.commandRouterConfig = props;
     }
 
@@ -296,7 +296,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Override
     protected void doStart() {
 
-        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
+        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), componentName);
         final Map<String, String> deploymentResult = new HashMap<>();
 
         final Future<String> adapterTracker = vertx.deployVerticle(
@@ -610,7 +610,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 ProtocolAdapterCommandConsumerFactoryImpl.class.getName());
-        return new ProtocolAdapterCommandConsumerFactoryImpl(vertx, commandRouterClient, getComponentName());
+        return new ProtocolAdapterCommandConsumerFactoryImpl(vertx, commandRouterClient, componentName);
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {

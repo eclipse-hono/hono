@@ -93,7 +93,6 @@ import jakarta.inject.Inject;
  */
 public abstract class AbstractApplication extends NotificationSupportingServiceApplication {
 
-    private static final String COMPONENT_NAME = "Hono Command Router";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractApplication.class);
 
     @Inject
@@ -151,7 +150,7 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
 
         final var props = new ClientConfigProperties(options);
         props.setServerRoleIfUnknown("Command & Control");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.commandConsumerConnectionConfig = props;
     }
 
@@ -162,7 +161,7 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
 
         final var props = new ClientConfigProperties(options);
         props.setServerRoleIfUnknown("Downstream");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.downstreamSenderConfig = props;
     }
 
@@ -172,7 +171,7 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Tenant");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.tenantClientConfig = props;
     }
 
@@ -182,7 +181,7 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
         props.setServerRoleIfUnknown("Device Registration");
-        props.setNameIfNotSet(getComponentName());
+        props.setNameIfNotSet(componentName);
         this.deviceRegistrationClientConfig = props;
     }
 
@@ -249,11 +248,6 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
     }
 
     @Override
-    public String getComponentName() {
-        return COMPONENT_NAME;
-    }
-
-    @Override
     protected void doStart() {
 
         if (!(authenticationService instanceof Verticle)) {
@@ -261,7 +255,7 @@ public abstract class AbstractApplication extends NotificationSupportingServiceA
         }
 
         final var instancesToDeploy = appConfig.getMaxInstances();
-        LOG.info("deploying {} {} instances ...", instancesToDeploy, getComponentName());
+        LOG.info("deploying {} {} instances ...", instancesToDeploy, componentName);
         final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)

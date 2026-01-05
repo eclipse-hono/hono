@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,18 +26,8 @@ import jakarta.inject.Inject;
 @ApplicationScoped
 public class Application extends AbstractProtocolAdapterApplication<SigfoxProtocolAdapterProperties> {
 
-    private static final String CONTAINER_ID = "Hono Sigfox Adapter";
-
     @Inject
     HttpAdapterMetrics metrics;
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getComponentName() {
-        return CONTAINER_ID;
-    }
 
     /**
      * {@inheritDoc}
