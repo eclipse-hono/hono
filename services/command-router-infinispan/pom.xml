@@ -10,7 +10,8 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -20,7 +21,7 @@
     <relativePath>../parent</relativePath>
   </parent>
   <artifactId>hono-service-command-router-infinispan</artifactId>
-  <name>Hono Infinispan Based Command Router</name>
+  <name>Hono Infinispan Command Router</name>
   <description>A Quarkus based implementation of Hono's Command Router API that is using Infinispan for storing data.</description>
 
   <dependencies>
