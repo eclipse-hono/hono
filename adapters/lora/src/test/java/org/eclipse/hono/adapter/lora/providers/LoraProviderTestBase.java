@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.eclipse.hono.adapter.lora.LoraCommand;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.UnknownLoraMessage;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +66,7 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
      */
     protected final RoutingContext getRequestContext(final LoraMessageType type, final String... classifiers) throws IOException {
 
-        final Buffer message = LoraTestUtil.loadTestFile(provider.getProviderName(), LoraMessageType.UPLINK, classifiers);
+        final Buffer message = LoraTestUtil.loadTestFile(provider.getProviderName(), type, classifiers);
         final HttpServerRequest request = mock(HttpServerRequest.class);
         final RoutingContext routingContext = mock(RoutingContext.class);
         when(routingContext.request()).thenReturn(request);
@@ -97,6 +98,19 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
         final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(request);
         assertCommonUplinkProperties(loraMessage);
         assertMetaDataForUplinkMessage(loraMessage);
+    }
+
+    /**
+     * Verifies that uplink messages are parsed correctly.
+     *
+     * @throws IOException If the file containing the example message could not be loaded.
+     */
+    @Test
+    public void testGetMessageSucceedsForUnknownMessage() throws IOException {
+
+        final RoutingContext request = getRequestContext(LoraMessageType.UNKNOWN);
+        final UnknownLoraMessage loraMessage = (UnknownLoraMessage) provider.getMessage(request);
+        assertThat(loraMessage.getType()).isEqualTo(LoraMessageType.UNKNOWN);
     }
 
     /**

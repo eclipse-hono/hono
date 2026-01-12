@@ -142,7 +142,8 @@ public class EventResourceTest extends ResourceTestBase {
                         eq(MetricsTags.QoS.AT_LEAST_ONCE),
                         eq(payload.length()),
                         eq(TtdStatus.NONE),
-                        any());
+                        any(),
+                        eq(MetricsTags.ProcessingOutcomeReason.UNKNOWN));
             });
             ctx.completeNow();
         }));
@@ -187,7 +188,8 @@ public class EventResourceTest extends ResourceTestBase {
                             eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
                             eq(TtdStatus.NONE),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                 });
                 ctx.completeNow();
             }));

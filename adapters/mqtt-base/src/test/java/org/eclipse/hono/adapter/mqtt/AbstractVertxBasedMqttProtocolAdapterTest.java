@@ -1369,7 +1369,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                                 any(MetricsTags.QoS.class),
                                 anyInt(),
-                                any());
+                                any(),
+                                eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                     });
                     ctx.completeNow();
                 }));
@@ -1416,7 +1417,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                                 any(MetricsTags.QoS.class),
                                 anyInt(),
-                                any());
+                                any(),
+                                eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                     });
                     ctx.completeNow();
                 }));
