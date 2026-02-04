@@ -1,0 +1,47 @@
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# This workflow performs a Sonar scan and publishes the result to SonarQube.
+
+name: Perform Sonar scan
+
+on:
+  schedule:
+  - cron: '42 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-sonar-scan:
+
+    runs-on: ubuntu-latest
+    name: "Run Sonar scan"
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: 3.9.11
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        distribution: "temurin"
+        java-version: "17"
+        cache: "maven"
+    - name: "Build native images"
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+          -Djacoco.skip=false \
+          -DnoDocker \
+          -DcreateJavadoc=true \
+          -Dsonar.organization=eclipse \
+          -Dsonar.projectKey=org.eclipse.hono
