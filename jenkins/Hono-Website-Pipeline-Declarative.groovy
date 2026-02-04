@@ -83,9 +83,11 @@ pipeline {
         sh '''#!/bin/bash
           echo "cloning Hono repository..."
           git clone --recurse-submodules https://github.com/eclipse-hono/hono.git "${WORKSPACE}/hono"
-          echo "copying Documentation directory from master branch..."
-          cp -r "${HONO_DOCUMENTATION_DIR}" "${DOC_ASSEMBLY_DIR}"
-          mkdir -p "${DOC_ASSEMBLY_DIR}/content_dirs"
+          echo "Adding Documentation from master branch as DEV version..."
+          cp -r -p "${HONO_DOCUMENTATION_DIR}" "${DOC_ASSEMBLY_DIR}"
+          mv "${DOC_ASSEMBLY_DIR}/content" "${DOC_ASSEMBLY_DIR}/dev"
+          mkdir "${DOC_ASSEMBLY_DIR}/content"
+          mv "${DOC_ASSEMBLY_DIR}/dev" "${DOC_ASSEMBLY_DIR}/content/"
         '''
       }
     }
@@ -130,11 +132,11 @@ pipeline {
               echo "  [Languages.stable]"
               echo "    weight = -20000"
               echo "    languageName = \\"stable ($VERSION)\\""
-              echo "    contentDir = \\"content_dirs/stable\\""
+              echo "    contentDir = \\"content/stable\\""
               echo "    [Languages.stable.params]"
               echo "      honoVersion = \\"stable\\""
             } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
-            cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/stable"
+            cp -r -p "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content/stable"
           }
 
           function prepare_docu_version {
@@ -147,11 +149,11 @@ pipeline {
               echo "    title = \\"Eclipse Hono&trade; Vers.: ${VERSION}\\""
               echo "    weight = ${WEIGHT}"
               echo "    languageName = \\"${VERSION}\\""
-              echo "    contentDir = \\"content_dirs/${VERSION}\\""
+              echo "    contentDir = \\"content/${VERSION}\\""
               echo "    [Languages.\\"${VERSION}\\".params]"
-              echo "      honoVersion = \\"$3\\""
+              echo "      honoVersion = \\"${VERSION}\\""
             } >> "${DOC_ASSEMBLY_DIR}/config_version.toml"
-            cp -r "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content_dirs/$3"
+            cp -r -p "${HONO_DOCUMENTATION_DIR}/content" "${DOC_ASSEMBLY_DIR}/content/${VERSION}"
           }
 
           cd "${HONO_DOCUMENTATION_DIR}"
@@ -163,8 +165,11 @@ pipeline {
             if [[ "${TAG}" == "${TAG_STABLE}" ]]; then
               prepare_stable "${MAJOR}" "${MINOR}"
             fi
-            prepare_docu_version "${MAJOR}" "${MINOR}" "${MAJOR}.${MINOR}"
+            prepare_docu_version "${MAJOR}" "${MINOR}"
           done < <(tail -n+3 "${DOC_ASSEMBLY_DIR}/versions_supported.csv")  # skip header line and comment
+
+          echo "Documentation source content folder layout:"
+          du -h -d 2 "${DOC_ASSEMBLY_DIR}/content"
         '''
         container("hugo") {
           sh '''#!/bin/bash
