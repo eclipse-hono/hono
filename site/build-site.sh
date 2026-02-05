@@ -64,12 +64,12 @@ fi
 
 cd homepage || exit
 echo "Building homepage in directory: $target"
-$hugo_cmd -d $target
+$hugo_cmd -d "$target"
 echo
 echo
 cd .. 
 
 cd documentation || exit
 echo "Building documentation in directory: $target/docs"
-$hugo_cmd -d $target/docs
+$hugo_cmd -d "$target/docs"
 cd ..
