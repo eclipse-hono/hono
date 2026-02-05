@@ -1,4 +1,4 @@
-baseurl = "https://www.eclipse.org/hono/"
+baseurl = "https://eclipse.dev/hono/"
 languageCode = "en-us"
 title = "Eclipse Hono&trade;"
 theme = "hugo-universal-theme"

@@ -1,4 +1,4 @@
-baseurl = "https://www.eclipse.org/hono/docs/"
+baseurl = "https://eclipse.dev/hono/docs/"
 
 languageCode = "en-us"
 title = "Eclipse Hono&trade;"
@@ -21,7 +21,7 @@ pluralizeListTitles = "false"
   copyright = "The Eclipse Hono Project"
 
   # used in shortcode "homelink" to create absoulte URL for links into the home page
-  homeBaseUrl = "https://www.eclipse.org/hono/"
+  homeBaseUrl = "https://eclipse.dev/hono/"
 
   # Prefix URL to edit current page. Will display an "Edit this page" button on top right hand corner of every page.
   # Useful to give opportunity to people to create merge request for your doc.
@@ -64,7 +64,7 @@ pluralizeListTitles = "false"
 # Menu Shortcuts
 [[menu.shortcuts]]
 name = "<i class='fas fa-home'></i> Hono Home"
-url = "https://www.eclipse.org/hono/"
+url = "https://eclipse.dev/hono/"
 title = "Hono's Homepage"
 weight = 10
 
