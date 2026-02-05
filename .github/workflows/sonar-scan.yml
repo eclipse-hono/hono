@@ -19,27 +19,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-sonar-scan:
+  perform-sonar-scan:
 
     runs-on: ubuntu-latest
-    name: "Run Sonar scan"
+    name: "Perform Sonar scan"
     steps:
-    - uses: actions/checkout@v6
+    - name: Check out code
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
     - name: Set up Maven
       uses: stCarolas/setup-maven@v5
       with:
         maven-version: 3.9.11
+
     - name: Set up JDK
       uses: actions/setup-java@v5
       with:
         distribution: "temurin"
-        java-version: "17"
+        java-version: "21"
         cache: "maven"
-    - name: "Build native images"
+
+    - name: Build and run Sonar scan
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+        mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
           -Djacoco.skip=false \
           -DnoDocker \
           -DcreateJavadoc=true \
