@@ -310,7 +310,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
 
         if (!properties.containsKey(MessageHelper.SYS_PROPERTY_CREATION_TIME)) {
             // must match http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#type-timestamp
-            // as defined in https://www.eclipse.org/hono/docs/api/telemetry/#forward-telemetry-data
+            // as defined in https://eclipse.dev/hono/docs/api/telemetry/#forward-telemetry-data
             headers.add(KafkaRecordHelper.createKafkaHeader(
                     MessageHelper.SYS_PROPERTY_CREATION_TIME,
                     Json.encode(Instant.now().toEpochMilli())));

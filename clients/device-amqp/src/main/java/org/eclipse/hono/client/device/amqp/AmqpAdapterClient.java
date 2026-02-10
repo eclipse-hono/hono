@@ -26,7 +26,7 @@ import io.vertx.core.Future;
 /**
  * A Vert.x based client for interacting with Hono's AMQP adapter.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/">AMQP Adapter User Guide</a>
+ * @see <a href="https://eclipse.dev/hono/docs/dev/user-guide/amqp-adapter/">AMQP Adapter User Guide</a>
  */
 public interface AmqpAdapterClient extends ConnectionLifecycle<HonoConnection>, TelemetrySender, EventSender, CommandResponder {
 

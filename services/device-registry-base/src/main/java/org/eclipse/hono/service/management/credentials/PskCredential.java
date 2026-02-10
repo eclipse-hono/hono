@@ -30,7 +30,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 /**
  * A credential type for storing a Pre-shared Key as used in TLS handshakes.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#pre-shared-key">Pre-Shared Key</a> for an example
+ * See <a href="https://eclipse.dev/hono/docs/api/credentials/#pre-shared-key">Pre-Shared Key</a> for an example
  * of the configuration properties for this credential type.
  * <p>
  * The <em>auth-id</em> in this case serves as the <em>PSK identity</em>. According to

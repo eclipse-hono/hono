@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -23,7 +23,6 @@
 
   <name>Hono Adapter Base Test Utils</name>
   <description>Helper classes for implementing unit tests for components built on top of hono-adapter-base</description>
-  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

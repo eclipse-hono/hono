@@ -43,7 +43,7 @@ import io.vertx.kafka.client.producer.KafkaProducer;
 /**
  * A Kafka based client for sending command response messages downstream via a Kafka cluster.
  *
- * @see "https://www.eclipse.org/hono/docs/api/command-and-control-kafka/"
+ * @see "https://eclipse.dev/hono/docs/api/command-and-control-kafka/"
  */
 public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSender<Buffer> implements CommandResponseSender {
 

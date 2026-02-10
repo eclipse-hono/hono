@@ -28,7 +28,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A simple example device implementation to show the usage of the AMQP Adapter Client. It connects to the
- * <a href="https://www.eclipse.org/hono/sandbox/">Hono Sandbox</a> and performs the following operations with a delay
+ * <a href="https://eclipse.dev/hono/sandbox/">Hono Sandbox</a> and performs the following operations with a delay
  * of 1 second between each:
  * <ol>
  * <li>Send a telemetry message with QoS "AT_MOST_ONCE"</li>
@@ -40,10 +40,10 @@ import io.vertx.core.json.JsonObject;
  * If it receives a request-response command, it sends a response.
  * <p>
  * <b>The used tenant, device and credentials need to be registered and enabled.</b> For details on how to do this,
- * refer to the <a href="https://www.eclipse.org/hono/getting-started/">Getting Started Guide</a>.
+ * refer to the <a href="https://eclipse.dev/hono/getting-started/">Getting Started Guide</a>.
  *
  * @see AmqpAdapterClient
- * @see <a href="https://www.eclipse.org/hono/docs/dev-guide/amqp_adapter_client/">The AMQP Adapter Client
+ * @see <a href="https://eclipse.dev/hono/docs/dev-guide/amqp_adapter_client/">The AMQP Adapter Client
  *      documentation</a>
  */
 @SuppressFBWarnings(

@@ -32,7 +32,7 @@ info:
 
    contact:
       name: Contact details
-      url: https://www.eclipse.org/hono/community/get-in-touch/
+      url: https://eclipse.dev/hono/community/get-in-touch/
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
@@ -47,17 +47,17 @@ tags:
      description: Tenant Management (optional)
      externalDocs:
         description: Hono Multi-Tenancy
-        url: https://www.eclipse.org/hono/docs/concepts/tenancy/
+        url: https://eclipse.dev/hono/docs/concepts/tenancy/
    - name: devices
      description: Device registration
      externalDocs:
         description: Hono device identity
-        url: https://www.eclipse.org/hono/docs/concepts/device-identity/
+        url: https://eclipse.dev/hono/docs/concepts/device-identity/
    - name: credentials
      description: Device credentials
      externalDocs:
         description: Hono device identity
-        url: https://www.eclipse.org/hono/docs/concepts/device-identity/
+        url: https://eclipse.dev/hono/docs/concepts/device-identity/
 
 servers:
    - url: '{server}/v1'
@@ -737,7 +737,7 @@ components:
                   [RFC 5890](https://datatracker.ietf.org/doc/html/rfc5890#section-2.3.1).
                   If set, the alias MUST be unique among all tenants. Implementations of Hono's Tenant service
                   MAY consider this property when looking up a tenant by its identifier as defined by the
-                  [get Tenant operation](https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information).
+                  [get Tenant operation](https://eclipse.dev/hono/docs/api/tenant/#get-tenant-information).
             "ext":
                $ref: '#/components/schemas/Extensions'
             "adapters":
@@ -1565,7 +1565,7 @@ components:
                                  of the bytes resulting from applying the hash function to the byte array consisting of the salt bytes
                                  (if a salt is used) and the UTF-8 encoding of the clear text password.
                                  For detail regarding different hash functions and the required encoding refer to the
-                                 [Credentials API](https://www.eclipse.org/hono/docs/api/credentials/#hashed-password).
+                                 [Credentials API](https://eclipse.dev/hono/docs/api/credentials/#hashed-password).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.

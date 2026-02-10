@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2019 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -24,7 +24,6 @@
   <name>Hono Sigfox Adapter</name>
 
   <description>A Quarkus based protocol adapter for connecting to the Sigfox backend.</description>
-  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

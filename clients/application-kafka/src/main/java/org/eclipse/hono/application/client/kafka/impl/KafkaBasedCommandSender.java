@@ -59,7 +59,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 /**
  * A Kafka based client for sending commands and receiving command responses.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/">
  *      Command &amp; Control API for Kafka Specification</a>
  */
 public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buffer> implements KafkaCommandSender {

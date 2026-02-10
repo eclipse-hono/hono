@@ -40,7 +40,7 @@ public interface ProtocolAdapterOptions {
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
-     * in the <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
+     * in the <a href="https://eclipse.dev/hono/docs/api/credentials/">Credentials API</a>.
      * <p>
      * If this property is {@code false} then devices are always allowed to publish data without providing
      * credentials. This should only be set to false in test setups.

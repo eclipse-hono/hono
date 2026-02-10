@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
  * A service for keeping record of device credentials.
  * This interface only covers mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/credentials/">Credentials API</a>
  */
 public interface CredentialsService {
 
@@ -36,10 +36,10 @@ public interface CredentialsService {
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
      * @return A future indicating the outcome of the operation.
      *         The <em>status code</em> is set as specified in the
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId) {
@@ -59,10 +59,10 @@ public interface CredentialsService {
      *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         The <em>status code</em> is set as specified in the
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     Future<CredentialsResult<JsonObject>> get(String tenantId, String type, String authId, Span span);
@@ -76,10 +76,10 @@ public interface CredentialsService {
      * @param clientContext Optional bag of properties that can be used to identify the device.
      * @return A future indicating the outcome of the operation.
      *         The <em>status code</em> is set as specified in the
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
@@ -101,10 +101,10 @@ public interface CredentialsService {
      *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         The <em>status code</em> is set as specified in the
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     Future<CredentialsResult<JsonObject>> get(String tenantId, String type, String authId, JsonObject clientContext,

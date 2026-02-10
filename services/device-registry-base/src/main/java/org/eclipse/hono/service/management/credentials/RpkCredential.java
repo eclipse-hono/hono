@@ -29,7 +29,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 /**
  * A credential type for storing a raw public key for a device.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#raw-public-key">Raw Public Key</a> for an example
+ * See <a href="https://eclipse.dev/hono/docs/api/credentials/#raw-public-key">Raw Public Key</a> for an example
  * of the configuration properties for this credential type.
  */
 @RegisterForReflection

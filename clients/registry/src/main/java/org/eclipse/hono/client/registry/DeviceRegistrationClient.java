@@ -23,7 +23,7 @@ import io.vertx.core.Future;
 /**
  * A client for accessing Hono's Device Registration API.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">
+ * See Hono's <a href="https://eclipse.dev/hono/docs/api/device-registration/">
  * Device Registration API</a> for a description of the status codes returned.
  */
 public interface DeviceRegistrationClient extends Lifecycle {
@@ -46,7 +46,7 @@ public interface DeviceRegistrationClient extends Lifecycle {
      *         The future will succeed if a response with a status code in the [200, 300) range
      *         has been received from the Device Registration service. The contained object will
      *         then have properties according to the response message defined by
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
+     *         <a href="https://eclipse.dev/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}

@@ -22,7 +22,7 @@ import io.vertx.core.Future;
  * A minimal service for keeping record of device identities.
  * This interface covers only the mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/device-registration/">Device Registration API</a>
  */
 public interface RegistrationService {
 
@@ -41,7 +41,7 @@ public interface RegistrationService {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     Future<RegistrationResult> assertRegistration(String tenantId, String deviceId);
@@ -66,7 +66,7 @@ public interface RegistrationService {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     default Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
@@ -105,7 +105,7 @@ public interface RegistrationService {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     Future<RegistrationResult> assertRegistration(String tenantId, String deviceId, String gatewayId);
@@ -146,7 +146,7 @@ public interface RegistrationService {
      *             registered for the tenant or its <em>enabled</em> property is {@code false}.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
     default Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,

@@ -32,7 +32,7 @@ import io.vertx.core.Future;
  * A service for managing tenant information.
  * <p>
  * The methods defined by this interface represent the <em>tenant</em> resources
- * of Hono's <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * of Hono's <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>.
  */
 public interface TenantManagementService {
 
@@ -54,7 +54,7 @@ public interface TenantManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/createTenant">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/createTenant">
      *      Device Registry Management API - Create Tenant</a>
      */
     Future<OperationResult<Id>> createTenant(Optional<String> tenantId, Tenant tenantObj, Span span);
@@ -75,7 +75,7 @@ public interface TenantManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/getTenant">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/getTenant">
      *      Device Registry Management API - Get Tenant</a>
      */
     Future<OperationResult<Tenant>> readTenant(String tenantId, Span span);
@@ -106,7 +106,7 @@ public interface TenantManagementService {
      *         as specified in the Device Registry Management API.
      * @throws NullPointerException if any of filters, sort options or tracing span are {@code null}.
      * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/searchTenants"> Device Registry
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/searchTenants"> Device Registry
      *      Management API - Search Tenants</a>
      */
     default Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
@@ -140,7 +140,7 @@ public interface TenantManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/updateTenant">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/updateTenant">
      *      Device Registry Management API - Update Tenant</a>
      */
     Future<OperationResult<Void>> updateTenant(
@@ -167,7 +167,7 @@ public interface TenantManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/deleteTenant">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/deleteTenant">
      *      Device Registry Management API - Delete Tenant</a>
      */
     Future<Result<Void>> deleteTenant(String tenantId, Optional<String> resourceVersion, Span span);

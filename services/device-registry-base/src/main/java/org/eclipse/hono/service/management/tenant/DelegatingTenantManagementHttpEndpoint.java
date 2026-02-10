@@ -44,7 +44,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  * An {@code HttpEndpoint} for managing tenant information.
  * <p>
  * This endpoint implements the <em>tenant</em> resources of Hono's
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and executes the matching service implementation methods.
  * The outcome is then returned to the peer in the HTTP response.
  *

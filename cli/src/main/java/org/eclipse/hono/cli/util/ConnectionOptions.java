@@ -36,7 +36,7 @@ public class ConnectionOptions {
             names = {"--sandbox"},
             description = {
                 "Connect to Hono's Sandbox environment.",
-                "See https://www.eclipse.org/hono/sandbox/"
+                "See https://eclipse.dev/hono/sandbox/"
                 },
             order = 1)
     public boolean useSandbox;

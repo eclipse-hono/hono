@@ -23,7 +23,6 @@
 
   <name>Hono Kafka Test Utils</name>
   <description>Helper classes for implementing unit tests for components built using Kafka</description>
-  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

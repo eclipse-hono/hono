@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * An {@code AmqpEndpoint} for managing device credential information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
+ * This endpoint implements Hono's <a href="https://eclipse.dev/hono/docs/api/credentials/">Credentials API</a>.
  * It receives AMQP 1.0 messages representing requests and forwards them to the credential service implementation.
  * The outcome is then returned to the peer in a response message.
  *

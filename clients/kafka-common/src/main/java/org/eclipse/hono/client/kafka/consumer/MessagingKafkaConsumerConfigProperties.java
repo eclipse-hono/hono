@@ -25,9 +25,9 @@ import io.vertx.kafka.client.serialization.BufferDeserializer;
  * Record keys will be deserialized with {@link StringDeserializer}, the values with {@link BufferDeserializer}.
  *
  * @see <a href="https://kafka.apache.org/documentation/#consumerconfigs">Kafka Consumer Configs</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
 // When renaming or moving this class, please update it in the documentation
 @RegisterForReflection(targets = BufferDeserializer.class)

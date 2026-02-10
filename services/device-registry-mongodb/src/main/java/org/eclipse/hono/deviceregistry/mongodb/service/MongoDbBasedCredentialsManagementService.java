@@ -36,7 +36,7 @@ import io.vertx.core.Vertx;
 /**
  * A credentials management service that persists data in a MongoDB collection.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>
  */
 public final class MongoDbBasedCredentialsManagementService extends AbstractCredentialsManagementService {
 

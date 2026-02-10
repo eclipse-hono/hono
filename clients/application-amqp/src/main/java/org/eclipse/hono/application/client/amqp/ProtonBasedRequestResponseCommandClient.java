@@ -49,7 +49,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * A vertx-proton based client for sending and receiving commands synchronously.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control/">
  *      Command &amp; Control API for AMQP 1.0 Specification</a>
  */
 public final class ProtonBasedRequestResponseCommandClient extends
@@ -109,7 +109,7 @@ public final class ProtonBasedRequestResponseCommandClient extends
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at 
-     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     *         <a href="https://eclipse.dev/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      * @throws IllegalArgumentException if the timeout duration value is &lt; 0
      */

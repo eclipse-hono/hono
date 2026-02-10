@@ -241,7 +241,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      * for the tenant that the origin device belongs to.
      * <p>
      * Depending on the outcome of the attempt to upload the message, the CoAP response code is set as
-     * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
+     * described by the <a href="https://eclipse.dev/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
      *
      * @param context The request that contains the uploaded message.
      * @param endpoint The type of API endpoint to forward the message to.

@@ -76,7 +76,7 @@ public final class DownstreamAmqpMessageFactory {
      * back content type}, if the payload is not {@code null} but the given content type is {@code null} and the
      * default properties do not contain a content type property.</li>
      * <li>sets the message's <em>ttl</em> header field based on the (device provided) <em>time-to-live</em> duration
-     * as specified by the <a href="https://www.eclipse.org/hono/docs/api/tenant/#resource-limits-configuration-format">
+     * as specified by the <a href="https://eclipse.dev/hono/docs/api/tenant/#resource-limits-configuration-format">
      * Tenant API</a>.</li>
      * </ul>
      *

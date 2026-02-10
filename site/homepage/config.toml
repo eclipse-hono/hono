@@ -57,7 +57,7 @@ pluralizeListTitles = "false"
     defaultDescription = "Eclipse Hono provides means for connecting millions of IoT devices using arbitrary protocols and interacting with them via uniform APIs."
 
     # used in shortcode "doclink" to create absoulte URLs for links into the documentation
-    docsBaseUrl = "https://www.eclipse.org/hono/docs"
+    docsBaseUrl = "https://eclipse.dev/hono/docs"
 
     # Twitter
     twitter_site = "EclipseHono"

@@ -10,5 +10,5 @@
 
 Eclipse Hono Example Protocol Gateway
 
-Go to https://www.eclipse.org/hono for more information.
+Go to https://eclipse.dev/hono for more information.
 

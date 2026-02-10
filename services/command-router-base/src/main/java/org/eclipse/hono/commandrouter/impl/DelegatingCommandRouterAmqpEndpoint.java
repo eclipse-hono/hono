@@ -49,7 +49,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * An {@code AmqpEndpoint} for managing command router information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/command-router/">Command
+ * This endpoint implements Hono's <a href="https://eclipse.dev/hono/docs/api/command-router/">Command
  * Router API</a>. It receives AMQP 1.0 messages representing requests and forwards them to the command router service
  * implementation. The outcome is then returned to the peer in a response message.
  *

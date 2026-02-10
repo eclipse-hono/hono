@@ -24,7 +24,7 @@ import io.vertx.core.Future;
  * A service for managing device credentials.
  * <p>
  * The methods defined by this interface represent the <em>credentials</em> resources
- * of Hono's <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * of Hono's <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>.
  */
 public interface CredentialsManagementService {
 
@@ -34,7 +34,7 @@ public interface CredentialsManagementService {
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device that the credentials belong to.
      * @param credentials The credentials to set. See
-     *                    <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">
+     *                    <a href="https://eclipse.dev/hono/docs/api/credentials/#credentials-format">
      *                    Credentials Format</a> for details.
      * @param resourceVersion The resource version that the credentials are required to have.
      *                        If empty, the resource version of the credentials on record will be ignored.
@@ -50,7 +50,7 @@ public interface CredentialsManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/credentials/setAllCredentials">
      *      Device Registry Management API - Update Credentials</a>
      */
     Future<OperationResult<Void>> updateCredentials(
@@ -77,7 +77,7 @@ public interface CredentialsManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/getAllCredentials">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/credentials/getAllCredentials">
      *      Device Registry Management API - Get Credentials</a>
      */
     Future<OperationResult<List<CommonCredential>>> readCredentials(String tenantId, String deviceId, Span span);

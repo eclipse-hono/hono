@@ -40,7 +40,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  * <p>
  * The authId is Subject DN value in string representation or arbitrary string produced by auth-id template.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#x-509-certificate">X.509 Certificate</a> for an
+ * See <a href="https://eclipse.dev/hono/docs/api/credentials/#x-509-certificate">X.509 Certificate</a> for an
  * example of the configuration properties for this credential type.
  */
 @RegisterForReflection

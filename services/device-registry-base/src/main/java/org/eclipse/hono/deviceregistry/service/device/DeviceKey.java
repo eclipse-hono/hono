@@ -22,7 +22,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
  * Provides a unique key for a <em>Device</em> resource of Hono's
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>.
  * It is used for storing and retrieving values from the backend storage and external systems.
  */
 public final class DeviceKey {

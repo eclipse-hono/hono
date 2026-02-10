@@ -23,7 +23,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * A client for sending telemetry messages to Hono's AMQP adapter.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/user-guide/amqp-adapter/#publishing-telemetry-data">AMQP Adapter User Guide</a>
+ * @see <a href="https://eclipse.dev/hono/docs/user-guide/amqp-adapter/#publishing-telemetry-data">AMQP Adapter User Guide</a>
  */
 public interface TelemetrySender {
 
