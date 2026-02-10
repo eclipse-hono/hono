@@ -24,7 +24,7 @@ import io.vertx.core.Future;
 /**
  * A client for accessing Hono's Tenant API.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant">
+ * See Hono's <a href="https://eclipse.dev/hono/docs/api/tenant">
  * Tenant API</a> for a description of the status codes returned.
  * </p>
  */
@@ -41,7 +41,7 @@ public interface TenantClient extends Lifecycle {
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
      *         has been received from the Tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
+     *         <a href="https://eclipse.dev/hono/docs/api/tenant/#get-tenant-information">
      *         Get Tenant Information</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
@@ -66,7 +66,7 @@ public interface TenantClient extends Lifecycle {
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
      *         has been received from the Tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
+     *         <a href="https://eclipse.dev/hono/docs/api/tenant/#get-tenant-information">
      *         Get Tenant Information</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}

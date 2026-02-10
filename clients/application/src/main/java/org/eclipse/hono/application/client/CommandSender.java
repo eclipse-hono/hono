@@ -25,9 +25,9 @@ import io.vertx.core.buffer.Buffer;
  * A client for sending commands and receiving command responses.
  *
  * @param <T> The type of context that command response messages are being received in.
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">Command &amp; Control API for AMQP 1.0
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control/">Command &amp; Control API for AMQP 1.0
  *      Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka
  *      Specification</a>
  */
 public interface CommandSender<T extends MessageContext> extends Lifecycle {
@@ -244,7 +244,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      *         <p>
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException} containing an error status
      *         code as defined in Hono's
-     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     *         <a href="https://eclipse.dev/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
     default Future<DownstreamMessage<T>> sendCommand(
@@ -276,7 +276,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      *         <p>
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException} containing an error status
      *         code as defined in Hono's
-     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     *         <a href="https://eclipse.dev/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      */
     default Future<DownstreamMessage<T>> sendCommand(
@@ -316,7 +316,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      *         <p>
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException} containing an error status
      *         code as defined in Hono's
-     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     *         <a href="https://eclipse.dev/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      * @throws IllegalArgumentException if the timeout's duration is negative.
      */

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2016 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -23,8 +23,7 @@
 
   <name>Hono Demo Certs</name>
   <description>Hono demo certificates and keys for TLS support</description>
-  <url>https://www.eclipse.org/hono</url>
-
+  
   <build>
     <resources>
       <resource>

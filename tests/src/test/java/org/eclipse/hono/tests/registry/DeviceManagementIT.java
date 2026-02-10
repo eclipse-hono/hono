@@ -576,7 +576,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     /**
      * Tests verifying the search devices operation.
      *
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> 
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/searchDevicesForTenant"> 
      *      Device Registry Management API - Search Devices</a>
      */
     @Nested

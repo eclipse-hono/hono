@@ -43,7 +43,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  * A trusted CA configuration.
  * <p>
  * Represents the <em>TrustedCA</em> schema object defined in the
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>
  *
  */
 @RegisterForReflection

@@ -1,6 +1,6 @@
 This content is produced and maintained by the Eclipse Hono project.
 
-* Project home: https://www.eclipse.org/hono
+* Project home: https://eclipse.dev/hono
 
 # Declared Project Licenses
 

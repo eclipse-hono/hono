@@ -24,7 +24,7 @@ import io.vertx.core.Future;
 /**
  * A client for accessing Hono's Command Router API.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/command-router">
+ * See Hono's <a href="https://eclipse.dev/hono/docs/api/command-router">
  * Command Router API</a> for a description of the status codes returned.
  */
 public interface CommandRouterClient extends Lifecycle {

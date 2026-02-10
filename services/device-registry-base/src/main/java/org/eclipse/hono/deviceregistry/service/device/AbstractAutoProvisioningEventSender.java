@@ -123,7 +123,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      * @return A future indicating the outcome of the operation. The future will be succeeded if the auto-provisioning
      *         event is sent successfully.
      * @throws NullPointerException if any of the parameters except gateway id is {@code null}.
-     * @see "https://www.eclipse.org/hono/docs/api/event/#device-provisioning-notification"
+     * @see "https://eclipse.dev/hono/docs/api/event/#device-provisioning-notification"
      */
     protected Future<Void> sendAutoProvisioningEvent(
             final String tenantId,

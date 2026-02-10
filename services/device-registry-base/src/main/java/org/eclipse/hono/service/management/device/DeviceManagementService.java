@@ -32,7 +32,7 @@ import io.vertx.core.Future;
  * A service for managing device registration information.
  * <p>
  * The methods defined by this interface represent the <em>devices</em> resources
- * of Hono's <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * of Hono's <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>.
  */
 public interface DeviceManagementService {
 
@@ -55,7 +55,7 @@ public interface DeviceManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/createDeviceRegistration">
      *      Device Registry Management API - Create Device Registration</a>
      */
     Future<OperationResult<Id>> createDevice(String tenantId, Optional<String> deviceId, Device device, Span span);
@@ -77,7 +77,7 @@ public interface DeviceManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/getRegistration">
      *      Device Registry Management API - Get Device Registration</a>
      */
     Future<OperationResult<Device>> readDevice(String tenantId, String deviceId, Span span);
@@ -111,7 +111,7 @@ public interface DeviceManagementService {
      *         as specified in the Device Registry Management API.
      * @throws NullPointerException if any of filters, sort options, gateway filter or tracing span are {@code null}.
      * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
      *      Management API - Search Devices</a>
      */
     default Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(
@@ -149,7 +149,7 @@ public interface DeviceManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/updateRegistration">
      *      Device Registry Management API - Update Device Registration</a>
      */
     Future<OperationResult<Id>> updateDevice(
@@ -178,7 +178,7 @@ public interface DeviceManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/deleteRegistration">
      *      Device Registry Management API - Delete Device Registration</a>
      */
     Future<Result<Void>> deleteDevice(String tenantId, String deviceId, Optional<String> resourceVersion, Span span);
@@ -199,7 +199,7 @@ public interface DeviceManagementService {
      *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteDevicesOfTenant">
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/deleteDevicesOfTenant">
      *      Device Registry Management API - Delete Devices of Tenant</a>
      */
     Future<Result<Void>> deleteDevicesOfTenant(String tenantId, Span span);

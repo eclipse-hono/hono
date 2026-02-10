@@ -10,7 +10,7 @@ Hono's [Device AMQP Client module](https://github.com/eclipse-hono/hono/tree/mas
 ## Prerequisites
 
 The protocol gateway requires a Hono instance running the standard AMQP adapter to connect to.
-By default, the gateway will connect to the AMQP adapter of the [Hono Sandbox](https://www.eclipse.org/hono/sandbox/).
+By default, the gateway will connect to the AMQP adapter of the [Hono Sandbox](https://eclipse.dev/hono/sandbox/).
 However, it can also be configured to connect to a local instance.
 
 ## Gateway Configuration

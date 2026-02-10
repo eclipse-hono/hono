@@ -58,7 +58,7 @@ certificates (e.g. `--ca-file /etc/ssl/certs/ca-certificates.crt`).
 
 The most important prerequisite is, of course, a Hono instance that you can work with.
 
-The most straightforward option to use for this guide is the [Hono Sandbox](https://www.eclipse.org/hono/sandbox) which
+The most straightforward option to use for this guide is the [Hono Sandbox](https://eclipse.dev/hono/sandbox) which
 is running on infrastructure provided by the Eclipse Foundation and which is publicly accessible from the internet.
 
 Using the Sandbox, there is no need to set up your own Hono instance locally. However, it requires several non-standard

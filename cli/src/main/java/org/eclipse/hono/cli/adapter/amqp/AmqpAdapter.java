@@ -400,7 +400,7 @@ public class AmqpAdapter implements Callable<Integer> {
                         The currently connected device is not authorized to act on behalf of device [id: %1$s].
                         In order to authorize the connected device, its device identifier needs to be added to
                         the list of (gateway) devices that may act on behalf of device [id: %1$s].
-                        Please refer to https://www.eclipse.org/hono/docs/concepts/connecting-devices/#connecting-via-a-device-gateway
+                        Please refer to https://eclipse.dev/hono/docs/concepts/connecting-devices/#connecting-via-a-device-gateway
                         for details regarding connecting devices via gateways.
                         """.formatted(deviceId));
                 break;

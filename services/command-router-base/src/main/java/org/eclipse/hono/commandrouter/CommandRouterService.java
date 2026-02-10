@@ -24,7 +24,7 @@ import io.vertx.core.Future;
  * A service for accepting information from protocol adapters which are used to route command &amp; control messages
  * to the protocol adapters that the target devices are connected to.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-router/">Command Router API</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-router/">Command Router API</a>
  */
 public interface CommandRouterService {
 

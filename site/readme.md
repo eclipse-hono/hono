@@ -54,7 +54,7 @@ or, respectively:
 # Publishing
 
 Hono's web site is hosted on infrastructure operated and provided by the Eclipse Foundation.
-The web site is available at https://www.eclipse.org/hono.
+The web site is available at https://eclipse.dev/hono.
 
 Publishing changes to the web site is done by means of pushing HTML files and other content to Hono's
 web site Git repository at the Eclipse Foundation.

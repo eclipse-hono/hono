@@ -23,7 +23,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * A client for accessing Hono's Credentials API.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">
+ * See Hono's <a href="https://eclipse.dev/hono/docs/api/credentials/">
  * Credentials API</a> for a description of the status codes returned.
  * </p>
  */
@@ -42,7 +42,7 @@ public interface CredentialsClient extends Lifecycle {
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
      *         has been received from the Credentials service. The JSON object will then contain values as
-     *         defined in <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         defined in <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}
@@ -69,7 +69,7 @@ public interface CredentialsClient extends Lifecycle {
      *         <p>
      *         The future will succeed if a response with a status code in the [200, 300) range
      *         has been received from the Credentials service. The JSON object will then contain values as
-     *         defined in <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         defined in <a href="https://eclipse.dev/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@code org.eclipse.hono.client.ServiceInvocationException}

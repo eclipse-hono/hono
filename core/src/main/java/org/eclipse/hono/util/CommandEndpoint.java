@@ -30,7 +30,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
  * Encapsulates the command endpoint information for a device as defined by the
- * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
+ * <a href="https://eclipse.dev/hono/docs/api/device-registration/">Device Registration API</a>.
  */
 @RegisterForReflection
 @JsonInclude(value = Include.NON_NULL)

@@ -51,7 +51,7 @@ import io.vertx.core.Future;
  * Information about a Hono Tenant.
  * <p>
  * Represents the <em>Tenant</em> schema object defined in the
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>
  */
 @RegisterForReflection(ignoreNested = false)
 @JsonInclude(value = Include.NON_NULL)

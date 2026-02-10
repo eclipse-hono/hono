@@ -21,7 +21,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * A client for sending event messages to Hono's AMQP adapter.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/user-guide/amqp-adapter/#publishing-events">AMQP Adapter User Guide</a>
+ * @see <a href="https://eclipse.dev/hono/docs/user-guide/amqp-adapter/#publishing-events">AMQP Adapter User Guide</a>
  */
 public interface EventSender {
 

@@ -48,7 +48,7 @@ import io.vertx.ext.web.handler.CorsHandler;
 
 /**
  * A Vert.x based Hono protocol adapter for accessing Hono's Telemetry &amp; Event API using HTTP
- * as described in the <a href="https://www.eclipse.org/hono/docs/user-guide/http-adapter">HTTP adapter user guide</a>.
+ * as described in the <a href="https://eclipse.dev/hono/docs/user-guide/http-adapter">HTTP adapter user guide</a>.
  */
 public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 

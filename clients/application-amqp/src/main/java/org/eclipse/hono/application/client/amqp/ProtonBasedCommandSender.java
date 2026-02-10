@@ -38,7 +38,7 @@ import io.vertx.proton.ProtonHelper;
 /**
  * A vertx-proton based client for sending commands.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control/">
  *      Command &amp; Control API for AMQP 1.0 Specification</a>
  */
 public class ProtonBasedCommandSender extends SenderCachingServiceClient

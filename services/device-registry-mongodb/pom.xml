@@ -27,7 +27,6 @@
   <description>
     A Quarkus based implementation of Hono's device registry using MongoDB for persistence.
   </description>
-  <url>https://www.eclipse.org/hono</url>
 
   <properties>
     <mongodb.driver.reactivestreams.version>4.11.5</mongodb.driver.reactivestreams.version>

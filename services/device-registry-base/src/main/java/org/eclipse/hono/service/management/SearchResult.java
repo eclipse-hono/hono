@@ -27,9 +27,9 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  * The result of a search operation in Device Registry Management API.
  *
  * @param <T> The type of the result.
- * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
+ * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
  *      Management API - Search Tenants</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
+ * @see <a href="https://eclipse.dev/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
  *      Management API - Search Devices</a>
  */
 @RegisterForReflection

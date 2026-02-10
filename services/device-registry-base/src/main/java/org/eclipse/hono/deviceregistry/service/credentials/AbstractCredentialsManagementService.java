@@ -105,7 +105,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *
      * @param key The device's key.
      * @param credentials The credentials to set. See
-     *                    <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">
+     *                    <a href="https://eclipse.dev/hono/docs/api/credentials/#credentials-format">
      *                    Credentials Format</a> for details.
      * @param resourceVersion The resource version that the credentials are required to have.
      *                        If empty, the resource version of the credentials on record will be ignored.

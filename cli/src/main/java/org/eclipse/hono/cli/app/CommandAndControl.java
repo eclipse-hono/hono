@@ -255,7 +255,7 @@ public class CommandAndControl implements Callable<Integer> {
                 System.err.println("""
                         Check if device is connected to a protocol adapter and has subscribed \
                         for commands as described in the protocol adapter user guides.
-                        https://www.eclipse.org/hono/docs/user-guide/
+                        https://eclipse.dev/hono/docs/user-guide/
                         """);
             }
         }

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Protocol Adapter configuration properties.
  * <p>
  * Represents the <em>Adapter</em> schema object defined in the
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {

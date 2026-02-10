@@ -58,7 +58,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * The trust anchor is determined by looking up the tenant that the device
  * belongs to using the client certificate's issuer DN as described by the
- * <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
+ * <a href="https://eclipse.dev/hono/docs/api/tenant/#get-tenant-information">
  * Tenant API</a>.
  *
  */

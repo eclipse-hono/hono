@@ -23,9 +23,9 @@ import java.util.Objects;
  * with changes in new versions of the Kafka client.
  *
  * @see <a href="https://kafka.apache.org/documentation/#adminclientconfigs">Kafka AdminClient Configs</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
 // When renaming or moving this class, please update it in the documentation
 public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigProperties {

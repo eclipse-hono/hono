@@ -797,7 +797,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     /**
      * Tests verifying the search tenants operation.
      *
-     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/searchTenants"> 
+     * @see <a href="https://eclipse.dev/hono/docs/api/management/#/tenants/searchTenants"> 
      *      Device Registry Management API - Search Tenants</a>
      */
     @Nested

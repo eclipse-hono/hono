@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2016 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -25,8 +25,6 @@
 
   <name>Hono Core</name>
   <description>Base classes used by all other modules</description>
-  <inceptionYear>2016</inceptionYear>
-  <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>

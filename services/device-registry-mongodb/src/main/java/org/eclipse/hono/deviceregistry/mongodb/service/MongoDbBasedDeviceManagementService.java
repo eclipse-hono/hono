@@ -49,7 +49,7 @@ import io.vertx.core.Vertx;
  * {@link #createDevice(String, Optional, Device, Span)} and deletes all credentials on record
  * for a device deleted by {@link MongoDbBasedDeviceManagementService#deleteDevice(String, String, Optional, Span)}.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * @see <a href="https://eclipse.dev/hono/docs/api/management/">Device Registry Management API</a>
  */
 public final class MongoDbBasedDeviceManagementService extends AbstractDeviceManagementService {
 

@@ -40,7 +40,7 @@ public interface KafkaCommandSender extends CommandSender<KafkaMessageContext> {
      * to be connected to one of Hono's protocol adapters in order for the command to be delivered successfully.
      * <p>
      * This method expects a tenant specific response Kafka topic as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/#send-a-requestresponse-command">Kafka
+     * <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/#send-a-requestresponse-command">Kafka
      * based Command &amp; Control API</a> to exist.
      * It is the client code's responsibility to correlate any response message(s) sent by the device via that topic
      * to the request message, e.g. by means of the given <em>correlation ID</em>.
@@ -87,7 +87,7 @@ public interface KafkaCommandSender extends CommandSender<KafkaMessageContext> {
      * to be connected to one of Hono's protocol adapters in order for the command to be delivered successfully.
      * <p>
      * This method expects a tenant specific response Kafka topic as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/#send-a-requestresponse-command">Kafka
+     * <a href="https://eclipse.dev/hono/docs/api/command-and-control-kafka/#send-a-requestresponse-command">Kafka
      * based Command &amp; Control API</a> to exist.
      *
      * @param tenantId The tenant that the device belongs to.
@@ -110,7 +110,7 @@ public interface KafkaCommandSender extends CommandSender<KafkaMessageContext> {
      *         <p>
      *         Otherwise, the future will be failed with a {@link ServiceInvocationException} containing an error status
      *         code as defined in Hono's
-     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control">Command and Control API</a>.
+     *         <a href="https://eclipse.dev/hono/docs/api/command-and-control">Command and Control API</a>.
      * @throws NullPointerException if any of tenantId, deviceId or command are {@code null}.
      * @throws IllegalArgumentException if the timeout's duration is negative.
      */

@@ -56,7 +56,7 @@
   </issueManagement>
 
   <ciManagement>
-    <system>Jenkins</system>
+    <system>GitHub Actions</system>
     <url>https://github.com/eclipse-hono/hono/actions</url>
   </ciManagement>
 
@@ -97,16 +97,6 @@
       <id>calohmn</id>
       <name>Carsten Lohmann</name>
       <email>carsten.lohmann@bosch.com</email>
-      <organization>Robert Bosch GmbH</organization>
-      <organizationUrl>https://www.bosch-digital.com</organizationUrl>
-      <roles>
-        <role>Committer</role>
-      </roles>
-    </developer>
-    <developer>
-      <id>kaniyan</id>
-      <name>Kartheeswaran Kalidass</name>
-      <email>Kartheeswaran.Kalidass@bosch.com</email>
       <organization>Robert Bosch GmbH</organization>
       <organizationUrl>https://www.bosch-digital.com</organizationUrl>
       <roles>

@@ -49,7 +49,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Helper to auto-provision devices and gateways.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/dev/concepts/device-provisioning">
+ * @see <a href="https://eclipse.dev/hono/docs/dev/concepts/device-provisioning">
  *      Automatic Device/Gateway Provisioning</a>
  */
 public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvisioningEventSender {
