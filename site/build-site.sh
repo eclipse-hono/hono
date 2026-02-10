@@ -12,6 +12,11 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
+# Exit upon error, avoiding cascading errors
+set -o errexit
+# Unveil hidden failures
+set -o pipefail
+
 target="public"
 hugo_cmd="hugo"
 
@@ -51,7 +56,7 @@ hugo_version=$($hugo_cmd version)
 if [[ -z "$hugo_version" ]]
 then
   echo "Could not find \"$hugo_cmd\" executable on your PATH. See readme.md for further details."
-  exit 0
+  exit 1
 fi
 
 submodule_status=$(git submodule status)
