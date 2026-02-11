@@ -62,14 +62,14 @@
 
   <distributionManagement>
     <repository>
-      <id>repo.eclipse.org</id>
+      <id>sonatype-central-portal</id>
       <name>Hono Releases</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-releases/</url>
+      <url>https://repo.maven.apache.org/maven2/</url>
     </repository>
     <snapshotRepository>
-      <id>repo.eclipse.org</id>
+      <id>sonatype-central-portal</id>
       <name>Hono Snapshots</name>
-      <url>https://repo.eclipse.org/content/repositories/hono-snapshots/</url>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -119,7 +119,7 @@
     <run-java-sh.version>1.3.8</run-java-sh.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
+    <version.njord>0.9.3</version.njord>
     <maven.compiler.release>17</maven.compiler.release>
 
     <!--
@@ -136,7 +136,7 @@
     <!--
       The organization name to use for our Docker image names.
      -->
-    <docker.image.org-name>eclipse</docker.image.org-name>
+    <docker.image.org-name>eclipsehono</docker.image.org-name>
 
     <!--
       The Docker registry to use for our Docker image names.
@@ -181,23 +181,21 @@
     <module>tests</module>
   </modules>
 
-  <pluginRepositories>
-    <pluginRepository>
-      <id>eclipse-cbi-releases</id>
-      <name>Eclipse CBI Repository</name>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <url>https://repo.eclipse.org/content/repositories/cbi-releases/</url>
-    </pluginRepository>
-  </pluginRepositories>
-
   <build>
+    <extensions>
+      <extension>
+        <groupId>eu.maveniverse.maven.njord</groupId>
+        <artifactId>extension3</artifactId>
+        <version>${version.njord}</version>
+      </extension>
+    </extensions>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>eu.maveniverse.maven.plugins</groupId>
+          <artifactId>njord</artifactId>
+          <version>${version.njord}</version>
+        </plugin>
         <plugin>
           <groupId>io.fabric8</groupId>
           <artifactId>docker-maven-plugin</artifactId>
@@ -369,12 +367,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>properties-maven-plugin</artifactId>
-          <version>1.2.1</version>
-        </plugin>
-        <plugin>
-          <groupId>com.internetitem</groupId>
-          <artifactId>write-properties-file-maven-plugin</artifactId>
-          <version>1.0.1</version>
+          <version>1.3.0</version>
         </plugin>
         <plugin>
           <groupId>io.smallrye</groupId>
@@ -424,16 +417,6 @@
               </configuration>
             </execution>
           </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.eclipse.cbi.maven.plugins</groupId>
-          <artifactId>eclipse-jarsigner-plugin</artifactId>
-          <version>1.3.2</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>3.2.8</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -510,48 +493,28 @@
       </properties>
     </profile>
     <profile>
-      <id>nexus</id>
+      <id>create_gpg_signature</id>
       <activation>
         <property>
-          <name>disableNexus</name>
-          <value>!true</value>
+          <name>createGPGSignature</name>
         </property>
       </activation>
       <build>
         <plugins>
           <plugin>
-            <!--
-              Use the Nexus Staging plugin as a full replacement for the standard
-              Maven Deploy plugin.
-              See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
-              why this makes sense :-)
-              We can control whether we want to deploy to the Eclipse repo or Maven Central
-              by a combination of the version being a SNAPHOT or release version and property
-              skipStaging=true/false.
-              In any case we can take advantage of the plugin's "deferred deploy" feature which
-              makes sure that all artifacts of a multi-module project are deployed as a whole
-              at the end of the build process instead of deploying each module's artifacts
-              individually as part of building the module.
-             -->
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.8</version>
-            <extensions>true</extensions>
-            <configuration>
-              <serverId>ossrh</serverId>
-              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-              <autoReleaseAfterClose>false</autoReleaseAfterClose>
-            </configuration>
-            <dependencies>
-              <dependency>
-                <groupId>com.thoughtworks.xstream</groupId>
-                <artifactId>xstream</artifactId>
-                <!-- apparently this needs to be exactly this version to work with Java 17 -->
-                <!-- https://stackoverflow.com/a/70157413/6138465 -->
-                <version>1.4.15</version> 
-              </dependency>
-            </dependencies>
-            </plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.8</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
         </plugins>
       </build>
     </profile>
@@ -581,8 +544,8 @@
                     <pluginExecutions>
                       <pluginExecution>
                         <!--
-                         Disable unpack-dependencies goal in order to prevent the m2eclipse
-                         error "Artifact has not been packaged yet..."
+                          Disable unpack-dependencies goal in order to prevent the m2eclipse
+                          error "Artifact has not been packaged yet..."
                         -->
                         <pluginExecutionFilter>
                           <groupId>org.apache.maven.plugins</groupId>
@@ -630,69 +593,6 @@
 	             </goals>
 	            </execution>
             </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <!-- this profile signs artifacts so that they can be deployed to repo.eclipse.org -->
-      <id>eclipse_jar_signing</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>enableEclipseJarSigner</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.eclipse.cbi.maven.plugins</groupId>
-            <artifactId>eclipse-jarsigner-plugin</artifactId>
-            <configuration>
-              <excludeInnerJars>true</excludeInnerJars>
-            </configuration>
-            <executions>
-              <execution>
-                <id>sign-jars</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <!-- this profile generates GPG signatures -->
-      <id>create_gpg_signature</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-        <property>
-          <name>createGPGSignature</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <gpgArguments>
-                <arg>--pinentry-mode</arg>
-                <arg>loopback</arg>
-              </gpgArguments>
-            </configuration>
           </plugin>
         </plugins>
       </build>

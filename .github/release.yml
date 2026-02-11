@@ -1,0 +1,42 @@
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# This is the configuration used by GitHub for automatically creating release notes
+# from pull requests based on their labels
+# see https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+  exclude:
+    labels:
+      - CQ
+      - duplicate
+      - not a bug
+      - wontfix
+      - invalid
+    authors:
+      - octocat
+  categories:
+    - title: "🛠️ Breaking Changes"
+      labels:
+        - "breaking change"
+    - title: "✨ Features"
+      labels:
+        - enhancement
+        - Feature Request
+    - title: "🐛 Bug Fixes"
+      labels:
+        - bug
+    - title: "📚 Documentation"
+      labels:
+        - documentation
+    - title: "Other Changes"
+      labels:
+        - "*"

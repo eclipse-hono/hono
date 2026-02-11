@@ -65,10 +65,10 @@ spec:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: hono
         app.kubernetes.io/version: 2.0.0
-        helm.sh/chart: hono-2.0.3
+        helm.sh/chart: hono-2.7.0
     spec:
       containers:
-      - image: index.docker.io/eclipse/hono-adapter-http:2.0.0
+      - image: index.docker.io/eclipsehono/hono-adapter-http:2.7.0
         name: adapter-http
         resources:
           limits:
