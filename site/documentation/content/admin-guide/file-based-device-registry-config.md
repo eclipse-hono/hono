@@ -20,8 +20,7 @@ The Device Registry component also exposes [HTTP based resources]({{< relref "/a
 and the registration information and credentials of devices.
 
 The Device Registry is implemented as a Spring Boot application. It can be run either directly from the command line or
-by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-file/)
-created from it.
+by means of starting the corresponding Docker image created from it.
 
 {{% notice info %}}
 The file based device registry has been removed in Hono 2.0.0.

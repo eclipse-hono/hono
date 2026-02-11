@@ -29,7 +29,7 @@ adapters:
   # adapters for connecting to the Kafka cluster to be used for messaging.
   # This property MUST be set if "messagingNetworkTypes" contains "kafka" and
   # "kafkaMessagingClusterExample.enabled" is set to false.
-  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/common-config/#kafka-based-messaging-configuration
+  # Please refer to https://eclipse.dev/hono/docs/admin-guide/common-config/#kafka-based-messaging-configuration
   # for a description of supported properties.
   kafkaMessagingSpec:
     commonClientConfig:
@@ -68,7 +68,7 @@ adapters:
   # tenantSpec contains Hono client properties used by all protocol adapters for
   # connecting to the Tenant service.
   # This property MUST be set if "deviceRegistryExample.enabled" is set to false.
-  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # Please refer to https://eclipse.dev/hono/docs/admin-guide/hono-client-configuration/
   # for a description of supported properties.
   tenantSpec:
     flowLatency: 1000
@@ -77,7 +77,7 @@ adapters:
   # deviceRegistrationSpec contains Hono client properties used by all protocol adapters for
   # connecting to the Device Registration service.
   # This property MUST be set if "deviceRegistryExample.enabled" is set to false.
-  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # Please refer to https://eclipse.dev/hono/docs/admin-guide/hono-client-configuration/
   # for a description of supported properties.
   deviceRegistrationSpec:
     flowLatency: 1000
@@ -87,7 +87,7 @@ adapters:
   # credentialsSpec contains Hono client properties used by all protocol adapters for
   # connecting to the Credentials service.
   # This property MUST be set if "deviceRegistryExample.enabled" is set to false.
-  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # Please refer to https://eclipse.dev/hono/docs/admin-guide/hono-client-configuration/
   # for a description of supported properties.
   credentialsSpec:
     flowLatency: 1000
@@ -97,7 +97,7 @@ adapters:
   # connecting to the Command Router service.
   # If not set, default properties will be used for establishing a TLS based connection
   # to the command router server.
-  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # Please refer to https://eclipse.dev/hono/docs/admin-guide/hono-client-configuration/
   # for a description of supported properties.
   commandRouterSpec:
     flowLatency: 1000
@@ -188,7 +188,7 @@ deviceRegistryExample:
   addExampleData: false
 
   # hono contains the Device Registry's configuration properties as defined in
-  # https://www.eclipseorg/hono/docs/admin-guide/device-registry-config/
+  # https://eclipse.dev/hono/docs/admin-guide/device-registry-config/
   hono:
     # auth contains Hono client properties used by the example registry for
     # connecting to the Authentication service.
@@ -246,7 +246,7 @@ commandRouterService:
       memory: "1Gi"
 
   # hono contains the service's configuration properties as defined in
-  # https://www.eclipse.org/hono/docs/admin-guide/command-router-config/
+  # https://eclipse.dev/hono/docs/admin-guide/command-router-config/
   hono:
     app:
       # maxInstances defines the number of adapter Verticle instances to deploy
@@ -262,7 +262,7 @@ commandRouterService:
     commandRouter:
       # cache contains properties configuring the embedded or remote cache that
       # the Command Router uses for storing routing information. Please refer to Hono's Command Router admin guide at
-      # https://www.eclipse.org/hono/docs/admin-guide/command-router-config/#data-grid-connection-configuration for
+      # https://eclipse.dev/hono/docs/admin-guide/command-router-config/#data-grid-connection-configuration for
       # details regarding cache configuration.
       # If not set explicitly here and "dataGridExample.enabled" is "true", the example data grid is used.
       # If "dataGridExample.enabled" is "false", an embedded cache with a default configuration will be used.

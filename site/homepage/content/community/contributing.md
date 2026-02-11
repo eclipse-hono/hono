@@ -41,7 +41,7 @@ https://www.eclipse.org/projects/handbook/#resources-commit
 ## Conventions
 
 1. The *groupId* of all Hono modules is `org.eclipse.hono`, *artifactId* always starts with `hono-`.
-1. Modules producing a Docker image generally use `eclipse/${artifactId}` as the image's repository name.
+1. Modules producing a Docker image generally use `eclipsehono/${artifactId}` as the image's repository name.
 1. All code complies with the formatting rules defined by the settings files in the `eclipse` folder.
 1. Modules implementing one of the Hono APIs are sub-modules of `services`.
 

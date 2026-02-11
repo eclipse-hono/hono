@@ -30,6 +30,7 @@
   </description>
 
   <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <maven.source.skip>true</maven.source.skip>
     <maven.install.skip>true</maven.install.skip>
@@ -522,31 +523,17 @@
             </executions>
           </plugin>
           <plugin>
-            <!--
-              The standard Maven plugin for writing properties cannot be used as it is only capable of writing
-              all project properties to file but not specific ones only.
-            -->
-            <groupId>com.internetitem</groupId>
-            <artifactId>write-properties-file-maven-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
             <executions>
               <execution>
                 <phase>post-integration-test</phase>
                 <goals>
-                  <goal>write-properties-file</goal>
+                  <goal>write-project-properties</goal>
                 </goals>
                 <configuration>
-                  <filename>kafka.port.properties</filename>
-                  <outputDirectory>${project.build.directory}/docker</outputDirectory>
-                  <properties>
-                    <property>
-                      <name>kafka.port</name>
-                      <value>${kafka.port}</value>
-                    </property>
-                    <property>
-                      <name>docker.host.address</name>
-                      <value>${docker.host.address}</value>
-                    </property>
-                  </properties>
+                  <outputFile>${project.build.directory}/docker/kafka.port.properties</outputFile>
+                  <includedPropertyKeys>docker.host.address,kafka.port</includedPropertyKeys>
                 </configuration>
               </execution>
             </executions>
@@ -2057,7 +2044,7 @@
                 <logging.profile>${logging.profile}</logging.profile>
                 <max.bcrypt.costFactor>${max.bcrypt.costFactor}</max.bcrypt.costFactor>
                 <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
-<!--                 <javax.net.debug>ssl:handshake</javax.net.debug> -->
+                <!-- <javax.net.debug>ssl:handshake</javax.net.debug> -->
                 <javax.net.ssl.trustStore>${project.build.directory}/certs/trustStore.jks</javax.net.ssl.trustStore>
                 <javax.net.ssl.trustStorePassword>honotrust</javax.net.ssl.trustStorePassword>
               </systemPropertyVariables>

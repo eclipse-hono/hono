@@ -23,8 +23,7 @@ remote *data grid* for storing information about device connections. The data gr
 from the Device Connection service components to meet the storage demands at hand.
 
 The Device Connection component is implemented as a Spring Boot application. It can be run either directly from the
-command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-connection/)
-created from it.
+command line or by means of starting the corresponding Docker image created from it.
 
 ## Service Configuration
 

@@ -4,7 +4,7 @@ weight = 385
 +++
 
 Hono can be deployed using the pre-built Docker images available from our
-[Docker Hub repositories](https://hub.docker.com/u/eclipse/). However, customizing and/or extending Hono's
+[Docker Hub repositories](https://hub.docker.com/u/eclipsehono/). However, customizing and/or extending Hono's
 functionality requires building the images from source code.
 
 This page provides step by step instructions for getting the source code and building the Hono's Docker images from it.

@@ -3,6 +3,29 @@ linkTitle = "Release Notes"
 title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
+## 2.7.0
+
+### Breaking Changes
+
+* The name of the organization used for the container images created by the Hono build process has changed from `eclipse` to
+  `eclipsehono`. For example, the container image for the Authentication server had previously been named
+  \
+  `eclipse/hono-service-auth`
+  \
+  but is now named
+  \
+  `eclipsehono/hono-service-auth`
+  \
+  This change had been necessary due to limitations on the number of user accounts per organization on the free tier of Docker Hub.
+  Having our own organization provides us with the necessary flexibility to grant access rights to the container image registries.
+  \
+  However, it is still possible to build the images using the previous organization name by means of setting the
+  `docker.image.org-name` Maven property when running the build process, e.g.
+  ```sh
+  mvn -Ddocker.image.org-name=eclipse -Pbuild-docker-image,metrics-prometheus install
+  ```
+  will tag all images using the `eclipse` organization name. This might be helpful if you cannot adapt existing deployment
+  scripts or Helm charts to reflect the new origanization name.
 
 ## 2.6.0
 

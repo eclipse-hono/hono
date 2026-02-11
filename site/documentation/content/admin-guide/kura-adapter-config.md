@@ -9,7 +9,7 @@ Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
 The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means
-of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-kura/) created from it.
+of starting the corresponding Docker image created from it.
 
 {{% notice info %}}
 The Kura adapter has been removed in Hono 2.0.0. Support for Kura version 4 and later is still available by means of

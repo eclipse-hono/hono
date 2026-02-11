@@ -1,0 +1,266 @@
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# This workflow creates a new Hono release.
+# This encompasses building all of Hono's components, running unit tests and creating
+# JARs and Docker images.
+# The produced artifacts are then published to the appropriate repositories.
+
+name: Create Hono Release
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        type: string
+        description: |
+          The tag/branch to build and release from.
+
+          Examples:
+          - master
+          - 2.1.x
+        required: true
+        default: 'master'
+      release_version:
+        type: string
+        description: |
+          The version identifier (tag name) to use for the artifacts built and released by this job.
+
+          Examples:
+          - 2.0.0-M6
+          - 2.1.0-RC1
+          - 2.0.1
+        required: true
+      previous_version:
+        type: string
+        description: |
+          The version identifier (tag name) to use as the baseline for automatically creating release notes.
+          Only pull requests merged after this version will be included in the release notes.
+          
+          If not set, no release notes will be generated and included in the GitHub release.
+
+          Examples:
+          - 2.0.0-M6
+          - 2.1.0-RC1
+          - 2.0.1
+        required: false
+      development_version:
+        type: string
+        description: |
+          The version identifier to use during development of the next version.
+          
+          If not set, no release tag will be created and the version will not be bumped after the release.
+
+          Examples:
+          - 2.2.0-SNAPSHOT
+        required: false
+      publish_artifacts:
+        type: boolean
+        description: |
+          Publish artifacts for this release to Maven Central and Docker Hub.
+          
+          If set to 'false', the release process will run, but the artifacts will not be published and
+          no GitHub release will be created.
+          This can be useful for testing the release process itself.
+        required: false
+        default: true
+      deploy_documentation:
+        type: boolean
+        description: |
+          Deploy documentation for this release to web site. Disable for milestone release.
+        required: false
+        default: true
+      stable_documentation:
+        type: boolean
+        description: |
+          Set the documentation for this release as the new stable version. Disable for milestone release.
+        required: false
+        default: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      DEV_VERSION: ${{ github.event.inputs.development_version }}
+      RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+
+    steps:
+    - run: |
+        git config --global user.name 'eclipse-hono-bot'
+        git config --global user.email 'hono-bot@eclipse.org'
+
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.inputs.ref }}
+
+    - name: Set up Java with Maven Central settings
+      uses: actions/setup-java@v5
+      with: # configure settings.xml
+        distribution: 'temurin'
+        java-version: '21'
+        server-id: sonatype-central-portal
+        server-username: MAVEN_CENTRAL_USER
+        server-password: MAVEN_CENTRAL_PASSWORD
+        gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: 3.9.11
+
+    - name: Install UPX
+      uses: crazy-max/ghaction-upx@v3
+      with:
+        version: latest
+        install-only: true
+
+    - name: Tool versions
+      run: |
+        git --version
+        mvn --version
+        java --version
+        upx --version
+
+    - name: Bump version to release version
+      run: |
+        # bump version to release version
+        mvn -B versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}
+
+    # Make sure that container images and JavaDocs can be built and that integration tests succeed.
+    # The "deploy" goal does not publish to Maven Central (yet) but will deploy artifacts to a
+    # staging repository in the local filesystem created by the njord Maven plugin.
+    # In this step, we only build and test the container images that are built for the GitHub runner's
+    # host architecture (usually amd64). The images will be re-built for both amd64 and arm64 in a later
+    # step and then also be pushed to Docker Hub.
+    - name: Build container images and run integration tests
+      env:
+        MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        MAVEN_GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+      run: |
+        mvn -B clean deploy \
+          -DCI=$CI \
+          -Dmaven.test.failure.ignore=false \
+          -DsnapshotDependencyAllowed=false \
+          -DcreateGPGSignature=true \
+          -Dgpg.useagent=false \
+          -Dgpg.keyname=${MAVEN_GPG_KEY_ID} \
+          -DcreateJavadoc=true \
+          -DaltDeploymentRepository=id::njord:release-sca \
+          -Pbuild-docker-image,metrics-prometheus,run-tests
+
+    # Make sure that the GraalVM native images can be built. We need to build them
+    # separately here because the Maven profile used to activate them is mutually exclusive
+    # with the one used for building the standard images (as used in the integration tests above).
+    # The native images built here will be pushed to Docker Hub in a later step.
+    - name: Build GraalVM based (native) container images
+      run: |
+        mvn -B package \
+          -DskipTests \
+          -Pbuild-native-image,metrics-prometheus,build-cli-native-executable
+        upx -q -9 \
+          -o hono-cli-amd64-${RELEASE_VERSION} \
+          cli/target/hono-cli-${RELEASE_VERSION}-exec
+
+    - name: Add version for documentation
+      if: ${{ github.event.inputs.deploy_documentation }}
+      env:
+        DEPLOY_DOCUMENTATION: ${{ github.event.inputs.deploy_documentation }}
+        STABLE_DOCUMENTATION: ${{ github.event.inputs.stable_documentation }}
+      run: |
+        echo "adding ${RELEASE_VERSION} to supported versions"
+        MAJOR="${RELEASE_VERSION%%.*}" # before first dot
+        rest="${RELEASE_VERSION#*.}" # after first dot
+        MINOR="${rest%%.*}"  # before first dot of rest
+        echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/documentation/versions_supported.csv
+        git add site/documentation/versions_supported.csv
+        if [[ "${STABLE_DOCUMENTATION}" =~ (t|true) ]]; then
+          echo "setting ${RELEASE_VERSION} as stable version"
+          echo "${RELEASE_VERSION}" > site/documentation/tag_stable.txt
+          git add site/documentation/tag_stable.txt
+        fi
+
+    # We publish the release artifacts to Maven Central using the Maven Njord plugin.
+    # before pushing the container images, because artifacts will be published to a
+    # staging repo on Maven Central that needs to be explicitly released
+    # and thus still allows us to rollback everything, if building and pushing the container
+    # images fails for some reason.
+    - name: Publish to Maven Central
+      if: ${{ github.event.inputs.publish_artifacts }}
+      env:
+        MAVEN_CENTRAL_USER: ${{ secrets.CENTRAL_SONATYPE_TOKEN_USERNAME }}
+        MAVEN_CENTRAL_PASSWORD: ${{ secrets.CENTRAL_SONATYPE_TOKEN_PASSWORD }}
+      run: |
+        mvn -B njord:publish \
+          -Dnjord.publisher=sonatype-cp \
+          -Dnjord.drop=true
+
+    # Now build and push container images for all supported platforms.
+
+    - name: Set up QEMU
+      if: ${{ github.event.inputs.publish_artifacts }}
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64,amd64
+
+    - name: Set up Docker Buildx
+      if: ${{ github.event.inputs.publish_artifacts }}
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      if: ${{ github.event.inputs.publish_artifacts }}
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+    - name: Build and push multi-platform container images
+      if: ${{ github.event.inputs.publish_artifacts }}
+      run: |
+        # We use Docker buildx to build and push multi-arch images for amd64 and arm64
+        # in one go. This is necessary because the local container registry can only store
+        # images for the host's architecture.
+        mvn -B install \
+          -DskipTests \
+          -Pbuild-docker-image,docker-multiarch-build,docker-push-image,metrics-prometheus
+
+    # We need to push the GraalVM-based images separately, because they are not built
+    # as part of the multi-arch build above. In fact, they can only be built for the host
+    # architecture because GraalVM native-image does not support cross-compilation:
+    # https://github.com/oracle/graal/issues/407
+    - name: Push GraalVM-based container images to Docker Hub
+      if: ${{ github.event.inputs.publish_artifacts }}
+      run: ${{ github.workspace }}/.github/workflows/scripts/push_hono_native_images.sh ${RELEASE_VERSION}
+
+    - name: Commit and tag release version
+      if: ${{ env.DEV_VERSION != '' }}
+      run: |
+        git add pom.xml \*/pom.xml
+        git commit -m "Release ${RELEASE_VERSION}"
+        git tag ${RELEASE_VERSION}
+        # now bump to development version
+        mvn versions:set -DallowSnapshots=true -DgenerateBackupPoms=false -DnewVersion=${DEV_VERSION}
+        git add pom.xml \*/pom.xml
+        git commit -m "Bump version to ${DEV_VERSION}"
+        # and push everything to GitHub
+        git push --all && git push --tags
+
+    # Finally, we create a GitHub Release for the new version to which we also
+    # attach the command line client that has been built in a previous step.
+    - name: Create GitHub Release
+      if: ${{ github.event.inputs.publish_artifacts }}
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ env.RELEASE_VERSION }}
+        artifacts: "hono-cli-*"
+        generateReleaseNotes: true
+        generateReleaseNotesPreviousTag: ${{ github.event.inputs.previous_version }}

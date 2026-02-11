@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+# Copyright (c) 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -44,7 +44,7 @@ amqpMessagingNetworkExample:
 adapters:
   http:
     enabled: true
-    imageName: "eclipse/hono-adapter-http-native"
+    imageName: "eclipsehono/hono-adapter-http-native"
     hono:
       http:
         insecurePortEnabled: false
@@ -67,7 +67,7 @@ adapters:
 
   mqtt:
     enabled: true
-    imageName: "eclipse/hono-adapter-mqtt-native"
+    imageName: "eclipsehono/hono-adapter-mqtt-native"
     hono:
       mqtt:
         insecurePortEnabled: false
@@ -90,7 +90,7 @@ adapters:
 
   amqp:
     enabled: true
-    imageName: "eclipse/hono-adapter-amqp-native"
+    imageName: "eclipsehono/hono-adapter-amqp-native"
     hono:
       amqp:
         insecurePortEnabled: false
@@ -111,7 +111,7 @@ adapters:
 
   coap:
     enabled: true
-    imageName: "eclipse/hono-adapter-coap-native"
+    imageName: "eclipsehono/hono-adapter-coap-native"
     hono:
       coap:
         insecurePortEnabled: false
@@ -146,7 +146,7 @@ adapters:
     hostnameVerificationRequired: false
 
 authServer:
-  imageName: "eclipse/hono-service-auth-native"
+  imageName: "eclipsehono/hono-service-auth-native"
   cmdLineArgs:
   - "-Xmx48m"
   resources:
@@ -194,7 +194,7 @@ dataGridExample:
       memory: "200Mi"
 
 commandRouterService:
-  imageName: "eclipse/hono-service-command-router-native"
+  imageName: "eclipsehono/hono-service-command-router-native"
   tlsKeysSecret: "sandbox-tls"
   cmdLineArgs:
   - "-Xmx96m"

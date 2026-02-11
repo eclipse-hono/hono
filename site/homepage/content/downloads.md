@@ -9,7 +9,7 @@ weight = 150
 ## Binaries
 
 Eclipse Hono's service components are provided by means of pre-built Docker images available from
-[Docker Hub](https://hub.docker.com/u/eclipse/). These container images can be deployed to popular
+[Docker Hub](https://hub.docker.com/u/eclipsehono/). These container images can be deployed to popular
 container orchestration platforms like Kubernetes and OpenShift.
 
 The [Eclipse IoT Packages](https://www.eclipse.org/packages/) project hosts the
