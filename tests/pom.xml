@@ -1116,7 +1116,7 @@
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*(Server is now live)$</log>
+                      <log>.*(Server is now ).*$</log>
                     </wait>
                   </run>
                 </image>

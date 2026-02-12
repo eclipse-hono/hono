@@ -28,7 +28,8 @@ Support for Mongo DB 5.0 has been removed from Hono after it had reached its [en
 {{% notice warning %}}
 According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
 for Mongo DB 6.0 has ended Jul 2025. Consequently, support for Mongo 6.0 in Hono has been deprecated and will be removed
-in a future version altogether. Users are encouraged to migrate to Mongo DB 7.0. Note that Hono currently does not support Mongo DB 8.0 because of the driver version being employed by the underlying Quarkus framework.
+in a future version altogether. Users are encouraged to migrate to Mongo DB 7.0. Note that Hono currently does not support Mongo DB 8.0 because of the
+specific driver version being required by the `vertx-mongo-client` library.
 {{% /notice %}}
 
 ## Service Configuration
