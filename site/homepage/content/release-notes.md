@@ -5,6 +5,39 @@ description = "Information about changes in recent Hono releases. Includes new f
 +++
 ## 2.7.0
 
+### New Features
+
+* The duration after which cached metrics, which are maintained by protocol adapters for adhering to messaging limits, are being
+  refreshed, can now be adjusted as a fixed fraction of the overall cache timeout duration. This allows fine tuning of the adapters'
+  behavior with regard to accepting/rejecting messages from devices of tenants for which the message limits are being exceeded.
+  Please refer to the Admin Guide for details.
+* There is now preliminary support for devices using MQTT 5 to connect to the MQTT adapter.
+  At the moment, the following functionality is provided:
+  
+  * The adapter returns proper MQTT 5 reason codes to devices during the connection establishment process
+  * Devices can use standard MQTT 5 message properties to convey the payload's content type when publishing messages instead of attaching
+    a property bag to the message topic.
+
+### Fixes & Enhancements
+
+* The Quarkus framework which serves as the basis for the implementation of all of Hono's components has undergone several
+  updates since the last Hono release. Hono has been updated to the most recent 3.27 Long Term Support (LTS) version of Quarkus
+  including updates to many other libraries that Hono depends on like vert.x, infinispan, Mongo DB client, Kafka Client etc.
+* All container images now use a Java 21 runtime environment. Hono's code base is still at the Java 17 level and will be
+  migrated to Java 21 in a future release.
+
+### Deprecations
+
+* According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles), support
+  for Mongo DB 6.0 has ended Jul 2025. Consequently, support for Mongo 6.0 in Hono has been deprecated and will be removed
+  in a future version altogether. Users are encouraged to migrate to Mongo DB 7.0.
+  Note that Hono currently does not support Mongo DB 8.0 because of the driver version being employed by the `vertx-mongo-client`
+  library that is used for the implementation of the Mongo DB based Device Registry.
+
+* Support for using the `QUARKUS_LOG_CONSOLE_JSON` environment variable for enabling JSON logging has been deprecated in the
+  underlying Quarkus framework and support for it will be removed altogether in a future version of Hono.
+  Please update your configuration to use the `QUARKUS_LOG_CONSOLE_JSON_ENABLED` variable instead.
+
 ### Breaking Changes
 
 * The name of the organization used for the container images created by the Hono build process has changed from `eclipse` to
