@@ -124,12 +124,19 @@ jobs:
         version: latest
         install-only: true
 
+    - name: Install Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: "0.123.8"
+        extended: true
+
     - name: Tool versions
       run: |
         git --version
         mvn --version
         java --version
         upx --version
+        hugo version
 
     - name: Bump version to release version
       run: |
