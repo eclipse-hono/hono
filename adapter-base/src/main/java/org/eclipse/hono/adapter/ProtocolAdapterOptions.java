@@ -21,6 +21,7 @@ import org.eclipse.hono.config.ServiceOptions;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
 import io.smallrye.config.WithDefault;
+import io.smallrye.config.WithName;
 import io.smallrye.config.WithParentName;
 
 /**
@@ -79,6 +80,23 @@ public interface ProtocolAdapterOptions {
     boolean defaultsEnabled();
 
     /**
+     * Checks if the adapter should include the client IP address in downstream messages.
+     *
+     * @return {@code true} if the client IP should be included.
+     */
+    @WithName("include-client-ip")
+    @WithDefault("false")
+    boolean includeClientIp();
+
+    /**
+     * Gets the client IP source options.
+     *
+     * @return The options.
+     */
+    @WithName("client-ip")
+    ClientIpOptions clientIp();
+
+    /**
      * Gets the maximum number of concurrent connections that the protocol adapter
      * accepts.
      * <p>
@@ -119,4 +137,17 @@ public interface ProtocolAdapterOptions {
      * @return The endpoints.
      */
     Map<String, MapperEndpointOptions> mapperEndpoints();
+
+    /**
+     * Options for resolving client IP addresses.
+     */
+    interface ClientIpOptions {
+        /**
+         * Gets the source used to resolve client IPs.
+         *
+         * @return The source configuration.
+         */
+        @WithDefault("auto")
+        String source();
+    }
 }

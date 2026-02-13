@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -44,6 +45,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
@@ -456,6 +458,42 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                         false,
                         true,
                         Map.of("content-type", customContentType)))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter includes client IP information when configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIp(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenant = new Tenant()
+                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.AUTO.getConfigValue());
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer("hello"),
+                        false,
+                        true,
+                        null))
             .onFailure(ctx::failNow);
     }
 

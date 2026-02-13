@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -34,10 +35,12 @@ import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -52,6 +55,7 @@ import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
@@ -118,6 +122,74 @@ public class TelemetryHttpIT extends HttpTestBase {
                     HttpResponseExpectation.SC_ACCEPTED),
                 MESSAGES_TO_SEND,
                 QoS.AT_LEAST_ONCE);
+    }
+
+    /**
+     * Verifies that the adapter includes the client IP when configured and the request contains forwarded headers.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIpFromForwardedHeader(final VertxTestContext ctx) {
+
+        final String expectedClientIp = "198.51.100.10";
+        final Tenant tenant = new Tenant()
+                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add("X-Forwarded-For", expectedClientIp);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
+                                .isEqualTo(expectedClientIp);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter does not include client IP when not enabled.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
+                                .isNull();
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
     }
 
     /**

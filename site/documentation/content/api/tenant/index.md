@@ -324,6 +324,8 @@ The table below contains the extension properties that are used for addition con
 | Name                          | Mandatory | JSON Type | Default Value | Description |
 | :---------------------------- | :-------: | :-------- | :------------ | :---------- |
 | *invalidate-cache-on-update*  | *no*      | *boolean* | `false`       | If set to `true`, the clients must purge the cached tenant's entity when they receive change notification for update operation. |
+| *include-client-ip*           | *no*      | *boolean* | `false`       | If set to `true`, protocol adapters include a `client_ip` property in downstream messages for this tenant. Adapter-level configuration may override this. |
+| *client-ip.source*            | *no*      | *string*  | `auto`        | Determines how the adapter resolves client IP addresses. Supported values are `auto`, `http-headers`, `proxy-protocol`, `remote-address`. For `auto` the adapter use protocol-specific defaults (Forwarded/X-Forwarded-For for HTTP, remote address otherwise). For `http-headers` the adapter inspects `Forwarded` and `X-Forwarded-For` headers. `proxy-protocol` requires a load balancer sending Proxy Protocol headers and enables Proxy Protocol support on the server. For `remote-address`, the adapter use the direct remote address reported by the transport. Adapter-level configuration may override this. |
 
 ## Delivery States used by the Tenant API
 

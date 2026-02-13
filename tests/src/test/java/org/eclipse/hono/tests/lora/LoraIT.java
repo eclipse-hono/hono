@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -44,6 +45,7 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -284,6 +286,52 @@ public class LoraIT {
                             requestBody,
                             requestHeaders,
                             HttpResponseExpectation.SC_ACCEPTED));
+    }
+
+    /**
+     * Verifies that the Lora adapter includes client IP information when configured.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test is interrupted before it has finished.
+     */
+    @Test
+    public void testUploadIncludesClientIp(final VertxTestContext ctx) throws InterruptedException {
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Tenant tenant = new Tenant()
+                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "application/json")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add("X-Forwarded-For", "203.0.113.20");
+
+        helper.registry
+            .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
+            .compose(ok -> helper.registry.registerDevice(tenantId, LORA_DEVICE_ID, loraDeviceData))
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final var requestBody = loriotRequestBody;
+        testUploadMessages(
+                ctx,
+                tenantId,
+                msg -> {
+                    DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                    return Future.succeededFuture();
+                },
+                count -> httpClient.create(
+                        ENDPOINT_URI_LORIOT,
+                        requestBody,
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED),
+                1,
+                null);
     }
 
     /**

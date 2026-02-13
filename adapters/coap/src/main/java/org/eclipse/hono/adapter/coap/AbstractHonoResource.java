@@ -29,6 +29,9 @@ import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.ClientIpAddressHelper;
+import org.eclipse.hono.adapter.ClientIpConfigHelper;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
@@ -43,6 +46,7 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -321,6 +325,15 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     Optional.ofNullable(commandConsumer)
                             .map(c -> ttdTracker.result())
                             .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
+                    if (ClientIpConfigHelper.isClientIpIncluded(tenantTracker.result(),
+                            getAdapter().getTypeName(), getAdapter().getConfig())) {
+                        final ClientIpSource clientIpSource = ClientIpConfigHelper.getClientIpSource(
+                                tenantTracker.result(), getAdapter().getTypeName(), getAdapter().getConfig());
+                        if (clientIpSource != ClientIpSource.HTTP_HEADERS) {
+                            ClientIpAddressHelper.extractRemoteAddress(context.getExchange().getSourceAddress())
+                                    .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));
+                        }
+                    }
                     customizeDownstreamMessageProperties(props, context);
 
                     if (context.isConfirmable()) {

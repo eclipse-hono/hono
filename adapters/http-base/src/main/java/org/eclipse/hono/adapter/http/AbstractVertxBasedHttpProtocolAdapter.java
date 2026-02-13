@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.ClientIpAddressHelper;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
@@ -365,6 +367,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                .setPort(getConfig().getPort(getPortDefaultValue()))
                .setMaxChunkSize(4096)
                .setIdleTimeout(getConfig().getIdleTimeout());
+        if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+            options.setUseProxyProtocol(true);
+        }
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;
@@ -387,6 +392,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue()))
                .setMaxChunkSize(4096)
                .setIdleTimeout(getConfig().getIdleTimeout());
+        if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+            options.setUseProxyProtocol(true);
+        }
         return options;
     }
 
@@ -650,6 +658,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             Optional.ofNullable(ttdTracker.result())
                     .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
+
+            if (isClientIpIncluded(tenantTracker.result())) {
+                final ClientIpSource clientIpSource = getClientIpSource(tenantTracker.result());
+                ClientIpAddressHelper.extractHttpClientIp(clientIpSource, ctx.request())
+                        .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));
+            }
 
             customizeDownstreamMessageProperties(props, ctx);
 

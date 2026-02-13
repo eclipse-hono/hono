@@ -775,6 +775,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Checks if the client IP address should be included in downstream messages for a tenant.
+     *
+     * @param tenant The tenant configuration.
+     * @return {@code true} if the client IP address should be included.
+     */
+    protected final boolean isClientIpIncluded(final TenantObject tenant) {
+        return ClientIpConfigHelper.isClientIpIncluded(tenant, getTypeName(), getConfig());
+    }
+
+    /**
+     * Gets the client IP source to use for a tenant.
+     *
+     * @param tenant The tenant configuration.
+     * @return The client IP source.
+     */
+    protected final ClientIpSource getClientIpSource(final TenantObject tenant) {
+        return ClientIpConfigHelper.getClientIpSource(tenant, getTypeName(), getConfig());
+    }
+
+    /**
      * Registers checks which verify that this component is connected to the services it depends on.
      */
     @Override

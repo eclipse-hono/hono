@@ -116,6 +116,18 @@ public final class DownstreamMessageAssertions {
                 .isNotNull());
     }
 
+    /**
+     * Verifies that a downstream message contains a client IP address.
+     *
+     * @param msg The message to check.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertMessageContainsClientIp(final DownstreamMessage<? extends MessageContext> msg) {
+        assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_CLIENT_IP)
+                .that(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
+                .isNotNull();
+    }
+
 
     /**
      * Verifies that a telemetry message that has been received by a downstream consumer contains

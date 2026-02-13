@@ -63,6 +63,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedSinglePskStore;
 import org.eclipse.californium.scandium.dtls.x509.SingleCertificateProvider;
 import org.eclipse.californium.scandium.dtls.x509.StaticNewAdvancedCertificateVerifier;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.adapter.coap.option.TimeOption;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -82,6 +83,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -937,6 +939,41 @@ public abstract class CoapTestBase {
             })
             .onFailure(ctx::failNow);
 
+    }
+
+    /**
+     * Verifies that the adapter includes client IP information when configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIp(final VertxTestContext ctx) {
+
+        final Tenant tenant = new Tenant()
+                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.AUTO.getConfigValue());
+
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                return result.future();
+            })
+            .onFailure(ctx::failNow);
     }
 
     /**

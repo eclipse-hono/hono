@@ -39,6 +39,8 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
+    private boolean clientIpIncluded = false;
+    private ClientIpSource clientIpSource = ClientIpSource.AUTO;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
     private int gcHeapPercentage = DEFAULT_GC_HEAP_PERCENTAGE;
@@ -60,6 +62,9 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         super(options.serviceOptions());
         this.authenticationRequired = options.authenticationRequired();
         this.defaultsEnabled = options.defaultsEnabled();
+        this.clientIpIncluded = options.includeClientIp();
+        this.clientIpSource = ClientIpSource.fromString(options.clientIp().source())
+                .orElse(ClientIpSource.AUTO);
         this.gcHeapPercentage = options.gcHeapPercentage();
         this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
         options.mapperEndpoints().entrySet()
@@ -174,6 +179,42 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public final void setDefaultsEnabled(final boolean flag) {
         this.defaultsEnabled = flag;
+    }
+
+    /**
+     * Checks if the adapter should include the client IP address in downstream messages.
+     *
+     * @return {@code true} if the client IP should be included.
+     */
+    public final boolean isClientIpIncluded() {
+        return clientIpIncluded;
+    }
+
+    /**
+     * Sets if the adapter should include the client IP address in downstream messages.
+     *
+     * @param flag {@code true} if the client IP should be included.
+     */
+    public final void setClientIpIncluded(final boolean flag) {
+        this.clientIpIncluded = flag;
+    }
+
+    /**
+     * Gets the source used to resolve client IP addresses.
+     *
+     * @return The source configuration.
+     */
+    public final ClientIpSource getClientIpSource() {
+        return clientIpSource;
+    }
+
+    /**
+     * Sets the source used to resolve client IP addresses.
+     *
+     * @param clientIpSource The source configuration.
+     */
+    public final void setClientIpSource(final ClientIpSource clientIpSource) {
+        this.clientIpSource = Objects.requireNonNull(clientIpSource);
     }
 
     /**
