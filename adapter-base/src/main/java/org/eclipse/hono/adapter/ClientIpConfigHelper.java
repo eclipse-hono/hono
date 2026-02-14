@@ -12,15 +12,12 @@
  */
 package org.eclipse.hono.adapter;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.util.Adapter;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
-
-import io.vertx.core.json.JsonObject;
 
 /**
  * Helper methods for resolving client IP configuration.
@@ -45,7 +42,9 @@ public final class ClientIpConfigHelper {
             final ProtocolAdapterProperties config) {
         Objects.requireNonNull(adapterType);
         Objects.requireNonNull(config);
-        return getBooleanExtensionValue(tenant, adapterType, TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP)
+        return Optional.ofNullable(tenant)
+                .map(currentTenant -> currentTenant.getAdapter(adapterType))
+                .map(Adapter::getClientIpEnabled)
                 .orElse(config.isClientIpIncluded());
     }
 
@@ -63,55 +62,11 @@ public final class ClientIpConfigHelper {
             final ProtocolAdapterProperties config) {
         Objects.requireNonNull(adapterType);
         Objects.requireNonNull(config);
-        return getStringExtensionValue(tenant, adapterType, TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE)
+        return Optional.ofNullable(tenant)
+                .map(currentTenant -> currentTenant.getAdapter(adapterType))
+                .map(Adapter::getClientIpSource)
+                .filter(source -> !Strings.isNullOrEmpty(source))
                 .flatMap(ClientIpSource::fromString)
                 .orElse(config.getClientIpSource());
-    }
-
-    private static Optional<Boolean> getBooleanExtensionValue(
-            final TenantObject tenant,
-            final String adapterType,
-            final String key) {
-        return getExtensionValue(tenant, adapterType, key)
-                .filter(Boolean.class::isInstance)
-                .map(Boolean.class::cast);
-    }
-
-    private static Optional<String> getStringExtensionValue(
-            final TenantObject tenant,
-            final String adapterType,
-            final String key) {
-        return getExtensionValue(tenant, adapterType, key)
-                .filter(String.class::isInstance)
-                .map(String.class::cast);
-    }
-
-    private static Optional<Object> getExtensionValue(
-            final TenantObject tenant,
-            final String adapterType,
-            final String key) {
-        if (tenant == null || key == null) {
-            return Optional.empty();
-        }
-        return getAdapterExtensionValue(tenant, adapterType, key)
-                .or(() -> getTenantExtensionValue(tenant, key));
-    }
-
-    private static Optional<Object> getTenantExtensionValue(final TenantObject tenant, final String key) {
-        return Optional.ofNullable(tenant.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
-                .map(extensions -> extensions.getValue(key));
-    }
-
-    private static Optional<Object> getAdapterExtensionValue(
-            final TenantObject tenant,
-            final String adapterType,
-            final String key) {
-        return Optional.ofNullable(tenant.getAdapter(adapterType))
-                .map(Adapter::getExtensions)
-                .map(Map::entrySet)
-                .flatMap(entries -> entries.stream()
-                        .filter(entry -> key.equals(entry.getKey()))
-                        .findFirst()
-                        .map(Map.Entry::getValue));
     }
 }

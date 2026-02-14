@@ -45,7 +45,6 @@ import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -298,9 +297,11 @@ public class LoraIT {
     public void testUploadIncludesClientIp(final VertxTestContext ctx) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
-        final Tenant tenant = new Tenant()
-                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
-                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "application/json")
                 .add(HttpHeaders.AUTHORIZATION, authorization)

@@ -85,15 +85,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_EXT = "ext";
     /**
-     * The name of the extension property that indicates if client IP addresses should be included in downstream
-     * messages.
-     */
-    public static final String FIELD_EXT_INCLUDE_CLIENT_IP = "include-client-ip";
-    /**
-     * The name of the extension property that defines the client IP source to use.
-     */
-    public static final String FIELD_EXT_CLIENT_IP_SOURCE = "client-ip.source";
-    /**
      * The name of the property that contains the minimum message size in bytes.
      */
     public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";

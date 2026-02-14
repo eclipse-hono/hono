@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 
@@ -62,9 +63,8 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         super(options.serviceOptions());
         this.authenticationRequired = options.authenticationRequired();
         this.defaultsEnabled = options.defaultsEnabled();
-        this.clientIpIncluded = options.includeClientIp();
-        this.clientIpSource = ClientIpSource.fromString(options.clientIp().source())
-                .orElse(ClientIpSource.AUTO);
+        this.clientIpIncluded = options.clientIp().enabled();
+        this.clientIpSource = Optional.ofNullable(options.clientIp().source()).orElse(ClientIpSource.AUTO);
         this.gcHeapPercentage = options.gcHeapPercentage();
         this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
         options.mapperEndpoints().entrySet()

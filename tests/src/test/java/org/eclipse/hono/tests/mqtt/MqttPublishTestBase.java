@@ -42,10 +42,11 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
@@ -472,9 +473,11 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final Tenant tenant = new Tenant()
-                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
-                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.AUTO.getConfigValue());
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.AUTO.getConfigValue());
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
             .compose(response -> createConsumer(tenantId, msg -> {

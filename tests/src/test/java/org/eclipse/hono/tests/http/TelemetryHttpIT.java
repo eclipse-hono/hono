@@ -34,13 +34,13 @@ import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -134,9 +134,11 @@ public class TelemetryHttpIT extends HttpTestBase {
     public void testUploadIncludesClientIpFromForwardedHeader(final VertxTestContext ctx) {
 
         final String expectedClientIp = "198.51.100.10";
-        final Tenant tenant = new Tenant()
-                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
-                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.HTTP_HEADERS.getConfigValue());
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)

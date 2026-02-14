@@ -39,6 +39,14 @@ public class Adapter {
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
     private boolean deviceAuthenticationRequired = true;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_ENABLED)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Boolean clientIpEnabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_SOURCE)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String clientIpSource;
+
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
@@ -106,6 +114,55 @@ public class Adapter {
      */
     public final boolean isDeviceAuthenticationRequired() {
         return deviceAuthenticationRequired;
+    }
+
+    /**
+     * Sets whether the client IP should be included in downstream messages.
+     *
+     * @param enabled {@code true} if the client IP should be included.
+     * @return A reference to this for fluent use.
+     */
+    public final Adapter setClientIpEnabled(final Boolean enabled) {
+        this.clientIpEnabled = enabled;
+        return this;
+    }
+
+    /**
+     * Checks whether the client IP should be included in downstream messages.
+     *
+     * @return {@code true} if the client IP should be included.
+     */
+    public final boolean isClientIpEnabled() {
+        return Boolean.TRUE.equals(clientIpEnabled);
+    }
+
+    /**
+     * Gets whether the client IP should be included in downstream messages.
+     *
+     * @return {@code true} if enabled, {@code false} if disabled, or {@code null} if not configured.
+     */
+    public final Boolean getClientIpEnabled() {
+        return clientIpEnabled;
+    }
+
+    /**
+     * Sets the client IP source.
+     *
+     * @param clientIpSource The source configuration value.
+     * @return A reference to this for fluent use.
+     */
+    public final Adapter setClientIpSource(final String clientIpSource) {
+        this.clientIpSource = clientIpSource;
+        return this;
+    }
+
+    /**
+     * Gets the client IP source.
+     *
+     * @return The source configuration value or {@code null} if not configured.
+     */
+    public final String getClientIpSource() {
+        return clientIpSource;
     }
 
     /**

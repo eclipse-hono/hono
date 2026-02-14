@@ -21,7 +21,6 @@ import org.eclipse.hono.config.ServiceOptions;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
 import io.smallrye.config.WithDefault;
-import io.smallrye.config.WithName;
 import io.smallrye.config.WithParentName;
 
 /**
@@ -80,20 +79,10 @@ public interface ProtocolAdapterOptions {
     boolean defaultsEnabled();
 
     /**
-     * Checks if the adapter should include the client IP address in downstream messages.
-     *
-     * @return {@code true} if the client IP should be included.
-     */
-    @WithName("include-client-ip")
-    @WithDefault("false")
-    boolean includeClientIp();
-
-    /**
-     * Gets the client IP source options.
+     * Gets the client IP options.
      *
      * @return The options.
      */
-    @WithName("client-ip")
     ClientIpOptions clientIp();
 
     /**
@@ -143,11 +132,19 @@ public interface ProtocolAdapterOptions {
      */
     interface ClientIpOptions {
         /**
-         * Gets the source used to resolve client IPs.
+         * Checks if the adapter should include client IP addresses in downstream messages.
+         *
+         * @return {@code true} if client IP addresses should be included.
+         */
+        @WithDefault("false")
+        boolean enabled();
+
+        /**
+         * Gets the source used to resolve client IP addresses.
          *
          * @return The source configuration.
          */
         @WithDefault("auto")
-        String source();
+        ClientIpSource source();
     }
 }

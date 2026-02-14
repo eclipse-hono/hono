@@ -83,7 +83,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -950,9 +949,11 @@ public abstract class CoapTestBase {
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
     public void testUploadIncludesClientIp(final VertxTestContext ctx) {
 
-        final Tenant tenant = new Tenant()
-                .putExtension(TenantConstants.FIELD_EXT_INCLUDE_CLIENT_IP, Boolean.TRUE)
-                .putExtension(TenantConstants.FIELD_EXT_CLIENT_IP_SOURCE, ClientIpSource.AUTO.getConfigValue());
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.AUTO.getConfigValue());
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
 
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
             .compose(response -> createConsumer(tenantId, msg -> {

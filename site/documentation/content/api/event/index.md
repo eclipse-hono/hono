@@ -118,7 +118,6 @@ The relevant properties are listed again in the following table:
 | :------------- | :--------------: | :----------------------- | :-------- | :---------- |
 | *content-type* | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
 | *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
-| *client_ip*    | no               | *application-properties* | *string*  | The client IP address as observed by the protocol adapter. |
 
 {{% notice tip %}}
 An empty notification can be used to indicate to a *Business Application* that a device is currently ready to
