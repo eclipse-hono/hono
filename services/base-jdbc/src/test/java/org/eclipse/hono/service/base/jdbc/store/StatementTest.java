@@ -49,9 +49,7 @@ public class StatementTest {
     @Test
     public void testValidateMissingField() {
         final Statement statement = Statement.statement("SELECT foo FROM bar WHERE baz=:baz");
-        assertThrows(IllegalStateException.class, () -> {
-            statement.validateParameters("bar");
-        });
+        assertThrows(IllegalStateException.class, () -> statement.validateParameters("bar"));
     }
 
     /**
@@ -68,14 +66,15 @@ public class StatementTest {
      */
     @Test
     public void testValidateAdditionalField2() {
-        final Statement statement = Statement.statement("UPDATE devices\n" +
-                "SET\n" +
-                "   data=:data::jsonb,\n" +
-                "   version=:next_version\n" +
-                "WHERE\n" +
-                "   tenant_id=:tenant_id\n" +
-                "AND\n" +
-                "   device_id=:device_id");
+        final Statement statement = Statement.statement("""
+                UPDATE devices
+                SET
+                   data=:data::jsonb,
+                   version=:next_version
+                WHERE
+                   tenant_id=:tenant_id
+                AND
+                   device_id=:device_id""");
         statement.validateParameters("data", "device_id", "next_version", "tenant_id");
     }
 
@@ -102,7 +101,7 @@ public class StatementTest {
     @Test
     public void testObjectCreationRejectedMapValue(@TempDir final Path tempDir) {
         final Path markerFile = tempDir.resolve("testObjectCreationRejectedMapValue.marker");
-        final String yaml = "read: !!java.io.FileOutputStream [" + markerFile.toAbsolutePath().toString() + "]";
+        final String yaml = "read: !!java.io.FileOutputStream [" + markerFile.toAbsolutePath() + "]";
 
         assertNoMarkerFile(markerFile, yaml);
     }
@@ -115,7 +114,7 @@ public class StatementTest {
     @Test
     public void testObjectCreationRejectedPlainValue(@TempDir final Path tempDir) {
         final Path markerFile = tempDir.resolve("testObjectCreationRejectedPlainValue.marker");
-        final String yaml = "!!java.io.FileOutputStream [" + markerFile.toAbsolutePath().toString() + "]";
+        final String yaml = "!!java.io.FileOutputStream [" + markerFile.toAbsolutePath() + "]";
 
         assertNoMarkerFile(markerFile, yaml);
     }
