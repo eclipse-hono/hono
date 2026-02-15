@@ -141,7 +141,7 @@
     <!--
       The Docker registry to use for our Docker image names.
     -->
-    <docker.registry-name>index.docker.io</docker.registry-name>
+    <docker.registry-name>docker.io</docker.registry-name>
 
     <!--
       The Docker repository to use for our Docker image names.
