@@ -16,7 +16,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services</artifactId>
-    <version>2.7.0</version>
+    <version>2.8.0-SNAPSHOT</version>
   </parent>
   <artifactId>hono-service-command-router-base</artifactId>
   <name>Hono Service Command Router Base</name>
