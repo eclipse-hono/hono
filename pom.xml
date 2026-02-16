@@ -606,7 +606,6 @@
     <profile>
       <id>docker-multiarch-build</id>
       <properties>
-        <docker.buildx.dockerStateDir>~/.docker</docker.buildx.dockerStateDir>
         <docker.buildx.builderName>maven</docker.buildx.builderName>
       </properties>
       <build>
@@ -620,7 +619,6 @@
                   <image>
                     <build>
                       <buildx>
-                        <dockerStateDir>${docker.buildx.dockerStateDir}</dockerStateDir>
                         <builderName>${docker.buildx.builderName}</builderName>
                         <platforms>
                           <platform>linux/amd64</platform>
