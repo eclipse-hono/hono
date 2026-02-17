@@ -271,6 +271,6 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ env.RELEASE_VERSION }}
-        artifacts: "hono-cli-*"
+        artifacts: "hono-cli-*,cli/target/hono-cli-${RELEASE_VERSION}-exec.jar"
         generateReleaseNotes: true
         generateReleaseNotesPreviousTag: ${{ github.event.inputs.previous_version }}
