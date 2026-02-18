@@ -16,7 +16,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.util.Adapter;
-import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 
 /**
@@ -36,7 +35,7 @@ public final class ClientIpConfigHelper {
      * @param config The adapter configuration.
      * @return {@code true} if client IP should be included.
      */
-    public static boolean isClientIpIncluded(
+    public static boolean isClientIpEnabled(
             final TenantObject tenant,
             final String adapterType,
             final ProtocolAdapterProperties config) {
@@ -44,8 +43,8 @@ public final class ClientIpConfigHelper {
         Objects.requireNonNull(config);
         return Optional.ofNullable(tenant)
                 .map(currentTenant -> currentTenant.getAdapter(adapterType))
-                .map(Adapter::getClientIpEnabled)
-                .orElse(config.isClientIpIncluded());
+                .map(Adapter::isClientIpEnabled)
+                .orElse(config.isClientIpEnabled());
     }
 
     /**
@@ -65,8 +64,6 @@ public final class ClientIpConfigHelper {
         return Optional.ofNullable(tenant)
                 .map(currentTenant -> currentTenant.getAdapter(adapterType))
                 .map(Adapter::getClientIpSource)
-                .filter(source -> !Strings.isNullOrEmpty(source))
-                .flatMap(ClientIpSource::fromString)
                 .orElse(config.getClientIpSource());
     }
 }

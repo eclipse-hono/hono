@@ -16,6 +16,8 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Defines how a protocol adapter should resolve client IP addresses.
  */
@@ -23,18 +25,22 @@ public enum ClientIpSource {
     /**
      * Use protocol-specific defaults (Forwarded/X-Forwarded-For for HTTP, remote address otherwise).
      */
+    @JsonProperty("auto")
     AUTO("auto"),
     /**
      * Use HTTP Forwarded/X-Forwarded-For headers.
      */
+    @JsonProperty("http-headers")
     HTTP_HEADERS("http-headers"),
     /**
      * Use Proxy Protocol information (requires server configuration to enable it).
      */
+    @JsonProperty("proxy-protocol")
     PROXY_PROTOCOL("proxy-protocol"),
     /**
      * Use the direct remote address reported by the transport.
      */
+    @JsonProperty("remote-address")
     REMOTE_ADDRESS("remote-address");
 
     private final String configValue;

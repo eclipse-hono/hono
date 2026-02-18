@@ -780,8 +780,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenant The tenant configuration.
      * @return {@code true} if the client IP address should be included.
      */
-    protected final boolean isClientIpIncluded(final TenantObject tenant) {
-        return ClientIpConfigHelper.isClientIpIncluded(tenant, getTypeName(), getConfig());
+    protected final boolean isClientIpEnabled(final TenantObject tenant) {
+        return ClientIpConfigHelper.isClientIpEnabled(tenant, getTypeName(), getConfig());
     }
 
     /**

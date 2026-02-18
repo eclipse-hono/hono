@@ -952,7 +952,7 @@ public abstract class CoapTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.AUTO.getConfigValue());
+                .setClientIpSource(ClientIpSource.AUTO);
         final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
 
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)

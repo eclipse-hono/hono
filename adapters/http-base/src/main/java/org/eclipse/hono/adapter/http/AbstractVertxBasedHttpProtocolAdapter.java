@@ -659,7 +659,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
 
-            if (isClientIpIncluded(tenantTracker.result())) {
+            if (isClientIpEnabled(tenantTracker.result())) {
                 final ClientIpSource clientIpSource = getClientIpSource(tenantTracker.result());
                 ClientIpAddressHelper.extractHttpClientIp(clientIpSource, ctx.request())
                         .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));

@@ -476,7 +476,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.AUTO.getConfigValue());
+                .setClientIpSource(ClientIpSource.AUTO);
         final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")

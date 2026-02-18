@@ -325,7 +325,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     Optional.ofNullable(commandConsumer)
                             .map(c -> ttdTracker.result())
                             .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
-                    if (ClientIpConfigHelper.isClientIpIncluded(tenantTracker.result(),
+                    if (ClientIpConfigHelper.isClientIpEnabled(tenantTracker.result(),
                             getAdapter().getTypeName(), getAdapter().getConfig())) {
                         final ClientIpSource clientIpSource = ClientIpConfigHelper.getClientIpSource(
                                 tenantTracker.result(), getAdapter().getTypeName(), getAdapter().getConfig());

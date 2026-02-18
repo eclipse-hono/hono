@@ -40,7 +40,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
-    private boolean clientIpIncluded = false;
+    private boolean clientIpEnabled = false;
     private ClientIpSource clientIpSource = ClientIpSource.AUTO;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
@@ -63,7 +63,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         super(options.serviceOptions());
         this.authenticationRequired = options.authenticationRequired();
         this.defaultsEnabled = options.defaultsEnabled();
-        this.clientIpIncluded = options.clientIp().enabled();
+        this.clientIpEnabled = options.clientIp().enabled();
         this.clientIpSource = Optional.ofNullable(options.clientIp().source()).orElse(ClientIpSource.AUTO);
         this.gcHeapPercentage = options.gcHeapPercentage();
         this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
@@ -186,8 +186,8 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      *
      * @return {@code true} if the client IP should be included.
      */
-    public final boolean isClientIpIncluded() {
-        return clientIpIncluded;
+    public final boolean isClientIpEnabled() {
+        return clientIpEnabled;
     }
 
     /**
@@ -195,8 +195,8 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      *
      * @param flag {@code true} if the client IP should be included.
      */
-    public final void setClientIpIncluded(final boolean flag) {
-        this.clientIpIncluded = flag;
+    public final void setClientIpEnabled(final boolean flag) {
+        this.clientIpEnabled = flag;
     }
 
     /**

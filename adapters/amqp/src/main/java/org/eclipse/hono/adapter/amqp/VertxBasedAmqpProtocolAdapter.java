@@ -1302,7 +1302,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return Future.all(tenantValidationTracker, tokenFuture)
                 .compose(ok -> {
                     final Map<String, Object> props = getDownstreamMessageProperties(context);
-                    if (isClientIpIncluded(tenantValidationTracker.result())) {
+                    if (isClientIpEnabled(tenantValidationTracker.result())) {
                         final ClientIpSource clientIpSource = getClientIpSource(tenantValidationTracker.result());
                         if (clientIpSource != ClientIpSource.HTTP_HEADERS) {
                             Optional.ofNullable(context.get(AmqpAdapterConstants.KEY_CLIENT_IP))

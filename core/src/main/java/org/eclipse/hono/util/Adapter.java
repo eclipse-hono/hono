@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.ClientIpSource;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -40,12 +42,10 @@ public class Adapter {
     private boolean deviceAuthenticationRequired = true;
 
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_ENABLED)
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Boolean clientIpEnabled;
+    private boolean clientIpEnabled = false;
 
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_SOURCE)
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String clientIpSource;
+    private ClientIpSource clientIpSource;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -122,7 +122,7 @@ public class Adapter {
      * @param enabled {@code true} if the client IP should be included.
      * @return A reference to this for fluent use.
      */
-    public final Adapter setClientIpEnabled(final Boolean enabled) {
+    public final Adapter setClientIpEnabled(final boolean enabled) {
         this.clientIpEnabled = enabled;
         return this;
     }
@@ -133,15 +133,6 @@ public class Adapter {
      * @return {@code true} if the client IP should be included.
      */
     public final boolean isClientIpEnabled() {
-        return Boolean.TRUE.equals(clientIpEnabled);
-    }
-
-    /**
-     * Gets whether the client IP should be included in downstream messages.
-     *
-     * @return {@code true} if enabled, {@code false} if disabled, or {@code null} if not configured.
-     */
-    public final Boolean getClientIpEnabled() {
         return clientIpEnabled;
     }
 
@@ -151,7 +142,7 @@ public class Adapter {
      * @param clientIpSource The source configuration value.
      * @return A reference to this for fluent use.
      */
-    public final Adapter setClientIpSource(final String clientIpSource) {
+    public final Adapter setClientIpSource(final ClientIpSource clientIpSource) {
         this.clientIpSource = clientIpSource;
         return this;
     }
@@ -161,7 +152,7 @@ public class Adapter {
      *
      * @return The source configuration value or {@code null} if not configured.
      */
-    public final String getClientIpSource() {
+    public final ClientIpSource getClientIpSource() {
         return clientIpSource;
     }
 

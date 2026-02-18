@@ -959,7 +959,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .map(QoS::ordinal)
                 .ifPresent(qos -> props.put(MessageHelper.APP_PROPERTY_QOS, qos));
             addRetainAnnotation(ctx, props, currentSpan);
-            if (isClientIpIncluded(tenantObject)) {
+            if (isClientIpEnabled(tenantObject)) {
                 final ClientIpSource clientIpSource = getClientIpSource(tenantObject);
                 ClientIpAddressHelper.extractClientIpFromRemoteAddress(clientIpSource, ctx.deviceEndpoint().remoteAddress())
                         .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));

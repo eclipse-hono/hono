@@ -137,7 +137,7 @@ public class TelemetryHttpIT extends HttpTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.HTTP_HEADERS.getConfigValue());
+                .setClientIpSource(ClientIpSource.HTTP_HEADERS);
         final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")

@@ -201,7 +201,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.AUTO.getConfigValue());
+                .setClientIpSource(ClientIpSource.AUTO);
         final Tenant tenantConfig = new Tenant().addAdapterConfig(adapterConfig);
         prepareTenantConfig(tenantConfig);
 
