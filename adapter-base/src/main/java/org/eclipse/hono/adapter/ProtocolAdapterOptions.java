@@ -79,6 +79,13 @@ public interface ProtocolAdapterOptions {
     boolean defaultsEnabled();
 
     /**
+     * Gets the client IP options.
+     *
+     * @return The options.
+     */
+    ClientIpOptions clientIp();
+
+    /**
      * Gets the maximum number of concurrent connections that the protocol adapter
      * accepts.
      * <p>
@@ -119,4 +126,25 @@ public interface ProtocolAdapterOptions {
      * @return The endpoints.
      */
     Map<String, MapperEndpointOptions> mapperEndpoints();
+
+    /**
+     * Options for resolving client IP addresses.
+     */
+    interface ClientIpOptions {
+        /**
+         * Checks if the adapter should include client IP addresses in downstream messages.
+         *
+         * @return {@code true} if client IP addresses should be included.
+         */
+        @WithDefault("false")
+        boolean enabled();
+
+        /**
+         * Gets the source used to resolve client IP addresses.
+         *
+         * @return The source configuration.
+         */
+        @WithDefault("auto")
+        ClientIpSource source();
+    }
 }

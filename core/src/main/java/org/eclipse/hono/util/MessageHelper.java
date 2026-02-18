@@ -66,6 +66,10 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_QOS = "qos";
     /**
+     * The name of the AMQP 1.0 message application property containing the client IP address.
+     */
+    public static final String APP_PROPERTY_CLIENT_IP = "client_ip";
+    /**
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
     public static final String APP_PROPERTY_RESOURCE = "resource";

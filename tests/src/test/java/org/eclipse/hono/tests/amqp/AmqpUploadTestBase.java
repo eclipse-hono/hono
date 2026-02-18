@@ -33,6 +33,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.LinkError;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -44,6 +45,8 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -182,6 +185,62 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     }
                 });
             });
+    }
+
+    /**
+     * Verifies that the adapter includes client IP information when configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIp(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.AUTO);
+        final Tenant tenantConfig = new Tenant().addAdapterConfig(adapterConfig);
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    msg.setBody(new Data(new Binary("hello".getBytes())));
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            })
+            .onFailure(ctx::failNow);
     }
 
     /**

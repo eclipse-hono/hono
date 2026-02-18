@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.ClientIpSource;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -38,6 +40,12 @@ public class Adapter {
 
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
     private boolean deviceAuthenticationRequired = true;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_ENABLED)
+    private boolean clientIpEnabled = false;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_CLIENT_IP_SOURCE)
+    private ClientIpSource clientIpSource;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -106,6 +114,46 @@ public class Adapter {
      */
     public final boolean isDeviceAuthenticationRequired() {
         return deviceAuthenticationRequired;
+    }
+
+    /**
+     * Sets whether the client IP should be included in downstream messages.
+     *
+     * @param enabled {@code true} if the client IP should be included.
+     * @return A reference to this for fluent use.
+     */
+    public final Adapter setClientIpEnabled(final boolean enabled) {
+        this.clientIpEnabled = enabled;
+        return this;
+    }
+
+    /**
+     * Checks whether the client IP should be included in downstream messages.
+     *
+     * @return {@code true} if the client IP should be included.
+     */
+    public final boolean isClientIpEnabled() {
+        return clientIpEnabled;
+    }
+
+    /**
+     * Sets the client IP source.
+     *
+     * @param clientIpSource The source configuration value.
+     * @return A reference to this for fluent use.
+     */
+    public final Adapter setClientIpSource(final ClientIpSource clientIpSource) {
+        this.clientIpSource = clientIpSource;
+        return this;
+    }
+
+    /**
+     * Gets the client IP source.
+     *
+     * @return The source configuration value or {@code null} if not configured.
+     */
+    public final ClientIpSource getClientIpSource() {
+        return clientIpSource;
     }
 
     /**

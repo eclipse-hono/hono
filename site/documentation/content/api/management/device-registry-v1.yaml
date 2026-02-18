@@ -982,6 +982,16 @@ components:
             "device-authentication-required":
                type: boolean
                default: true
+            "client-ip-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether the adapter should include a client IP address in downstream messages.
+            "client-ip-source":
+               type: string
+               default: auto
+               description: |
+                  Determines how the adapter resolves client IP addresses. Supported values are `auto`, `http-headers`, `proxy-protocol`, `remote-address`. For `auto`, HTTP adapters inspect `Forwarded` and `X-Forwarded-For` headers and fall back to the direct remote address if no usable header is present; non-HTTP adapters use the direct remote address reported by the transport. For `http-headers`, HTTP adapters inspect `Forwarded` and `X-Forwarded-For` headers and fall back to the direct remote address if no usable header is present; non-HTTP adapters do not resolve a client IP address when configured with `http-headers`. For `proxy-protocol`, the adapter enables Proxy Protocol support on the server and uses the remote address reported by the transport (as populated by Proxy Protocol). For `remote-address`, the adapter uses the direct remote address reported by the transport.
             "ext":
                $ref: '#/components/schemas/Extensions'
 

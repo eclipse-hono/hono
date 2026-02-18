@@ -41,6 +41,8 @@ import javax.net.ssl.SSLSession;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AuthorizationException;
+import org.eclipse.hono.adapter.ClientIpAddressHelper;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.adapter.ConnectionDurationExceededException;
 import org.eclipse.hono.adapter.DataVolumeExceededException;
 import org.eclipse.hono.adapter.TenantConnectionsExceededException;
@@ -317,6 +319,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     .setHost(getConfig().getBindAddress())
                     .setPort(determineSecurePort())
                     .setMaxMessageSize(getConfig().getMaxPayloadSize() + MAX_MSG_SIZE_VARIABLE_HEADER_SIZE);
+            if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+                options.setUseProxyProtocol(true);
+            }
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
@@ -337,6 +342,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     .setHost(getConfig().getInsecurePortBindAddress())
                     .setPort(determineInsecurePort())
                     .setMaxMessageSize(getConfig().getMaxPayloadSize() + MAX_MSG_SIZE_VARIABLE_HEADER_SIZE);
+            if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+                options.setUseProxyProtocol(true);
+            }
 
             return bindMqttServer(options, insecureServer).map(createdServer -> {
                 insecureServer = createdServer;
@@ -951,6 +959,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .map(QoS::ordinal)
                 .ifPresent(qos -> props.put(MessageHelper.APP_PROPERTY_QOS, qos));
             addRetainAnnotation(ctx, props, currentSpan);
+            if (isClientIpEnabled(tenantObject)) {
+                final ClientIpSource clientIpSource = getClientIpSource(tenantObject);
+                ClientIpAddressHelper.extractClientIpFromRemoteAddress(clientIpSource, ctx.deviceEndpoint().remoteAddress())
+                        .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));
+            }
             customizeDownstreamMessageProperties(props, ctx);
 
             if (endpoint == EndpointType.EVENT) {
