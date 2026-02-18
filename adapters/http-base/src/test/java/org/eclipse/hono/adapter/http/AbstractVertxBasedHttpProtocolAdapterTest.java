@@ -874,7 +874,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
-                any());
+                any(),
+                eq(MetricsTags.ProcessingOutcomeReason.UNKNOWN));
         // and the command consumer is closed
         verify(commandConsumer).close(eq(false), any());
     }
@@ -957,7 +958,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
-                any());
+                any(),
+                eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
     }
 
     /**
@@ -996,7 +998,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
-                any());
+                any(),
+                eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
     }
 
     /**
