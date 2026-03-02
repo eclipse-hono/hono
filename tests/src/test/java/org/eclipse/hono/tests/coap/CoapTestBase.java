@@ -978,6 +978,37 @@ public abstract class CoapTestBase {
     }
 
     /**
+     * Verifies that the adapter does not include client IP information when not configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        helper.registry.addPskDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET)
+            .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+            }))
+            .compose(ok -> {
+
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Promise<CoapResponse> result = Promise.promise();
+                final var request = createCoapsRequest(Code.POST, getPostResource(), 0);
+                client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                return result.future();
+            })
+            .onFailure(ctx::failNow);
+    }
+
+    /**
      * Verifies that the adapter rejects empty messages that have no content format set and
      * that are not marked as empty notifications with a 4.00 response code.
      *

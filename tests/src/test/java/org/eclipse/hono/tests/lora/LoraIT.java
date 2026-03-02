@@ -336,6 +336,49 @@ public class LoraIT {
     }
 
     /**
+     * Verifies that the Lora adapter does not include client IP information when not configured.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test is interrupted before it has finished.
+     */
+    @Test
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) throws InterruptedException {
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "application/json")
+                .add(HttpHeaders.AUTHORIZATION, authorization);
+
+        helper.registry
+            .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
+            .compose(ok -> helper.registry.registerDevice(tenantId, LORA_DEVICE_ID, loraDeviceData))
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final var requestBody = loriotRequestBody;
+        testUploadMessages(
+                ctx,
+                tenantId,
+                msg -> {
+                    DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                    return Future.succeededFuture();
+                },
+                count -> httpClient.create(
+                        ENDPOINT_URI_LORIOT,
+                        requestBody,
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED),
+                1,
+                null);
+    }
+
+    /**
      * Verifies that a number of messages uploaded to Hono's Lora adapter using client certificate
      * based authentication can be successfully consumed via the messaging infrastructure.
      *

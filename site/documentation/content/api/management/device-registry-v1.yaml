@@ -986,7 +986,7 @@ components:
                type: boolean
                default: false
                description: |
-                  Indicates whether the adapter should include a client IP address in downstream messages.
+                  Indicates whether the adapter should include the client device's IP address in downstream messages as determined by the strategy set in `client-ip-source`.
             "client-ip-source":
                type: string
                default: auto

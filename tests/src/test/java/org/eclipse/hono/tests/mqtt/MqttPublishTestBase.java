@@ -501,6 +501,39 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     }
 
     /**
+     * Verifies that the adapter does not include client IP information when not configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, "secret")
+            .compose(response -> createConsumer(tenantId, msg -> {
+                LOGGER.trace("received {}", msg);
+                ctx.verify(() -> {
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                    DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                });
+                ctx.completeNow();
+            }))
+            .compose(consumer -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret"))
+            .compose(connAck -> send(
+                        tenantId,
+                        deviceId,
+                        Buffer.buffer("hello"),
+                        false,
+                        true,
+                        null))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
      * Verifies that the adapter rejects empty messages that have no content type set.
      *
      * @param ctx The vert.x test context.

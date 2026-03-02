@@ -244,6 +244,58 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     }
 
     /**
+     * Verifies that the adapter does not include client IP information when not configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    msg.setBody(new Data(new Binary("hello".getBytes())));
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            })
+            .onFailure(ctx::failNow);
+    }
+
+    /**
      * Verifies that the adapter rejects empty messages that have no content type set.
      *
      * @param ctx The vert.x test context.
