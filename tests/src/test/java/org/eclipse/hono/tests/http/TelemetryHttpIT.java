@@ -181,8 +181,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .compose(ok -> createConsumer(tenantId, msg -> {
                     logger.trace("received {}", msg);
                     ctx.verify(() -> {
-                        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
-                                .isNull();
+                        DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
                     });
                     ctx.completeNow();
                 }))
