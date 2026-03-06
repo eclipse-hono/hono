@@ -131,7 +131,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private static final int MEMORY_PER_CONNECTION = 20_000;
 
     /**
-     * Supported ClientIpSource
+     * Supported ClientIpSource.
      */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
             ClientIpSource.AUTO,

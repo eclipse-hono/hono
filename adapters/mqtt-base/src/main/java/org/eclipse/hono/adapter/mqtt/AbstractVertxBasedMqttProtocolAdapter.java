@@ -154,7 +154,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private static final String LOG_FIELD_TOPIC_FILTER = "filter";
 
     /**
-     * Supported ClientIpSource
+     * Supported ClientIpSource.
      */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
             ClientIpSource.AUTO,
