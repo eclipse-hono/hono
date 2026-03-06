@@ -40,6 +40,9 @@ import io.vertx.core.Promise;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> implements CoapProtocolAdapter {
 
+    /**
+     * Supported ClientIpSource
+     */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
             ClientIpSource.AUTO,
             ClientIpSource.REMOTE_ADDRESS);

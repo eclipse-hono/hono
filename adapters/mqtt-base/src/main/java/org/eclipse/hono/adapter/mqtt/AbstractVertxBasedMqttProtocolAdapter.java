@@ -152,6 +152,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
     private static final String LOG_FIELD_TOPIC_FILTER = "filter";
+
+    /**
+     * Supported ClientIpSource
+     */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
             ClientIpSource.AUTO,
             ClientIpSource.PROXY_PROTOCOL,

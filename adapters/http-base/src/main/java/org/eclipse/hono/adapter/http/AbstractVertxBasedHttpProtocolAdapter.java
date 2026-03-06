@@ -88,6 +88,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private static final String MATCH_ALL_ROUTE_NAME = "/*";
 
     private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
+
+    /**
+     * Supported ClientIpSource
+     */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
             ClientIpSource.AUTO,
             ClientIpSource.HTTP_HEADERS,
