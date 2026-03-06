@@ -37,7 +37,6 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -150,8 +149,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .compose(ok -> createConsumer(tenantId, msg -> {
                     logger.trace("received {}", msg);
                     ctx.verify(() -> {
-                        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
-                                .isEqualTo(expectedClientIp);
+                        DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp);
                     });
                     ctx.completeNow();
                 }))

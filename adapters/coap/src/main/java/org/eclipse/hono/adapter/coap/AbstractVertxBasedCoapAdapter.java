@@ -22,6 +22,8 @@ import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.ClientIpSource;
+import org.eclipse.hono.adapter.ClientIpSourceSupport;
 import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Future;
@@ -37,6 +39,10 @@ import io.vertx.core.Promise;
  */
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> implements CoapProtocolAdapter {
+
+    private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
+            ClientIpSource.AUTO,
+            ClientIpSource.REMOTE_ADDRESS);
 
     /**
      * The CoAP endpoint handling exchanges via DTLS.
@@ -154,6 +160,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     @Override
     public final void doStart(final Promise<Void> startPromise) {
+        try {
+            ClientIpSourceSupport.ensureSupported(getTypeName(), getConfig().getClientIpSource(),
+                    SUPPORTED_CLIENT_IP_SOURCES);
+        } catch (final IllegalArgumentException e) {
+            startPromise.fail(e);
+            return;
+        }
 
         Optional.ofNullable(server)
                 .map(Future::succeededFuture)

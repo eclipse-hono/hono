@@ -19,12 +19,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.ClientIpAddressHelper;
 import org.eclipse.hono.adapter.ClientIpSource;
+import org.eclipse.hono.adapter.ClientIpSourceSupport;
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
@@ -86,6 +88,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private static final String MATCH_ALL_ROUTE_NAME = "/*";
 
     private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
+    private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
+            ClientIpSource.AUTO,
+            ClientIpSource.HTTP_HEADERS,
+            ClientIpSource.PROXY_PROTOCOL,
+            ClientIpSource.REMOTE_ADDRESS);
 
     private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
     private HttpServer server;
@@ -179,6 +186,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     @Override
     public final void doStart(final Promise<Void> startPromise) {
+        try {
+            ClientIpSourceSupport.ensureSupported(getTypeName(), getConfig().getClientIpSource(),
+                    SUPPORTED_CLIENT_IP_SOURCES);
+        } catch (final IllegalArgumentException e) {
+            startPromise.fail(e);
+            return;
+        }
+
         checkPortConfiguration()
             .compose(s -> preStartup())
             .compose(s -> {

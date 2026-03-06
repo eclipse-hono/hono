@@ -43,6 +43,7 @@ import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AuthorizationException;
 import org.eclipse.hono.adapter.ClientIpAddressHelper;
 import org.eclipse.hono.adapter.ClientIpSource;
+import org.eclipse.hono.adapter.ClientIpSourceSupport;
 import org.eclipse.hono.adapter.ConnectionDurationExceededException;
 import org.eclipse.hono.adapter.DataVolumeExceededException;
 import org.eclipse.hono.adapter.TenantConnectionsExceededException;
@@ -151,6 +152,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
     private static final String LOG_FIELD_TOPIC_FILTER = "filter";
+    private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
+            ClientIpSource.AUTO,
+            ClientIpSource.PROXY_PROTOCOL,
+            ClientIpSource.REMOTE_ADDRESS);
 
     private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
 
@@ -378,6 +383,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     @Override
     protected final void doStart(final Promise<Void> startPromise) {
+
+        try {
+            ClientIpSourceSupport.ensureSupported(getTypeName(), getConfig().getClientIpSource(),
+                    SUPPORTED_CLIENT_IP_SOURCES);
+        } catch (final IllegalArgumentException e) {
+            startPromise.fail(e);
+            return;
+        }
 
         registerDeviceAndTenantChangeNotificationConsumers();
 

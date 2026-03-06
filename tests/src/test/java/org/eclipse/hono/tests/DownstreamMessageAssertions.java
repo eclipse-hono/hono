@@ -129,6 +129,21 @@ public final class DownstreamMessageAssertions {
     }
 
     /**
+     * Verifies that a downstream message contains the expected client IP address.
+     *
+     * @param msg The message to check.
+     * @param expectedClientIp The expected client IP.
+     * @throws AssertionError if the checks fail.
+     */
+    public static void assertMessageContainsClientIp(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final String expectedClientIp) {
+        assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_CLIENT_IP)
+                .that(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
+                .isEqualTo(expectedClientIp);
+    }
+
+    /**
      * Verifies that a downstream message does not contain a client IP address.
      *
      * @param msg The message to check.

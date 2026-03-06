@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -44,6 +45,7 @@ import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AdapterDisabledException;
 import org.eclipse.hono.adapter.AuthorizationException;
 import org.eclipse.hono.adapter.ClientIpSource;
+import org.eclipse.hono.adapter.ClientIpSourceSupport;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
@@ -127,6 +129,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * The amount of memory (bytes) required for each connection.
      */
     private static final int MEMORY_PER_CONNECTION = 20_000;
+    private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
+            ClientIpSource.AUTO,
+            ClientIpSource.PROXY_PROTOCOL,
+            ClientIpSource.REMOTE_ADDRESS);
 
     private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
 
@@ -173,6 +179,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     @Override
     protected void doStart(final Promise<Void> startPromise) {
+
+        try {
+            ClientIpSourceSupport.ensureSupported(getTypeName(), getConfig().getClientIpSource(),
+                    SUPPORTED_CLIENT_IP_SOURCES);
+        } catch (final IllegalArgumentException e) {
+            startPromise.fail(e);
+            return;
+        }
 
         registerDeviceAndTenantChangeNotificationConsumers();
 
