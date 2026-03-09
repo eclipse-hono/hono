@@ -44,7 +44,7 @@ public final class ClientIpAddressHelper {
         if (request == null) {
             return Optional.empty();
         }
-        if (source == ClientIpSource.HTTP_HEADERS || source == ClientIpSource.AUTO) {
+        if (source == ClientIpSource.HTTP_HEADERS) {
             final Optional<String> forwarded = extractForwardedFor(request);
             if (forwarded.isPresent()) {
                 return forwarded;

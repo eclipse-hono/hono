@@ -201,7 +201,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.AUTO);
+                .setClientIpSource(ClientIpSource.REMOTE_ADDRESS);
         final Tenant tenantConfig = new Tenant().addAdapterConfig(adapterConfig);
         prepareTenantConfig(tenantConfig);
 
@@ -213,7 +213,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     ctx.verify(() -> {
                         DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
                         DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
-                        DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                        DownstreamMessageAssertions.assertMessageContainsValidClientIp(msg);
                         assertAdditionalMessageProperties(msg);
                     });
                     ctx.completeNow();

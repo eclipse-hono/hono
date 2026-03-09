@@ -44,7 +44,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Supported ClientIpSource.
      */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
-            ClientIpSource.AUTO,
             ClientIpSource.REMOTE_ADDRESS);
 
     /**

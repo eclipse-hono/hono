@@ -144,7 +144,7 @@ public interface ProtocolAdapterOptions {
          *
          * @return The source configuration.
          */
-        @WithDefault("auto")
+        @WithDefault("remote-address")
         ClientIpSource source();
     }
 }

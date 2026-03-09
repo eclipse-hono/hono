@@ -183,6 +183,9 @@ mvn verify -Prun-tests,mqtt-only
 The `no-adapters` Maven profile can be used to run no adapter (and corresponding tests) at all. This might be useful when
 working on the device registry and/or command router components.
 
+The `proxy-protocol-tests` profile can be used to run dedicated Proxy Protocol behavior tests. It starts AMQP, HTTP and MQTT
+adapters with `clientIp.source=proxy-protocol` and enables tests guarded by the `proxy.protocol.tests.enabled` system property.
+
 It is also possible to selectively disable one or more protocol adapters and skip the corresponding test cases
 by means of setting one or more of the following Maven properties to `true`:
 
@@ -245,4 +248,3 @@ be run as a Java application.
    ```sh
    mvn verify -PstopContainers
    ```
-

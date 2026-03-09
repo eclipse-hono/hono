@@ -155,6 +155,7 @@
     <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
     <hono.amqp-adapter.disabled>false</hono.amqp-adapter.disabled>
+    <hono.amqp.clientIp.source>remote-address</hono.amqp.clientIp.source>
 
     <hono.coap-adapter.host>hono-adapter-coap</hono.coap-adapter.host>
     <hono.coap-adapter.image>hono-adapter-coap</hono.coap-adapter.image>
@@ -170,6 +171,7 @@
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
     <hono.http-adapter.disabled>false</hono.http-adapter.disabled>
+    <hono.http.clientIp.source>remote-address</hono.http.clientIp.source>
 
     <hono.lora-adapter.host>hono-adapter-lora</hono.lora-adapter.host>
     <hono.lora-adapter.image>hono-adapter-lora</hono.lora-adapter.image>
@@ -185,6 +187,9 @@
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
     <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
+    <hono.mqtt.clientIp.source>remote-address</hono.mqtt.clientIp.source>
+
+    <proxy.protocol.tests.enabled>false</proxy.protocol.tests.enabled>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
@@ -720,7 +725,21 @@
         <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
-    
+    <profile>
+      <id>proxy-protocol-tests</id>
+      <properties>
+        <hono.amqp-adapter.disabled>false</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>false</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
+        <hono.amqp.clientIp.source>proxy-protocol</hono.amqp.clientIp.source>
+        <hono.http.clientIp.source>proxy-protocol</hono.http.clientIp.source>
+        <hono.mqtt.clientIp.source>proxy-protocol</hono.mqtt.clientIp.source>
+        <proxy.protocol.tests.enabled>true</proxy.protocol.tests.enabled>
+      </properties>
+    </profile>
+
     <profile>
       <id>local</id>
       <activation>
@@ -1630,6 +1649,7 @@
                       <OTEL_SERVICE_NAME>${hono.http-adapter.host}</OTEL_SERVICE_NAME>
                       <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
+                      <HONO_HTTP_CLIENTIP_SOURCE>${hono.http.clientIp.source}</HONO_HTTP_CLIENTIP_SOURCE>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -1706,6 +1726,7 @@
                       <OTEL_SERVICE_NAME>${hono.mqtt-adapter.host}</OTEL_SERVICE_NAME>
                       <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
+                      <HONO_MQTT_CLIENTIP_SOURCE>${hono.mqtt.clientIp.source}</HONO_MQTT_CLIENTIP_SOURCE>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -1783,6 +1804,7 @@
                       <OTEL_SERVICE_NAME>${hono.amqp-adapter.host}</OTEL_SERVICE_NAME>
                       <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
                       <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
+                      <HONO_AMQP_CLIENTIP_SOURCE>${hono.amqp.clientIp.source}</HONO_AMQP_CLIENTIP_SOURCE>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
@@ -2047,6 +2069,7 @@
                 <!-- <javax.net.debug>ssl:handshake</javax.net.debug> -->
                 <javax.net.ssl.trustStore>${project.build.directory}/certs/trustStore.jks</javax.net.ssl.trustStore>
                 <javax.net.ssl.trustStorePassword>honotrust</javax.net.ssl.trustStorePassword>
+                <proxy.protocol.tests.enabled>${proxy.protocol.tests.enabled}</proxy.protocol.tests.enabled>
               </systemPropertyVariables>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             </configuration>

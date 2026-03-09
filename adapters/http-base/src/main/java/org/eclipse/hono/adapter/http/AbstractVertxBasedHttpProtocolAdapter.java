@@ -93,7 +93,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Supported ClientIpSource.
      */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
-            ClientIpSource.AUTO,
             ClientIpSource.HTTP_HEADERS,
             ClientIpSource.PROXY_PROTOCOL,
             ClientIpSource.REMOTE_ADDRESS);

@@ -157,7 +157,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Supported ClientIpSource.
      */
     private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
-            ClientIpSource.AUTO,
             ClientIpSource.PROXY_PROTOCOL,
             ClientIpSource.REMOTE_ADDRESS);
 

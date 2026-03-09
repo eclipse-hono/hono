@@ -23,11 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public enum ClientIpSource {
     /**
-     * Use protocol-specific defaults (Forwarded/X-Forwarded-For for HTTP, remote address otherwise).
-     */
-    @JsonProperty("auto")
-    AUTO("auto"),
-    /**
      * Use HTTP Forwarded/X-Forwarded-For headers.
      */
     @JsonProperty("http-headers")

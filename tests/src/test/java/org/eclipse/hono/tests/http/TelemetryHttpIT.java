@@ -42,6 +42,7 @@ import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -190,6 +191,34 @@ public class TelemetryHttpIT extends HttpTestBase {
                         requestHeaders,
                         HttpResponseExpectation.SC_ACCEPTED))
                 .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that direct HTTP uploads fail when Proxy Protocol mode is enabled.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testDirectUploadFailsWhenProxyProtocolEnabled(final VertxTestContext ctx) {
+
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onComplete(attempt -> {
+                    ctx.verify(() -> assertThat(attempt.failed()).isTrue());
+                    ctx.completeNow();
+                });
     }
 
     /**

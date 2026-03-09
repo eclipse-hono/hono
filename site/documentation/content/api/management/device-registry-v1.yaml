@@ -989,9 +989,9 @@ components:
                   Indicates whether the adapter should include the client device's IP address in downstream messages as determined by the strategy set in `client-ip-source`.
             "client-ip-source":
                type: string
-               default: auto
+               default: remote-address
                description: |
-                  Determines how the adapter resolves client IP addresses. Supported values are `auto`, `http-headers`, `proxy-protocol`, `remote-address`. For `auto`, HTTP adapters inspect `Forwarded` and `X-Forwarded-For` headers and fall back to the direct remote address if no usable header is present; non-HTTP adapters use the direct remote address reported by the transport. For `http-headers`, HTTP adapters inspect `Forwarded` and `X-Forwarded-For` headers and fall back to the direct remote address if no usable header is present; non-HTTP adapters do not resolve a client IP address when configured with `http-headers`. For `proxy-protocol`, the adapter enables Proxy Protocol support on the server and uses the remote address reported by the transport (as populated by Proxy Protocol). For `remote-address`, the adapter uses the direct remote address reported by the transport.
+                  Determines how the adapter resolves client IP addresses. Supported values depend on the adapter type: HTTP supports `http-headers`, `proxy-protocol`, `remote-address`; AMQP and MQTT support `proxy-protocol`, `remote-address`; CoAP supports `remote-address`. For `proxy-protocol`, the adapter requires incoming connections to carry Proxy Protocol headers from an upstream proxy/load balancer, otherwise direct connections are rejected. Unsupported values are rejected.
             "ext":
                $ref: '#/components/schemas/Extensions'
 

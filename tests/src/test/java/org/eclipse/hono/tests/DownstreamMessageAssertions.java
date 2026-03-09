@@ -27,6 +27,8 @@ import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 
+import com.google.common.net.InetAddresses;
+
 import io.opentracing.SpanContext;
 import io.vertx.core.buffer.Buffer;
 
@@ -126,6 +128,22 @@ public final class DownstreamMessageAssertions {
         assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_CLIENT_IP)
                 .that(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
                 .isNotNull();
+    }
+
+    /**
+     * Verifies that a downstream message contains a syntactically valid client IP address.
+     *
+     * @param msg The message to check.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertMessageContainsValidClientIp(final DownstreamMessage<? extends MessageContext> msg) {
+        final String clientIp = msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class);
+        assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_CLIENT_IP)
+                .that(clientIp)
+                .isNotNull();
+        assertWithMessage("message contains a valid IP address")
+                .that(InetAddresses.isInetAddress(clientIp))
+                .isTrue();
     }
 
     /**

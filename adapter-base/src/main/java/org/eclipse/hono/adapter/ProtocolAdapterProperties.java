@@ -41,7 +41,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
     private boolean clientIpEnabled = false;
-    private ClientIpSource clientIpSource = ClientIpSource.AUTO;
+    private ClientIpSource clientIpSource = ClientIpSource.REMOTE_ADDRESS;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
     private int gcHeapPercentage = DEFAULT_GC_HEAP_PERCENTAGE;
@@ -64,7 +64,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         this.authenticationRequired = options.authenticationRequired();
         this.defaultsEnabled = options.defaultsEnabled();
         this.clientIpEnabled = options.clientIp().enabled();
-        this.clientIpSource = Optional.ofNullable(options.clientIp().source()).orElse(ClientIpSource.AUTO);
+        this.clientIpSource = Optional.ofNullable(options.clientIp().source()).orElse(ClientIpSource.REMOTE_ADDRESS);
         this.gcHeapPercentage = options.gcHeapPercentage();
         this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
         options.mapperEndpoints().entrySet()

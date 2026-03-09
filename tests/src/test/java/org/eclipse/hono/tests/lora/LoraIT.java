@@ -296,6 +296,7 @@ public class LoraIT {
     @Test
     public void testUploadIncludesClientIp(final VertxTestContext ctx) throws InterruptedException {
 
+        final String expectedClientIp = "203.0.113.20";
         final VertxTestContext setup = new VertxTestContext();
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA)
                 .setEnabled(true)
@@ -305,7 +306,7 @@ public class LoraIT {
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "application/json")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
-                .add("X-Forwarded-For", "203.0.113.20");
+                .add("X-Forwarded-For", expectedClientIp);
 
         helper.registry
             .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
@@ -323,7 +324,7 @@ public class LoraIT {
                 ctx,
                 tenantId,
                 msg -> {
-                    DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                    DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp);
                     return Future.succeededFuture();
                 },
                 count -> httpClient.create(

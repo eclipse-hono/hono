@@ -476,7 +476,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
                 .setEnabled(true)
                 .setClientIpEnabled(Boolean.TRUE)
-                .setClientIpSource(ClientIpSource.AUTO);
+                .setClientIpSource(ClientIpSource.REMOTE_ADDRESS);
         final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
@@ -485,7 +485,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 ctx.verify(() -> {
                     DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
                     DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
-                    DownstreamMessageAssertions.assertMessageContainsClientIp(msg);
+                    DownstreamMessageAssertions.assertMessageContainsValidClientIp(msg);
                 });
                 ctx.completeNow();
             }))
