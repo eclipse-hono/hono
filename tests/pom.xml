@@ -190,6 +190,7 @@
     <hono.mqtt.clientIp.source>remote-address</hono.mqtt.clientIp.source>
 
     <proxy.protocol.tests.enabled>false</proxy.protocol.tests.enabled>
+    <failsafe.groups></failsafe.groups>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
@@ -737,6 +738,7 @@
         <hono.http.clientIp.source>proxy-protocol</hono.http.clientIp.source>
         <hono.mqtt.clientIp.source>proxy-protocol</hono.mqtt.clientIp.source>
         <proxy.protocol.tests.enabled>true</proxy.protocol.tests.enabled>
+        <failsafe.groups>proxy-protocol</failsafe.groups>
       </properties>
     </profile>
 
@@ -2072,6 +2074,7 @@
                 <proxy.protocol.tests.enabled>${proxy.protocol.tests.enabled}</proxy.protocol.tests.enabled>
               </systemPropertyVariables>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+              <groups>${failsafe.groups}</groups>
             </configuration>
             <executions>
               <execution>

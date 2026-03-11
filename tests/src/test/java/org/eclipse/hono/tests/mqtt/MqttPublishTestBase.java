@@ -42,12 +42,15 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.tests.proxy.ProxyProtocolV2Forwarder;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -60,6 +63,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
@@ -530,6 +534,58 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                         false,
                         true,
                         null))
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that uploads forwarded using Proxy Protocol v2 include the expected client IP.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Tag("proxy-protocol")
+    @Timeout(value = 15, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testUploadIncludesClientIpFromProxyProtocol(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String expectedClientIp = "203.0.113.10";
+        final Promise<Void> messageReceived = Promise.promise();
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.PROXY_PROTOCOL);
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
+
+        ProxyProtocolV2Forwarder.start(vertx, IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT,
+                expectedClientIp)
+            .compose(forwarder -> helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
+                    .compose(response -> createConsumer(tenantId, msg -> {
+                        LOGGER.trace("received {}", msg);
+                        ctx.verify(() -> {
+                            DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                            DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                            DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp);
+                        });
+                        messageReceived.tryComplete();
+                        ctx.completeNow();
+                    }))
+                    .compose(consumer -> {
+                        final MqttClientOptions options = new MqttClientOptions(defaultOptions)
+                                .setUsername(IntegrationTestSupport.getUsername(deviceId, tenantId))
+                                .setPassword("secret");
+                        return connectToAdapter(options, "127.0.0.1", forwarder.localPort());
+                    })
+                    .compose(connAck -> send(
+                                tenantId,
+                                deviceId,
+                                Buffer.buffer("hello"),
+                                false,
+                                true,
+                                null))
+                    .compose(v -> messageReceived.future())
+                    .eventually(v -> forwarder.close()))
             .onFailure(ctx::failNow);
     }
 

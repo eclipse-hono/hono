@@ -40,6 +40,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -97,6 +98,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context.
      */
     @Test
+    @Tag("proxy-protocol")
     @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
     public void testDirectConnectionFailsWhenProxyProtocolEnabled(final VertxTestContext ctx) {
 

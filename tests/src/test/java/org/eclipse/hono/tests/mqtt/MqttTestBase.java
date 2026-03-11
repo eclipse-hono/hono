@@ -218,18 +218,37 @@ public abstract class MqttTestBase {
             final MqttClientOptions options,
             final String hostname) {
 
+        return connectToAdapter(options, hostname, IntegrationTestSupport.MQTTS_PORT);
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using given options.
+     *
+     * @param options The options to use for connecting to the adapter.
+     * @param hostname The name of the host to connect to.
+     * @param port The port to connect to.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
+     *         if the connection could not be established.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(
+            final MqttClientOptions options,
+            final String hostname,
+            final int port) {
+
         Objects.requireNonNull(options);
         Objects.requireNonNull(hostname);
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
         vertx.runOnContext(connect -> {
             mqttClient = MqttClient.create(vertx, options);
-            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, hostname, result);
+            mqttClient.connect(port, hostname, result);
         });
         return result.future().map(conAck -> {
             LOGGER.info(
                     "MQTTS connection to adapter [host: {}, port: {}] established",
-                    hostname, IntegrationTestSupport.MQTTS_PORT);
+                    hostname, port);
             this.context = Vertx.currentContext();
             return conAck;
         });

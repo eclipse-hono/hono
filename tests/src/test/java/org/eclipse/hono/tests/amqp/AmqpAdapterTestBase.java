@@ -214,6 +214,23 @@ public abstract class AmqpAdapterTestBase {
     }
 
     /**
+     * Connects to the AMQP protocol adapter using a username and password on a custom port.
+     *
+     * @param hostname The name of the host to connect to.
+     * @param port The port to connect to.
+     * @param username The username to use for authentication.
+     * @param password The password to use for authentication.
+     * @return A succeeded future containing the established connection.
+     */
+    protected Future<ProtonConnection> connectToAdapter(
+            final String hostname,
+            final int port,
+            final String username,
+            final String password) {
+        return connectToAdapter(IntegrationTestSupport.TLS_VERSION_1_2, null, hostname, port, username, password);
+    }
+
+    /**
      * Connects to the AMQP protocol adapter using a username and password.
      *
      * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
@@ -229,6 +246,30 @@ public abstract class AmqpAdapterTestBase {
             final String username,
             final String password) {
 
+        return connectToAdapter(tlsVersion, cipherSuite, IntegrationTestSupport.AMQP_HOST,
+                IntegrationTestSupport.AMQPS_PORT, username, password);
+    }
+
+    /**
+     * Connects to the AMQP protocol adapter using a username and password.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param cipherSuite The TLS cipher suite to use for connecting to the adapter or {@code null} if the
+     *                    cipher suite should not be restricted.
+     * @param hostname The adapter host to connect to.
+     * @param port The adapter port to connect to.
+     * @param username The username to use for authentication.
+     * @param password The password to use for authentication.
+     * @return A succeeded future containing the established connection.
+     */
+    protected Future<ProtonConnection> connectToAdapter(
+            final String tlsVersion,
+            final String cipherSuite,
+            final String hostname,
+            final int port,
+            final String username,
+            final String password) {
+
         final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(vertx);
 
@@ -238,12 +279,12 @@ public abstract class AmqpAdapterTestBase {
         Optional.ofNullable(cipherSuite).ifPresent(options::addEnabledCipherSuite);
         client.connect(
                 options,
-                IntegrationTestSupport.AMQP_HOST,
-                IntegrationTestSupport.AMQPS_PORT,
+                hostname,
+                port,
                 username,
                 password,
                 result);
-        return result.future().compose(con -> handleConnectAttempt(con, IntegrationTestSupport.AMQP_HOST));
+        return result.future().compose(con -> handleConnectAttempt(con, hostname, port));
     }
 
     /**
@@ -287,12 +328,13 @@ public abstract class AmqpAdapterTestBase {
                 hostname,
                 IntegrationTestSupport.AMQPS_PORT,
                 result);
-        return result.future().compose(con -> handleConnectAttempt(con, hostname));
+        return result.future().compose(con -> handleConnectAttempt(con, hostname, IntegrationTestSupport.AMQPS_PORT));
     }
 
     private Future<ProtonConnection> handleConnectAttempt(
             final ProtonConnection unopenedConnection,
-            final String hostname) {
+            final String hostname,
+            final int port) {
 
         final Promise<ProtonConnection> result = Promise.promise();
 
@@ -309,12 +351,12 @@ public abstract class AmqpAdapterTestBase {
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
                     log.info("AMQPS connection to adapter [{}:{}] established",
-                            hostname, IntegrationTestSupport.AMQPS_PORT);
+                            hostname, port);
                     return con;
                 })
                 .recover(t -> {
                     log.info("failed to establish AMQPS connection to adapter [{}:{}]",
-                            hostname, IntegrationTestSupport.AMQPS_PORT);
+                            hostname, port);
 
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
                             .map(condition -> Future.<ProtonConnection>failedFuture(ErrorConverter.fromAttachError(condition)))
