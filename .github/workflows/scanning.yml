@@ -67,7 +67,9 @@ jobs:
           docker image ls --format "{{.Repository}}:{{.Tag}}" "${DOCKER_HUB_NAMESPACE}/${{ matrix.artifactId }}"
 
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.4
+        # use SHA pinned version (0.2.6) of the action as recommended in
+        # https://github.com/aquasecurity/trivy/discussions/10425
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
 
       - name: Scan Docker image
         run: |
