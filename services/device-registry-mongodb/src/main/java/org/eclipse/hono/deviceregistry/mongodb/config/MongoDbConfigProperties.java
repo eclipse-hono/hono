@@ -46,6 +46,10 @@ public final class MongoDbConfigProperties {
     private String connectionString;
     private Integer serverSelectionTimeoutInMs = DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS;
     private Integer connectionTimeoutInMs;
+    private boolean ssl;
+    private String keyPath;
+    private String certPath;
+    private String caPath;
 
     /**
      * Creates default properties.
@@ -70,6 +74,10 @@ public final class MongoDbConfigProperties {
         options.connectionString().ifPresent(this::setConnectionString);
         this.setConnectTimeout(options.connectTimeout());
         this.setServerSelectionTimeout(options.serverSelectionTimeout());
+        this.setSsl(options.ssl());
+        options.keyPath().ifPresent(this::setKeyPath);
+        options.certPath().ifPresent(this::setCertPath);
+        options.caPath().ifPresent(this::setCaPath);
     }
 
     /**
@@ -272,6 +280,86 @@ public final class MongoDbConfigProperties {
     }
 
     /**
+     * Gets whether SSL/TLS should be used when connecting to the Mongo DB.
+     *
+     * @return Whether SSL/TLS should be used.
+     */
+    public boolean getSsl() {
+        return this.ssl;
+    }
+
+    /**
+     * Sets whether SSL/TLS should be used when connecting to the Mongo DB.
+     *
+     * @param ssl Whether SSL/TLS should be used.
+     * @return A reference to this for fluent use.
+     */
+    public MongoDbConfigProperties setSsl(final boolean ssl) {
+        this.ssl = ssl;
+        return this;
+    }
+
+    /**
+     * Gets the path to client's private key for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @return The client's private key path.
+     */
+    public String getKeyPath() {
+        return this.keyPath;
+    }
+
+    /**
+     * Sets the path to client's private key for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @param keyPath The client's private key path.
+     * @return A reference to this for fluent use.
+     */
+    public MongoDbConfigProperties setKeyPath(final String keyPath) {
+        this.keyPath = keyPath;
+        return this;
+    }
+
+    /**
+     * Gets the path to client's certificate for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @return The client's certificate path.
+     */
+    public String getCertPath() {
+        return this.certPath;
+    }
+
+    /**
+     * Sets the path to client's certificate for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @param certPath The client's certificate path.
+     * @return A reference to this for fluent use.
+     */
+    public MongoDbConfigProperties setCertPath(final String certPath) {
+        this.certPath = certPath;
+        return this;
+    }
+
+    /**
+     * Gets the path to the Certificate Authority's certificate for use in TLS when connecting to the Mongo DB.
+     *
+     * @return The Certificate Authority's certificate path.
+     */
+    public String getCaPath() {
+        return this.caPath;
+    }
+
+    /**
+     * Sets the path to the Certificate Authority's certificate for use in TLS when connecting to the Mongo DB.
+     *
+     * @param caPath The client's certificate path.
+     * @return A reference to this for fluent use.
+     */
+    public MongoDbConfigProperties setCaPath(final String caPath) {
+        this.caPath = caPath;
+        return this;
+    }
+
+    /**
      * Gets the Mongo DB properties for creating a {@code MongoClient}.
      * <p>
      * If the connectionString is set, it will override all the other connection settings.
@@ -288,13 +376,22 @@ public final class MongoDbConfigProperties {
                     .put("port", port)
                     .put("db_name", dbName)
                     .put("username", username)
-                    .put("password", password);
+                    .put("password", password)
+                    .put("ssl", ssl);
 
             Optional.ofNullable(getServerSelectionTimeout())
                     .ifPresent(timeout -> configJson.put("serverSelectionTimeoutMS", timeout));
             Optional.ofNullable(getConnectTimeout())
                     .ifPresent(timeout -> configJson.put("connectTimeoutMS", timeout));
         }
+
+        Optional.ofNullable(getCertPath())
+                .ifPresent(certPath -> configJson.put("certPath", certPath));
+        Optional.ofNullable(getKeyPath())
+                .ifPresent(keyPath -> configJson.put("keyPath", keyPath));
+        Optional.ofNullable(getCaPath())
+                .ifPresent(caPath -> configJson.put("caPath", caPath));
+
         return configJson;
     }
 }

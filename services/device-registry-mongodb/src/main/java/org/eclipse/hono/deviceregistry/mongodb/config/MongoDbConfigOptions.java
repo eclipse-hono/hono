@@ -95,4 +95,33 @@ public interface MongoDbConfigOptions {
      */
     @WithDefault("10000")
     int connectTimeout();
+
+    /**
+     * Gets whether SSL/TLS should be used when connecting to the Mongo DB.
+     *
+     * @return Whether SSL/TLS should be used.
+     */
+    @WithDefault("false")
+    boolean ssl();
+
+    /**
+     * Gets the path to client's private key for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @return The client's private key path.
+     */
+    Optional<String> keyPath();
+
+    /**
+     * Gets the path to client's certificate for use in mutual TLS authentication when connecting to the Mongo DB.
+     *
+     * @return The client's certificate path.
+     */
+    Optional<String> certPath();
+
+    /**
+     * Gets the path to the Certificate Authority's certificate for use in TLS when connecting to the Mongo DB.
+     *
+     * @return The Certificate Authority's certificate path.
+     */
+    Optional<String> caPath();
 }
