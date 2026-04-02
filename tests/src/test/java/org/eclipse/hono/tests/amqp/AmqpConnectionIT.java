@@ -40,7 +40,9 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -88,6 +90,28 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that direct device connections fail when Proxy Protocol mode is enabled.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Tag("proxy-protocol")
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testDirectConnectionFailsWhenProxyProtocolEnabled(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .onComplete(attempt -> {
+                    ctx.verify(() -> assertThat(attempt.failed()).isTrue());
+                    ctx.completeNow();
+                });
     }
 
     /**

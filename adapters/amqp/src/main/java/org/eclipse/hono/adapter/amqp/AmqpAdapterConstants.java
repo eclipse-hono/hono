@@ -34,6 +34,11 @@ public final class AmqpAdapterConstants {
     public static final String KEY_CURRENT_SPAN = "CURRENT_SPAN";
 
     /**
+     * The key that the client IP address is stored under in a {@code ProtonConnection}'s attachments.
+     */
+    public static final String KEY_CLIENT_IP = "CLIENT_IP";
+
+    /**
      * The key that the trace sampling priority determined for a request tenant/auth-id
      * is stored under in a {@code ProtonConnection}'s attachments.
      */

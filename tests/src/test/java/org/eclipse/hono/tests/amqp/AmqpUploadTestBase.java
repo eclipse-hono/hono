@@ -33,6 +33,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.LinkError;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -44,12 +45,17 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.tests.proxy.ProxyProtocolV2Forwarder;
+import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -182,6 +188,159 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     }
                 });
             });
+    }
+
+    /**
+     * Verifies that the adapter includes client IP information when configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIp(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.REMOTE_ADDRESS);
+        final Tenant tenantConfig = new Tenant().addAdapterConfig(adapterConfig);
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageContainsValidClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    msg.setBody(new Data(new Binary("hello".getBytes())));
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            })
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter does not include client IP information when not configured.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, ProtonQoS.AT_LEAST_ONCE)
+            .compose(s -> {
+                this.sender = s;
+                return createConsumer(tenantId, msg -> {
+                    log.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                });
+            })
+            .onSuccess(consumer -> {
+                final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+                    replenishedSender.sendQueueDrainHandler(null);
+                    final var msg = ProtonHelper.message();
+                    msg.setAddress(getEndpointName());
+                    msg.setBody(new Data(new Binary("hello".getBytes())));
+                    replenishedSender.send(msg, delivery -> {
+                        if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                            ctx.failNow(AmqpErrorException.from(delivery.getRemoteState()));
+                        }
+                    });
+                };
+
+                context.runOnContext(go -> {
+                    if (sender.getCredit() <= 0) {
+                        sender.sendQueueDrainHandler(sendMsgHandler);
+                    } else {
+                        sendMsgHandler.handle(sender);
+                    }
+                });
+            })
+            .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that uploads forwarded using Proxy Protocol v2 include the expected client IP.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Tag("proxy-protocol")
+    @Timeout(value = 15, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testUploadIncludesClientIpFromProxyProtocol(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String expectedClientIp = "203.0.113.10";
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.PROXY_PROTOCOL);
+        final Tenant tenantConfig = new Tenant().addAdapterConfig(adapterConfig);
+        final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
+        prepareTenantConfig(tenantConfig);
+
+        ProxyProtocolV2Forwarder.start(vertx, IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT,
+                expectedClientIp, IntegrationTestSupport.DEFAULT_AMQPS_PORT)
+            .compose(forwarder -> helper.registry.addDeviceForTenant(tenantId, tenantConfig, deviceId, DEVICE_PASSWORD)
+                    .compose(ok -> createConsumer(tenantId, msg -> {
+                        log.trace("received {}", msg);
+                        ctx.verify(() -> {
+                            DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                            DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                            DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp);
+                            assertAdditionalMessageProperties(msg);
+                        });
+                        ctx.completeNow();
+                    }))
+                    .compose(consumer -> connectToAdapter("127.0.0.1", forwarder.localPort(), username, DEVICE_PASSWORD))
+                    .compose(con -> createProducer(null, ProtonQoS.AT_LEAST_ONCE))
+                    .compose(s -> {
+                        this.sender = s;
+                        return sendSimpleMessage(ctx);
+                    })
+                    .eventually(v -> forwarder.close()))
+            .onFailure(ctx::failNow);
     }
 
     /**
@@ -772,15 +931,65 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             final String deviceId,
             final ProtonQoS senderQos) {
 
+        return setupProtocolAdapter(tenantId, tenantConfig, deviceId, senderQos,
+                IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT);
+    }
+
+    /**
+     * Sets up the protocol adapter and connects using a custom host/port.
+     *
+     * @param tenantId The tenant to register with the device registry.
+     * @param tenantConfig The tenant's configuration data.
+     * @param deviceId The device to add to the tenant identified by tenantId.
+     * @param senderQos The delivery semantics used by the device for uploading messages.
+     * @param adapterHost The adapter host to connect to.
+     * @param adapterPort The adapter port to connect to.
+     * @return A future succeeding with the created sender.
+     */
+
+    protected Future<ProtonSender> setupProtocolAdapter(
+            final String tenantId,
+            final Tenant tenantConfig,
+            final String deviceId,
+            final ProtonQoS senderQos,
+            final String adapterHost,
+            final int adapterPort) {
+
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
 
         return helper.registry
                 .addDeviceForTenant(tenantId, tenantConfig, deviceId, DEVICE_PASSWORD)
-                .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
+                .compose(ok -> connectToAdapter(adapterHost, adapterPort, username, DEVICE_PASSWORD))
                 .compose(con -> createProducer(null, senderQos))
                 .recover(t -> {
                     log.error("error setting up AMQP protocol adapter", t);
                     return Future.failedFuture(t);
                 });
+    }
+
+    private Future<Void> sendSimpleMessage(final VertxTestContext ctx) {
+        final Promise<Void> sendResult = Promise.promise();
+        final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
+            replenishedSender.sendQueueDrainHandler(null);
+            final var msg = ProtonHelper.message();
+            msg.setAddress(getEndpointName());
+            msg.setBody(new Data(new Binary("hello".getBytes())));
+            replenishedSender.send(msg, delivery -> {
+                if (!Accepted.class.isInstance(delivery.getRemoteState())) {
+                    sendResult.fail(AmqpErrorException.from(delivery.getRemoteState()));
+                } else {
+                    sendResult.complete();
+                }
+            });
+        };
+
+        context.runOnContext(go -> {
+            if (sender.getCredit() <= 0) {
+                sender.sendQueueDrainHandler(sendMsgHandler);
+            } else {
+                sendMsgHandler.handle(sender);
+            }
+        });
+        return sendResult.future();
     }
 }

@@ -27,6 +27,7 @@ import javax.security.auth.login.LoginException;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
+import org.eclipse.hono.adapter.ClientIpAddressHelper;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -122,6 +123,8 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         public void init(final NetSocket socket, final ProtonConnection protonConnection, final Transport transport) {
             LOG.trace("initializing SASL authenticator");
             this.protonConnection = protonConnection;
+            ClientIpAddressHelper.extractRemoteAddress(socket.remoteAddress())
+                    .ifPresent(ip -> protonConnection.attachments().set(AmqpAdapterConstants.KEY_CLIENT_IP, String.class, ip));
             this.sasl = transport.sasl();
             sasl.server();
             sasl.allowSkip(false);

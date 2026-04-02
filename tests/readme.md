@@ -198,6 +198,17 @@ For example, the following command will not start the MQTT adapter and will run 
 mvn verify -Prun-tests -Dhono.mqtt-adapter.disabled=true
 ```
 
+### Running the Proxy Protocol Tests
+
+The Proxy Protocol test cases are executed in a dedicated profile because they require protocol adapters to run
+with `clientIp.source=proxy-protocol`. The profile runs only test cases tagged for Proxy Protocol verification.
+
+Run the Proxy Protocol suite:
+
+```sh
+mvn verify -Prun-tests,proxy-protocol-tests
+```
+
 ### Running the Tests with local services
 
 The integration tests are usually run against Hono components that have been started as
@@ -245,4 +256,3 @@ be run as a Java application.
    ```sh
    mvn verify -PstopContainers
    ```
-

@@ -214,6 +214,8 @@ The table below contains the properties which are used to configure a *Hono prot
 | *type*                             | *yes*     | *string*   | `-`          | The type of the adapter which this configuration belongs to.|
 | *enabled*                          | *no*      | *boolean*  | `false`      | If `false`, the tenant is not allowed to receive/send data utilizing the given type of adapter. |
 | *device-authentication-required*   | *no*      | *boolean*  | `true`       | If `false`, devices are not required to authenticate with an adapter of the given type before sending/receiving data. |
+| *client-ip-enabled*                | *no*      | *boolean*  | `false`      | If `true`, the adapter includes a `client_ip` property in downstream messages. |
+| *client-ip-source*                 | *no*      | *string*   | `remote-address`       | Determines how the adapter resolves client IP addresses. Supported values depend on the adapter type: HTTP supports `http-headers`, `proxy-protocol`, `remote-address`; AMQP and MQTT support `proxy-protocol`, `remote-address`; CoAP supports `remote-address`. For `proxy-protocol`, the adapter requires incoming connections to carry Proxy Protocol headers from an upstream proxy/load balancer, otherwise direct connections are rejected. Unsupported values are rejected. |
 
 Protocol adapters SHOULD use the configuration properties set for a tenant when interacting with devices of that tenant, e.g. in order to make authorization decisions etc.
 
