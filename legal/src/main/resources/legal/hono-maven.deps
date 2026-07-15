@@ -1,7 +1,7 @@
 at.yawk.lz4:lz4-java:jar:1.10.1
 biz.paluch.logging:logstash-gelf:jar:1.15.1
-ch.qos.logback:logback-classic:jar:1.5.22
-ch.qos.logback:logback-core:jar:1.5.22
+ch.qos.logback:logback-classic:jar:1.5.34
+ch.qos.logback:logback-core:jar:1.5.34
 com.aayushatharva.brotli4j:brotli4j:jar:1.23.0
 com.aayushatharva.brotli4j:native-linux-x86_64:jar:1.23.0
 com.aayushatharva.brotli4j:service:jar:1.23.0
@@ -43,7 +43,7 @@ com.google.code.gson:gson:jar:2.13.2
 com.googlecode.juniversalchardet:juniversalchardet:jar:1.0.3
 com.google.errorprone:error_prone_annotations:jar:2.41.0
 com.google.guava:failureaccess:jar:1.0.1
-com.google.guava:guava:jar:33.5.0-jre
+com.google.guava:guava:jar:33.6.0-jre
 com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava
 com.google.http-client:google-http-client-apache-v2:jar:1.47.1
 com.google.http-client:google-http-client-gson:jar:1.47.1
@@ -377,7 +377,7 @@ org.postgresql:postgresql:jar:42.7.11
 org.reactivestreams:reactive-streams:jar:1.0.4
 org.slf4j:slf4j-api:jar:2.0.17
 org.snakeyaml:snakeyaml-engine:jar:2.9
-org.springframework.security:spring-security-crypto:jar:6.5.7
+org.springframework.security:spring-security-crypto:jar:6.5.10
 org.threeten:threetenbp:jar:1.7.1
 org.wildfly.common:wildfly-common:jar:2.0.1
 org.wildfly.security:wildfly-elytron-asn1:jar:2.6.5.Final
