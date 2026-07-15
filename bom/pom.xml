@@ -49,7 +49,7 @@
     <opentracing.version>0.33.0</opentracing.version>
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.16.0</qpid-jms.version>
-    <quarkus.platform.version>3.27.4</quarkus.platform.version>
+    <quarkus.platform.version>3.27.4.1</quarkus.platform.version>
     <slf4j.version>2.0.18</slf4j.version>
     <spring-security-crypto.version>6.5.10</spring-security-crypto.version>
     <truth.version>1.4.5</truth.version>
