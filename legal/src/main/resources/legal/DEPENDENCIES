@@ -1,7 +1,7 @@
 maven/mavencentral/at.yawk.lz4/lz4-java/1.10.1, Apache-2.0, approved, #27141
 maven/mavencentral/biz.paluch.logging/logstash-gelf/1.15.1, MIT, approved, clearlydefined
-maven/mavencentral/ch.qos.logback/logback-classic/1.5.22, EPL-1.0 AND LGPL-2.1-only, approved, #18704
-maven/mavencentral/ch.qos.logback/logback-core/1.5.22, EPL-1.0 AND LGPL-2.1-only, approved, #15210
+maven/mavencentral/ch.qos.logback/logback-classic/1.5.34, EPL-1.0 AND LGPL-2.1-only, approved, #18704
+maven/mavencentral/ch.qos.logback/logback-core/1.5.34, EPL-1.0 AND LGPL-2.1-only, approved, #15210
 maven/mavencentral/com.aayushatharva.brotli4j/brotli4j/1.23.0, Apache-2.0 AND MIT, approved, #28601
 maven/mavencentral/com.aayushatharva.brotli4j/native-linux-x86_64/1.23.0, Apache-2.0, approved, #28608
 maven/mavencentral/com.aayushatharva.brotli4j/service/1.23.0, Apache-2.0, approved, #28597
@@ -42,7 +42,7 @@ maven/mavencentral/com.google.code.gson/gson/2.13.2, Apache-2.0, approved, #2065
 maven/mavencentral/com.googlecode.juniversalchardet/juniversalchardet/1.0.3, MPL-1.1, approved, CQ10305
 maven/mavencentral/com.google.errorprone/error_prone_annotations/2.41.0, Apache-2.0, approved, #22631
 maven/mavencentral/com.google.guava/failureaccess/1.0.1, Apache-2.0, approved, CQ22654
-maven/mavencentral/com.google.guava/guava/33.5.0-jre, Apache-2.0 AND CC0-1.0 AND CC-PDDC, approved, #23378
+maven/mavencentral/com.google.guava/guava/33.6.0-jre, Apache-2.0 AND CC-PDDC, approved, #27169
 maven/mavencentral/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava, Apache-2.0, approved, CQ22657
 maven/mavencentral/com.google.http-client/google-http-client/1.47.1, Apache-2.0, approved, #21201
 maven/mavencentral/com.google.http-client/google-http-client-apache-v2/1.47.1, Apache-2.0, approved, clearlydefined
@@ -371,7 +371,7 @@ maven/mavencentral/org.postgresql/postgresql/42.7.11, BSD-2-Clause AND Apache-2.
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.4, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/slf4j-api/2.0.17, MIT, approved, #5915
 maven/mavencentral/org.snakeyaml/snakeyaml-engine/2.9, Apache-2.0, approved, #18860
-maven/mavencentral/org.springframework.security/spring-security-crypto/6.5.7, Apache-2.0 AND ISC, approved, #22171
+maven/mavencentral/org.springframework.security/spring-security-crypto/6.5.10, Apache-2.0 AND ISC, approved, #22171
 maven/mavencentral/org.threeten/threetenbp/1.7.1, BSD-3-Clause, approved, clearlydefined
 maven/mavencentral/org.wildfly.common/wildfly-common/2.0.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/2.6.5.Final, Apache-2.0, approved, #16638
