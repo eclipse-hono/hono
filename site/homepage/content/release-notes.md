@@ -3,6 +3,13 @@ linkTitle = "Release Notes"
 title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
+## 2.7.1
+
+### Fixes & Enhancements
+
+* Hono has been updated to the 3.27.4.1 Long Term Support (LTS) version of Quarkus whcih includes bug fixes and updates
+  to other libraries that Hono depends on like vert.x, infinispan, Mongo DB client, Kafka Client etc.
+
 ## 2.7.0
 
 ### New Features
@@ -13,7 +20,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   Please refer to the Admin Guide for details.
 * There is now preliminary support for devices using MQTT 5 to connect to the MQTT adapter.
   At the moment, the following functionality is provided:
-  
+
   * The adapter returns proper MQTT 5 reason codes to devices during the connection establishment process
   * Devices can use standard MQTT 5 message properties to convey the payload's content type when publishing messages instead of attaching
     a property bag to the message topic.
@@ -101,11 +108,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### New Features
 
 * A more generic format for storing the OpenTelemetry trace context information in an AMQP 1.0 message can now be
-  configured, writing the corresponding properties in the message application properties. This is for example relevant 
-  when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto. 
+  configured, writing the corresponding properties in the message application properties. This is for example relevant
+  when using AMQP 1.0 messaging in connection with Eclipse Ditto, resulting in combined traces of Hono and Ditto.
   Please refer to the `${prefix}.useLegacyTraceContextFormat` connection property documentation in the
   [Hono Client Configuration Guide]({{% doclink "/admin-guide/hono-client-configuration/#connection-properties" %}})
-  for additional information. 
+  for additional information.
 * The JDBC based Device Registry implementation now has limited support for filter criteria when searching devices.
   Please refer to the Device Registry User Guide for details.
 * The Device Registry Management API's *search Devices* operation now supports restricting the result set to gateway or
@@ -282,7 +289,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   This has been fixed.
 * On startup, Hono components could get into a state that caused certain Kafka client metrics to not get reported.
   This has been fixed.
-* Default messaging type changed to Kafka. Changed related documentation pages.  
+* Default messaging type changed to Kafka. Changed related documentation pages.
 * The native executable based Lora adapter container image failed to forward Lora meta information in messages being
   sent downstream. This has been fixed.
 * The Command Router component might not have reached the *ready* state in case the Kafka broker got restarted during
@@ -426,8 +433,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   because it was undefined how these properties would be processed by the Hono components.
 * The order of the method parameters of the `org.eclipse.hono.application.client.CommandSender` interface have been changed
   so that mandatory parameters come first.
-* The *hono-service-base-quarkus* module has been removed. Its content has been integrated in the *hono-service-base* module. 
-* The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module. 
+* The *hono-service-base-quarkus* module has been removed. Its content has been integrated in the *hono-service-base* module.
+* The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module.
 * The *amqp-device* client no longer requires supplying a tenant ID when creating a client or invoking any of its
   methods.
 * The Hono components now export tracing data using the OpenTelemetry Protocol (OTLP). See the
@@ -600,7 +607,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   the documented environment variable `HONO_CREDENTIALS_SVC_RECEIVERLINKCREDIT`. Instead, the initial link credit can be
   configured using environment variable `HONO_REGISTRY_AMQP_RECEIVERLINKCREDIT`. The Mongo DB based registry's admin guide
   has been updated accordingly.
-* When using Kafka messaging, there could possibly be an exception during startup of the Command Router component, 
+* When using Kafka messaging, there could possibly be an exception during startup of the Command Router component,
   meaning the component was potentially only available after a number of startup attempts. This has been fixed.
 * The Quarkus based variant of the Lora protocol adapter did not start up unless the `HONO_LORA_COMMANDENABLEDTENANTS`
   environment variable had been set. This has been fixed by removing this (unused) variable from the Lora adapter
@@ -691,7 +698,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Registry Management API has been extended with an operation to delete all devices (including credentials) of a
   tenant. Both the Mongo DB and the JDBC based registry implementations support this operation.
 * The protocol adapters and the Command Router component now by default report a set of metrics concerning the clients
-  used for sending and receiving messages via Kafka. Please refer to the 
+  used for sending and receiving messages via Kafka. Please refer to the
   [Hono Kafka Client Configuration Guide]({{% doclink "/admin-guide/hono-kafka-client-configuration/#kafka-client-metrics-configuration" %}})
   for additional information.
 
@@ -774,10 +781,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The rate at which the Command Router component handles Command & Control messages from a Kafka cluster is now
   limited to prevent potential memory issues and reduce the load on dependent services. The limit value is adopted from
   the configured `max.poll.records` Kafka consumer configuration value.
-* The default properties of the Hono CLI tool have been updated to match typical Hono installations. It provides now 
+* The default properties of the Hono CLI tool have been updated to match typical Hono installations. It provides now
   3 types of profiles that need to be combined: 1. select the "mode": `receiver` or `command`; 2. select the "target":
-  `sandbox` or `local` (aims for deployment in Minikube but works for every deployment of the Helm chart); 3. select the 
-  "messaging-type": `kafka` (if not set, it defaults to AMQP-based messaging). For details refer to the file 
+  `sandbox` or `local` (aims for deployment in Minikube but works for every deployment of the Helm chart); 3. select the
+  "messaging-type": `kafka` (if not set, it defaults to AMQP-based messaging). For details refer to the file
   `application.yml` of the CLI module.
 
 ### Deprecations
@@ -1020,7 +1027,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   have been moved to `org.eclipse.hono.service.spring.AbstractApplication` and `org.eclipse.hono.service.spring.AbstractApplication`
   in the newly added `service-base-spring` module respectively.
 * The existing `mapper` configuration has been renamed to `downstream-message-mapper`.
-* The Command Router component now requires the configuration of a tenant service client. Please refer to 
+* The Command Router component now requires the configuration of a tenant service client. Please refer to
   [Tenant Service Connection Configuration]({{% doclink "/admin-guide/command-router-config/#tenant-service-connection-configuration" %}})
   for details.
 
@@ -1070,8 +1077,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   This can be enabled by configuring protocol adapters to use Hono's new Kafka-based
   client. Please refer to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration/" %}})
   for details.
-* New APIs have been added for the Kafka-based messaging. Please refer to 
-  [Telemetry API for Kafka]({{% doclink "/api/telemetry-kafka/" %}}) and 
+* New APIs have been added for the Kafka-based messaging. Please refer to
+  [Telemetry API for Kafka]({{% doclink "/api/telemetry-kafka/" %}}) and
   [Event API for Kafka]({{% doclink "/api/event-kafka/" %}}) for the specifications.
 * The MQTT adapter now allows clients to indicate whether they want the target device's tenant and/or device IDs
   to be included in the topic used when publishing commands.
@@ -1171,7 +1178,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   the AMQP session's incoming window size and the *max-message-size* of receiver
   links can be configured (and thus limited).
 * A new way of routing Command & Control messages from the AMQP messaging network
-  to the target protocol adapters has been introduced. For that, a new 
+  to the target protocol adapters has been introduced. For that, a new
   [Command Router service]({{% doclink "/admin-guide/command-router-config" %}})
   component is used, receiving command messages and routing them to the appropriate
   protocol adapters. Protocol adapters supply routing information to the component
@@ -1201,9 +1208,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   paging and sorting options.
   Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
   for details.
-* The wildcards `?` and `*` are now supported by the search devices operation in the MongoDB based device registry. 
+* The wildcards `?` and `*` are now supported by the search devices operation in the MongoDB based device registry.
   Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
-  for details. 
+  for details.
 * Command messages that have their payload in an AMQP body section whose type isn't supported in Hono
   now get rejected, instead of getting forwarded to the device with an empty payload.
 * The authentication providers in Hono use `CredentialsObject.getCandidateSecrets` to retrieve valid secrets.
@@ -1213,7 +1220,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MQTT adapter now sets the MQTT client identifier as *client-id* in the payload of a Credentials API *get*
   operation request also when authenticating a device using the username/password mechanism. Previously that was
   only done for the client certificate authentication mechanism.
-* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set
   or set to AT_MOST_ONCE. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with an empty content type. Now, the `application/octet-stream`
@@ -1253,7 +1260,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set
   or set to AT_MOST_ONCE. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the north bound
   application received a message with the content type set to an empty string. Now, the content type property
@@ -1305,7 +1312,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Device Registry Management API has been extended now to support searching devices for a tenant
   with optional filters, paging and sorting options.
   Please refer to the [Device registry management API]({{% doclink "/api/management#/devices/searchDevicesForTenant" %}})
-  for details. 
+  for details.
 * The MongoDB based device registry now supports searching devices for a tenant with optional filters,
   paging and sorting options.
 
@@ -1314,7 +1321,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MongoDB based device registry now checks for tenant existence during device registration and credentials management operations.
 
 ### Deprecations
- 
+
 * The configuration property `singleTenant` of the protocol adapters and the device registry is now deprecated
   and planned to be removed in a future release. The use case of a system with just a single tenant should be
   realized by configuring just one tenant in the device registry.
@@ -1325,7 +1332,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set 
+* The HTTP adapter did not properly forward the QoS level for events when the *qos-level* header is not set
   or set to AT_MOST_ONCE. This has been fixed.
 * An HTTP device sending a command response request with no `Content-Type` header meant that the northbound
   application received a message with the content type set to an empty string. Now, the content type property
@@ -1390,7 +1397,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   the name of the cache to store the data in.
 * When the connection to a device is closed or lost, a protocol adapter instance will now
   stop listening for commands targeted at the device.
-* The AMQP adapter before accepting any connections checks if the connection limit is exceeded 
+* The AMQP adapter before accepting any connections checks if the connection limit is exceeded
   or not and if the adapter is enabled or not. These checks are currently done inside the
   `AmqpAdapterSaslAuthenticatorFactory`. Thereby, if any of these checks failed, the AMQP adapter
   reported authentication failure instead of the actual reason. This has been fixed now.
@@ -1452,13 +1459,13 @@ description = "Information about changes in recent Hono releases. Includes new f
   special characters in device and tenant identifiers. The configuration properties
   `HONO_REGISTRY_HTTP_TENANT_ID_PATTERN` and `HONO_REGISTRY_HTTP_DEVICE_ID_PATTERN` (and corresponding ones with
   prefix `HONO_REGISTRY_REST` for the file based registry) can be used to override the patterns for matching
-  valid identifiers. Please refer to the 
+  valid identifiers. Please refer to the
   [file based registry]({{% doclink "/admin-guide/file-based-device-registry-config/#service-configuration" %}}) or
   [MongoDB based registry]({{% doclink "/admin-guide/mongodb-device-registry-config/#service-configuration" %}})
   configuration guide for details.
- 
+
 ### Deprecations
- 
+
  * The configuration property `HONO_MQTT_COMMAND_ACK_TIMEOUT` of the MQTT adapter is now deprecated
    and planned to be removed in a future release. Use `HONO_MQTT_SEND_MESSAGE_TO_DEVICE_TIMEOUT` instead.
 
@@ -1540,7 +1547,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* When a message arrived, the *message limit* checks failed to calculate the payload size 
+* When a message arrived, the *message limit* checks failed to calculate the payload size
   of the incoming message based on the configured *minimum message size*. Instead, it used the
   actual payload size to verify if the *message limit* has been exceeded or not. This has been
   fixed now.
@@ -1568,9 +1575,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   `pwd-hash`, `salt` and `hash-function` are stored by the device registry but not returned to the user.
   Each secret is given an ID which is now returned, along with the other metadata (time validity and optional fields).
 * The `tenant` and `devices` endpoints of the management HTTP API now accept creation requests without a body.
-  As there is no mandatory field, having a mandatory body was confusing. 
+  As there is no mandatory field, having a mandatory body was confusing.
 * The methods of the service base classes `CredentialsManagementService`, `CredentialsService`,
-  `DeviceConnectionService`, `DeviceManagementService`, `RegistrationService`, `TenantManagementService` and 
+  `DeviceConnectionService`, `DeviceManagementService`, `RegistrationService`, `TenantManagementService` and
   `TenantService` have been refactored to now return a Vert.x Future instead of taking a Handler as an argument.
 * The `CommandConsumerFactory` interface has been renamed to `ProtocolAdapterCommandConsumerFactory` and method
   signatures have been changed slightly. Also, a new `initialize` method has been added to be called on protocol
@@ -1617,19 +1624,19 @@ description = "Information about changes in recent Hono releases. Includes new f
   to allow devices to establish a TLS connection with adapters using a tenant specific
   server certificate and host name. Please refer to the *Secure Communication* admin
   guide for details.
-* Hono now supports *auto-provisioning* of devices that authenticate with X.509 client certificates. 
+* Hono now supports *auto-provisioning* of devices that authenticate with X.509 client certificates.
   For more information please refer to the [Device Provisioning]({{% doclink "/concepts/device-provisioning/" %}})
   concept and for details to the [Tenant API]({{% doclink "/api/tenant/#trusted-ca-format" %}})
   and the [Credentials API]({{% doclink "/api/credentials/#get-credentials" %}}).
 * The Hono Auth Server and Device Registry components now support configuring the SASL
   mechanisms advertised to a client connecting to these components. This can be used to
-  restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
-* A new metric namely *hono.connections.authenticated.duration* has been introduced to track the 
-  connection duration of the authenticated devices. Please refer to the 
+  restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both.
+* A new metric namely *hono.connections.authenticated.duration* has been introduced to track the
+  connection duration of the authenticated devices. Please refer to the
   [Metrics API]({{% doclink "/api/metrics/" %}}) for more details.
-* The protocol adapters that maintain *connection state* can now be configured to verify the *connection 
-  duration limit* for each tenant before accepting any new connection request from the devices. Please 
-  refer to the [resource-limits]({{% doclink "/concepts/resource-limits/#connection-duration-limit" %}}) 
+* The protocol adapters that maintain *connection state* can now be configured to verify the *connection
+  duration limit* for each tenant before accepting any new connection request from the devices. Please
+  refer to the [resource-limits]({{% doclink "/concepts/resource-limits/#connection-duration-limit" %}})
   section for more details.
 * Hono's example device registry now supports configuring a time out for processing requests from clients.
   This is configured using the property `sendTimeOutInMs` in `org.eclipse.hono.config.ServiceConfigProperties`.
@@ -1704,7 +1711,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * A potential issue has been identified where some command messages might not get sent to
   the corresponding gateway. The scenario here involves the gateway sending event/telemetry
   messages via HTTP with a `hono-ttd` header in order to receive commands, and doing so
-  with multiple concurrent requests for *different* devices. To resolve this issue, the 
+  with multiple concurrent requests for *different* devices. To resolve this issue, the
   corresponding tenant can be configured with a `support-concurrent-gateway-device-command-requests`
   option set to `true` in the `ext` field of an `adapters` entry of type `hono-http`.
   Note that with this option it is not supported for the authenticated gateway to send
@@ -1732,17 +1739,17 @@ description = "Information about changes in recent Hono releases. Includes new f
   for details.
   The AMQP, HTTP, MQTT and Kura protocol adapters consider this property when setting a TTL on
   downstream event messages.
-* A protocol adapter can now be configured with a timeout for idle tenants. When there has been no 
-  communication between a protocol adapter instance and the devices of a tenant, the former one releases 
-  allocated resources of the tenant. Currently this means that it closes AMQP links and stops reporting 
-  metrics for this tenant. The timeout is configured with the property `tenantIdleTimeout` for a protocol 
+* A protocol adapter can now be configured with a timeout for idle tenants. When there has been no
+  communication between a protocol adapter instance and the devices of a tenant, the former one releases
+  allocated resources of the tenant. Currently this means that it closes AMQP links and stops reporting
+  metrics for this tenant. The timeout is configured with the property `tenantIdleTimeout` for a protocol
   adapter. Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}})
   for details.
 * The accounting period for the *message limit* checks can now be configured as `monthly`.
-  In this case the data usage for a tenant is calculated from the beginning till the end of the 
+  In this case the data usage for a tenant is calculated from the beginning till the end of the
   (Gregorian) calendar month. Refer [resource limits]({{% doclink "/concepts/resource-limits/" %}})
   for more information.
-* The devices can now indicate a *time-to-live* duration for event messages published using 
+* The devices can now indicate a *time-to-live* duration for event messages published using
   the HTTP and MQTT adapters by setting the *hono-ttl* property in requests explicitly. Please refer to the
   [HTTP Adapter]({{% doclink "/user-guide/http-adapter/#publish-an-event-authenticated-device" %}})
   and [MQTT Adapter]({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
@@ -1760,12 +1767,12 @@ description = "Information about changes in recent Hono releases. Includes new f
   With the new feature of also being able to subscribe to commands for specific devices, northbound
   applications will get notified of such a subscription along with the specific device id.
 * Now a *max-ttd* value, which is used as an upper boundary for the *hono-ttd* value specified by the devices,
-  can be set as an *extension* property in the adapters section of the tenant configuration.  
+  can be set as an *extension* property in the adapters section of the tenant configuration.
 
 ### API Changes
 
 * The already deprecated *legacy metrics* support has been removed.
-* The already deprecated *legacy device registry* and the corresponding base classes, which had been deprecated 
+* The already deprecated *legacy device registry* and the corresponding base classes, which had been deprecated
  as well, have been removed.
 * The topic filters used by MQTT devices to subscribe to commands has been changed slightly
   to better fit the addressing scheme used by the other protocol adapters.
@@ -1807,21 +1814,21 @@ description = "Information about changes in recent Hono releases. Includes new f
   Registry by means of setting a configuration property when [deploying using the Helm chart]({{% doclink "/deployment/helm-based-deployment/#using-the-device-connection-service" %}}).
 * A tenant can now be configured so that *all* OpenTracing spans created when processing messages for that
   specific tenant will be recorded in the tracing backend (overriding the default sampling strategy that
-  might only record a certain percentage of traces). See 
+  might only record a certain percentage of traces). See
   [Monitoring & Tracing]({{% doclink "/admin-guide/monitoring-tracing-config/#enforcing-the-recording-of-traces-for-a-tenant" %}})
   for more details.
 
 ### API Changes
 
-* The obsolete method variants of `reportTelemetry` in `org.eclipse.hono.service.metric.Metrics` 
+* The obsolete method variants of `reportTelemetry` in `org.eclipse.hono.service.metric.Metrics`
   have been removed. The new variants of this method accept an additional parameter of type `TenantObject`.
 * The already deprecated `org.eclipse.hono.service.AbstractProtocolAdapterBase.getRegistrationAssertion`
-  method has been removed. The alternate variant of the `getRegistrationAssertion` method which accepts an 
+  method has been removed. The alternate variant of the `getRegistrationAssertion` method which accepts an
   additional OpenTracing span parameter should be used.
 * The already deprecated `getRegistrationAssertion`, `getTenantConfiguration`, `sendConnectedTtdEvent`,
-  `sendDisconnectedTtdEvent` and `sendTtdEvent` methods in `org.eclipse.hono.service.AbstractProtocolAdapterBase` 
-  have been removed. The alternate variant of these methods which accepts an additional OpenTracing span parameter 
-  should be used.  
+  `sendDisconnectedTtdEvent` and `sendTtdEvent` methods in `org.eclipse.hono.service.AbstractProtocolAdapterBase`
+  have been removed. The alternate variant of these methods which accepts an additional OpenTracing span parameter
+  should be used.
 
 ### Deprecations
 
@@ -1834,12 +1841,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * Implementation of the new HTTP management API for tenants, devices and
   credentials.
-* The health check endpoints of services can now be called securely via TLS. 
-  Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}}) 
+* The health check endpoints of services can now be called securely via TLS.
+  Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}})
   for the new parameters available.
-* The [Tenant API]({{% doclink "/api/tenant/#resource-limits-configuration-format" %}}) now optionally allows 
-  specifying *minimum message size*. If it is specified, then the payload size of the incoming telemetry, event 
-  and command messages are calculated in accordance with the *minimum message size* by the AMQP, HTTP and MQTT 
+* The [Tenant API]({{% doclink "/api/tenant/#resource-limits-configuration-format" %}}) now optionally allows
+  specifying *minimum message size*. If it is specified, then the payload size of the incoming telemetry, event
+  and command messages are calculated in accordance with the *minimum message size* by the AMQP, HTTP and MQTT
   protocol adapters and then recorded in the metrics system.
   See [Metrics]({{% doclink "/api/metrics/#minimum-message-size" %}}) for more details.
 
@@ -1871,9 +1878,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The example Device Registry that comes with Hono now implements the new
   HTTP management API. Consequently, the URI endpoints for managing the content
   of the registry have changed accordingly.
-* The configuration parameters for the health check endpoint were moved from 
+* The configuration parameters for the health check endpoint were moved from
   `hono.app` to `hono.healthCheck` and renamed. `hono.app.healthCheckPort` is now
-  `hono.healthCheck.insecurePort` and `hono.app.healthCheckBindAddress` is now 
+  `hono.healthCheck.insecurePort` and `hono.app.healthCheckBindAddress` is now
   `hono.healthCheck.insecurePortBindAdress`. Please refer to the protocol adapter
   [configuration guides]({{% doclink "/admin-guide/" %}}) for additional
   information on the new naming.
@@ -1971,8 +1978,8 @@ which got deprecated, are planned to be dropped in 1.1.
   [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
-* The optional methods of the 
-  [Device Registration API]({{% doclink "/api/device-registration/" %}}) have been 
+* The optional methods of the
+  [Device Registration API]({{% doclink "/api/device-registration/" %}}) have been
   removed. Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
   [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
@@ -1983,16 +1990,16 @@ which got deprecated, are planned to be dropped in 1.1.
   the operation is invoked.
 * The methods for invoking the optional operations of the Device Registration API have been removed
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
-* The optional methods of the [Credentials API]({{% doclink "/api/credentials/" %}}) 
+* The optional methods of the [Credentials API]({{% doclink "/api/credentials/" %}})
   have been removed. Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined
   by [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
-* The `control` prefix in the northbound and southbound Command & Control endpoints has been renamed to `command`. 
+* The `control` prefix in the northbound and southbound Command & Control endpoints has been renamed to `command`.
   The endpoint names with the `control` prefix are still supported but deprecated. The northbound endpoint for
   *business applications* to receive command responses has the `command_response` prefix now. The old `control` prefix
   for the receiver address is also still supported but deprecated.
-* The `deviceId` parameter of the `getOrCreateCommandClient` and `getOrCreateAsyncCommandClient` methods of the 
+* The `deviceId` parameter of the `getOrCreateCommandClient` and `getOrCreateAsyncCommandClient` methods of the
   `org.eclipse.hono.client.ApplicationClientFactory` interface has been removed.
   This means that a `CommandClient` or `AsyncCommandClient` instance can be used to send commands to arbitrary
   devices of a tenant now. Accordingly, the `CommandClient.sendCommand` and `AsyncCommandClient.sendAsyncCommand`
@@ -2004,19 +2011,19 @@ which got deprecated, are planned to be dropped in 1.1.
 ### New Features
 
 * Default properties can now also be set at the tenant level, affecting all devices
-  belonging to the tenant. Please refer to the 
+  belonging to the tenant. Please refer to the
   [protocol adapter user guides]({{% doclink "/user-guide/" %}}) for details.
-* `CredentialsClientImpl` now supports caching of response data received from a Credentials service based on 
+* `CredentialsClientImpl` now supports caching of response data received from a Credentials service based on
   *cache directives*. The protocol adapters are now equipped to cache the response from the Credentials Service.
-  The protocol adapters support configuration variables to set the default cache timeout, the minimum 
+  The protocol adapters support configuration variables to set the default cache timeout, the minimum
   and maximum cache sizes for this service.
 * The example device registry's Credentials service implementation now includes a *cache directive*
   in its response to the *get Credentials* operation which allows clients to cache credentials of
   type *hashed-password* and *x509-cert* for a configurable amount of time. Please refer to the
-  [Device Registry Admin Guide]({{% doclink "/admin-guide/device-registry-config/" %}}) 
+  [Device Registry Admin Guide]({{% doclink "/admin-guide/device-registry-config/" %}})
   for details regarding the configuration properties to use.
 * There is now an official specification of an HTTP API for managing the content of a device registry.
-  The [HTTP Management API]({{% doclink "/api/management" %}}) is defined using by 
+  The [HTTP Management API]({{% doclink "/api/management" %}}) is defined using by
   means of OpenAPI v3. Note, that the API is not yet implemented by the example device registry that comes with Hono.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.
@@ -2039,7 +2046,7 @@ which got deprecated, are planned to be dropped in 1.1.
   `org.eclipse.hono.service.AbstractProtocolAdapterBase.addProperties` methods have
   been changed to accept an additional parameter of type `TenantObject` which may contain default
   properties defined for the tenant to be included in downstream messages.
-* The *get Registration Information* operation of the Device Registration API is not optional anymore, 
+* The *get Registration Information* operation of the Device Registration API is not optional anymore,
   it is now mandatory to implement. For device registry implementations based on the
   `CompleteRegistrationService` interface, there is no change needed as the operation is already
   defined there.
@@ -2049,12 +2056,12 @@ which got deprecated, are planned to be dropped in 1.1.
 * The already deprecated `org.eclipse.hono.client.CommandConsumerFactory.closeCommandConsumer`
   method has been removed.
 * The response message format of the *assert Device Registration* operation of the Device Registration API
-  has been changed to include an optional `gw-supported` boolean field. The value of this field refers to 
+  has been changed to include an optional `gw-supported` boolean field. The value of this field refers to
   whether the device on which the operation is invoked allows one or more gateways to act on its behalf.
-* The AMQP sender link address to be used by *business applications* to send commands to devices has been 
-  changed from `control/${tenant_id}/${device_id}` to `control/${tenant_id}` with command messages requiring 
+* The AMQP sender link address to be used by *business applications* to send commands to devices has been
+  changed from `control/${tenant_id}/${device_id}` to `control/${tenant_id}` with command messages requiring
   the `to` property to be set to `control/${tenant_id}/${device_id}`. Using `control/${tenant_id}/${device_id}`
-  as sender link address is still possible but gateway agnostic addressing of devices is not supported for 
+  as sender link address is still possible but gateway agnostic addressing of devices is not supported for
   such command messages.
 
 ### Deprecations
@@ -2078,11 +2085,11 @@ which got deprecated, are planned to be dropped in 1.1.
   of telemetry data and events from devices connected to LoRa network providers and/or
   LoRa gateways. Note that this adapter is *not* considered production ready yet.
   Any help in improving and enhancing the adapter is more than welcome.
-* The concept and implementation of *resource limits* have been added. Now a connection limit to define 
-  the maximum number of device connections to be allowed per tenant can be configured. The MQTT and AMQP 
-  adapters can be enabled to verify this connection limit before accepting any new connections. Please 
+* The concept and implementation of *resource limits* have been added. Now a connection limit to define
+  the maximum number of device connections to be allowed per tenant can be configured. The MQTT and AMQP
+  adapters can be enabled to verify this connection limit before accepting any new connections. Please
   refer to the [resource limits]({{% doclink "/concepts/resource-limits/" %}}) for details.
- 
+
 ### Fixes & Enhancements
 
 * The base classes for implementing the AMQP and HTTP endpoints for the Credentials, Tenant
@@ -2096,7 +2103,7 @@ which got deprecated, are planned to be dropped in 1.1.
   messages that contained a TTD value and others that didn't.
 * The Helm based deployment of the device registry has been fixed by adding the secret
   and deployment entries for the `device-identities.json`.
-* Before uploading command responses, the MQTT and AMQP adapters now check whether the device is 
+* Before uploading command responses, the MQTT and AMQP adapters now check whether the device is
   registered and also the adapter is enabled for the tenant.
 
 ### API Changes
@@ -2195,7 +2202,7 @@ which got deprecated, are planned to be dropped in 1.1.
   [AMQP Adapter Configuration]({{% doclink "/admin-guide/amqp-adapter-config/" %}}) for details.
 * The `org.eclipse.hono.client.AsyncCommandClient` has been added to support the sending of
   commands to devices and the receiving of responses in an asynchronous way. This can be used
-  to decouple the sender and receiver from each other. 
+  to decouple the sender and receiver from each other.
 * The `org.eclipse.hono.service.tenant.CompleteBaseTenantService` class now rejects malformed
   encodings of public keys/certificates included in a request to add a trust anchor to a tenant.
 
