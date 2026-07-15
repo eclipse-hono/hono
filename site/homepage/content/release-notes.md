@@ -3,6 +3,13 @@ linkTitle = "Release Notes"
 title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
+## 2.8.0
+
+### Fixes & Enhancements
+
+* Hono has been updated to the 3.27.4.1 Long Term Support (LTS) version of Quarkus whcih includes bug fixes and updates
+  to other libraries that Hono depends on like vert.x, infinispan, Mongo DB client, Kafka Client etc.
+
 ## 2.7.0
 
 ### New Features
