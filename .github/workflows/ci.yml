@@ -57,7 +57,7 @@ jobs:
           device-registry: jdbc
           commandrouting-cache: embedded
           messaging-type: kafka
-          kafka-image-name: 'docker.io/confluentinc/cp-kafka:8.0.3'
+          kafka-image-name: 'docker.io/apache/kafka:4.0.0'
           mongodb-image-name: mongo:7.0
         # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 3.9 messaging, Command Router with data grid
         - device-registry-name: mongodb-6.0
