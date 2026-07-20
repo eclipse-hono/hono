@@ -28,13 +28,13 @@ jobs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@f75f66ce1886f00957d99748a42c724f4330bdcf # v5.3.1
+        uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # v5.3.2
         with:
           # All of these options are optional, so you can remove them if you are happy with the defaults
           cancel_others: 'true'
           concurrent_skipping: 'same_content_newer'
           skip_after_successful_duplicate: 'true'
-          paths_ignore: '["deploy/**", "legal/src/main/resources/legal/**", "logo/**", "jenkins/**"]'
+          paths_ignore: '["deploy/**", "legal/src/main/resources/legal/**", "logo/**"]'
           do_not_skip: '["workflow_dispatch", "schedule"]'
 
   build:
@@ -50,29 +50,30 @@ jobs:
           device-registry: file
           commandrouting-cache: embedded
           messaging-type: amqp
-          kafka-image-name: 'docker.io/confluentinc/cp-kafka:7.9.5'
-          mongodb-image-name: mongo:6.0
-        # Use Quarkus JVM images: JDBC registry, Kafka 4.0 messaging, Command Router with embedded cache
+          kafka-image-name: 'non-existent' # no Kafka needed for this setup, but maven-docker-plugin requires non-empty name
+
+          mongodb-image-name: 'mongo:6.0' # this is only needed for running the unit tests here
+        # Use Quarkus JVM images: JDBC registry, Kafka 4.2 messaging, Command Router with embedded cache
         - device-registry-name: jdbc
           device-registry: jdbc
           commandrouting-cache: embedded
           messaging-type: kafka
-          kafka-image-name: 'docker.io/confluentinc/cp-kafka:8.0.3'
-          mongodb-image-name: mongo:7.0
-        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 3.9 messaging, Command Router with data grid
+          kafka-image-name: 'docker.io/apache/kafka:4.2.1'
+          mongodb-image-name: 'mongo:7.0' # this is only needed for running the unit tests here
+        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 4.1 messaging, Command Router with data grid
         - device-registry-name: mongodb-6.0
           device-registry: mongodb
-          mongodb-image-name: mongo:6.0
+          mongodb-image-name: 'mongo:6.0'
           commandrouting-cache: server
           messaging-type: kafka
-          kafka-image-name: 'docker.io/confluentinc/cp-kafka:7.9.5'
-        # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.1 messaging, Command Router with data grid
+          kafka-image-name: 'docker.io/apache/kafka:4.1.2'
+        # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.3 messaging, Command Router with data grid
         - device-registry-name: mongodb-7.0
           device-registry: mongodb
-          mongodb-image-name: mongo:7.0
+          mongodb-image-name: 'mongo:7.0'
           commandrouting-cache: server
           messaging-type: kafka
-          kafka-image-name: 'docker.io/apache/kafka:4.1.1'
+          kafka-image-name: 'docker.io/apache/kafka:4.3.1'
 
     name: "Use ${{ matrix.device-registry-name }} registry, ${{ matrix.messaging-type }} messaging with ${{ matrix.commandrouting-cache }} cache"
     steps:
