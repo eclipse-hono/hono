@@ -766,8 +766,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("partitions assigned: [{}] [client-id: {}]",
-                            HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
+                    LOG.debug("partitions assigned [client-id: {}]: [{}]",
+                            getClientId(), HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
                 ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 updateSubscribedTopicPatternTopicsAndRemoveMetrics();

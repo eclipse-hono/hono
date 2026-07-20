@@ -255,6 +255,10 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                         // Doing it here will speed up the first invocation of "createCommandConsumer" for this tenant.
                         final String tenantId = notification.getTenantId();
                         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
+                        LOG.info("""
+                                received notification about newly created tenant [id: {}], \
+                                ensuring corresponding command topic [{}] is among subscribed topics...""",
+                                tenantId, topic);
                         kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic);
                     }
                 });
@@ -280,7 +284,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             LOG.debug("createCommandConsumer: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
-        LOG.debug("""
+        LOG.info("""
                 createCommandConsumer: topic not subscribed; check for its existence, triggering auto-creation \
                 if enabled [{}]\
                 """, topic);
