@@ -1124,11 +1124,11 @@ public abstract class HttpTestBase {
             });
             switch (msg.getContentType()) {
             case "text/msg1":
-                logger.debug("received first message");
+                            logger.info("received first message");
                 firstMessageReceived.complete();
                 break;
             case "text/msg2":
-                logger.debug("received second message");
+                            logger.info("received second message");
                 secondMessageReceived.complete();
                 break;
             default:
@@ -1234,8 +1234,8 @@ public abstract class HttpTestBase {
         final var emptyResponseReceived = ctx.checkpoint();
         final int ttdSeconds = 4;
 
-        helper.registry.addDeviceForTenant(tenantId, 
-                new Tenant(), deviceId, PWD)
+        helper.registry.addDeviceForTenant(tenantId,
+                        new Tenant(), deviceId, PWD)
             .compose(ok -> createConsumer(tenantId, msg -> {
                 logger.trace("received message");
                 msg.getTimeUntilDisconnectNotification()
