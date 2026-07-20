@@ -95,8 +95,7 @@ public abstract class HttpTestBase {
     protected static final String ORIGIN_URI = "http://hono.eclipse.org";
 
     /**
-     * A helper for accessing the AMQP 1.0 Messaging Network and
-     * for managing tenants/devices/credentials.
+     * A helper for accessing the AMQP 1.0 Messaging Network and for managing tenants/devices/credentials.
      */
     protected static IntegrationTestSupport helper;
     /**
@@ -108,7 +107,7 @@ public abstract class HttpTestBase {
     private static final String COMMAND_JSON_KEY = "brightness";
 
     private static final String ORIGIN_WILDCARD = "*";
-    private static final long  TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
+    private static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
 
     /**
      * The default options to use for creating HTTP clients.
@@ -125,8 +124,7 @@ public abstract class HttpTestBase {
      */
     protected CrudHttpClient httpClient;
     /**
-     * A client for connecting to the HTTP adapter using a client certificate
-     * for authentication.
+     * A client for connecting to the HTTP adapter using a client certificate for authentication.
      */
     protected CrudHttpClient httpClientWithClientCert;
     /**
@@ -195,8 +193,7 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Deletes all temporary objects from the Device Registry which
-     * have been created during the last test execution.
+     * Deletes all temporary objects from the Device Registry which have been created during the last test execution.
      * Disconnects from the AMQP Messaging Network.
      *
      * @param ctx The vert.x test context.
@@ -230,8 +227,7 @@ public abstract class HttpTestBase {
         return Stream.of(
                 new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE),
                 new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
-                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
-                );
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE));
     }
 
     /**
@@ -244,7 +240,7 @@ public abstract class HttpTestBase {
     /**
      * Creates a test specific message consumer.
      *
-     * @param tenantId        The tenant to create the consumer for.
+     * @param tenantId The tenant to create the consumer for.
      * @param messageConsumer The handler to invoke for every message received.
      * @return A future succeeding with the created consumer.
      */
@@ -255,8 +251,7 @@ public abstract class HttpTestBase {
     /**
      * Perform additional checks on a received message.
      * <p>
-     * This default implementation does nothing. Subclasses should override this method to implement
-     * reasonable checks.
+     * This default implementation does nothing. Subclasses should override this method to implement reasonable checks.
      *
      * @param msg The message to perform checks on.
      * @throws RuntimeException if any of the checks fail.
@@ -266,8 +261,8 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Verifies that the adapter forwards an empty message with a custom content type other
-     * than {@value EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} to downstream consumers.
+     * Verifies that the adapter forwards an empty message with a custom content type other than
+     * {@value EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION} to downstream consumers.
      *
      * @param ctx The vert.x test context.
      */
@@ -282,24 +277,24 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
-            .compose(response -> createConsumer(tenantId, msg -> {
-                logger.trace("received {}", msg);
-                ctx.verify(() -> {
-                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
-                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
-                    assertThat(msg.getContentType()).isEqualTo(customContentType);
-                    assertThat(msg.getPayload()).isNull();
-                    assertAdditionalMessageProperties(msg);
-                });
-                ctx.completeNow();
-            }))
-            .compose(consumer -> httpClient.create(
-                    getEndpointUri(),
-                    null,
-                    requestHeaders,
-                    HttpResponseExpectation.SC_ACCEPTED))
-            .onFailure(ctx::failNow);
+                .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(customContentType);
+                        assertThat(msg.getPayload()).isNull();
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        null,
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
     }
 
     /**
@@ -316,23 +311,23 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
-            .compose(response -> createConsumer(tenantId, msg -> {
-                logger.trace("received {}", msg);
-                ctx.failNow("downstream consumer should not have received message");
-            }))
-            .compose(consumer -> httpClient.create(
-                    getEndpointUri(),
-                    null,
-                    requestHeaders,
-                    HttpResponseExpectation.SC_BAD_REQUEST))
-            .onComplete(ctx.succeedingThenComplete());
+                .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        null,
+                        requestHeaders,
+                        HttpResponseExpectation.SC_BAD_REQUEST))
+                .onComplete(ctx.succeedingThenComplete());
 
     }
 
     /**
-     * Verifies that the adapter forwards a non-empty message without any content type set in the request
-     * to downstream consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
+     * Verifies that the adapter forwards a non-empty message without any content type set in the request to downstream
+     * consumers using the {@value MessageHelper#CONTENT_TYPE_OCTET_STREAM} content type.
      *
      * @param ctx The vert.x test context.
      */
@@ -345,30 +340,30 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
-            .compose(response -> createConsumer(tenantId, msg -> {
-                logger.trace("received {}", msg);
-                ctx.verify(() -> {
-                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
-                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
-                    assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
-                    assertThat(msg.getPayload().length()).isGreaterThan(0);
-                    assertAdditionalMessageProperties(msg);
-                });
-                ctx.completeNow();
-            }))
-            .compose(consumer -> httpClient.create(
-                    getEndpointUri(),
-                    Buffer.buffer("some payload"),
-                    requestHeaders,
-                    HttpResponseExpectation.SC_ACCEPTED))
-            .onFailure(ctx::failNow);
+                .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                        DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
+                        assertThat(msg.getContentType()).isEqualTo(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                        assertThat(msg.getPayload().length()).isGreaterThan(0);
+                        assertAdditionalMessageProperties(msg);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("some payload"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
 
     }
 
     /**
-     * Verifies that the adapter rejects non-empty messages that are marked as empty
-     * notifications with a 400 status code.
+     * Verifies that the adapter rejects non-empty messages that are marked as empty notifications with a 400 status
+     * code.
      *
      * @param ctx The vert.x test context.
      */
@@ -382,23 +377,23 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
-            .compose(response -> createConsumer(tenantId, msg -> {
-                logger.trace("received {}", msg);
-                ctx.failNow("downstream consumer should not have received message");
-            }))
-            .compose(consumer -> httpClient.create(
-                    getEndpointUri(),
-                    Buffer.buffer("some payload"),
-                    requestHeaders,
-                    HttpResponseExpectation.SC_BAD_REQUEST))
-            .onComplete(ctx.succeedingThenComplete());
+                .addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD)
+                .compose(response -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.failNow("downstream consumer should not have received message");
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("some payload"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_BAD_REQUEST))
+                .onComplete(ctx.succeedingThenComplete());
 
     }
 
     /**
-     * Verifies that a number of messages uploaded to Hono's HTTP adapter
-     * using HTTP Basic auth can be successfully consumed via the AMQP Messaging Network.
+     * Verifies that a number of messages uploaded to Hono's HTTP adapter using HTTP Basic auth can be successfully
+     * consumed via the AMQP Messaging Network.
      *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -418,8 +413,8 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
-            .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-            .onComplete(setup.succeedingThenComplete());
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -428,7 +423,7 @@ public abstract class HttpTestBase {
         }
 
         final var clientOptions = new HttpClientOptions(defaultOptions)
-            .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
+                .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
         final var tls13BasedClient = new CrudHttpClient(vertx, new HttpClientOptions(clientOptions));
         testUploadMessages(ctx, tenantId,
                 count -> {
@@ -436,8 +431,8 @@ public abstract class HttpTestBase {
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
                             count % 2 == 0 ? requestHeaders : requestHeadersWithEncodedCredentials,
-                                    HttpResponseExpectation.SC_ACCEPTED)
-                        .compose(this::verifyAccessControlExposedHeaders);
+                            HttpResponseExpectation.SC_ACCEPTED)
+                            .compose(this::verifyAccessControlExposedHeaders);
                 });
     }
 
@@ -462,9 +457,9 @@ public abstract class HttpTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, gatewayOneId, PWD)
-            .compose(ok -> helper.registry.addDeviceToTenant(tenantId, gatewayTwoId, PWD))
-            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
-            .onComplete(setup.succeedingThenComplete());
+                .compose(ok -> helper.registry.addDeviceToTenant(tenantId, gatewayTwoId, PWD))
+                .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -524,13 +519,13 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.getCertificate(deviceCert.certificatePath())
-           .compose(cert -> {
+                .compose(cert -> {
 
-                final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
 
-            })
-            .onComplete(setup.succeedingThenComplete());
+                })
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -544,7 +539,7 @@ public abstract class HttpTestBase {
                     Buffer.buffer("hello " + count),
                     requestHeaders,
                     HttpResponseExpectation.SC_ACCEPTED)
-                .compose(this::verifyAccessControlExposedHeaders);
+                    .compose(this::verifyAccessControlExposedHeaders);
         });
     }
 
@@ -563,14 +558,14 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.getCertificate(deviceCert.certificatePath())
-            .compose(cert -> {
-                // GIVEN a tenant configured for auto-provisioning
-                final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
-                return helper.registry.addTenant(tenantId, tenant);
+                .compose(cert -> {
+                    // GIVEN a tenant configured for auto-provisioning
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
+                    return helper.registry.addTenant(tenantId, tenant);
 
-            })
-            .onComplete(setup.succeedingThenComplete());
+                })
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -587,8 +582,8 @@ public abstract class HttpTestBase {
                         Buffer.buffer("hello " + count),
                         requestHeaders,
                         HttpResponseExpectation.SC_ACCEPTED)
-                    .compose(this::verifyAccessControlExposedHeaders),
-                5,
+                        .compose(this::verifyAccessControlExposedHeaders),
+                        5,
                 null);
     }
 
@@ -604,25 +599,25 @@ public abstract class HttpTestBase {
 
         // GIVEN a tenant configured with a trust anchor that does not allow auto-provisioning
         helper.getCertificate(deviceCert.certificatePath())
-            .compose(cert -> {
-                final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
-                return helper.registry.addTenant(tenantId, tenant);
-            })
-            // WHEN a unknown device tries to connect to the adapter
-            // using a client certificate with the trust anchor registered for the device's tenant
-            .compose(ok -> {
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.ORIGIN, ORIGIN_URI);
-                return httpClientWithClientCert.create(
-                        getEndpointUri(),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_UNAUTHORIZED);
-            })
-            // THEN the connection is refused
-            .onComplete(ctx.succeedingThenComplete());
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
+                    return helper.registry.addTenant(tenantId, tenant);
+                })
+                // WHEN a unknown device tries to connect to the adapter
+                // using a client certificate with the trust anchor registered for the device's tenant
+                .compose(ok -> {
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+                    return httpClientWithClientCert.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_UNAUTHORIZED);
+                })
+                // THEN the connection is refused
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -631,8 +626,7 @@ public abstract class HttpTestBase {
      * @param ctx The test context to run on.
      * @param tenantId The tenant that the device belongs to.
      * @param requestSender The test device that will publish the data.
-     * @throws InterruptedException if the test is interrupted before it
-     *              has finished.
+     * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
             final VertxTestContext ctx,
@@ -648,8 +642,7 @@ public abstract class HttpTestBase {
      * @param tenantId The tenant that the device belongs to.
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
-     * @throws InterruptedException if the test is interrupted before it
-     *              has finished.
+     * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
             final VertxTestContext ctx,
@@ -664,15 +657,17 @@ public abstract class HttpTestBase {
             return qos;
         }
 
-        final MetricsTags.EndpointType endpointType = MetricsTags.EndpointType.fromString(getEndpointUri().replaceFirst("/", ""));
+        final MetricsTags.EndpointType endpointType = MetricsTags.EndpointType
+                .fromString(getEndpointUri().replaceFirst("/", ""));
 
         switch (endpointType) {
-            case EVENT:
-                return QoS.AT_LEAST_ONCE;
-            case TELEMETRY:
-                return QoS.AT_MOST_ONCE;
-            default:
-                throw new IllegalArgumentException("Either QoS must be non-null or endpoint type must be telemetry or event!");
+        case EVENT:
+            return QoS.AT_LEAST_ONCE;
+        case TELEMETRY:
+            return QoS.AT_MOST_ONCE;
+        default:
+            throw new IllegalArgumentException(
+                    "Either QoS must be non-null or endpoint type must be telemetry or event!");
         }
     }
 
@@ -684,7 +679,8 @@ public abstract class HttpTestBase {
      * @param messageConsumer Consumer that is invoked when a message was received.
      * @param requestSender The test device that will publish the data.
      * @param numberOfMessages The number of messages that are uploaded.
-     * @param expectedQos The expected QoS level, may be {@code null} leading to expecting the default for event or telemetry.
+     * @param expectedQos The expected QoS level, may be {@code null} leading to expecting the default for event or
+     *            telemetry.
      * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
@@ -711,17 +707,17 @@ public abstract class HttpTestBase {
                 assertAdditionalMessageProperties(msg);
             });
             Optional.ofNullable(messageConsumer)
-                .map(consumer -> consumer.apply(msg))
-                .orElseGet(Future::succeededFuture)
-                .onComplete(attempt -> {
-                    if (attempt.succeeded()) {
-                        receivedMessageCount.incrementAndGet();
-                        messageReceived.flag();
-                    } else {
-                        logger.error("failed to process message from device", attempt.cause());
-                        messageSending.failNow(attempt.cause());
-                    }
-            });
+                    .map(consumer -> consumer.apply(msg))
+                    .orElseGet(Future::succeededFuture)
+                    .onComplete(attempt -> {
+                        if (attempt.succeeded()) {
+                            receivedMessageCount.incrementAndGet();
+                            messageReceived.flag();
+                        } else {
+                            logger.error("failed to process message from device", attempt.cause());
+                            messageSending.failNow(attempt.cause());
+                        }
+                    });
             if (receivedMessageCount.get() % 20 == 0) {
                 logger.info("messages received: {}", receivedMessageCount.get());
             }
@@ -743,20 +739,21 @@ public abstract class HttpTestBase {
 
             final CountDownLatch sending = new CountDownLatch(1);
             requestSender.apply(currentMessage)
-                .compose(this::assertHttpResponse)
-                .onComplete(attempt -> {
-                    try {
-                        if (attempt.succeeded()) {
-                            logger.debug("sent message {}", currentMessage);
-                            messageSent.flag();
-                        } else {
-                            logger.info("failed to send message {}: {}", currentMessage, attempt.cause().getMessage());
-                            messageSending.failNow(attempt.cause());
+                    .compose(this::assertHttpResponse)
+                    .onComplete(attempt -> {
+                        try {
+                            if (attempt.succeeded()) {
+                                logger.debug("sent message {}", currentMessage);
+                                messageSent.flag();
+                            } else {
+                                logger.info("failed to send message {}: {}", currentMessage,
+                                        attempt.cause().getMessage());
+                                messageSending.failNow(attempt.cause());
+                            }
+                        } finally {
+                            sending.countDown();
                         }
-                    } finally {
-                        sending.countDown();
-                    }
-                });
+                    });
             if (!sending.await(TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 ctx.failNow("timeout waiting for message %s to be sent".formatted(currentMessage));
             } else if (currentMessage % 20 == 0) {
@@ -792,40 +789,38 @@ public abstract class HttpTestBase {
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     public void testUploadFailsForNonMatchingTrustAnchor(final VertxTestContext ctx) throws GeneralSecurityException {
 
-
         final KeyPair keyPair = helper.newEcKeyPair();
 
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
-            .compose(cert -> {
+                .compose(cert -> {
 
-                final Tenant tenant = Tenants.createTenantForTrustAnchor(
-                    cert.getIssuerX500Principal().getName(X500Principal.RFC2253),
-                    keyPair.getPublic().getEncoded(),
-                    keyPair.getPublic().getAlgorithm());
+                    final Tenant tenant = Tenants.createTenantForTrustAnchor(
+                            cert.getIssuerX500Principal().getName(X500Principal.RFC2253),
+                            keyPair.getPublic().getEncoded(),
+                            keyPair.getPublic().getAlgorithm());
 
-                return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-            })
-            // WHEN a device tries to upload data and authenticate with a client
-            // certificate that has not been signed with the configured trusted CA
-            .compose(ok -> {
+                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+                })
+                // WHEN a device tries to upload data and authenticate with a client
+                // certificate that has not been signed with the configured trusted CA
+                .compose(ok -> {
 
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.ORIGIN, ORIGIN_URI);
-                return httpClientWithClientCert.create(
-                        getEndpointUri(),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_UNAUTHORIZED);
-            })
-            // THEN the request fails with a 401
-            .onComplete(ctx.succeedingThenComplete());
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+                    return httpClientWithClientCert.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_UNAUTHORIZED);
+                })
+                // THEN the request fails with a 401
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
-     * Verifies that the adapter fails to authenticate a device that is providing
-     * wrong credentials.
+     * Verifies that the adapter fails to authenticate a device that is providing wrong credentials.
      *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if the test fails.
@@ -863,15 +858,16 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Verifies that the adapter fails to authenticate a device that is providing
-     * credentials that contain a non-existing tenant.
+     * Verifies that the adapter fails to authenticate a device that is providing credentials that contain a
+     * non-existing tenant.
      *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if the test fails.
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
-    public void testUploadFailsForCredentialsWithNonExistingTenant(final VertxTestContext ctx) throws InterruptedException {
+    public void testUploadFailsForCredentialsWithNonExistingTenant(final VertxTestContext ctx)
+            throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
         final Tenant tenant = new Tenant();
@@ -916,22 +912,22 @@ public abstract class HttpTestBase {
         tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(false));
 
         helper.registry
-            .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-            .compose(ok -> {
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> {
 
-                // WHEN a device that belongs to the tenant uploads a message
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.AUTHORIZATION, authorization);
+                    // WHEN a device that belongs to the tenant uploads a message
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, authorization);
 
-                return httpClient.create(
-                        getEndpointUri(),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_FORBIDDEN);
-            })
-            // THEN the message gets rejected by the HTTP adapter with a 403
-            .onComplete(ctx.succeedingThenComplete());
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_FORBIDDEN);
+                })
+                // THEN the message gets rejected by the HTTP adapter with a 403
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -948,22 +944,22 @@ public abstract class HttpTestBase {
         final Device device = new Device().setEnabled(Boolean.FALSE);
 
         helper.registry
-            .addDeviceForTenant(tenantId, tenant, deviceId, device, PWD)
-            .compose(ok -> {
+                .addDeviceForTenant(tenantId, tenant, deviceId, device, PWD)
+                .compose(ok -> {
 
-                // WHEN the device tries to upload a message
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.AUTHORIZATION, authorization);
+                    // WHEN the device tries to upload a message
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, authorization);
 
-                return httpClient.create(
-                        getEndpointUri(),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_NOT_FOUND);
-            })
-            // THEN the message gets rejected by the HTTP adapter with a 404
-            .onComplete(ctx.succeedingThenComplete());
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_NOT_FOUND);
+                })
+                // THEN the message gets rejected by the HTTP adapter with a 404
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -984,24 +980,24 @@ public abstract class HttpTestBase {
         final Device device = new Device().setVia(Collections.singletonList(gatewayId));
 
         helper.registry
-            .addDeviceForTenant(tenantId, tenant, gatewayId, gateway, PWD)
-            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
-            .compose(ok -> {
+                .addDeviceForTenant(tenantId, tenant, gatewayId, gateway, PWD)
+                .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
+                .compose(ok -> {
 
-                // WHEN the gateway tries to upload a message for the device
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
+                    // WHEN the gateway tries to upload a message for the device
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
 
-                return httpClient.update(
-                        String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_FORBIDDEN);
+                    return httpClient.update(
+                            String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_FORBIDDEN);
 
-            })
-            // THEN the message gets rejected by the HTTP adapter with a 403
-            .onComplete(ctx.succeedingThenComplete());
+                })
+                // THEN the message gets rejected by the HTTP adapter with a 403
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -1021,29 +1017,29 @@ public abstract class HttpTestBase {
         deviceData.setVia(Collections.singletonList("not-the-created-gateway"));
 
         helper.registry
-            .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
-            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-            .compose(ok -> {
+                .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
+                .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+                .compose(ok -> {
 
-                // WHEN another gateway tries to upload a message for the device
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
+                    // WHEN another gateway tries to upload a message for the device
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
 
-                return httpClient.update(
-                        String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
-                        Buffer.buffer("hello"),
-                        requestHeaders,
-                        HttpResponseExpectation.SC_FORBIDDEN)
-                    .map(requestHeaders);
-            })
-            .compose(requestHeaders -> httpClient.update(
+                    return httpClient.update(
+                            String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_FORBIDDEN)
+                            .map(requestHeaders);
+                })
+                .compose(requestHeaders -> httpClient.update(
                         String.format("%s//%s", getEndpointUri(), deviceId),
                         Buffer.buffer("hello"),
                         requestHeaders,
                         HttpResponseExpectation.SC_FORBIDDEN))
-            // THEN the message gets rejected by the HTTP adapter with a 403
-            .onComplete(ctx.succeedingThenComplete());
+                // THEN the message gets rejected by the HTTP adapter with a 403
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -1075,10 +1071,10 @@ public abstract class HttpTestBase {
                     final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, edgeDeviceId);
 
                     return httpClient.update(
-                                uri,
-                                Buffer.buffer("hello"),
-                                requestHeaders,
-                                HttpResponseExpectation.SC_ACCEPTED);
+                            uri,
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_ACCEPTED);
                 })
                 .compose(ok -> provisioningNotificationReceived.future())
                 .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
@@ -1113,42 +1109,42 @@ public abstract class HttpTestBase {
         // GIVEN a registered device
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .compose(ok -> createConsumer(tenantId, msg -> {
-            logger.trace("received message: {}", msg);
-            msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
-                logger.debug("processing piggy backed message [ttd: {}]", notification.getTtd());
-                ctx.verify(() -> {
-                    assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
-                });
-            });
-            switch (msg.getContentType()) {
-            case "text/msg1":
-                logger.debug("received first message");
-                firstMessageReceived.complete();
-                break;
-            case "text/msg2":
-                logger.debug("received second message");
-                secondMessageReceived.complete();
-                break;
-            default:
-                // nothing to do
-            }
-        })).compose(c -> {
-            // We need to send an initial request with QoS 1 to trigger establishment
-            // of the link required for processing requests in the HTTP adapter.
-            // Otherwise, the second of the two consecutive upload requests
-            // might fail immediately because the link has not been established yet.
-            return httpClient.create(
-                getEndpointUri(),
-                Buffer.buffer("trigger msg"),
-                MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.CONTENT_TYPE, "application/trigger")
-                    .add(HttpHeaders.AUTHORIZATION, authorization)
-                    .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                    .add(Constants.HEADER_QOS_LEVEL, "1"),
-                HttpResponseExpectation.status(200, 300));
-        }).onComplete(setup.succeedingThenComplete());
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received message: {}", msg);
+                    msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
+                        logger.debug("processing piggy backed message [ttd: {}]", notification.getTtd());
+                        ctx.verify(() -> {
+                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                            assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                        });
+                    });
+                    switch (msg.getContentType()) {
+                    case "text/msg1":
+                        logger.info("received first message");
+                        firstMessageReceived.complete();
+                        break;
+                    case "text/msg2":
+                        logger.info("received second message");
+                        secondMessageReceived.complete();
+                        break;
+                    default:
+                        // nothing to do
+                    }
+                })).compose(c -> {
+                    // We need to send an initial request with QoS 1 to trigger establishment
+                    // of the link required for processing requests in the HTTP adapter.
+                    // Otherwise, the second of the two consecutive upload requests
+                    // might fail immediately because the link has not been established yet.
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("trigger msg"),
+                            MultiMap.caseInsensitiveMultiMap()
+                                    .add(HttpHeaders.CONTENT_TYPE, "application/trigger")
+                                    .add(HttpHeaders.AUTHORIZATION, authorization)
+                                    .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                                    .add(Constants.HEADER_QOS_LEVEL, "1"),
+                            HttpResponseExpectation.status(200, 300));
+                }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1164,65 +1160,65 @@ public abstract class HttpTestBase {
                 .add(Constants.HEADER_TIME_TILL_DISCONNECT, "10");
 
         final Future<HttpResponse<Buffer>> firstResponse = httpClient.create(
-            getEndpointUri(),
-            Buffer.buffer("hello one"),
-            firstRequestHeaders,
-            HttpResponseExpectation.status(200, 300)
-        ).onSuccess(httpResponse -> {
-            logger.info("received response to first request");
-        });
+                getEndpointUri(),
+                        Buffer.buffer("hello one"),
+                firstRequestHeaders,
+                HttpResponseExpectation.status(200, 300)).onSuccess(httpResponse -> {
+                    logger.info("received response to first request");
+                });
         logger.info("sent first request");
 
         // followed by a second request
         final Future<HttpResponse<Buffer>> secondResponse = firstMessageReceived.future()
-            .compose(v -> {
+                .compose(v -> {
                     final var requestHeaders = MultiMap.caseInsensitiveMultiMap()
                             .add(HttpHeaders.CONTENT_TYPE, "text/msg2")
                             .add(HttpHeaders.AUTHORIZATION, authorization)
                             .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                             .add(Constants.HEADER_TIME_TILL_DISCONNECT, "5");
                     return httpClient.create(
-                        getEndpointUri(),
-                        Buffer.buffer("hello two"),
-                        requestHeaders,
-                        HttpResponseExpectation.status(200, 300));
-            }).onSuccess(httpResponse -> {
-                logger.info("received response to second request");
-            });
+                            getEndpointUri(),
+                            Buffer.buffer("hello two"),
+                            requestHeaders,
+                            HttpResponseExpectation.status(200, 300));
+                }).onSuccess(httpResponse -> {
+                    logger.info("received response to second request");
+                });
         logger.info("sent second request");
 
         // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
         secondMessageReceived.future()
-            .compose(ok -> helper.sendOneWayCommand(
-                tenantId,
-                deviceId,
-                COMMAND_TO_SEND,
-                "application/json",
-                inputData.toBuffer(),
-                3000)
-            ).onSuccess(sent -> {
-                logger.info("one-way command sent successfully");
-            })
-            .compose(sent -> {
-                return Future.all(firstResponse, secondResponse);
-            })
-            .onComplete(ctx.succeeding(ok -> {
-                // THEN both requests succeed
-                ctx.verify(() -> {
-                    // and the response to the second request contains a command
-                    assertThat(secondResponse.result().getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
+                .compose(ok -> helper.sendOneWayCommand(
+                                tenantId,
+                        deviceId,
+                        COMMAND_TO_SEND,
+                        "application/json",
+                        inputData.toBuffer(),
+                        3000))
+                .onSuccess(sent -> {
+                    logger.info("one-way command sent successfully");
+                })
+                .compose(sent -> {
+                    return Future.all(firstResponse, secondResponse);
+                })
+                .onComplete(ctx.succeeding(ok -> {
+                    // THEN both requests succeed
+                    ctx.verify(() -> {
+                        // and the response to the second request contains a command
+                        assertThat(secondResponse.result().getHeader(Constants.HEADER_COMMAND))
+                                .isEqualTo(COMMAND_TO_SEND);
 
-                    // while the response to the first request is empty
-                    assertThat(firstResponse.result().getHeader(Constants.HEADER_COMMAND)).isNull();
-                });
-                ctx.completeNow();
-            }));
+                        // while the response to the first request is empty
+                        assertThat(firstResponse.result().getHeader(Constants.HEADER_COMMAND)).isNull();
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
-     * Verifies that the HTTP adapter returns empty responses when sending a request
-     * for uploading telemetry data or an event with a TTD but no command is pending for the device.
+     * Verifies that the HTTP adapter returns empty responses when sending a request for uploading telemetry data or an
+     * event with a TTD but no command is pending for the device.
      *
      * @param ctx The test context.
      */
@@ -1234,48 +1230,48 @@ public abstract class HttpTestBase {
         final var emptyResponseReceived = ctx.checkpoint();
         final int ttdSeconds = 4;
 
-        helper.registry.addDeviceForTenant(tenantId, 
+        helper.registry.addDeviceForTenant(tenantId,
                 new Tenant(), deviceId, PWD)
-            .compose(ok -> createConsumer(tenantId, msg -> {
-                logger.trace("received message");
-                msg.getTimeUntilDisconnectNotification()
-                    .ifPresent(notification -> {
-                        ctx.verify(() -> {
-                            assertThat(notification.getTtd()).isEqualTo(ttdSeconds);
-                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                            assertThat(notification.getDeviceId()).isEqualTo(deviceId);
-                        });
-                        // do NOT send a command, but let the HTTP adapter's timer expire
-                        downstreamMessageReceived.flag();
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received message");
+                    msg.getTimeUntilDisconnectNotification()
+                            .ifPresent(notification -> {
+                                ctx.verify(() -> {
+                                    assertThat(notification.getTtd()).isEqualTo(ttdSeconds);
+                                    assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                                });
+                                // do NOT send a command, but let the HTTP adapter's timer expire
+                                downstreamMessageReceived.flag();
+                            });
+                }))
+                .compose(ok -> {
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.AUTHORIZATION, authorization)
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                            .add(Constants.HEADER_TIME_TILL_DISCONNECT, String.valueOf(ttdSeconds));
+                    return httpClient.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            HttpResponseExpectation.SC_ACCEPTED);
+                })
+                .onComplete(ctx.succeeding(responseHeaders -> {
+                    logger.info("received response to upload request");
+                    ctx.verify(() -> {
+                        // assert that the response does not contain a command nor a request ID nor a payload
+                        assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND)).isNull();
+                        assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
+                        assertThat(responseHeaders.getHeader(HttpHeaders.CONTENT_LENGTH.toString())).isEqualTo("0");
                     });
-            }))
-            .compose(ok -> {
-                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                        .add(HttpHeaders.AUTHORIZATION, authorization)
-                        .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                        .add(Constants.HEADER_TIME_TILL_DISCONNECT, String.valueOf(ttdSeconds));
-                return httpClient.create(
-                    getEndpointUri(),
-                    Buffer.buffer("hello"),
-                    requestHeaders,
-                    HttpResponseExpectation.SC_ACCEPTED);
-            })
-            .onComplete(ctx.succeeding(responseHeaders -> {
-                logger.info("received response to upload request");
-                ctx.verify(() -> {
-                    // assert that the response does not contain a command nor a request ID nor a payload
-                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND)).isNull();
-                    assertThat(responseHeaders.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
-                    assertThat(responseHeaders.getHeader(HttpHeaders.CONTENT_LENGTH.toString())).isEqualTo("0");
-                });
-                emptyResponseReceived.flag();
-            }));
+                    emptyResponseReceived.flag();
+                }));
     }
 
     /**
-     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
-     * response from the device.
+     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding response from the
+     * device.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context.
@@ -1310,8 +1306,8 @@ public abstract class HttpTestBase {
                 .add(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200");
 
         helper.registry
-        .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .onComplete(setup.succeedingThenComplete());
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1332,15 +1328,16 @@ public abstract class HttpTestBase {
                             .map(notification -> {
                                 if (logger.isTraceEnabled()) {
                                     logger.trace(
-                                        "received piggy backed message [ttd: {}]: {}",
-                                        notification.getTtd(), msg);
+                                            "received piggy backed message [ttd: {}]: {}",
+                                            notification.getTtd(), msg);
                                 }
                                 ctx.verify(() -> {
                                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
                                     assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
                                 });
                                 // now ready to send a command
-                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY,
+                                        (int) (Math.random() * 100));
                                 return helper.sendCommand(
                                         tenantId,
                                         commandTargetDeviceId,
@@ -1361,62 +1358,70 @@ public abstract class HttpTestBase {
                 },
                 count -> {
                     final Buffer buffer = Buffer.buffer("hello " + count);
-                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of the requests
-                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId, useQueryParams, true)
-                            .map(httpResponse -> {
+                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of
+                                                                   // the requests
+                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig,
+                            commandTargetDeviceId, useQueryParams, true)
+                                    .map(httpResponse -> {
 
-                                final String requestId = httpResponse.getHeader(Constants.HEADER_COMMAND_REQUEST_ID);
+                                        final String requestId = httpResponse
+                                                .getHeader(Constants.HEADER_COMMAND_REQUEST_ID);
 
-                                ctx.verify(() -> {
-                                    // assert that the response contains a command
-                                    assertWithMessage("response no. %s '%s' header", count, Constants.HEADER_COMMAND)
-                                            .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
-                                            .isNotNull();
-                                    assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
-                                    assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
-                                    assertThat(requestId).isNotNull();
-                                    assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_LENGTH.toString())).isNotEqualTo("0");
-                                });
-                                return requestId;
+                                        ctx.verify(() -> {
+                                            // assert that the response contains a command
+                                            assertWithMessage("response no. %s '%s' header", count,
+                                                    Constants.HEADER_COMMAND)
+                                                            .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                                            .isNotNull();
+                                            assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                                    .isEqualTo(COMMAND_TO_SEND);
+                                            assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString()))
+                                                    .isEqualTo("application/json");
+                                            assertThat(requestId).isNotNull();
+                                            assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_LENGTH.toString()))
+                                                    .isNotEqualTo("0");
+                                        });
+                                        return requestId;
 
-                            }).compose(receivedCommandRequestId -> {
+                                    }).compose(receivedCommandRequestId -> {
 
-                                // send a response to the command now
-                                final String tenantIdToUseInResponseUri;
-                                if (count % 2 == 0 && endpointConfig.isSubscribeAsGateway()) {
-                                    tenantIdToUseInResponseUri = "";
-                                } else {
-                                    tenantIdToUseInResponseUri = tenantId;
-                                }
-                                final String responseUri = endpointConfig.getCommandResponseUri(
-                                        tenantIdToUseInResponseUri,
-                                        commandTargetDeviceId,
-                                        receivedCommandRequestId);
-                                logger.debug("sending response to command [uri: {}]", responseUri);
+                                        // send a response to the command now
+                                        final String tenantIdToUseInResponseUri;
+                                        if (count % 2 == 0 && endpointConfig.isSubscribeAsGateway()) {
+                                            tenantIdToUseInResponseUri = "";
+                                        } else {
+                                            tenantIdToUseInResponseUri = tenantId;
+                                        }
+                                        final String responseUri = endpointConfig.getCommandResponseUri(
+                                                tenantIdToUseInResponseUri,
+                                                commandTargetDeviceId,
+                                                receivedCommandRequestId);
+                                        logger.debug("sending response to command [uri: {}]", responseUri);
 
-                                final Buffer body = Buffer.buffer("ok");
-                                final Future<HttpResponse<Buffer>> result;
-                                if (endpointConfig.isSubscribeAsGateway()) {
-                                    // GW uses PUT when acting on behalf of a device
-                                    result = httpClient.update(responseUri, body, cmdResponseRequestHeaders,
-                                        HttpResponseExpectation.SC_ACCEPTED);
-                                } else {
-                                    result = httpClient.create(responseUri, body, cmdResponseRequestHeaders,
-                                        HttpResponseExpectation.SC_ACCEPTED);
-                                }
-                                return result.recover(thr -> {
-                                    // wrap exception, making clear it occurred when sending the command response,
-                                    // not the preceding telemetry/event message
-                                    final String msg = "Error sending command response: " + thr.getMessage();
-                                    return Future.failedFuture(new RuntimeException(msg, thr));
-                                });
-                            });
+                                        final Buffer body = Buffer.buffer("ok");
+                                        final Future<HttpResponse<Buffer>> result;
+                                        if (endpointConfig.isSubscribeAsGateway()) {
+                                            // GW uses PUT when acting on behalf of a device
+                                            result = httpClient.update(responseUri, body, cmdResponseRequestHeaders,
+                                                    HttpResponseExpectation.SC_ACCEPTED);
+                                        } else {
+                                            result = httpClient.create(responseUri, body, cmdResponseRequestHeaders,
+                                                    HttpResponseExpectation.SC_ACCEPTED);
+                                        }
+                                        return result.recover(thr -> {
+                                            // wrap exception, making clear it occurred when sending the command
+                                            // response,
+                                            // not the preceding telemetry/event message
+                                            final String msg = "Error sending command response: " + thr.getMessage();
+                                            return Future.failedFuture(new RuntimeException(msg, thr));
+                                        });
+                                    });
                 });
     }
 
     /**
-     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
-     * response from the device.
+     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding response from the
+     * device.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context.
@@ -1438,8 +1443,8 @@ public abstract class HttpTestBase {
                 .add(Constants.HEADER_TIME_TILL_DISCONNECT, "4");
 
         helper.registry
-        .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .onComplete(setup.succeedingThenComplete());
+                .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1464,7 +1469,8 @@ public abstract class HttpTestBase {
                                     assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
                                 });
                                 // now ready to send a command
-                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY,
+                                        (int) (Math.random() * 100));
                                 return helper.sendOneWayCommand(
                                         tenantId,
                                         commandTargetDeviceId,
@@ -1477,20 +1483,26 @@ public abstract class HttpTestBase {
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
-                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of the requests
-                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId, useQueryParams, true)
-                        .map(httpResponse -> {
-                            ctx.verify(() -> {
-                                // assert that the response contains a one-way command
-                                assertWithMessage("response no. %s '%s' header", count, Constants.HEADER_COMMAND)
-                                        .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
-                                        .isNotNull();
-                                assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
-                                assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
-                                assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
-                            });
-                            return httpResponse;
-                        });
+                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of
+                                                                   // the requests
+                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig,
+                            commandTargetDeviceId, useQueryParams, true)
+                                    .map(httpResponse -> {
+                                        ctx.verify(() -> {
+                                            // assert that the response contains a one-way command
+                                            assertWithMessage("response no. %s '%s' header", count,
+                                                    Constants.HEADER_COMMAND)
+                                                            .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                                            .isNotNull();
+                                            assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                                    .isEqualTo(COMMAND_TO_SEND);
+                                            assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString()))
+                                                    .isEqualTo("application/json");
+                                            assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND_REQUEST_ID))
+                                                    .isNull();
+                                        });
+                                        return httpResponse;
+                                    });
                 });
     }
 
@@ -1501,9 +1513,9 @@ public abstract class HttpTestBase {
             final String requestDeviceId,
             final boolean useQueryParams) {
 
-        final QueryStringEncoder uriEncoder = endpointConfig.isSubscribeAsGatewayForSingleDevice() ?
-                new QueryStringEncoder(getEndpointUri() + "/" + tenantId + "/" + requestDeviceId) :
-                new QueryStringEncoder(getEndpointUri());
+        final QueryStringEncoder uriEncoder = endpointConfig.isSubscribeAsGatewayForSingleDevice()
+                ? new QueryStringEncoder(getEndpointUri() + "/" + tenantId + "/" + requestDeviceId)
+                : new QueryStringEncoder(getEndpointUri());
 
         final MultiMap requestHeadersToUse;
         if (useQueryParams && (requestHeaders.contains(Constants.HEADER_TIME_TILL_DISCONNECT)
@@ -1517,10 +1529,10 @@ public abstract class HttpTestBase {
         if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
             // GW uses PUT when acting on behalf of a device
             return httpClient.update(uriEncoder.toString(), payload, requestHeadersToUse,
-                HttpResponseExpectation.SC_OK);
+                    HttpResponseExpectation.SC_OK);
         } else {
             return httpClient.create(uriEncoder.toString(), payload, requestHeadersToUse,
-                HttpResponseExpectation.SC_OK);
+                    HttpResponseExpectation.SC_OK);
         }
     }
 
@@ -1541,24 +1553,26 @@ public abstract class HttpTestBase {
             final boolean useQueryParams,
             final boolean retry) {
 
-        return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId, useQueryParams)
-                .recover(t -> {
-                    if (retry) {
-                        // we probably sent the request before the
-                        // HTTP adapter was able to close the command
-                        // consumer for the previous request
-                        // wait a little and try again
-                        final Promise<HttpResponse<Buffer>> retryResult = Promise.promise();
-                        vertx.setTimer(300, timerId -> {
-                            logger.info("re-trying request, failure was: {}", t.getMessage());
-                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId, useQueryParams)
-                                .onComplete(retryResult);
+        return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId,
+                useQueryParams)
+                        .recover(t -> {
+                            if (retry) {
+                                // we probably sent the request before the
+                                // HTTP adapter was able to close the command
+                                // consumer for the previous request
+                                // wait a little and try again
+                                final Promise<HttpResponse<Buffer>> retryResult = Promise.promise();
+                                vertx.setTimer(300, timerId -> {
+                                    logger.info("re-trying request, failure was: {}", t.getMessage());
+                                    sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig,
+                                            requestDeviceId, useQueryParams)
+                                                    .onComplete(retryResult);
+                                });
+                                return retryResult.future();
+                            } else {
+                                return Future.failedFuture(t);
+                            }
                         });
-                        return retryResult.future();
-                    } else {
-                        return Future.failedFuture(t);
-                    }
-                });
     }
 
     private <T> Future<HttpResponse<T>> verifyAccessControlExposedHeaders(final HttpResponse<T> response) {
@@ -1613,7 +1627,8 @@ public abstract class HttpTestBase {
      * @param password The device's password.
      * @return The header value.
      */
-    protected static String getBasicAuthWithEncodedCredentials(final String tenant, final String deviceId, final String password) {
+    protected static String getBasicAuthWithEncodedCredentials(final String tenant, final String deviceId,
+            final String password) {
 
         final StringBuilder result = new StringBuilder("Basic ");
         final String username = IntegrationTestSupport.getUsername(deviceId, tenant) + ":" + password;
