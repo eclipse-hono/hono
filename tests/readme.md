@@ -120,13 +120,13 @@ mvn verify -Prun-tests,jaeger -Ddocker.keepRunning -Dit.test=TelemetryHttpIT#tes
 ```
 
 Note that in order to be able to view the traces after a test run, the `docker.keepRunning` property has
-to be used as well, as shown above.  
+to be used as well, as shown above.
 
 The Jaeger UI, showing the traces of the test run, can be accessed at `http://localhost:18080`
 
 if the Docker engine is running on `localhost`, otherwise the appropriate Docker host has to be used in the
 above URL. To choose a different port for the Jaeger UI, set the `jaeger.query.port` Maven property to the
-desired port when running the tests. 
+desired port when running the tests.
 
 Start subsequent test runs using the running containers with the `useRunningContainers` Maven profile, e.g.:
 
