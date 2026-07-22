@@ -33,7 +33,7 @@ import io.vertx.ext.mongo.MongoClient;
 public final class MongoDbTestUtils {
 
     private static final MongoDBContainer MONGO_DB_CONTAINER;
-    private static final String MONGO_DB_IMAGE_NAME = System.getProperty("mongoDbImageName", "mongo:6.0");
+    private static final String MONGO_DB_IMAGE_NAME = System.getProperty("mongoDbImageName", "mongo:7.0");
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbTestUtils.class);
 
     static {
