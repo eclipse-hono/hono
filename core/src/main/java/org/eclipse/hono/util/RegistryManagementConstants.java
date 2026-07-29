@@ -283,6 +283,15 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that indicates whether a protocol adapter should include the client IP address
+     * in downstream messages.
+     */
+    public static final String FIELD_ADAPTERS_CLIENT_IP_ENABLED = "client-ip-enabled";
+    /**
+     * The name of the property that defines the source for client IP addresses.
+     */
+    public static final String FIELD_ADAPTERS_CLIENT_IP_SOURCE = "client-ip-source";
+    /**
      * The name of the property that contains a tenant's optional alternative identifier.
      */
     public static final String FIELD_ALIAS = "alias";

@@ -982,6 +982,16 @@ components:
             "device-authentication-required":
                type: boolean
                default: true
+            "client-ip-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether the adapter should include the client device's IP address in downstream messages as determined by the strategy set in `client-ip-source`.
+            "client-ip-source":
+               type: string
+               default: remote-address
+               description: |
+                  Determines how the adapter resolves client IP addresses. Supported values depend on the adapter type: HTTP supports `http-headers`, `proxy-protocol`, `remote-address`; AMQP and MQTT support `proxy-protocol`, `remote-address`; CoAP supports `remote-address`. For `proxy-protocol`, the adapter requires incoming connections to carry Proxy Protocol headers from an upstream proxy/load balancer, otherwise direct connections are rejected. Unsupported values are rejected.
             "ext":
                $ref: '#/components/schemas/Extensions'
 

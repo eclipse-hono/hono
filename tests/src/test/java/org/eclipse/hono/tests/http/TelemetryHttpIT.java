@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.eclipse.hono.adapter.ClientIpSource;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
@@ -27,18 +28,24 @@ import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.tests.proxy.ProxyProtocolV2Forwarder;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -52,6 +59,7 @@ import io.vertx.core.http.HttpResponseExpectation;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
@@ -118,6 +126,185 @@ public class TelemetryHttpIT extends HttpTestBase {
                     HttpResponseExpectation.SC_ACCEPTED),
                 MESSAGES_TO_SEND,
                 QoS.AT_LEAST_ONCE);
+    }
+
+    /**
+     * Verifies that the adapter includes the client IP when configured and the request contains forwarded headers.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIpFromForwardedHeader(final VertxTestContext ctx) {
+
+        final String expectedClientIp = "198.51.100.10";
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.HTTP_HEADERS);
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add("X-Forwarded-For", expectedClientIp);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter uses the remote address when configured accordingly.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadIncludesClientIpFromRemoteAddress(final VertxTestContext ctx) {
+
+        final String forwardedClientIp = "198.51.100.10";
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.REMOTE_ADDRESS);
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI)
+                .add("X-Forwarded-For", forwardedClientIp);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertMessageContainsValidClientIp(msg);
+                        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_CLIENT_IP, String.class))
+                                .isNotEqualTo(forwardedClientIp);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that the adapter does not include client IP when not enabled.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadDoesNotIncludeClientIpByDefault(final VertxTestContext ctx) {
+
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> createConsumer(tenantId, msg -> {
+                    logger.trace("received {}", msg);
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertMessageDoesNotContainClientIp(msg);
+                    });
+                    ctx.completeNow();
+                }))
+                .compose(consumer -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onFailure(ctx::failNow);
+    }
+
+    /**
+     * Verifies that direct HTTP uploads fail when Proxy Protocol mode is enabled.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Tag("proxy-protocol")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testDirectUploadFailsWhenProxyProtocolEnabled(final VertxTestContext ctx) {
+
+        final Tenant tenant = new Tenant();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                .compose(ok -> httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        HttpResponseExpectation.SC_ACCEPTED))
+                .onComplete(attempt -> {
+                    ctx.verify(() -> assertThat(attempt.failed()).isTrue());
+                    ctx.completeNow();
+                });
+    }
+
+    /**
+     * Verifies that uploads forwarded using Proxy Protocol v2 include the expected client IP address.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    @Tag("proxy-protocol")
+    @Timeout(value = 15, timeUnit = TimeUnit.SECONDS)
+    @EnabledIfSystemProperty(named = "proxy.protocol.tests.enabled", matches = "true")
+    public void testUploadIncludesClientIpFromProxyProtocol(final VertxTestContext ctx) {
+
+        final String expectedClientIp = "203.0.113.10";
+        final Vertx proxyVertx = Vertx.vertx();
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setClientIpEnabled(Boolean.TRUE)
+                .setClientIpSource(ClientIpSource.PROXY_PROTOCOL);
+        final Tenant tenant = new Tenant().addAdapterConfig(adapterConfig);
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, authorization)
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        ProxyProtocolV2Forwarder.start(proxyVertx, IntegrationTestSupport.HTTP_HOST, IntegrationTestSupport.HTTPS_PORT,
+                expectedClientIp)
+                .compose(forwarder -> helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+                        .compose(ok -> createConsumer(tenantId, msg -> {
+                            logger.trace("received {}", msg);
+                            ctx.verify(() -> DownstreamMessageAssertions.assertMessageContainsClientIp(msg, expectedClientIp));
+                            ctx.completeNow();
+                        }))
+                        .compose(consumer -> {
+                            final RequestOptions options = new RequestOptions()
+                                    .setHost("127.0.0.1")
+                                    .setPort(forwarder.localPort())
+                                    .setURI(getEndpointUri())
+                                    .setHeaders(requestHeaders);
+                            return httpClient.create(options, Buffer.buffer("hello"), HttpResponseExpectation.SC_ACCEPTED);
+                        })
+                        .eventually(() -> forwarder.close().compose(v2 -> proxyVertx.close())))
+                .onFailure(ctx::failNow);
     }
 
     /**

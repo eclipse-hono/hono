@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -43,6 +44,8 @@ import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.AdapterConnectionsExceededException;
 import org.eclipse.hono.adapter.AdapterDisabledException;
 import org.eclipse.hono.adapter.AuthorizationException;
+import org.eclipse.hono.adapter.ClientIpSource;
+import org.eclipse.hono.adapter.ClientIpSourceSupport;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.usernamepassword.UsernamePasswordAuthProvider;
@@ -127,6 +130,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     private static final int MEMORY_PER_CONNECTION = 20_000;
 
+    /**
+     * Supported ClientIpSource.
+     */
+    private static final Set<ClientIpSource> SUPPORTED_CLIENT_IP_SOURCES = Set.of(
+            ClientIpSource.PROXY_PROTOCOL,
+            ClientIpSource.REMOTE_ADDRESS);
+
     private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
 
     /**
@@ -172,6 +182,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     @Override
     protected void doStart(final Promise<Void> startPromise) {
+
+        try {
+            ClientIpSourceSupport.ensureSupported(getTypeName(), getConfig().getClientIpSource(),
+                    SUPPORTED_CLIENT_IP_SOURCES);
+        } catch (final IllegalArgumentException e) {
+            startPromise.fail(e);
+            return;
+        }
 
         registerDeviceAndTenantChangeNotificationConsumers();
 
@@ -331,6 +349,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         .setMaxFrameSize(getConfig().getMaxFrameSize())
                         // set heart beat to half the idle timeout
                         .setHeartbeat(getConfig().getIdleTimeout() >> 1);
+            if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+                options.setUseProxyProtocol(true);
+            }
 
             final Promise<Void> result = Promise.promise();
             insecureServer = createServer(insecureServer, options);
@@ -357,6 +378,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         .setMaxFrameSize(getConfig().getMaxFrameSize())
                         // set heart beat to half the idle timeout
                         .setHeartbeat(getConfig().getIdleTimeout() >> 1);
+            if (getConfig().getClientIpSource() == ClientIpSource.PROXY_PROTOCOL) {
+                options.setUseProxyProtocol(true);
+            }
 
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
@@ -737,6 +761,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             "settled", delivery.remotelySettled()));
 
                     final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, msgSpan, authenticatedDevice);
+                    final String clientIpAddress = Optional
+                            .ofNullable(conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_IP, String.class))
+                            .orElse(conn.getRemoteHostname());
+                    Optional.ofNullable(clientIpAddress)
+                            .ifPresent(ip -> ctx.put(AmqpAdapterConstants.KEY_CLIENT_IP, ip));
                     ctx.setTimer(metrics.startTimer());
 
                     final Future<Void> spanPreparationFuture = authenticatedDevice == null
@@ -1290,6 +1319,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return Future.all(tenantValidationTracker, tokenFuture)
                 .compose(ok -> {
                     final Map<String, Object> props = getDownstreamMessageProperties(context);
+                    if (isClientIpEnabled(tenantValidationTracker.result())) {
+                        final ClientIpSource clientIpSource = getClientIpSource(tenantValidationTracker.result());
+                        if (clientIpSource != ClientIpSource.HTTP_HEADERS) {
+                            Optional.ofNullable(context.get(AmqpAdapterConstants.KEY_CLIENT_IP))
+                                    .ifPresent(ip -> props.put(MessageHelper.APP_PROPERTY_CLIENT_IP, ip));
+                        }
+                    }
 
                     if (context.getEndpoint() == EndpointType.TELEMETRY) {
                         return getTelemetrySender(tenantValidationTracker.result()).sendTelemetry(
