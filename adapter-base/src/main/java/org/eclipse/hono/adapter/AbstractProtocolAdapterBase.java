@@ -42,6 +42,7 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.service.AbstractServiceBase;
+import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;

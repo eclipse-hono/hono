@@ -236,46 +236,83 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
         final var gatewayDevice = ctx.getAuthenticatedDevice();
         TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
-        try {
-            final LoraMessage loraMessage = provider.getMessage(ctx.getRoutingContext());
-            final LoraMessageType type = loraMessage.getType();
-            currentSpan.log(Map.of("message type", type));
-            final String deviceId = loraMessage.getDevEUIAsString();
-            currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
 
-            switch (type) {
-            case UPLINK:
-                final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
-                final Buffer payload = uplinkMessage.getPayload();
+        final MetricsTags.EndpointType endpoint = MetricsTags.EndpointType.fromString(ctx.getRequestedResource().getEndpoint());
+        final MetricsTags.QoS qos = getQoSLevel(endpoint, ctx.getRequestedQos());
 
-                Optional.ofNullable(uplinkMessage.getMetaData())
-                        .ifPresent(metaData -> ctx.put(LoraConstants.APP_PROPERTY_META_DATA, metaData));
+        getTenantConfiguration(gatewayDevice.getTenantId(), currentSpan.context())
+            .map(tenantObject -> {
+                final LoraMessage loraMessage;
+                try {
+                    loraMessage = provider.getMessage(ctx.getRoutingContext());
 
-                Optional.ofNullable(uplinkMessage.getAdditionalData())
-                        .ifPresent(additionalData -> ctx.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, additionalData));
+                } catch (final LoraProviderMalformedPayloadException e) {
+                    LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
+                    TracingHelper.logError(currentSpan, "error processing request", e);
+                    currentSpan.finish();
+                    handle400(ctx.getRoutingContext(), ERROR_MSG_INVALID_PAYLOAD);
+                    metrics.reportTelemetry(
+                        endpoint,
+                        gatewayDevice.getTenantId(),
+                        tenantObject,
+                        MetricsTags.ProcessingOutcome.UNPROCESSABLE,
+                        qos,
+                        ctx.getRoutingContext().body().buffer().length(),
+                        ctx.getTtdStatus(),
+                        getMicrometerSample(ctx.getRoutingContext()),
+                        MetricsTags.ProcessingOutcomeReason.BAD_SYNTAX);
+                    return tenantObject;
+                }
+                final LoraMessageType type = loraMessage.getType();
+                currentSpan.log(Map.of("message type", type));
+                final String deviceId = loraMessage.getDevEUIAsString();
+                currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
 
-                final String contentType = payload.length() > 0
-                        ? LoraConstants.CONTENT_TYPE_LORA_BASE + provider.getProviderName()
-                        : EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+                switch (type) {
+                    case UPLINK:
+                        final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
+                        final Buffer payload = uplinkMessage.getPayload();
 
-                currentSpan.finish(); // uploadTelemetryMessage will finish the root span, therefore finish child span here already
-                uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
-                registerCommandConsumerIfNeeded(provider, gatewayDevice, currentSpan.context());
-                break;
-            default:
-                LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
-                        gatewayDevice.getTenantId(), deviceId, type);
-                currentSpan.log("discarding message of unsupported type");
+                        Optional.ofNullable(uplinkMessage.getMetaData())
+                            .ifPresent(metaData -> ctx.put(LoraConstants.APP_PROPERTY_META_DATA, metaData));
+
+                        Optional.ofNullable(uplinkMessage.getAdditionalData())
+                            .ifPresent(additionalData -> ctx.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, additionalData));
+
+                        final String contentType = payload.length() > 0
+                            ? LoraConstants.CONTENT_TYPE_LORA_BASE + provider.getProviderName()
+                            : EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+
+                        currentSpan.finish(); // uploadTelemetryMessage will finish the root span, therefore finish child span here already
+                        uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
+                        registerCommandConsumerIfNeeded(provider, gatewayDevice, currentSpan.context());
+                        break;
+                    default:
+
+                        LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
+                            gatewayDevice.getTenantId(), deviceId, type);
+                        currentSpan.log("discarding message of unsupported type");
+                        currentSpan.finish();
+                        // discard the message but return 202 to not cause errors on the LoRa provider side
+                        handle202(ctx.getRoutingContext());
+
+                        final MetricsTags.ProcessingOutcomeReason reason = type == LoraMessageType.UNKNOWN ? MetricsTags.ProcessingOutcomeReason.UNKNOWN_TYPE : MetricsTags.ProcessingOutcomeReason.UNSUPPORTED_TYPE;
+                        metrics.reportTelemetry(
+                            endpoint,
+                            gatewayDevice.getTenantId(),
+                            tenantObject,
+                            MetricsTags.ProcessingOutcome.UNPROCESSABLE,
+                            qos,
+                            ctx.getRoutingContext().body().buffer().length(),
+                            ctx.getTtdStatus(),
+                            getMicrometerSample(ctx.getRoutingContext()),
+                            reason);
+                }
+                return tenantObject;
+            }).onFailure(e -> {
                 currentSpan.finish();
-                // discard the message but return 202 to not cause errors on the LoRa provider side
-                handle202(ctx.getRoutingContext());
-            }
-        } catch (final LoraProviderMalformedPayloadException e) {
-            LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
-            TracingHelper.logError(currentSpan, "error processing request", e);
-            currentSpan.finish();
-            handle400(ctx.getRoutingContext(), ERROR_MSG_INVALID_PAYLOAD);
-        }
+                LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
+            });
     }
 
     private void registerCommandConsumerIfNeeded(final LoraProvider provider, final Device gatewayDevice,

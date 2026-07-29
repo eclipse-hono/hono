@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter;
+package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 

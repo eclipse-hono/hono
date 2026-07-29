@@ -1,0 +1,16 @@
+{
+  "end_device_ids": {
+    "device_id": "dev1",
+    "application_ids": {
+      "application_id": "app1"
+    },
+    "dev_eui": "01020304050607AB",
+    "join_eui": "800000000000000C",
+    "dev_addr": "00BCB929"
+  },
+  "correlation_ids": [
+    "as:up:01..."
+  ],
+  "received_at": "2020-02-12T15:15...",
+  "simulated": true
+}

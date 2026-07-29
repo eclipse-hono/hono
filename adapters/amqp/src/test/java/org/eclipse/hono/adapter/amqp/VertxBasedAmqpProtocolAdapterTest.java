@@ -388,7 +388,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.TENANT_DISABLED_FOR_ADAPTER));
                 });
                 ctx.completeNow();
             }));
@@ -1000,7 +1001,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                 });
     }
 
@@ -1027,7 +1029,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                 });
     }
 

@@ -65,7 +65,11 @@ public class ProximusProvider extends JsonBasedLoraProvider {
      */
     @Override
     protected LoraMessageType getMessageType(final JsonObject loraMessage) {
-        return LoraMessageType.UPLINK;
+
+        if (loraMessage.containsKey(FIELD_PROXIMUS_PAYLOAD)) {
+            return LoraMessageType.UPLINK;
+        }
+        return LoraMessageType.UNKNOWN;
     }
 
     @Override
