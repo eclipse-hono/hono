@@ -1,0 +1,41 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: RAM_backend
+
+extensions:
+  jaeger_storage:
+    backends:
+      RAM_backend:
+        memory:
+          max_traces: 2000
+  jaeger_query:
+    storage:
+      traces: RAM_backend
+    http:
+      endpoint: "0.0.0.0:16686"
+  remote_sampling:
+    file:
+      path: /etc/hono/default-sampling-strategies.json
+    grpc:
+      endpoint: "0.0.0.0:5779"
+  healthcheckv2:
+    use_v2: true
+    http:
+      endpoint: "0.0.0.0:13133"
+
+service:
+  telemetry:
+    logs:
+      level: "info"
+  extensions: [jaeger_storage, jaeger_query, remote_sampling, healthcheckv2]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: []
+      exporters: [jaeger_storage_exporter]
