@@ -70,7 +70,8 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
                 cacheManager.start();
                 LOG.info("started cache manager");
                 LOG.debug("trying to get cache");
-                setCache(cacheManager.getCache(cacheName));
+                final org.infinispan.commons.api.BasicCache<K, V> cache = cacheManager.getCache(cacheName);
+                setCache(cache);
                 if (isStarted()) {
                     LOG.info("successfully connected to cache");
                     return (Void) null;
