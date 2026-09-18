@@ -1,0 +1,73 @@
+name: Generate Maven SBOM
+
+on:
+  push:
+    tags:
+      - "**" # triggers on any tag push
+
+  workflow_dispatch:
+    # Provide custom 'Version' input, to allow running the workflow for older
+    # git refs, where the workflow file did not exist yet. This is not possible
+    # with the builtin "Use workflow from" input field.
+    inputs:
+      version:
+        description: "Version"
+        default: "master"
+        required: true
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRO: 'temurin'
+  PLUGIN_VERSION: '2.9.1'
+  SBOM_TYPE: 'makeAggregateBom'
+  PROJECT_VERSION: "${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-sbom:
+    runs-on: ubuntu-latest
+    outputs:
+      # Make env var available in re-usuable workflow (see actions/runner#2372)
+      project-version: ${{ env.PROJECT_VERSION }}
+    steps:
+      - name: Checkout repository at '${{ env.PROJECT_VERSION }}'
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          ref: ${{ env.PROJECT_VERSION }}
+          persist-credentials: false
+
+      - name: Setup Java SDK
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRO }}
+
+      - name: Generate
+        run: |
+          # Generate SBOMs in expected location
+          # 'skipNotDeployed' is needed to generate SBOM outside of deployment phase.
+
+          mvn org.cyclonedx:cyclonedx-maven-plugin:${PLUGIN_VERSION}:${SBOM_TYPE} \
+              -Dcyclonedx.skipNotDeployed=false \
+              -DoutputName=Eclipse-Hono-Sbom \
+              -DoutputDirectory=target/sbom
+
+      - name: Upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom
+          path: target/sbom/Eclipse-Hono-Sbom.json
+
+  # Store SBOM and metadata in a predefined format for otterdog to pick up
+  store-sbom-data:
+    needs: ['generate-sbom']
+    uses: eclipse-csi/workflows/.github/workflows/store-sbom-data.yml@main
+    with:
+      projectName: 'hono'
+      projectVersion: ${{ needs.generate-sbom.outputs.project-version }}
+      bomArtifact: 'sbom'
+      bomFilename: 'Eclipse-Hono-Sbom.json'
+      parentProject: 'abe9ce77-f603-45ae-bd3c-c83f2d3c080d'
