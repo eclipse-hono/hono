@@ -111,7 +111,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
                         return Future.succeededFuture(Optional.empty());
                     case 1:
                         final var entry = entries.get(0);
-                        final var deviceJson = entry.getString("data") != null ? entry.getString("data") : "{}";
+                        final var deviceJson = Optional.ofNullable(entry.getString("data")).orElse("{}");
                         final var device = Json.decodeValue(deviceJson, Device.class);
                         final var version = Optional.ofNullable(entry.getString("version"));
                         return Future.succeededFuture(Optional.of(new DeviceReadResult(device, version)));

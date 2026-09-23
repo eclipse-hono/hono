@@ -55,6 +55,9 @@ import io.vertx.sqlclient.Tuple;
  */
 class TableAdapterStoreTest {
 
+    private static final String TENANT_ID = "test-tenant";
+    private static final String DEVICE_ID = "device-1";
+
     private final Span span = mock(Span.class);
     private final SpanContext spanContext = mock(SpanContext.class);
     private final io.vertx.sqlclient.SqlConnection sqlConnection = mock(io.vertx.sqlclient.SqlConnection.class);
@@ -66,8 +69,6 @@ class TableAdapterStoreTest {
 
     private String deviceJson;
     private TableAdapterStore store;
-    private final String TENANT_ID = "test-tenant";
-    private final String DEVICE_ID = "device-1";
 
     /**
      * Creates a test device with default values.
