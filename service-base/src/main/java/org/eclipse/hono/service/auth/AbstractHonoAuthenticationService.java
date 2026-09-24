@@ -117,7 +117,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
 
             final String authzid = new String(authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE), StandardCharsets.UTF_8);
             final String subject = authRequest.getString(AuthenticationConstants.FIELD_SUBJECT_DN);
-            log.debug("processing EXTERNAL authentication request [Subject DN: {}]", subject);
+            log.debug("processing EXTERNAL authentication request [Subject DN: {}, Authz ID: {}]", subject, authzid);
             return verifyExternal(authzid, subject);
 
         } else {
