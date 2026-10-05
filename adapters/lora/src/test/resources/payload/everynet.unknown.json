@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "network": "9e9bf02a",
+    "packet_hash": "adc6bcac0d06195bc0329c3ef6a2d6ea",
+    "application": "b3a1067cf7085309",
+    "time": 1504638900.866375,
+    "device": "8c30dd074be218cb",
+    "packet_id": "287f9555a3e8b000ffc8c3c50f60e309",
+    "gateway": "017e8cd996cd3a0e"
+  },
+  "params": {
+    "dev_eui": "8c30dd074be218cb",
+    "dev_addr": "01d6dcd6",
+    "dev_nonce": "f9e7",
+    "net_id": "000000"
+  },
+  "type": "join_request"
+}

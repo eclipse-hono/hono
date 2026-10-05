@@ -78,7 +78,10 @@ public class KerlinkProvider extends JsonBasedLoraProvider {
      */
     @Override
     public LoraMessageType getMessageType(final JsonObject loraMessage) {
-        return LoraMessageType.UPLINK;
+        if (loraMessage.containsKey(FIELD_KERLINK_PAYLOAD)) {
+            return LoraMessageType.UPLINK;
+        }
+        return LoraMessageType.UNKNOWN;
     }
 
     @Override

@@ -101,6 +101,19 @@ public class NoopBasedMetrics implements Metrics {
 
     @Override
     public void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final Sample timer,
+            final MetricsTags.ProcessingOutcomeReason reason) {
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, timer);
+    }
+
+    @Override
+    public void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
             final TenantObject tenantObject,
@@ -109,6 +122,20 @@ public class NoopBasedMetrics implements Metrics {
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, timer);
+    }
+
+    @Override
+    public void reportTelemetry(
+            final EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer,
+            final MetricsTags.ProcessingOutcomeReason reason) {
         reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, timer);
     }
 

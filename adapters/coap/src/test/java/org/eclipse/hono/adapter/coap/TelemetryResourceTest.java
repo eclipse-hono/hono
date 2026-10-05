@@ -39,6 +39,7 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.service.AdapterDisabledException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -92,7 +93,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final var resource = givenAResource(adapter);
         // which is disabled for tenant "my-tenant"
         when(adapter.isAdapterEnabled(any(TenantObject.class)))
-            .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN)));
+            .thenReturn(Future.failedFuture(new AdapterDisabledException("my-tenant")));
 
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         final Buffer payload = Buffer.buffer("some payload");
@@ -118,7 +119,8 @@ public class TelemetryResourceTest extends ResourceTestBase {
                             eq(MetricsTags.QoS.AT_MOST_ONCE),
                             eq(payload.length()),
                             eq(TtdStatus.NONE),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.TENANT_DISABLED_FOR_ADAPTER));
                 });
                 ctx.completeNow();
             }));
@@ -371,7 +373,8 @@ public class TelemetryResourceTest extends ResourceTestBase {
                             eq(MetricsTags.QoS.AT_MOST_ONCE),
                             eq(payload.length()),
                             eq(TtdStatus.NONE),
-                            any());
+                            any(),
+                            eq(MetricsTags.ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED));
                 });
                 ctx.completeNow();
             }));
@@ -560,7 +563,8 @@ public class TelemetryResourceTest extends ResourceTestBase {
                         eq(MetricsTags.QoS.AT_LEAST_ONCE),
                         eq(payload.length()),
                         eq(TtdStatus.COMMAND),
-                        any());
+                        any(),
+                        eq(MetricsTags.ProcessingOutcomeReason.UNKNOWN));
                 // and the command delivery is released
                 verify(commandContext).release(any(Throwable.class));
             });
