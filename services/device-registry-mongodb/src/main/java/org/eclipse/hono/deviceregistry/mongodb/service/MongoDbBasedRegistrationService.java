@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,12 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 
@@ -32,19 +35,37 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbBasedRegistrationService extends AbstractRegistrationService {
 
+    private final MongoDbBasedRegistrationConfigProperties config;
     private final DeviceDao dao;
 
     /**
      * Creates a new service for a data access object.
      *
      * @param deviceDao The data access object to use for accessing data in the MongoDB.
+     * @param configProperties The configuration properties for the MongoDB-based registration service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public MongoDbBasedRegistrationService(final DeviceDao deviceDao) {
+    public MongoDbBasedRegistrationService(final DeviceDao deviceDao,
+            final MongoDbBasedRegistrationConfigProperties configProperties) {
 
         Objects.requireNonNull(deviceDao);
+        Objects.requireNonNull(configProperties);
 
+        this.config = configProperties;
         this.dao = deviceDao;
+    }
+
+    /**
+     * Gets the cache directive to include in responses to the assert Registration operation.
+     *
+     * @param deviceId The identifier of the device that is the subject of the assertion.
+     * @param tenantId The tenant that the device belongs to.
+     * @return The cache directive based on the {@link MongoDbBasedRegistrationConfigProperties#getCacheMaxAge()
+     *         configured cache max age}.
+     */
+    @Override
+    protected CacheDirective getRegistrationAssertionCacheDirective(final String deviceId, final String tenantId) {
+        return DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge());
     }
 
     /**

@@ -110,15 +110,11 @@ public interface CredentialsServiceTestBase {
 
     /**
      * Gets the cache directive that is supposed to be used for a given type of credentials.
-     * <p>
-     * This default implementation always returns {@code CacheDirective#noCacheDirective()}.
      *
      * @param credentialsType The type of credentials.
      * @return The expected cache directive.
      */
-    default CacheDirective getExpectedCacheDirective(final String credentialsType) {
-        return CacheDirective.noCacheDirective();
-    }
+    CacheDirective getExpectedCacheDirective(String credentialsType);
 
     /**
      * Gets the information of this device registry implementation supports resource versions.
@@ -506,8 +502,8 @@ public interface CredentialsServiceTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
-                                assertThat(response.getCacheDirective()).isNotNull();
-                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
+                                assertThat(response.getCacheDirective()).isEqualTo(
+                                        getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_X509_CERT));
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -526,8 +522,8 @@ public interface CredentialsServiceTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
-                                assertThat(response.getCacheDirective()).isNotNull();
-                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
+                                assertThat(response.getCacheDirective()).isEqualTo(
+                                        getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_X509_CERT));
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -543,8 +539,8 @@ public interface CredentialsServiceTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
-                                assertThat(response.getCacheDirective()).isNotNull();
-                                assertThat(response.getCacheDirective().isCachingAllowed()).isTrue();
+                                assertThat(response.getCacheDirective()).isEqualTo(
+                                        getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -563,8 +559,8 @@ public interface CredentialsServiceTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
-                                assertThat(response.getCacheDirective()).isNotNull();
-                                assertThat(response.getCacheDirective().isCachingAllowed()).isFalse();
+                                assertThat(response.getCacheDirective()).isEqualTo(
+                                        getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY));
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
@@ -583,8 +579,8 @@ public interface CredentialsServiceTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.isOk()).isTrue();
                                 // THEN the response contains a cache directive
-                                assertThat(response.getCacheDirective()).isNotNull();
-                                assertThat(response.getCacheDirective().isCachingAllowed()).isFalse();
+                                assertThat(response.getCacheDirective()).isEqualTo(
+                                        getExpectedCacheDirective(CredentialsConstants.SECRETS_TYPE_RAW_PUBLIC_KEY));
                                 // and the expected properties
                                 assertGetCredentialsResponseProperties(
                                         response.getPayload(),
