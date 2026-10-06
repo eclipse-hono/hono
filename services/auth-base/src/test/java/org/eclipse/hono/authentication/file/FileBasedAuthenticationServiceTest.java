@@ -21,11 +21,13 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileNotFoundException;
+import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.AuthTokenFactory;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -187,8 +189,11 @@ public class FileBasedAuthenticationServiceTest {
 
         givenAStartedService()
             .compose(ok -> authService.verifyPlain("userB", "hono-client@HONO", "secret"))
-            .onComplete(ctx.succeeding(res -> {
-                assertUserAndToken(ctx, res, "hono-client@HONO", TOKEN);
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                });
                 ctx.completeNow();
             }));
     }
@@ -287,8 +292,11 @@ public class FileBasedAuthenticationServiceTest {
 
         givenAStartedService()
             .compose(ok -> authService.verifyExternal("userB", "CN=userA"))
-            .onComplete(ctx.succeeding(res -> {
-                assertUserAndToken(ctx, res, "userA", TOKEN);
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                });
                 ctx.completeNow();
             }));
     }
