@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceOptions;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantService;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.TenantResult;
 
 import io.opentracing.Span;
@@ -77,10 +77,8 @@ public class TenantServiceImpl extends AbstractTenantService {
                 .map(tenant -> TenantResult.from(
                         HttpURLConnection.HTTP_OK,
                         tenant,
-                        CacheDirective.maxAgeDirective(this.properties.tenantTtl()))
-                )
+                        DeviceRegistryUtils.getCacheDirective(this.properties.tenantTtl()
+                                .toSeconds())))
                 .orElseGet(() -> TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-
     }
-
 }

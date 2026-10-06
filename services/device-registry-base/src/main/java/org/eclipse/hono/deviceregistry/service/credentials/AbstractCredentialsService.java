@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -117,9 +117,8 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
      * Gets a cache directive for a type of credentials.
      *
      * @param type The type of credentials.
-     * @param maxAge The number of seconds that the credentials may be cached.
-     * @return A max-age directive if the type is either hashed-password or X.509,
-     *         a no-cache directive otherwise.
+     * @param maxAge The maximum number of seconds that credentials may be cached.
+     * @return A max-age directive if the type is either hashed-password or X.509, a no-cache directive otherwise.
      * @throws NullPointerException if type is {@code null}.
      */
     protected final CacheDirective getCacheDirective(final String type, final long maxAge) {

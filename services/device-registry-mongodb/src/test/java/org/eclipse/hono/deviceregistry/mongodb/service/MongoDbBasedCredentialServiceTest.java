@@ -35,6 +35,7 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.Assertions;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.CredentialsServiceTestBase;
@@ -45,6 +46,7 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -101,6 +103,8 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
     public void createServices(final VertxTestContext ctx) {
 
         vertx = Vertx.vertx();
+        // set cache max age to non-default value for the credentials service configuration
+        credentialsServiceConfig.setCacheMaxAge(MongoDbBasedCredentialsConfigProperties.DEFAULT_MAX_AGE_SECONDS + 123);
 
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
         credentialsService = new MongoDbBasedCredentialsService(credentialsDao, credentialsServiceConfig);
@@ -195,6 +199,17 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
     @Override
     public DeviceManagementService getDeviceManagementService() {
         return this.deviceManagementService;
+    }
+
+    @Override
+    public CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        switch (credentialsType) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+            return DeviceRegistryUtils.getCacheDirective(credentialsServiceConfig.getCacheMaxAge());
+        default:
+            return CacheDirective.noCacheDirective();
+        }
     }
 
     /**

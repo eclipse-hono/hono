@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.credentials.CredentialsServiceTestBase;
@@ -28,13 +29,36 @@ import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+/**
+ * Tests for {@link JdbcBasedCredentialsService}.
+ */
+@ExtendWith(VertxExtension.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 class JdbcBasedCredentialsServiceTest extends AbstractJdbcRegistryTest implements CredentialsServiceTestBase {
+
+    @Override
+    public CacheDirective getExpectedCacheDirective(final String credentialsType) {
+        switch (credentialsType) {
+        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+            return CacheDirective.maxAgeDirective(properties.credentialsTtl().toSeconds());
+        default:
+            return CacheDirective.noCacheDirective();
+        }
+    }
 
     /**
      * Verifies that a request to update credentials of a device fails with a 403 status code

@@ -99,6 +99,7 @@ abstract class AbstractJdbcRegistryTest {
     protected RegistrationService registrationAdapter;
     protected DeviceManagementServiceImpl registrationManagement;
 
+    protected TenantServiceOptions tenantServiceOptions;
     protected TenantService tenantAdapter;
     protected TenantManagementService tenantManagement;
     protected DeviceServiceOptions properties;
@@ -127,8 +128,9 @@ abstract class AbstractJdbcRegistryTest {
         when(properties.hashAlgorithmsAllowList()).thenReturn(Optional.of(Set.of()));
         when(properties.maxBcryptCostFactor()).thenReturn(10);
         when(properties.maxDevicesPerTenant()).thenReturn(-1);
-        when(properties.credentialsTtl()).thenReturn(Duration.ofMinutes(1));
-        when(properties.registrationTtl()).thenReturn(Duration.ofMinutes(1));
+        // set the TTL for credentials and registration to a non-default value for testing purposes
+        when(properties.credentialsTtl()).thenReturn(Duration.ofSeconds(123));
+        when(properties.registrationTtl()).thenReturn(Duration.ofSeconds(321));
 
         final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
@@ -137,8 +139,10 @@ abstract class AbstractJdbcRegistryTest {
                 properties
         );
         this.registrationAdapter = new RegistrationServiceImpl(
-                DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
-                new NoOpSchemaCreator()
+                DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(),
+                        Optional.empty()),
+                new NoOpSchemaCreator(),
+                properties
         );
 
         this.credentialsManagement = new CredentialsManagementServiceImpl(
@@ -248,12 +252,13 @@ abstract class AbstractJdbcRegistryTest {
         // pre-create database
         RunScript.execute(connection, script);
 
-        final TenantServiceOptions options = mock(TenantServiceOptions.class);
-        when(options.tenantTtl()).thenReturn(Duration.ofMinutes(1));
+        tenantServiceOptions = mock(TenantServiceOptions.class);
+        // set tenant TTL to non-default value for testing purposes
+        when(tenantServiceOptions.tenantTtl()).thenReturn(Duration.ofSeconds(123));
 
         this.tenantAdapter = new TenantServiceImpl(
                 Stores.adapterStore(vertx, TRACER, jdbc),
-                options
+                tenantServiceOptions
         );
 
         this.tenantManagement = new TenantManagementServiceImpl(

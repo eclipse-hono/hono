@@ -85,6 +85,13 @@ public interface AbstractRegistrationServiceTest {
     DeviceManagementService getDeviceManagementService();
 
     /**
+     * Gets the configured max cache age for Registration Assertions.
+     *
+     * @return The max age in seconds.
+     */
+    long getConfiguredRegistrationAssertionCacheMaxAge();
+
+    /**
      * Create a random device ID.
      *
      * @return A new device ID, never returns {@code null}.
@@ -115,7 +122,8 @@ public interface AbstractRegistrationServiceTest {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
-                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
+                        assertThat(registrationResult.getCacheDirective().getMaxAge())
+                                .isEqualTo(getConfiguredRegistrationAssertionCacheMaxAge());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
                             .containsExactlyElementsIn(authorizedGateways);
                 });
@@ -149,7 +157,8 @@ public interface AbstractRegistrationServiceTest {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
-                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
+                        assertThat(registrationResult.getCacheDirective().getMaxAge())
+                                .isEqualTo(getConfiguredRegistrationAssertionCacheMaxAge());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
                             .containsExactlyElementsIn(authorizedGateways);
                 });
@@ -192,7 +201,8 @@ public interface AbstractRegistrationServiceTest {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
-                    assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
+                        assertThat(registrationResult.getCacheDirective().getMaxAge())
+                                .isEqualTo(getConfiguredRegistrationAssertionCacheMaxAge());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
                         .containsExactly(gatewayIdA, gatewayIdB, gatewayIdC);
                 });

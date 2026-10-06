@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import org.eclipse.hono.deviceregistry.app.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
@@ -47,6 +48,9 @@ public class AmqpServerFactory extends AbstractAmqpServerFactory {
     DeviceDao deviceDao;
 
     @Inject
+    MongoDbBasedRegistrationConfigProperties registrationServiceConfiguration;
+
+    @Inject
     CredentialsDao credentialsDao;
 
     @Inject
@@ -59,7 +63,7 @@ public class AmqpServerFactory extends AbstractAmqpServerFactory {
 
     @Override
     protected AbstractRegistrationService createRegistrationService() {
-        return new MongoDbBasedRegistrationService(deviceDao);
+        return new MongoDbBasedRegistrationService(deviceDao, registrationServiceConfiguration);
     }
 
     @Override
