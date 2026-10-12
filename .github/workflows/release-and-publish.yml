@@ -84,9 +84,12 @@ on:
         required: false
         default: true
 
+permissions:
+  contents: read
+
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       packages: write
@@ -99,13 +102,13 @@ jobs:
         git config --global user.name 'eclipse-hono-bot'
         git config --global user.email 'hono-bot@eclipse.org'
 
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ github.event.inputs.ref }}
         submodules: recursive
 
     - name: Set up Java with Maven Central settings
-      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
       with: # configure settings.xml
         distribution: 'temurin'
         java-version: '21'
@@ -133,17 +136,17 @@ jobs:
 
     - name: Set up QEMU
       if: ${{ github.event.inputs.publish_artifacts }}
-      uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       with:
         platforms: arm64,amd64
 
     - name: Set up Docker Buildx
       id: setup-buildx
       if: ${{ github.event.inputs.publish_artifacts }}
-      uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
     - name: Login to Docker Hub
-      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         username: ${{ secrets.DOCKER_HUB_USER }}
         password: ${{ secrets.DOCKER_HUB_TOKEN }}
