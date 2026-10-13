@@ -7,8 +7,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* Hono has been updated to the 3.27.5.2 Long Term Support (LTS) version of Quarkus whcih includes bug fixes and updates
-  to other libraries that Hono depends on like vert.x, infinispan, Mongo DB client, Kafka Client etc.
+* Hono has been updated to the 3.27.6 Long Term Support (LTS) version of Quarkus which includes bug fixes and updates
+  to other libraries that Hono depends on.
 
 ## 2.7.0
 
