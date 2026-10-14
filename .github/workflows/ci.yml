@@ -67,11 +67,11 @@ jobs:
           messaging-type: kafka
           kafka-image-name: 'docker.io/apache/kafka:4.2.1'
           mongodb-image-name: 'mongo:7.0' # this is only needed for running the unit tests here
-        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 4.1 messaging, Command Router with data grid
+        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 4.1 messaging, Command Router with Redis cache
         - device-registry-name: mongodb-6.0
           device-registry: mongodb
           mongodb-image-name: 'mongo:6.0'
-          commandrouting-cache: server
+          commandrouting-cache: redis
           messaging-type: kafka
           kafka-image-name: 'docker.io/apache/kafka:4.1.2'
         # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.3 messaging, Command Router with data grid

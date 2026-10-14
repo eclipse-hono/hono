@@ -176,11 +176,17 @@ determine the overall number of responses that can be cached.
 
 ## Data Grid Connection Configuration
 
-The Command Router component requires either an embedded cache or a remote
-data grid, using the Infinispan Hotrod protocol to store device information.
+The Command Router component uses a cache to store device connection information. Two implementations are
+provided, each built into its own Docker image. A deployment uses exactly one of them:
+
+* the *Infinispan* based variant (`hono-service-command-router-infinispan`) which uses either an embedded cache or a
+  remote data grid, accessed via the Infinispan Hotrod protocol, and
+* the *Redis* based variant (`hono-service-command-router-redis`) which uses a remote Redis server.
+
+### Infinispan cache
 
 The following table provides an overview of the configuration variables and corresponding command line options for
-configuring the common aspects of the service:
+configuring the common aspects of the Infinispan based variant:
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
@@ -192,7 +198,7 @@ The type of cache (embedded or remote) is determined during startup by means of 
 configuration variable. If the variable has a non empty value, a [remote cache]({{< relref "#remote-cache" >}}) is configured.
 Otherwise, an [embedded cache]({{< relref "#embedded-cache" >}}) is configured.
 
-### Remote cache
+#### Remote cache
 
 The following table provides an overview of the configuration variables and corresponding system properties for configuring the connection to the data grid:
 
@@ -231,13 +237,67 @@ The following table provides an overview of the configuration variables and corr
 
 See also the [Infinispan Hotrod client documentation](https://docs.jboss.org/infinispan/13.0/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description).
 
-### Embedded cache
+#### Embedded cache
 
 The following table provides an overview of the configuration variables and corresponding system properties for configuring the embedded cache:
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/13.0/configdocs/infinispan-config-13.0.html). |
+
+### Redis cache
+
+{{% notice warning %}}
+The Redis based variant is a recent addition that has not yet undergone extensive real-world validation. It is
+considered experimental and its configuration and behavior may change in future releases. Using it in production
+environments is not recommended at this stage.
+{{% /notice %}}
+
+The Redis based variant (`hono-service-command-router-redis`) stores device connection information in a remote Redis
+server. It uses the [Quarkus Redis client](https://quarkus.io/guides/redis-reference) to connect to the server, so you
+configure the connection with that client's standard `quarkus.redis` properties.
+
+The following table provides an overview of the most commonly used configuration variables and corresponding system
+properties for configuring the connection to the Redis server:
+
+| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `QUARKUS_REDIS_HOSTS`<br>`quarkus.redis.hosts` | yes | - | The connection URI of the Redis server, in the form `redis://[username:password@]host:port`. For a TLS secured connection use the `rediss://` scheme. |
+| `QUARKUS_REDIS_PASSWORD`<br>`quarkus.redis.password` | no | - | The password to use for authenticating to the server. May alternatively be provided as part of the connection URI. |
+| `QUARKUS_REDIS_CLIENT_TYPE`<br>`quarkus.redis.client-type` | no | `standalone` | The type of Redis deployment to connect to. Must be set to `cluster` when connecting to a Redis Cluster. With the default value, the client does not follow the cluster's redirects, so operations on keys that are stored on another node of the cluster fail. |
+| `QUARKUS_REDIS_MAX_POOL_SIZE`<br>`quarkus.redis.max-pool-size` | no | `32` | The maximum number of connections held in the connection pool. The pool closes connections that stay unused for longer than `quarkus.redis.pool-recycle-timeout`, so a higher maximum adds Redis connections only during bursts. This component raises the value from the Quarkus default of `6` to `32`. |
+| `QUARKUS_REDIS_MAX_POOL_WAITING`<br>`quarkus.redis.max-pool-waiting` | no | `512` | The maximum number of connection acquisitions that may be queued while the pool is exhausted. The vert.x Redis client acquires a pooled connection per command, so a burst of commands to route can easily exceed `max-pool-size` concurrent commands. Acquisitions beyond this limit are rejected, failing command delivery, so a deep wait queue is used to absorb such bursts. This component raises the value from the Quarkus default of `24` to `512`. |
+
+See the [Quarkus Redis client reference](https://quarkus.io/guides/redis-reference) for the full set of supported
+properties.
+
+{{% notice info %}}
+The Redis based variant implements its atomic cache operations as server-side Lua scripts and therefore requires the
+`EVAL` command (Redis 2.6 or later) to be permitted for the configured user. When using Redis ACLs, the `@scripting`
+command category must not be denied. The component verifies this at startup and fails to start with a descriptive
+error if scripting is not permitted.
+
+The component also runs the `INFO` command to find out whether the server is part of a Redis Cluster. `INFO` belongs
+to the `@dangerous` command category, so an ACL that denies `@dangerous` must allow `INFO` explicitly, e.g.
+`+@all -@dangerous +info`. If `INFO` is not permitted, the component treats the server as a Redis Cluster and repeats
+the check before each operation on multiple keys, which adds a round trip to the Redis server.
+{{% /notice %}}
+
+#### Connection pool sizing
+
+The Redis client sends each Redis command over a connection from its pool. If all `quarkus.redis.max-pool-size`
+connections are busy, further Redis commands wait in a queue that holds up to `quarkus.redis.max-pool-waiting`
+entries. The client rejects the Redis commands that do not fit into the queue, and delivery of the affected device
+commands fails. The trace of such a failed delivery shows an `io.vertx.core.http.ConnectionPoolTooBusyException` with
+the message `Connection pool reached max wait queue size of <n>`. The `redis_pool_rejected_total` metric counts the
+rejected Redis commands. The `redis_pool_ratio` metric shows the share of the pool's connections in use, and the
+`redis_pool_queue_size` metric shows the number of waiting Redis commands. If `redis_pool_rejected_total` increases,
+change the pool settings as follows:
+
+* Raise `quarkus.redis.max-pool-waiting` first. Queueing usually adds only a few milliseconds to a Redis command.
+* Raise `quarkus.redis.max-pool-size` if the queueing latency matters for command delivery.
+* Keep the number of Command Router instances multiplied by `quarkus.redis.max-pool-size` below the connection limit
+  of the Redis server (`maxclients`, which is `10000` by default) or of the managed Redis service.
 
 ## Authentication Service Connection Configuration
 
