@@ -15,7 +15,8 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.bson.Document;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
@@ -46,7 +48,6 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,17 +55,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.ReadPreference;
+
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
-import io.vertx.ext.mongo.MongoClient;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -73,36 +75,35 @@ import io.vertx.junit5.VertxTestContext;
  * Tests for {@link MongoDbBasedCredentialsService}.
  */
 @ExtendWith(VertxExtension.class)
+@ExtendWith(MockitoExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTestBase {
 
-    private static final String DB_NAME = "hono-credentials-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
 
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
     private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
     private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
+    @Mock
+    private TenantInformationService tenantInformationService;
+
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsService credentialsService;
     private MongoDbBasedCredentialsManagementService credentialsManagementService;
     private MongoDbBasedDeviceManagementService deviceManagementService;
-    private TenantInformationService tenantInformationService;
-    private Vertx vertx;
 
     /**
      * Creates the services under test.
      *
      * @param ctx The test context to use for running asynchronous tests.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      */
     @BeforeAll
-    public void createServices(final VertxTestContext ctx) {
-
-        vertx = Vertx.vertx();
-
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
+    public void createServices(final VertxTestContext ctx, final Vertx vertx) {
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx);
         credentialsService = new MongoDbBasedCredentialsService(credentialsDao, credentialsServiceConfig);
         credentialsManagementService = new MongoDbBasedCredentialsManagementService(
                 vertx,
@@ -110,7 +111,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                 credentialsServiceConfig,
                 new SpringBasedHonoPasswordEncoder());
 
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx);
         deviceManagementService = new MongoDbBasedDeviceManagementService(
                 vertx,
                 deviceDao,
@@ -131,10 +132,10 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
     public void setup(final TestInfo testInfo) {
         LOG.info("running {}", testInfo.getDisplayName());
 
-        tenantInformationService = mock(TenantInformationService.class);
-        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
-        when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
-            return Future.succeededFuture(OperationResult.ok(
+        lenient().when(tenantInformationService.getTenant(anyString(), any()))
+                        .thenReturn(Future.succeededFuture(new Tenant()));
+        lenient().when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
+                return Future.succeededFuture(OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
                     TenantKey.from(invocation.getArgument(0)),
                     Optional.empty(),
@@ -153,32 +154,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        final Checkpoint clean = testContext.checkpoint(2);
-        credentialsDao.deleteAllFromCollection()
-            .onComplete(testContext.succeeding(ok -> clean.flag()));
-        deviceDao.deleteAllFromCollection()
-            .onComplete(testContext.succeeding(ok -> clean.flag()));
-    }
-
-    /**
-     * Shut down services.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
-     */
-    @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-
-        final Promise<Void> credentialsCloseHandler = Promise.promise();
-        credentialsDao.close(credentialsCloseHandler);
-        final Promise<Void> deviceCloseHandler = Promise.promise();
-        deviceDao.close(deviceCloseHandler);
-
-        Future.all(credentialsCloseHandler.future(), deviceCloseHandler.future())
-            .compose(ok -> {
-                final Promise<Void> vertxCloseHandler = Promise.promise();
-                vertx.close(vertxCloseHandler);
-                return vertxCloseHandler.future();
-            })
+        Future.all(credentialsDao.deleteAllFromCollection(), deviceDao.deleteAllFromCollection())
             .onComplete(testContext.succeedingThenComplete());
     }
 
@@ -208,7 +184,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
         final var tenantId = UUID.randomUUID().toString();
         final var deviceId = UUID.randomUUID().toString();
 
-        when(tenantInformationService.getTenant(anyString(), any()))
+        when(tenantInformationService.getTenant(eq(tenantId), any()))
             .thenReturn(Future.succeededFuture(new Tenant().setRegistrationLimits(
                     new RegistrationLimits().setMaxCredentialsPerDevice(1))));
 
@@ -237,8 +213,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
     public void testCredentialsDaoUsesIndex(final VertxTestContext ctx) {
 
         final var tenantId = UUID.randomUUID().toString();
-
-        final MongoClient mongoClient = MongoDbTestUtils.getMongoClient(vertx, DB_NAME);
+        final var mongoClient = MongoDbTestUtils.getMongoClient();
 
         final var dto1 = CredentialsDto.forCreation(
                 tenantId,
@@ -273,41 +248,45 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
             .compose(ok -> credentialsDao.create(dto2, NoopSpan.INSTANCE.context()))
             .compose(ok -> credentialsDao.create(dto3, NoopSpan.INSTANCE.context()))
             .compose(ok -> credentialsDao.create(dto4, NoopSpan.INSTANCE.context()))
-            .compose(ok -> {
-                final Promise<JsonObject> resultHandler = Promise.promise();
+                        .compose(ok -> {
                 final var filter = MongoDbDocumentBuilder.builder()
                         .withTenantId(tenantId)
                         .withAuthId("device1a")
                         .withType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
                         .document();
-                final var commandRight = new JsonObject()
-                        .put("find", "credentials")
-                        .put("batchSize", 1)
-                        .put("singleBatch", true)
-                        .put("filter", filter)
-                        .put("projection", MongoDbBasedCredentialsDao.PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID);
-                final var explain = new JsonObject()
-                        .put("explain", commandRight)
-                        .put("verbosity", "executionStats");
-                mongoClient.runCommand("explain", explain, resultHandler);
-                return resultHandler.future();
+                                final var commandRight = new Document()
+                                                .append("find", "credentials")
+                                                .append("batchSize", 1)
+                                                .append("singleBatch", true)
+                                                .append("filter", filter)
+                                                .append("projection",
+                                                                MongoDbBasedCredentialsDao.PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID);
+                                final var explain = new Document()
+                                                .append("explain", commandRight)
+                                                .append("verbosity", "executionStats");
+                                final var explainUni = mongoClient.getDatabase(MongoDbTestUtils.MONGO_DB_NAME)
+                                                .runCommand(explain,
+                                                                ReadPreference.nearest());
+                                return Future.fromCompletionStage(explainUni.subscribeAsCompletionStage());
             })
             .onComplete(ctx.succeeding(result -> {
+                                final var resultJson = new JsonObject(result);
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace("result:{}{}", System.lineSeparator(), result.encodePrettily());
+                                        LOG.trace("result:{}{}", System.lineSeparator(), resultJson.encodePrettily());
                 }
                 ctx.verify(() -> {
-                    final var indexScan = (JsonObject) JsonPointer.from("/queryPlanner/winningPlan/inputStage/inputStage")
-                            .queryJson(result);
+                                        final var indexScan = (JsonObject) JsonPointer
+                                                        .from("/queryPlanner/winningPlan/inputStage/inputStage")
+                                                        .queryJson(resultJson);
                     assertThat(indexScan.getString("indexName"))
                         .isEqualTo(MongoDbBasedCredentialsDao.IDX_CREDENTIALS_TYPE_AND_AUTH_ID);
-                    final var executionStats = result.getJsonObject("executionStats", new JsonObject());
+                                        final var executionStats = resultJson.getJsonObject("executionStats",
+                                                        new JsonObject());
                     // there are two credentials with auth-id "device1a" and type "hashed-password"
                     assertThat(executionStats.getInteger("totalKeysExamined")).isEqualTo(2);
                     assertThat(executionStats.getInteger("totalDocsExamined")).isEqualTo(2);
                 });
                 ctx.completeNow();
             }));
-
     }
 }

@@ -43,7 +43,7 @@
     <kafka-clients.version>3.9.2</kafka-clients.version>
     <kafka-image.name>docker.io/apache/kafka:4.3.1</kafka-image.name>
     <logback.version>1.5.34</logback.version>
-    <mongodb-image.name>docker.io/library/mongo:7.0</mongodb-image.name>
+    <mongodb-image.name>docker.io/library/mongo:7.0.43</mongodb-image.name>
     <native.image.name>quay.io/quarkus/ubi9-quarkus-micro-image:2.0</native.image.name>
     <native.builder-image.name>mandrel</native.builder-image.name>
     <opentracing.version>0.33.0</opentracing.version>
@@ -416,11 +416,6 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-service-device-registry-base</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-service-device-registry-mongodb-base</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+
 /**
  * Configuration properties for Hono's tenant service and management APIs.
  */
+@Singleton
 public final class MongoDbBasedTenantsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 
     /**
@@ -35,6 +39,7 @@ public final class MongoDbBasedTenantsConfigProperties extends AbstractMongoDbBa
      * @param options The options.
      * @throws NullPointerException if options are {@code null}.
      */
+    @Inject
     public MongoDbBasedTenantsConfigProperties(final MongoDbBasedTenantsConfigOptions options) {
         super(options.commonOptions());
         this.setCollectionName(options.collectionName());
@@ -44,5 +49,4 @@ public final class MongoDbBasedTenantsConfigProperties extends AbstractMongoDbBa
     protected String getDefaultCollectionName() {
         return DEFAULT_TENANTS_COLLECTION_NAME;
     }
-
 }

@@ -21,7 +21,6 @@ import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementSearchDevicesTest;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -47,28 +45,34 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public final class MongoDBBasedDeviceManagementSearchDevicesTest implements AbstractDeviceManagementSearchDevicesTest {
 
-    private static final String DB_NAME = "hono-search-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
+
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
     private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
+
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceManagementService service;
-    private Vertx vertx;
 
     /**
      * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) {
+    public void setup(final VertxTestContext testContext, final Vertx vertx) {
 
-        vertx = Vertx.vertx();
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
-        service = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config, serviceConfig);
-        Future.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx);
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx);
+        service = new MongoDbBasedDeviceManagementService(
+                vertx,
+                deviceDao,
+                credentialsDao,
+                config,
+                serviceConfig);
+        Future.all(deviceDao.createIndices(), credentialsDao.createIndices())
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -88,31 +92,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        Future.all(
-                deviceDao.deleteAllFromCollection(),
-                credentialsDao.deleteAllFromCollection())
-            .onComplete(testContext.succeedingThenComplete());
-    }
-
-    /**
-     * Releases the connection to the Mongo DB.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
-     */
-    @AfterAll
-    public void closeDao(final VertxTestContext testContext) {
-
-        final Promise<Void> devicesCloseHandler = Promise.promise();
-        deviceDao.close(devicesCloseHandler);
-        final Promise<Void> credentialsCloseHandler = Promise.promise();
-        credentialsDao.close(credentialsCloseHandler);
-
-        Future.all(credentialsCloseHandler.future(), devicesCloseHandler.future())
-            .compose(ok -> {
-                final Promise<Void> vertxCloseHandler = Promise.promise();
-                vertx.close(vertxCloseHandler);
-                return vertxCloseHandler.future();
-            })
+        Future.all(deviceDao.deleteAllFromCollection(), credentialsDao.deleteAllFromCollection())
             .onComplete(testContext.succeedingThenComplete());
     }
 

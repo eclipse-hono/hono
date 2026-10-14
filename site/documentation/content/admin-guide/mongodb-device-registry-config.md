@@ -18,18 +18,13 @@ either directly from the command line or by means of starting the corresponding
 
 The registry is compatible and known to work with the following MongoDB versions:
 
-* [MongoDB 6.0](https://www.mongodb.com/docs/v6.0/release-notes/6.0/)
 * [MongoDB 7.0](https://www.mongodb.com/docs/v7.0/release-notes/7.0/)
+* [MongoDB 8.3](https://www.mongodb.com/docs/v8.3/release-notes/8.3/)
+* [MongoDB 9.0](https://www.mongodb.com/docs/v9.0/release-notes/9.0/)
 
 {{% notice info %}}
-Support for Mongo DB 5.0 has been removed from Hono after it had reached its [end of life](https://www.mongodb.com/support-policy/lifecycles) in Oct 2024. 
-{{% /notice %}}
-
-{{% notice warning %}}
-According to the [Mongo DB Software Lifecycle Schedule](https://www.mongodb.com/support-policy/lifecycles) support
-for Mongo DB 6.0 has ended Jul 2025. Consequently, support for Mongo 6.0 in Hono has been deprecated and will be removed
-in a future version altogether. Users are encouraged to migrate to Mongo DB 7.0. Note that Hono currently does not support Mongo DB 8.0 because of the
-specific driver version being required by the `vertx-mongo-client` library.
+Support for Mongo DB 6.0 has been removed from Hono after it had reached its [end of life](https://www.mongodb.com/support-policy/lifecycles) in Jul 2025.
+Users are encouraged to migrate to one of the supported versions of Mongo DB listed above.
 {{% /notice %}}
 
 ## Service Configuration
@@ -41,21 +36,10 @@ configuring the MongoDB based Device Registry.
 | :---------------------------------------------- | :-------: | :------ | :------------------------------------------- |
 | `HONO_CREDENTIALS_SVC_CACHEMAXAGE`<br>`hono.credentials.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_CREDENTIALS_SVC_COLLECTIONNAME`<br>`hono.credentials.svc.collectionName` | no | `credentials` | The name of the MongoDB collection where the server stores credentials of devices.|
+| `HONO_CREDENTIALS_SVC_DATABASENAME`<br>`hono.credentials.svc.databaseName` | yes | - | The name of the MongoDB database that contains the credentials collection (`HONO_CREDENTIALS_SVC_COLLECTIONNAME`).|
 | `HONO_CREDENTIALS_SVC_ENCRYPTIONKEYFILE`<br>`hono.credentials.svc.encryptionKeyFile` | no | - | The path to the YAML file that [encryption keys]({{< relref "#encrypting-secrets" >}}) should be read from. |
 | `HONO_CREDENTIALS_SVC_HASHALGORITHMSWHITELIST`<br>`hono.credentials.svc.hashAlgorithmsWhitelist` | no | `empty` | An array of supported hashing algorithms to be used with the `hashed-password` type of credentials. When not set, all values will be accepted. |
 | `HONO_CREDENTIALS_SVC_MAXBCRYPTCOSTFACTOR`<br>`hono.credentials.svc.maxBcryptCostFactor` | no | `10` | The maximum cost factor that is supported in password hashes using the BCrypt hash function. This limit is enforced by the device registry when adding or updating corresponding credentials. Increasing this number allows for potentially more secure password hashes to be used. However, the time required to compute the hash increases exponentially with the cost factor. |
-| `HONO_MONGODB_CONNECTIONSTRING`<br>`hono.mongodb.connectionString` | no | - | The connection string used by the Device Registry application to connect to the MongoDB database. If this property is set, it overrides the other MongoDB connection settings.<br>See [Connection String URI Format](https://docs.mongodb.com/manual/reference/connection-string/) for more information.|
-| `HONO_MONGODB_CONNECTIONTIMEOUTINMS`<br>`hono.mongodb.connectionTimeoutInMs` | no | `10000` | The time in milliseconds to attempt a connection before timing out.|
-| `HONO_MONGODB_DBNAME`<br>`hono.mongodb.dbName` | no | - | The name of the MongoDB database that should be used by the Device Registry application. |
-| `HONO_MONGODB_HOST`<br>`hono.mongodb.host` | no | `localhost` | The host name or IP address of the MongoDB instance.|
-| `HONO_MONGODB_PORT`<br>`hono.mongodb.port` | no | `27017` | The port that the MongoDB instance is listening on.|
-| `HONO_MONGODB_PASSWORD`<br>`hono.mongodb.password` | no | - | The password to use for authenticating to the MongoDB instance.|
-| `HONO_MONGODB_SERVERSELECTIONTIMEOUTINMS`<br>`hono.mongodb.serverSelectionTimeoutInMs` | no | `1000` | The time in milliseconds that the mongo driver will wait to select a server for an operation before raising an error.|
-| `HONO_MONGODB_USERNAME`<br>`hono.mongodb.username` | no | - | The user name to use for authenticating to the MongoDB instance.|
-| `HONO_MONGODB_SSL`<br>`hono.mongodb.ssl` | no | `false` | Whether SSL/TLS should be used when connecting to the MongoDB instance. |
-| `HONO_MONGODB_KEYPATH `<br>`hono.mongodb.keyPath` | no | - | The path to client's private key for use in mutual TLS authentication when connecting to the MongoDB instance.<br>The file pointed to by the path must include a valid PEM encoded PKCS1 or PKCS8 key.  |
-| `HONO_MONGODB_CERTPATH `<br>`hono.mongodb.certPath` | no | - | The path to client's certificate for use in mutual TLS authentication when connecting to the MongoDB instance.<br>The file pointed to by the path must include a valid PEM encoded certificate chain, meaning one or more PEM certificate blocks concatenated. |
-| `HONO_MONGODB_CAPATH `<br>`hono.mongodb.caPath` | no | - | The path to the Certificate Authority's root certificate for use in TLS when connecting to the MongoDB instance.<br>The file pointed by the path must include a valid PEM encoded certificate. |
 | `HONO_REGISTRY_AMQP_BINDADDRESS`<br>`hono.registry.amqp.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_REGISTRY_AMQP_CERTPATH`<br>`hono.registry.amqp.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_AMQP_KEYPATH`.<br>Alternatively, the `HONO_REGISTRY_AMQP_KEYSTOREPATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_REGISTRY_AMQP_INSECUREPORT`<br>`hono.registry.amqp.insecurePort` | no | - | The insecure port the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -69,13 +53,14 @@ configuring the MongoDB based Device Registry.
 | `HONO_REGISTRY_AMQP_RECEIVERLINKCREDIT`<br>`hono.registry.amqp.receiverLinkCredit` | no | `100` | The number of credits to (initially) flow to a client connecting to one of the registry's endpoints. |
 | `HONO_REGISTRY_AMQP_SECUREPROTOCOLS`<br>`hono.registry.amqp.secureProtocols` | no | `TLSv1.3,TLSv1.2` | A (comma separated) list of secure protocols (in order of preference) that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_REGISTRY_AMQP_SUPPORTEDCIPHERSUITES`<br>`hono.registry.amqp.supportedCipherSuites` | no | - | A (comma separated) list of names of cipher suites (in order of preference) that are supported when negotiating TLS sessions. Please refer to [JSSE Cipher Suite Names](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#jsse-cipher-suite-names) for a list of supported names. |
-| `HONO_REGISTRY_HTTP_AUTH_COLLECTIONNAME`<br>`hono.registry.http.auth.collectionName` | no | `user` | The name of the Mongo collection that contains the user accounts that are authorized to access the HTTP endpoint. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTH_HASHALGORITHM`<br>`hono.registry.http.auth.hashAlgorithm` | no | `PBKDF2` | **DEPRECATED** The name of the property that contains the algorithm to be used for creating the password hash. Valid values are `PBKDF2` and `SHA512`. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTH_PASSWORDFIELD`<br>`hono.registry.http.auth.passwordField` | no | `password` | The name of the property that contains an account's password. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTH_SALTFIELD`<br>`hono.registry.http.auth.saltField` | no | `salt` | **DEPRECATED** The name of the property that contains a password hash's salt (if the `HONO_REGISTRY_HTTP_AUTH_SALTSTYLE` has value `COLUMN`). Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTH_SALTSTYLE`<br>`hono.registry.http.auth.saltStyle` | no | `COLUMN` | **DEPRECATED** The strategy to use for storing password salt values. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTH_USERNAMEFIELD`<br>`hono.registry.http.auth.usernameField` | no | `username` | The name of the property that contains an account's user name. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/) for details. |
-| `HONO_REGISTRY_HTTP_AUTHENTICATIONREQUIRED`<br>`hono.registry.http.authenticationRequired` | no | `true` | If set to `true` the HTTP endpoint of the Device Registry requires clients to authenticate when connecting to the Device Registry. The MongoDB based Device Registry currently supports basic authentication with user credentials being read from a Mongo collection defined by `HONO_REGISTRY_HTTP_AUTH_COLLECTIONNAME`. <br>For more information on how to manage users please refer to [Mongo Auth Provider](https://vertx.io/docs/4.5.7/vertx-auth-mongo/java/). |
+| `HONO_REGISTRY_HTTP_AUTH_COLLECTIONNAME`<br>`hono.registry.http.auth.collectionName` | no | `user` | The name of the Mongo collection that contains the user accounts that are authorized to access the HTTP endpoint. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTH_DATABASENAME`<br>`hono.registry.http.auth.databaseName` | yes | - | The name of the MongoDB database that contains the user accounts collection (`HONO_REGISTRY_HTTP_AUTH_COLLECTIONNAME`). |
+| `HONO_REGISTRY_HTTP_AUTH_HASHALGORITHM`<br>`hono.registry.http.auth.hashAlgorithm` | no | `PBKDF2` | **DEPRECATED** The name of the property that contains the algorithm to be used for creating the password hash. Valid values are `PBKDF2` and `SHA512`. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTH_PASSWORDFIELD`<br>`hono.registry.http.auth.passwordField` | no | `password` | The name of the property that contains an account's password. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTH_SALTFIELD`<br>`hono.registry.http.auth.saltField` | no | `salt` | **DEPRECATED** The name of the property that contains a password hash's salt (if the `HONO_REGISTRY_HTTP_AUTH_SALTSTYLE` has value `COLUMN`). Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTH_SALTSTYLE`<br>`hono.registry.http.auth.saltStyle` | no | `COLUMN` | **DEPRECATED** The strategy to use for storing password salt values. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTH_USERNAMEFIELD`<br>`hono.registry.http.auth.usernameField` | no | `username` | The name of the property that contains an account's user name. Please refer to the [vert.x documentation](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/) for details. |
+| `HONO_REGISTRY_HTTP_AUTHENTICATIONREQUIRED`<br>`hono.registry.http.authenticationRequired` | no | `true` | If set to `true` the HTTP endpoint of the Device Registry requires clients to authenticate when connecting to the Device Registry. The MongoDB based Device Registry currently supports basic authentication with user credentials being read from a MongoDB collection defined by `HONO_REGISTRY_HTTP_AUTH_COLLECTIONNAME`.<br>For more information on how to manage users please refer to [Mongo Auth Provider](https://vertx.io/docs/4.5.31/vertx-auth-mongo/java/). |
 | `HONO_REGISTRY_HTTP_BINDADDRESS`<br>`hono.registry.http.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure HTTP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_REGISTRY_HTTP_CERTPATH`<br>`hono.registry.http.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_HTTP_KEYPATH`.<br>Alternatively, the `HONO_REGISTRY_HTTP_KEYSTOREPATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_REGISTRY_HTTP_DEVICEIDPATTERN`<br>`hono.registry.http.deviceIdPattern` | no | `^[a-zA-Z0-9-_\.:]+$` | The regular expression to use to validate device ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
@@ -93,10 +78,12 @@ configuring the MongoDB based Device Registry.
 | `HONO_REGISTRY_HTTP_TENANTIDPATTERN`<br>`hono.registry.http.tenantIdPattern` | no | `^[a-zA-Z0-9-_\.]+$` | The regular expression to use to validate tenant ID. Please refer to the [java pattern documentation](https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html). |
 | `HONO_REGISTRY_SVC_CACHEMAXAGE`<br>`hono.registry.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_REGISTRY_SVC_COLLECTIONNAME`<br>`hono.registry.svc.collectionName` | no | `devices` | The name of the MongoDB collection where the server stores registered device information.|
+| `HONO_REGISTRY_SVC_DATABASENAME`<br>`hono.registry.svc.databaseName` | yes | - | The name of the MongoDB database that contains the registration data collection (`HONO_REGISTRY_SVC_COLLECTIONNAME`).|
 | `HONO_REGISTRY_SVC_MAXDEVICESPERTENANT`<br>`hono.registry.svc.maxDevicesPerTenant` | no | `-1` | The number of devices that can be registered for each tenant. It is an error to set this property to a value < -1. The value `-1` indicates that no limit is set.|
 | `HONO_REGISTRY_SVC_USERNAMEPATTERN`<br>`hono.registry.svc.usernamePattern` | no | `^[a-zA-Z0-9-_=\\.]+$` | The regular expression to use for validating authentication identifiers (user names) of hashed-password credentials. |
 | `HONO_TENANT_SVC_CACHEMAXAGE`<br>`hono.tenant.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_TENANT_SVC_COLLECTIONNAME`<br>`hono.tenant.svc.collectionName` | no | `tenants` | The name of the MongoDB collection where the server stores tenants information.|
+| `HONO_TENANT_SVC_DATABASENAME`<br>`hono.tenant.svc.databaseName` | yes | - | The name of the MongoDB database that contains the tenants collection (`HONO_TENANT_SVC_COLLECTIONNAME`).|
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -165,21 +152,42 @@ Setting this variable to `0.0.0.0` will let the port being bound to **all** netw
 the port unintentionally to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port
 at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
 configured to use the same port number.
 
 Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
 binding address `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port
-to a local network e.g., while the secure port may be visible worldwide. 
+to a local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The registry will then use
 arbitrary (unused) port numbers determined by the operating system during startup.
+
+## Database Connection Configuration
+
+{{% notice info %}}
+The management of the connection pool to the MongoDB instance has been changed in Hono 2.8.0. The pool is now managed by
+the Quarkus Mongo Client extension. As a consequence, the connection pool configuration is now done using the
+corresponding Quarkus properties instead of the former Hono specific properties, which are no longer supported.
+{{% /notice %}}
+
+The connection pool to the MongoDB instance that contains the device registry entities (tenant, registration info, credentials and registry user information)
+can be configured using the properties defined by the [Quarkus MongoDB Client extension](https://quarkus.io/version/3.27/guides/mongodb/#configuration-reference).
+
+{{% notice info %}}
+The registry requires the name of the MongoDB database that contains the different entities to be configured explicitly using the
+corresponding properties:
+
+* `HONO_REGISTRY_HTTP_AUTH_DATABASENAME`
+* `HONO_CREDENTIALS_SVC_DATABASENAME`
+* `HONO_REGISTRY_SVC_DATABASENAME`
+* `HONO_TENANT_SVC_DATABASENAME`
+{{% /notice %}}
 
 ## Authentication Service Connection Configuration
 

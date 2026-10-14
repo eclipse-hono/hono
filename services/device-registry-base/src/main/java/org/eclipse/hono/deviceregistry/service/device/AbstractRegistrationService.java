@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -65,7 +65,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
     /**
      * The service to use for retrieving information about tenants.
      */
-    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+    protected TenantInformationService tenantInformationService = NoopTenantInformationService.INSTANCE;
 
     private EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner;
 
@@ -118,7 +118,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
     /**
      * Sets an instance of the edge device auto-provisioner.
      * <p>
-     * If set, edge device auto-provisioning will be performed. Defaults to {@code null} meaning edge device 
+     * If set, edge device auto-provisioning will be performed. Defaults to {@code null} meaning edge device
      * auto-provisioning is disabled.
      *
      * @param edgeDeviceAutoProvisioner An instance of the edge device auto-provisioner.
@@ -296,7 +296,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                         .toList()));
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
-                                    return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId, 
+                                    return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId,
                                             gatewayId, device, span.context())
                                             .compose(newDevice -> {
                                                 final JsonObject deviceData = JsonObject.mapFrom(newDevice);

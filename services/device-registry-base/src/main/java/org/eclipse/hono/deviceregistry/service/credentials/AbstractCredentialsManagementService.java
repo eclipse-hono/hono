@@ -56,7 +56,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
     /**
      * The service to use for retrieving tenant information.
      */
-    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+    protected TenantInformationService tenantInformationService = NoopTenantInformationService.INSTANCE;
 
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;

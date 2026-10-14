@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Copyright (c) 2016 Contributors to the Eclipse Foundation
-   
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -432,7 +432,7 @@
           <name>CI</name>
         </property>
       </activation>
-      <!-- 
+      <!--
         relax timeouts when running on CI environment in order to account for (very) limited
         CPU resources.
        -->
@@ -721,7 +721,7 @@
         <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
-    
+
     <profile>
       <id>local</id>
       <activation>
@@ -884,8 +884,8 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <memorySwap>320000000</memorySwap>
-                    <memory>320000000</memory>
+                    <memorySwap>360000000</memorySwap>
+                    <memory>360000000</memory>
                     <log>
                       <prefix>INFINISPAN</prefix>
                       <color>${log.color.hono-services}</color>
@@ -1289,7 +1289,7 @@
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*("Listening on").*("0.0.0.0").*</log>
+                      <log>.*(?:"Listening on").*(?:\{"address":"0.0.0.0(?:\:\d{1,5})?"\}).*</log>
                     </wait>
                   </run>
                 </image>

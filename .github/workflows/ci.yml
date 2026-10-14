@@ -47,10 +47,14 @@ jobs:
   build:
     needs: pre_job
     if: needs.pre_job.outputs.should_skip != 'true'
-    runs-on: ubuntu-latest
+    # MongoDB versions > 7.x need a kernel <= 6.19 or >= 7.0.14
+    # see https://jira.mongodb.org/browse/SERVER-125742
+    # At the time of writing, the ubuntu-24.04 runner uses kernel 6.17 and should therefore be
+    # compatible with the MongoDB versions we want to test with.
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        device-registry-name: [file,jdbc,mongodb-6.0,mongodb-7.0]
+        device-registry-name: [file,jdbc,mongodb-7.0,mongodb-8.3, mongodb-9.0]
         include:
         # Use Quarkus JVM images: file registry, AMQP messaging, Command Router with embedded cache
         - device-registry-name: file
@@ -58,26 +62,36 @@ jobs:
           commandrouting-cache: embedded
           messaging-type: amqp
           kafka-image-name: 'non-existent' # no Kafka needed for this setup, but maven-docker-plugin requires non-empty name
+          mongodb-image-name: 'mongo:7.0.43' # this is only used for running the unit tests here
 
-          mongodb-image-name: 'mongo:6.0' # this is only needed for running the unit tests here
         # Use Quarkus JVM images: JDBC registry, Kafka 4.2 messaging, Command Router with embedded cache
         - device-registry-name: jdbc
           device-registry: jdbc
           commandrouting-cache: embedded
           messaging-type: kafka
-          kafka-image-name: 'docker.io/apache/kafka:4.2.1'
-          mongodb-image-name: 'mongo:7.0' # this is only needed for running the unit tests here
-        # Use Quarkus JVM images: MongoDB 6.0 registry, Kafka 4.1 messaging, Command Router with data grid
-        - device-registry-name: mongodb-6.0
+          kafka-image-name: 'docker.io/apache/kafka:4.2.2'
+          mongodb-image-name: 'mongo:8.2.12' # this is only used for running the unit tests here
+
+        # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.1 messaging, Command Router with data grid
+        - device-registry-name: mongodb-7.0
           device-registry: mongodb
-          mongodb-image-name: 'mongo:6.0'
+          mongodb-image-name: 'mongo:7.0.43'
           commandrouting-cache: server
           messaging-type: kafka
           kafka-image-name: 'docker.io/apache/kafka:4.1.2'
-        # Use Quarkus JVM images: MongoDB 7.0 registry, Kafka 4.3 messaging, Command Router with data grid
-        - device-registry-name: mongodb-7.0
+
+        # Use Quarkus JVM images: MongoDB 8.3 registry, Kafka 4.2 messaging, Command Router with data grid
+        - device-registry-name: mongodb-8.3
           device-registry: mongodb
-          mongodb-image-name: 'mongo:7.0'
+          mongodb-image-name: 'mongo:8.3.11'
+          commandrouting-cache: server
+          messaging-type: kafka
+          kafka-image-name: 'docker.io/apache/kafka:4.2.2'
+
+        # Use Quarkus JVM images: MongoDB 9.0 registry, Kafka 4.3 messaging, Command Router with data grid
+        - device-registry-name: mongodb-9.0
+          device-registry: mongodb
+          mongodb-image-name: 'mongo:9.0.2'
           commandrouting-cache: server
           messaging-type: kafka
           kafka-image-name: 'docker.io/apache/kafka:4.3.1'

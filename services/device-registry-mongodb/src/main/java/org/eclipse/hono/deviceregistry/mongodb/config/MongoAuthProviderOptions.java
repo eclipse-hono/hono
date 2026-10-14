@@ -26,6 +26,16 @@ import io.vertx.ext.auth.mongo.MongoAuthentication;
 public interface MongoAuthProviderOptions {
 
     /**
+     * Gets the name of the Mongo DB database that contains the user accounts.
+     * <p>
+     * The default value of this property is {@code "userdb"}.
+     *
+     * @return The database name or {@code null} if the provider should use the default value.
+     */
+    @WithDefault("userdb")
+    String databaseName();
+
+    /**
      * Gets the name of the Mongo DB collection that contains the user accounts.
      * <p>
      * The default value of this property is {@value MongoAuthentication#DEFAULT_COLLECTION_NAME}.

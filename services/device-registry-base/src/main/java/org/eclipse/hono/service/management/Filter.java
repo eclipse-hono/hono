@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -21,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.pointer.JsonPointer;
 
 /**
@@ -72,11 +72,12 @@ public final class Filter {
      *
      * @param field A JSON Pointer to the field to use for filtering.
      * @param valueList The list of values to match.
+     * @param <T> The type of the values in the list.
      * @return The filter.
      * @throws IllegalArgumentException if the field is not a valid pointer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Filter inFilter(final String field, final JsonArray valueList) {
+    public static <T> Filter inFilter(final String field, final List<T> valueList) {
         return new Filter(field, valueList, Operator.in);
     }
 
@@ -85,11 +86,12 @@ public final class Filter {
      *
      * @param field A JSON Pointer to the field to use for filtering.
      * @param valueList The list of values to match.
+     * @param <T> The type of the values in the list.
      * @return The filter.
      * @throws IllegalArgumentException if the field is not a valid pointer.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Filter notInFilter(final String field, final JsonArray valueList) {
+    public static <T> Filter notInFilter(final String field, final List<T> valueList) {
         return new Filter(field, valueList, Operator.not_in);
     }
 

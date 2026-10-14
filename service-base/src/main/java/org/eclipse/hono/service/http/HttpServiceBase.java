@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -215,9 +215,13 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
      * @param router The router.
      */
     protected void addAuthHandler(final Router router) {
-        if (authHandler != null) {
-            final Route matchAllRoute = router.route();
-            matchAllRoute.handler(authHandler);
+        if (getConfig().isAuthenticationRequired()) {
+            if (authHandler != null) {
+                final Route matchAllRoute = router.route();
+                matchAllRoute.handler(authHandler);
+            } else {
+                log.warn("HTTP server is configured to require clients to authenticate but no AuthenticationHandler has been configured. Clients will NOT be authenticated.");
+            }
         }
     }
 

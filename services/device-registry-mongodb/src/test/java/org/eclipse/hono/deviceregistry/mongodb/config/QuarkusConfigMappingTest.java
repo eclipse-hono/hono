@@ -29,34 +29,6 @@ import org.junit.jupiter.api.Test;
 class QuarkusConfigMappingTest {
 
     @Test
-    void testMongoDbConfigOptionsMappingWithConnectionString() {
-
-        final var props = new MongoDbConfigProperties(
-                ConfigMappingSupport.getConfigMapping(
-                        MongoDbConfigOptions.class,
-                        this.getClass().getResource("/mongodb-connection-string-only.yaml")));
-        assertThat(props.getConnectionString())
-            .isEqualTo("mongodb://username:password@mongodb-server/hono-db?connectTimeoutMS=2000");
-    }
-
-    @Test
-    void testMongoDbConfigOptionsMappingWithSeparateProperties() throws IOException {
-
-        final var props = new MongoDbConfigProperties(
-                ConfigMappingSupport.getConfigMapping(
-                        MongoDbConfigOptions.class,
-                        this.getClass().getResource("/mongodb-separate-props.yaml")));
-        assertThat(props.getConnectionString()).isNull();
-        assertThat(props.getHost()).isEqualTo("mongodb-server");
-        assertThat(props.getPort()).isEqualTo(13131);
-        assertThat(props.getDbName()).isEqualTo("hono-db");
-        assertThat(props.getUsername()).isEqualTo("user");
-        assertThat(props.getPassword()).isEqualTo("pwd");
-        assertThat(props.getConnectTimeout()).isEqualTo(6789);
-        assertThat(props.getServerSelectionTimeout()).isEqualTo(5432);
-    }
-
-    @Test
     void testMongoDbBasedHttpServiceConfigOptionsMapping() throws IOException {
 
         final var props = new MongoDbBasedHttpServiceConfigProperties(

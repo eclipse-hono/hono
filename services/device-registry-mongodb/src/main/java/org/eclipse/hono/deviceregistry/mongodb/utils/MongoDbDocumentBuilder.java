@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.bson.Document;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
@@ -28,8 +29,6 @@ import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
 
 /**
@@ -52,7 +51,6 @@ public final class MongoDbDocumentBuilder {
             DeviceDto.FIELD_DEVICE,
             RegistryManagementConstants.FIELD_MEMBER_OF);
 
-    private static final JsonArray EMPTY_ARRAY = new JsonArray();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String TENANT_ALIAS_PATH = String.format(
             "%s.%s",
@@ -72,6 +70,7 @@ public final class MongoDbDocumentBuilder {
             AuthenticationConstants.FIELD_SUBJECT_DN);
     private static final String MONGODB_OPERATOR_AND = "$and";
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
+    private static final String MONGODB_OPERATOR_EQUALS = "$eq";
     private static final String MONGODB_OPERATOR_EXISTS = "$exists";
     private static final String MONGODB_OPERATOR_IN = "$in";
     private static final String MONGODB_OPERATOR_NOT = "$not";
@@ -79,10 +78,10 @@ public final class MongoDbDocumentBuilder {
     private static final String MONGODB_OPERATOR_OR = "$or";
     private static final String MONGODB_OPERATOR_REGEX = "$regex";
 
-    private final JsonObject document;
+    private final Document document;
 
     private MongoDbDocumentBuilder() {
-        this.document = new JsonObject();
+        this.document = new Document();
     }
 
     /**
@@ -99,7 +98,7 @@ public final class MongoDbDocumentBuilder {
      *
      * @return The document.
      */
-    public JsonObject document() {
+    public Document document() {
         return document;
     }
 
@@ -122,7 +121,7 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withGatewayDevices() {
         document.put(
                 DEVICE_VIA_PATH,
-                new JsonObject().put(MONGODB_OPERATOR_EXISTS, true));
+                new Document(MONGODB_OPERATOR_EXISTS, Boolean.TRUE));
         return this;
     }
 
@@ -135,9 +134,9 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withMemberOfAnyGatewayGroup() {
         document.put(
                 DEVICE_MEMBEROF_PATH,
-                new JsonObject()
-                    .put(MONGODB_OPERATOR_EXISTS, true)
-                    .put(MONGODB_OPERATOR_NOT_EQUALS, EMPTY_ARRAY));
+                new Document()
+                        .append(MONGODB_OPERATOR_EXISTS, Boolean.TRUE)
+                        .append(MONGODB_OPERATOR_NOT_EQUALS, List.of()));
         return this;
     }
 
@@ -151,17 +150,17 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withTenantIdOrAlias(final String tenantId) {
+
         document.put(
                 MONGODB_OPERATOR_OR,
-                new JsonArray()
-                        .add(new JsonObject().put(BaseDto.FIELD_TENANT_ID, tenantId))
-                        .add(new JsonObject().put(
-                                MONGODB_OPERATOR_AND,
-                                new JsonArray()
-                                    .add(new JsonObject().put(
-                                            TENANT_ALIAS_PATH,
-                                            new JsonObject().put(MONGODB_OPERATOR_EXISTS, true)))
-                                    .add(new JsonObject().put(TENANT_ALIAS_PATH, tenantId)))));
+                List.of(
+                        new Document(BaseDto.FIELD_TENANT_ID, tenantId),
+                        new Document()
+                                .append(MONGODB_OPERATOR_AND,
+                                        List.of(
+                                                new Document(TENANT_ALIAS_PATH,
+                                                        new Document(MONGODB_OPERATOR_EXISTS, Boolean.TRUE)),
+                                                new Document(TENANT_ALIAS_PATH, tenantId)))));
         return this;
     }
 
@@ -172,7 +171,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withOtherTenantId(final String tenantId) {
-        document.put(BaseDto.FIELD_TENANT_ID, new JsonObject().put(MONGODB_OPERATOR_NOT_EQUALS, tenantId));
+        document.put(BaseDto.FIELD_TENANT_ID, new Document(MONGODB_OPERATOR_NOT_EQUALS, tenantId));
         return this;
     }
 
@@ -194,7 +193,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withCa(final String subjectDn) {
-        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", subjectDn));
+        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new Document(MONGODB_OPERATOR_EQUALS, subjectDn));
         return this;
     }
 
@@ -208,11 +207,11 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withAnyCa(final List<String> subjectDns) {
         document.put(
                 TENANT_TRUSTED_CA_PATH,
-                new JsonObject().put(
+                new Document(
                         MONGODB_OPERATOR_ELEM_MATCH,
-                        new JsonObject().put(
+                        new Document(
                                 RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
-                                new JsonObject().put(MONGODB_OPERATOR_IN, new JsonArray(subjectDns)))));
+                                new Document(MONGODB_OPERATOR_IN, subjectDns))));
         return this;
     }
 
@@ -258,13 +257,13 @@ public final class MongoDbDocumentBuilder {
     public MongoDbDocumentBuilder withTrustAnchorGroup(final String trustAnchorGroup) {
         document.put(
                 MONGODB_OPERATOR_OR,
-                new JsonArray()
-                        .add(new JsonObject().put(
+                List.of(
+                        new Document(
                                 TENANT_TRUST_ANCHOR_GROUP_PATH,
-                                new JsonObject().put(MONGODB_OPERATOR_EXISTS, false)))
-                        .add(new JsonObject().put(
+                                new Document(MONGODB_OPERATOR_EXISTS, Boolean.FALSE)),
+                        new Document(
                                 TENANT_TRUST_ANCHOR_GROUP_PATH,
-                                new JsonObject().put(MONGODB_OPERATOR_NOT_EQUALS, trustAnchorGroup))));
+                                new Document(MONGODB_OPERATOR_NOT_EQUALS, trustAnchorGroup))));
         return this;
     }
 
@@ -321,23 +320,27 @@ public final class MongoDbDocumentBuilder {
     }
 
     private void applyEqFilter(final Filter filter, final Function<JsonPointer, String> fieldMapper) {
+        final String key = fieldMapper.apply(filter.getField());
         if (filter.getValue() instanceof String stringValue) {
-            document.put(fieldMapper.apply(filter.getField()), new JsonObject().put(MONGODB_OPERATOR_REGEX,
-                    DeviceRegistryUtils.getRegexExpressionForSearchOperation(stringValue)));
+            document.put(
+                    key,
+                    new Document(MONGODB_OPERATOR_REGEX,
+                            DeviceRegistryUtils.getRegexExpressionForSearchOperation(stringValue)));
         } else {
-            document.put(fieldMapper.apply(filter.getField()), filter.getValue());
+            document.put(key, filter.getValue());
         }
     }
 
     private void applyInFilter(final Filter filter, final Function<JsonPointer, String> fieldMapper) {
-        if (filter.getValue() instanceof JsonArray valueList) {
-            final var expr = new JsonObject().put(MONGODB_OPERATOR_IN, valueList);
+        if (filter.getValue() instanceof List<?> valueList) {
+            final var key = fieldMapper.apply(filter.getField());
+            final var expr = new Document(MONGODB_OPERATOR_IN, valueList);
             switch (filter.getOperator()) {
             case in:
-                document.put(fieldMapper.apply(filter.getField()), expr);
+                document.put(key, expr);
                 break;
             case not_in:
-                document.put(fieldMapper.apply(filter.getField()), new JsonObject().put(MONGODB_OPERATOR_NOT, expr));
+                document.put(key, new Document(MONGODB_OPERATOR_NOT, expr));
                 break;
             default:
                 // we can only handle $in operator
@@ -370,8 +373,8 @@ public final class MongoDbDocumentBuilder {
     }
 
     private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {
-        final var credentialsArraySpec = document.getJsonObject(CredentialsDto.FIELD_CREDENTIALS, new JsonObject());
-        final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
+        final var credentialsArraySpec = document.get(CredentialsDto.FIELD_CREDENTIALS, new Document());
+        final var elementMatchSpec = credentialsArraySpec.get(MONGODB_OPERATOR_ELEM_MATCH, new Document());
         elementMatchSpec.put(field, value);
         credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
         document.put(CredentialsDto.FIELD_CREDENTIALS, credentialsArraySpec);

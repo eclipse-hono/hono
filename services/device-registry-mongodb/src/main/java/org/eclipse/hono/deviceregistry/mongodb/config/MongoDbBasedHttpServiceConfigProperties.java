@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,14 @@ package org.eclipse.hono.deviceregistry.mongodb.config;
 
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+
 
 /**
  * Configuration properties for the registry's HTTP endpoint.
  */
+@Singleton
 public final class MongoDbBasedHttpServiceConfigProperties extends HttpServiceConfigProperties {
 
     private MongoAuthProviderConfig authenticationProviderConfig = new MongoAuthProviderConfig();
@@ -37,6 +41,7 @@ public final class MongoDbBasedHttpServiceConfigProperties extends HttpServiceCo
      * @param options The options.
      * @throws NullPointerException if options are {@code null}.
      */
+    @Inject
     public MongoDbBasedHttpServiceConfigProperties(final MongoDbBasedHttpServiceConfigOptions options) {
         super(options.commonOptions());
         this.authenticationProviderConfig = new MongoAuthProviderConfig(options.auth());

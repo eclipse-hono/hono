@@ -31,25 +31,27 @@ hono:
       insecurePortBindAddress: 0.0.0.0
       maxPayloadSize: ${hono.deviceregistry.maxPayloadSize}
       auth:
+        # the database and collection where the user credentials for
+        # the device registry's HTTP API are stored
+        databaseName: "${hono.mongodb.database.name}"
         collectionName: "registryusers"
         usernameField: "login"
         passwordField: "pwdHash"
         saltField: "spice"
         hashAlgorithm: "PBKDF2"
     svc:
+      # the database that contains the device registration collection
+      databaseName: "${hono.mongodb.database.name}"
   credentials:
     svc:
+      # the database that contains the credentials collection
+      databaseName: "${hono.mongodb.database.name}"
       encryptionKeyFile: "/opt/hono/config/encryptionKeys.yml"
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:
-  mongodb:
-    connectionString: "mongodb://${hono.mongodb.username}:${hono.mongodb.password}@${hono.mongodb.host}:${hono.mongodb.port}/${hono.mongodb.database.name}"
-#    host: ${hono.mongodb.host}
-#    port: ${hono.mongodb.port}
-#    dbName: ${hono.mongodb.database.name}
-#    username: ${hono.mongodb.username}
-#    password: ${hono.mongodb.password}
+      # the database that contains the tenant collection
+      databaseName: "${hono.mongodb.database.name}"
   kafka:
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
@@ -77,5 +79,8 @@ quarkus:
     category:
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
+  mongodb:
+    # the connection string to use for connecting to the MongoDB instance that contains the registry entities and user data
+    connection-string: "mongodb://${hono.mongodb.username}:${hono.mongodb.password}@${hono.mongodb.host}:${hono.mongodb.port}/${hono.mongodb.database.name}"
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}

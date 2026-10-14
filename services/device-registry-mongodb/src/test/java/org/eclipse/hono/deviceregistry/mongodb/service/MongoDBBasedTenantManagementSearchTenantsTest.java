@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,6 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigP
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.eclipse.hono.service.management.tenant.AbstractTenantManagementSearchTenantsTest;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -45,19 +43,19 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedTenantManagementSearchTenantsTest.class);
 
     private final MongoDbBasedTenantsConfigProperties config = new MongoDbBasedTenantsConfigProperties();
+
     private MongoDbBasedTenantManagementService tenantManagementService;
     private MongoDbBasedTenantDao dao;
-    private Vertx vertx;
 
     /**
      * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) {
-        vertx = Vertx.vertx();
-        dao = MongoDbTestUtils.getTenantDao(vertx, "hono-search-tenants-test");
+    public void setup(final VertxTestContext testContext, final Vertx vertx) {
+        dao = MongoDbTestUtils.getTenantDao(vertx);
         tenantManagementService = new MongoDbBasedTenantManagementService(vertx, dao, config);
         dao.createIndices().onComplete(testContext.succeedingThenComplete());
     }
@@ -82,25 +80,6 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     public void cleanCollection(final TestInfo testInfo, final VertxTestContext testContext) {
         LOG.info("finished {}", testInfo.getDisplayName());
         dao.deleteAllFromCollection().onComplete(testContext.succeedingThenComplete());
-    }
-
-    /**
-     * Releases the connection to the Mongo DB.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
-     */
-    @AfterAll
-    public void closeDao(final VertxTestContext testContext) {
-        final Promise<Void> daoCloseHandler = Promise.promise();
-        dao.close(daoCloseHandler);
-
-        daoCloseHandler.future()
-            .compose(ok -> {
-                final Promise<Void> vertxCloseHandler = Promise.promise();
-                vertx.close(vertxCloseHandler);
-                return vertxCloseHandler.future();
-            })
-            .onComplete(testContext.succeedingThenComplete());
     }
 
     @Override

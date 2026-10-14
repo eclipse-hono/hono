@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,12 @@ import io.vertx.core.Future;
  */
 public final class NoopTenantInformationService implements TenantInformationService {
 
+    public static final NoopTenantInformationService INSTANCE = new NoopTenantInformationService();
+
+    private NoopTenantInformationService() {
+        // prevent instantiation, use INSTANCE instead.
+    }
+
     /**
      * {@inheritDoc}
      * <p>
@@ -42,9 +48,13 @@ public final class NoopTenantInformationService implements TenantInformationServ
                 Optional.empty(), Optional.empty()));
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation always returns a succeeded future containing an empty tenant.
+     */
     @Override
     public Future<Tenant> getTenant(final String tenantId, final Span span) {
         return Future.succeededFuture(new Tenant());
     }
-
 }

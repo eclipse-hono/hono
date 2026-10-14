@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
     /**
      * The service to use for retrieving information about tenants.
      */
-    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+    protected TenantInformationService tenantInformationService = NoopTenantInformationService.INSTANCE;
 
     private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
 

@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +43,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.MessagingType;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +50,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +59,6 @@ import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -68,34 +69,35 @@ import io.vertx.junit5.VertxTestContext;
  * {@link MongoDbBasedDeviceManagementService}.
  */
 @ExtendWith(VertxExtension.class)
+@ExtendWith(MockitoExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
-    private static final String DB_NAME = "hono-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
     private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
+    @Mock
+    private TenantInformationService tenantInformationService;
+
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedRegistrationService registrationService;
     private MongoDbBasedDeviceManagementService deviceManagementService;
-    private TenantInformationService tenantInformationService;
-    private Vertx vertx;
 
     /**
      * Starts up the service.
      *
      * @param testContext The test context to use for running asynchronous tests.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      */
     @BeforeAll
-    public void startService(final VertxTestContext testContext) {
+    public void startService(final VertxTestContext testContext, final Vertx vertx) {
 
-        vertx = Vertx.vertx();
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx);
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx);
         deviceManagementService = new MongoDbBasedDeviceManagementService(
                 vertx,
                 deviceDao,
@@ -126,9 +128,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
 
         LOG.info("running {}", testInfo.getDisplayName());
 
-        tenantInformationService = mock(TenantInformationService.class);
-        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
-        when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
+        lenient().when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
+        lenient().when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
             return Future.succeededFuture(OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
                     TenantKey.from(invocation.getArgument(0)),
@@ -147,30 +148,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        Future.all(
-                deviceDao.deleteAllFromCollection(),
-                credentialsDao.deleteAllFromCollection())
-            .onComplete(testContext.succeedingThenComplete());
-    }
-
-    /**
-     * Releases the connection to the Mongo DB.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
-     */
-    @AfterAll
-    public void closeDao(final VertxTestContext testContext) {
-        final Promise<Void> credentialsCloseHandler = Promise.promise();
-        credentialsDao.close(credentialsCloseHandler);
-        final Promise<Void> deviceCloseHandler = Promise.promise();
-        deviceDao.close(deviceCloseHandler);
-
-        Future.all(credentialsCloseHandler.future(), deviceCloseHandler.future())
-            .compose(ok -> {
-                final Promise<Void> vertxCloseHandler = Promise.promise();
-                vertx.close(vertxCloseHandler);
-                return vertxCloseHandler.future();
-            })
+        Future.all(deviceDao.deleteAllFromCollection(), credentialsDao.deleteAllFromCollection())
             .onComplete(testContext.succeedingThenComplete());
     }
 
