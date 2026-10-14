@@ -50,6 +50,7 @@
     <postgresql-image.name>docker.io/library/postgres:14-alpine</postgresql-image.name>
     <qpid-jms.version>1.16.0</qpid-jms.version>
     <quarkus.platform.version>3.27.6</quarkus.platform.version>
+    <redis-image.name>docker.io/library/redis:8.10-alpine</redis-image.name>
     <slf4j.version>2.0.18</slf4j.version>
     <spring-security-crypto.version>6.5.10</spring-security-crypto.version>
     <truth.version>1.4.5</truth.version>
@@ -441,6 +442,11 @@ quarkus.vertx.max-event-loop-execute-time=${max.event-loop.execute-time:20000}
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>client-device-connection-infinispan</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>client-device-connection-redis</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

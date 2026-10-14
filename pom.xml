@@ -170,6 +170,7 @@
     <module>cli</module>
     <module>client-device-connection-base</module>
     <module>client-device-connection-infinispan</module>
+    <module>client-device-connection-redis</module>
     <module>clients</module>
     <module>demo-certs</module>
     <module>examples</module>

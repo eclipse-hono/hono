@@ -32,6 +32,7 @@
     <module>base-jdbc</module>
     <module>command-router-base</module>
     <module>command-router-infinispan</module>
+    <module>command-router-redis</module>
     <module>device-registry-base</module>
     <module>device-registry-jdbc</module>
     <module>device-registry-mongodb</module>
