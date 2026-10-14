@@ -33,3 +33,10 @@ quarkus:
         level: INFO
       "org.eclipse.hono.service.management":
         level: INFO
+hono:
+  registry:
+    http:
+      authenticationRequired: true
+      auth:
+        databaseName: "hono-test"
+        collectionName: "registryusers"

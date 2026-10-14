@@ -13,31 +13,21 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.app;
 
-import java.util.Optional;
-
 import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigOptions;
+import org.eclipse.hono.deviceregistry.mongodb.utils.MongoAuthenticationImpl;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
-import org.eclipse.hono.service.http.HttpServiceConfigProperties;
-import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.ext.auth.authentication.AuthenticationProvider;
-import io.vertx.ext.auth.mongo.HashAlgorithm;
-import io.vertx.ext.auth.mongo.HashSaltStyle;
-import io.vertx.ext.auth.mongo.MongoAuthentication;
-import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
-import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
-import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
-import io.vertx.ext.mongo.MongoClient;
+import io.quarkus.mongodb.reactive.ReactiveMongoClient;
+import io.vertx.core.Vertx;
 import io.vertx.ext.web.handler.BasicAuthHandler;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
  * A factory for creating Device Registry Management API endpoints.
- *
  */
 @ApplicationScoped
 public class HttpServerFactory extends AbstractHttpServerFactory {
@@ -45,51 +35,24 @@ public class HttpServerFactory extends AbstractHttpServerFactory {
     private static final Logger LOG = LoggerFactory.getLogger(HttpServerFactory.class);
 
     @Inject
-    MongoClient mongoClient;
+    Vertx vertx;
 
     @Inject
-    MongoDbBasedHttpServiceConfigProperties httpServerProperties;
+    ReactiveMongoClient mongoClient;
 
-    @Override
-    protected final HttpServiceConfigProperties getHttpServerProperties() {
-        return httpServerProperties;
-    }
+    @Inject
+    MongoDbBasedHttpServiceConfigOptions httpServerOptions;
 
-    @SuppressWarnings("deprecation")
     @Override
     protected void customizeServer(final DeviceRegistryHttpServer server) {
-        if (httpServerProperties.isAuthenticationRequired()) {
-            final var authConfig = httpServerProperties.getAuth();
+        if (httpServerOptions.commonOptions().authenticationRequired()) {
+            final var authOptions = httpServerOptions.auth();
             LOG.debug(
-                    "creating AuthenticationHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
-                    System.lineSeparator(), authConfig);
-            final var mongoAuthOptions = new MongoAuthenticationOptions();
-            mongoAuthOptions.setCollectionName(authConfig.getCollectionName());
-            mongoAuthOptions.setUsernameField(authConfig.getUsernameField());
-            mongoAuthOptions.setPasswordField(authConfig.getPasswordField());
-            final AuthenticationProvider authenticationProvider;
-            if (Strings.isNullOrEmpty(authConfig.getSaltField())
-                    && authConfig.getHashAlgorithm() == null
-                    && authConfig.getSaltStyle() == null) {
-                authenticationProvider = MongoAuthentication.create(mongoClient, mongoAuthOptions);
-            } else {
-                // use legacy password hashing
-                final var hashStrategy = new DefaultHashStrategy();
-                hashStrategy.setAlgorithm(Optional.ofNullable(authConfig.getHashAlgorithm())
-                        .orElse(HashAlgorithm.PBKDF2));
-                hashStrategy.setSaltStyle(Optional.ofNullable(authConfig.getSaltStyle())
-                        .orElse(HashSaltStyle.COLUMN));
-                final var saltField = Optional.ofNullable(authConfig.getSaltField())
-                        .orElse(MongoAuthentication.DEFAULT_SALT_FIELD);
-                authenticationProvider = new MongoAuthenticationImpl(
-                        mongoClient,
-                        hashStrategy,
-                        saltField,
-                        mongoAuthOptions);
-            }
+        "creating AuthenticationHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
+                System.lineSeparator(), authOptions);
             server.setAuthHandler(BasicAuthHandler.create(
-                    authenticationProvider,
-                    httpServerProperties.getRealm()));
+                        new MongoAuthenticationImpl(vertx, mongoClient, authOptions),
+                        httpServerOptions.commonOptions().realm()));
         }
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     public static final int DEFAULT_MAX_AGE_SECONDS = 180;
 
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
+    private String databaseName;
     /**
      * Mongodb collection name for individual device registry service entity type.
      */
@@ -50,6 +51,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      */
     protected AbstractMongoDbBasedRegistryConfigProperties(final MongoDbBasedRegistryConfigOptions options) {
         Objects.requireNonNull(options);
+        this.setDatabaseName(options.databaseName());
         this.setCacheMaxAge(options.cacheMaxAge());
     }
 
@@ -70,13 +72,32 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     }
 
     /**
-     * Gets the name of the Mongo DB collection that the registry's data gets persisted to.
+     * Sets the name of the Mongo DB collection that the registry's data gets persisted to.
      *
      * @param collectionName The name.
      * @throws NullPointerException if name is {@code null}.
      */
     public final void setCollectionName(final String collectionName) {
         this.collectionName = Objects.requireNonNull(collectionName);
+    }
+
+    /**
+     * Gets the name of the MongoDB database that contains the registry entities.
+     *
+     * @return The database name.
+     */
+    public final String getDatabaseName() {
+        return databaseName;
+    }
+
+    /**
+     * Sets the name of the MongoDB database that contains the registry entities.
+     *
+     * @param databaseName The database name.
+     * @throws NullPointerException if name is {@code null}.
+     */
+    public final void setDatabaseName(final String databaseName) {
+        this.databaseName = Objects.requireNonNull(databaseName);
     }
 
     /**

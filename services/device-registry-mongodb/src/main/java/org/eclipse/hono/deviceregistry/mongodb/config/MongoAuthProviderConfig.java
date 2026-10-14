@@ -25,9 +25,12 @@ import io.vertx.ext.auth.mongo.MongoAuthentication;
  */
 public final class MongoAuthProviderConfig {
 
+    public static final String DEFAULT_DATABASE_NAME = "userdb";
+
     private String collectionName = MongoAuthentication.DEFAULT_COLLECTION_NAME;
     private HashSaltStyle saltStyle = null;
     private String saltField = null;
+    private String databaseName = DEFAULT_DATABASE_NAME;
     private String usernameField = MongoAuthentication.DEFAULT_USERNAME_FIELD;
     private String passwordField = MongoAuthentication.DEFAULT_PASSWORD_FIELD;
     private HashAlgorithm hashAlgorithm = null;
@@ -47,12 +50,36 @@ public final class MongoAuthProviderConfig {
      */
     public MongoAuthProviderConfig(final MongoAuthProviderOptions options) {
         Objects.requireNonNull(options);
+        setDatabaseName(options.databaseName());
         setCollectionName(options.collectionName());
         options.hashAlgorithm().ifPresent(this::setHashAlgorithm);
         setPasswordField(options.passwordField());
         options.saltField().ifPresent(this::setSaltField);
         options.saltStyle().ifPresent(this::setSaltStyle);
         setUsernameField(options.usernameField());
+    }
+
+    /**
+     * Gets the name of the Mongo DB database that contains the user accounts.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_DATABASE_NAME}.
+     *
+     * @return The name of the database.
+     */
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    /**
+     * Sets the name of the Mongo DB database that contains the user accounts.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_DATABASE_NAME}.
+     *
+     * @param databaseName The name.
+     * @throws NullPointerException if databaseName is {@code null}.
+     */
+    public void setDatabaseName(final String databaseName) {
+        this.databaseName = Objects.requireNonNull(databaseName);
     }
 
     /**

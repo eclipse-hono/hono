@@ -64,7 +64,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceManagementService.class);
 
     protected final Vertx vertx;
-    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+    protected TenantInformationService tenantInformationService = NoopTenantInformationService.INSTANCE;
 
     private final Handler<AbstractNotification> notificationSender;
 

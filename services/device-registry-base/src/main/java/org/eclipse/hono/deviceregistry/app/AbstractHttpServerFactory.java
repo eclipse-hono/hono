@@ -50,14 +50,10 @@ public abstract class AbstractHttpServerFactory {
     CredentialsManagementService credentialsManagementService;
 
     @Inject
-    HealthCheckServer healthCheckServer;
+    HttpServiceConfigProperties httpServerProperties;
 
-    /**
-     * Gets the HTTP endpoint configuration properties.
-     *
-     * @return The properties.
-     */
-    protected abstract HttpServiceConfigProperties getHttpServerProperties();
+    @Inject
+    HealthCheckServer healthCheckServer;
 
     /**
      * Creates a server with an HTTP endpoint exposing Hono's Device Registry Management API.
@@ -66,7 +62,7 @@ public abstract class AbstractHttpServerFactory {
      */
     public final DeviceRegistryHttpServer newServer() {
         final var server = new DeviceRegistryHttpServer();
-        server.setConfig(getHttpServerProperties());
+        server.setConfig(httpServerProperties);
         server.setHealthCheckServer(healthCheckServer);
         server.setTracer(tracer);
         server.addEndpoint(tenantHttpEndpoint());
@@ -97,7 +93,7 @@ public abstract class AbstractHttpServerFactory {
      */
     private HttpEndpoint tenantHttpEndpoint() {
         final var endpoint = new DelegatingTenantManagementHttpEndpoint<>(vertx, tenantManagementService);
-        endpoint.setConfiguration(getHttpServerProperties());
+        endpoint.setConfiguration(httpServerProperties);
         endpoint.setTracer(tracer);
         return endpoint;
     }
@@ -110,7 +106,7 @@ public abstract class AbstractHttpServerFactory {
      */
     private HttpEndpoint deviceHttpEndpoint() {
         final var endpoint = new DelegatingDeviceManagementHttpEndpoint<>(vertx, deviceManagementService);
-        endpoint.setConfiguration(getHttpServerProperties());
+        endpoint.setConfiguration(httpServerProperties);
         endpoint.setTracer(tracer);
         return endpoint;
     }
@@ -123,7 +119,7 @@ public abstract class AbstractHttpServerFactory {
      */
     private HttpEndpoint credentialsHttpEndpoint() {
         final var endpoint = new DelegatingCredentialsManagementHttpEndpoint<>(vertx, credentialsManagementService);
-        endpoint.setConfiguration(getHttpServerProperties());
+        endpoint.setConfiguration(httpServerProperties);
         endpoint.setTracer(tracer);
         return endpoint;
     }

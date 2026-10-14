@@ -21,6 +21,13 @@ import io.smallrye.config.WithDefault;
 interface MongoDbBasedRegistryConfigOptions {
 
     /**
+     * Gets the name of the MongoDB database that contains the registry entities.
+     *
+     * @return The database name.
+     */
+    String databaseName();
+
+    /**
      * Gets the maximum period of time that information returned by the service's
      * operations may be cached for.
      * <p>

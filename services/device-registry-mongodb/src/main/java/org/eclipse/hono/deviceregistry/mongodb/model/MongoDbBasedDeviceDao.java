@@ -21,13 +21,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.bson.Document;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
-import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
@@ -37,31 +37,40 @@ import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.mongodb.client.model.FindOneAndReplaceOptions;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.ReturnDocument;
 
 import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.quarkus.mongodb.FindOptions;
+import io.quarkus.mongodb.reactive.ReactiveMongoClient;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
-import io.vertx.ext.mongo.FindOptions;
-import io.vertx.ext.mongo.IndexOptions;
-import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.mongo.UpdateOptions;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.inject.Default;
+import jakarta.inject.Singleton;
 
 
 /**
  * A data access object for persisting device information to a Mongo DB collection.
  *
  */
-public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao, HealthCheckProvider {
+@Readiness
+@Default
+@Singleton
+public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao, HealthCheck {
 
     /**
      * The name of the index on tenant ID, device ID of devices that are a member of a gateway group.
@@ -82,18 +91,39 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
     /**
      * Creates a new DAO.
      *
-     * @param vertx The vert.x instance to use.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      * @param mongoClient The client to use for accessing the Mongo DB.
-     * @param collectionName The name of the collection that contains the tenant data.
+     * @param config The configuration properties for the device DAO.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     public MongoDbBasedDeviceDao(
             final Vertx vertx,
-            final MongoClient mongoClient,
-            final String collectionName,
+                    final ReactiveMongoClient mongoClient,
+                    final MongoDbBasedRegistrationConfigProperties config,
             final Tracer tracer) {
-        super(vertx, mongoClient, collectionName, tracer, null);
+        super(vertx, mongoClient, config.getDatabaseName(), config.getCollectionName(), tracer, null);
+    }
+
+    @PostConstruct
+    void init() {
+        vertx.setPeriodic(
+            2000,
+            2000,
+            timerId -> createIndices()
+                .onFailure(t -> LOG.info("Failed to create indices, retrying ...", t))
+                .onSuccess(ok -> {
+                    LOG.info("Successfully created indices");
+                    vertx.cancelTimer(timerId);
+                })
+        );
+    }
+
+    @Override
+    public HealthCheckResponse call() {
+        return HealthCheckResponse.named("Device DAO - Indices")
+            .status(indicesCreated.get())
+            .build();
     }
 
     /**
@@ -108,30 +138,28 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         if (creatingIndices.compareAndSet(false, true)) {
             // create unique index on device ID
             return createIndex(
-                    new JsonObject().put(BaseDto.FIELD_TENANT_ID, 1).put(DeviceDto.FIELD_DEVICE_ID, 1),
-                    new IndexOptions()
-                        .unique(true))
+                    new Document(BaseDto.FIELD_TENANT_ID, 1).append(DeviceDto.FIELD_DEVICE_ID, 1),
+                    new IndexOptions().unique(true))
                 .compose(ok -> createIndex(
-                        new JsonObject().put(BaseDto.FIELD_TENANT_ID, 1).put(MongoDbDocumentBuilder.DEVICE_VIA_PATH, 1),
+                        new Document(BaseDto.FIELD_TENANT_ID, 1).append(MongoDbDocumentBuilder.DEVICE_VIA_PATH, 1),
                         new IndexOptions()
                             .name("tenant_id.via_exists")
                             .partialFilterExpression(MongoDbDocumentBuilder.builder()
                                 .withGatewayDevices()
                                 .document())))
                 .compose(ok -> createIndex(
-                        new JsonObject()
-                            .put(BaseDto.FIELD_TENANT_ID, 1)
-                            .put(DeviceDto.FIELD_DEVICE_ID, 1)
+                        new Document(BaseDto.FIELD_TENANT_ID, 1)
+                            .append(DeviceDto.FIELD_DEVICE_ID, 1)
                             // the created field is only included in the index so that Mongo 4.4
                             // does not complain about an index on tenant and device already existing
                             // with different options
-                            .put(DeviceDto.FIELD_CREATED, 1),
+                            .append(DeviceDto.FIELD_CREATED, 1),
                         new IndexOptions()
                             .name(IDX_TENANT_ID_DEVICE_ID_MEMBER_OF_EXISTS)
                             .partialFilterExpression(
-                                new JsonObject().put(
+                                new Document(
                                         MongoDbDocumentBuilder.DEVICE_MEMBEROF_PATH,
-                                        new JsonObject().put("$exists", true)))))
+                                    new Document("$exists", true)))))
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
                     creatingIndices.set(false);
@@ -141,35 +169,6 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
             LOG.debug("already trying to create indices");
         }
         return result.future();
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Registers a check that, when invoked, verifies that Device collection related indices have been
-     * created and, if not, triggers the creation of the indices (again).
-     */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register(
-                "devices-indices-created-" + UUID.randomUUID(),
-                status -> {
-                    if (indicesCreated.get()) {
-                        status.tryComplete(Status.OK());
-                    } else {
-                        LOG.debug("devices-indices not (yet) created");
-                        status.tryComplete(Status.KO());
-                        createIndices();
-                    }
-                });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // nothing to register
     }
 
     /**
@@ -188,7 +187,10 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceConfig.getDeviceId())
                 .start();
 
-        return mongoClient.insert(collectionName, JsonObject.mapFrom(deviceConfig))
+        final Document deviceConfigDocument = new Document(JsonObject.mapFrom(deviceConfig).getMap());
+        final var insertUni = getCollection().insertOne(deviceConfigDocument);
+
+        return futureFromUni(insertUni)
                 .map(success -> {
                     span.log("successfully created device");
                     LOG.debug("successfully created device [tenant: {}, device-id: {}, resource-version: {}]",
@@ -235,18 +237,22 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
 
     private Future<DeviceDto> getById(final String tenantId, final String deviceId, final Span span) {
 
-        final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
+        final Document findDeviceQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
-        return mongoClient.findOne(collectionName, findDeviceQuery, null)
+
+        final Uni<Document> findUni = getCollection().find(findDeviceQuery).toUni();
+        return futureFromUni(findUni)
                 .map(result -> {
                     if (result == null) {
                         throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "device not found");
                     } else {
+                        final var deviceJson = new JsonObject(result);
                         if (LOG.isTraceEnabled()) {
-                            LOG.trace("device data from collection;{}{}", System.lineSeparator(), result.encodePrettily());
+                            LOG.trace("device data from collection;{}{}", System.lineSeparator(), deviceJson.encodePrettily());
                         }
-                        return result.mapTo(DeviceDto.class);
+                        return deviceJson.mapTo(DeviceDto.class);
                     }
                 })
                 .onFailure(t -> logError(span, "error retrieving device", t, tenantId, deviceId))
@@ -275,19 +281,18 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         span.log("resolving " + viaGroups.size() + " device groups");
 
-        final var deviceMemberOfSpec = new JsonObject().put("$exists", true).put("$in", new JsonArray(List.copyOf(viaGroups)));
-        final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.builder()
+        final var deviceMemberOfSpec = new Document("$exists", true).append("$in", new ArrayList<String>(viaGroups));
+        final Document resolveGroupMembersQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .document()
-                .put(PROPERTY_DEVICE_MEMBER_OF, deviceMemberOfSpec);
+                .append(PROPERTY_DEVICE_MEMBER_OF, deviceMemberOfSpec);
         // retrieve only the deviceId instead of the whole document.
         final FindOptions findOptions = new FindOptions()
-                .setFields(new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
+                .projection(new Document(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, true).append("_id", false));
 
-        return mongoClient.findWithOptions(
-                collectionName,
-                resolveGroupMembersQuery,
-                findOptions)
+        final Uni<List<Document>> findUni = getCollection().find(resolveGroupMembersQuery, findOptions).collect().asList();
+
+        return futureFromUni(findUni)
                 .map(documents -> {
                     if (documents == null) {
                         return Set.<String>of();
@@ -349,7 +354,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
             filtersPromise.complete(filters);
         }
 
-        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
+        final var sortDocument = MongoDbDocumentBuilder.builder()
                 .withDeviceSortOptions(sortOptions)
                 .document();
 
@@ -368,11 +373,10 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .onComplete(r -> span.finish());
     }
 
-    private static List<DeviceWithId> getDevicesWithId(final JsonObject searchResult) {
-        return Optional.ofNullable(searchResult.getJsonArray(RegistryManagementConstants.FIELD_RESULT_SET_PAGE))
+    private static List<DeviceWithId> getDevicesWithId(final Document searchResult) {
+        return Optional.ofNullable(searchResult.getList(RegistryManagementConstants.FIELD_RESULT_SET_PAGE, Document.class))
                 .map(devices -> devices.stream()
-                        .filter(JsonObject.class::isInstance)
-                        .map(JsonObject.class::cast)
+                        .map(JsonObject::new)
                         .peek(json -> {
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("document from collection:{}{}", System.lineSeparator(), json.encodePrettily());
@@ -403,23 +407,23 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
+        final var updateDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(deviceConfig.getTenantId())
                 .withDeviceId(deviceConfig.getDeviceId())
                 .document();
 
-        final var document = JsonObject.mapFrom(deviceConfig);
+        final var deviceConfigJson = JsonObject.mapFrom(deviceConfig);
         if (LOG.isTraceEnabled()) {
-            LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), document.encodePrettily());
+            LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), deviceConfigJson.encodePrettily());
         }
 
-        return mongoClient.findOneAndReplaceWithOptions(
-                            collectionName,
+        final var replaceResultUni = getCollection().findOneAndReplace(
                             updateDeviceQuery,
-                            document,
-                            new FindOptions(),
-                            new UpdateOptions().setReturningNewDocument(true))
+            new Document(deviceConfigJson.getMap()),
+            new FindOneAndReplaceOptions().returnDocument(ReturnDocument.AFTER));
+
+        return futureFromUni(replaceResultUni)
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -463,13 +467,14 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                     tenantId, deviceId, resourceVersion.orElse(null));
         }
 
-        final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.builder()
+        final var deleteDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
 
-        return mongoClient.findOneAndDelete(collectionName, deleteDeviceQuery)
+        final var deleteUni = getCollection().findOneAndDelete(deleteDeviceQuery);
+        return futureFromUni(deleteUni)
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -499,10 +504,11 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        final JsonObject removeDevicesQuery = MongoDbDocumentBuilder.builder()
+        final var removeDevicesQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .document();
-        return mongoClient.removeDocuments(collectionName, removeDevicesQuery)
+        final var removeUni = getCollection().deleteMany(removeDevicesQuery);
+        return futureFromUni(removeUni)
                 .compose(result -> {
                     span.log("successfully deleted devices");
                     LOG.debug("successfully deleted devices of tenant [tenant-id: {}]", tenantId);
@@ -526,51 +532,46 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        return mongoClient.count(
-                collectionName,
-                MongoDbDocumentBuilder.builder().withTenantId(tenantId).document())
+        final var countQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId).document();
+        final var countUni = getCollection().countDocuments(countQuery);
+        return futureFromUni(countUni)
             .onFailure(t -> logError(span, "error counting devices", t, tenantId, null))
             .recover(this::mapError)
             .onComplete(r -> span.finish());
     }
 
-    private Future<JsonArray> getIdsOfGatewayDevices(final String tenantId, final Span span) {
+    private Future<List<String>> getIdsOfGatewayDevices(final String tenantId, final Span span) {
 
         final var viaQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .withGatewayDevices()
                 .document();
 
-        final var viaElements = mongoClient.distinctWithQuery(
-                collectionName,
-                MongoDbDocumentBuilder.DEVICE_VIA_PATH,
-                String.class.getName(),
-                viaQuery)
-                .map(array -> array.stream()
-                        .filter(String.class::isInstance)
-                        .map(String.class::cast)
-                        .collect(Collectors.toSet()));
+        final var viaElementsUni = getCollection().distinct(
+                    MongoDbDocumentBuilder.DEVICE_VIA_PATH,
+                    viaQuery,
+                    String.class)
+                .collect().asSet();
+        final var viaElements = futureFromUni(viaElementsUni);
 
         final var gatewayGroupQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .withMemberOfAnyGatewayGroup()
                 .document();
 
-        final var gwGroupMembers = mongoClient.distinctWithQuery(
-                collectionName,
+        final var gwGroupMembersUni = getCollection().distinct(
                 DeviceDto.FIELD_DEVICE_ID,
-                String.class.getName(),
-                gatewayGroupQuery)
-                .map(array -> array.stream()
-                        .filter(String.class::isInstance)
-                        .map(String.class::cast)
-                        .collect(Collectors.toSet()));
+            gatewayGroupQuery,
+            String.class)
+            .collect().asSet();
+        final var gwGroupMembers = futureFromUni(gwGroupMembersUni);
 
         return Future.all(viaElements, gwGroupMembers)
                 .map(ok -> {
-                    final Set<String> result = new HashSet<>(viaElements.result());
-                    result.addAll(gwGroupMembers.result());
-                    return new JsonArray(new ArrayList<>(result));
+                    final var distinctIds = new HashSet<>(viaElements.result());
+                    distinctIds.addAll(gwGroupMembers.result());
+                    final List<String> result = new ArrayList<>(distinctIds);
+                    return result;
                 })
                 .onFailure(t -> {
                     LOG.debug("error retrieving gateway device IDs for tenant {}", tenantId, t);
@@ -579,7 +580,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .onSuccess(idList -> {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("found gateway device IDs for tenant {}: {}",
-                                tenantId, idList.encodePrettily());
+                                tenantId, idList);
                     }
                 })
                 .recover(this::mapError);

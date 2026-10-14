@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,13 @@ import java.util.regex.Pattern;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+
 /**
  * Configuration properties for Hono's device registration and management APIs.
  */
+@Singleton
 public final class MongoDbBasedRegistrationConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 
     /**
@@ -38,7 +42,7 @@ public final class MongoDbBasedRegistrationConfigProperties extends AbstractMong
      * Creates default properties.
      */
     public MongoDbBasedRegistrationConfigProperties() {
-        // do nothing
+        super();
     }
 
     /**
@@ -47,6 +51,7 @@ public final class MongoDbBasedRegistrationConfigProperties extends AbstractMong
      * @param options The options.
      * @throws NullPointerException if options are {@code null}.
      */
+    @Inject
     public MongoDbBasedRegistrationConfigProperties(final MongoDbBasedRegistrationConfigOptions options) {
         super(options.commonOptions());
         this.setCollectionName(options.collectionName());

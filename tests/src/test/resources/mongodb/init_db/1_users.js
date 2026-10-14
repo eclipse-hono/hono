@@ -1,4 +1,4 @@
-//Creates users required for the device registry to connect to the mongo db database
+// Creates users required for the device registry to connect to the mongo db database
 db.createUser(
     {
         user: "${hono.mongodb.username}",

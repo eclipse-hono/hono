@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,14 +18,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.bson.Document;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
-import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
@@ -37,31 +37,40 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.microprofile.health.HealthCheck;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.mongodb.client.model.FindOneAndReplaceOptions;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.ReturnDocument;
 
 import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
+import io.quarkus.mongodb.FindOptions;
+import io.quarkus.mongodb.reactive.ReactiveMongoClient;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
-import io.vertx.ext.mongo.FindOptions;
-import io.vertx.ext.mongo.IndexOptions;
-import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.mongo.UpdateOptions;
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.inject.Default;
+import jakarta.inject.Singleton;
 
 
 /**
  * A data access object for persisting tenants to a Mongo DB collection.
  *
  */
-public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements TenantDao, HealthCheckProvider {
+@Readiness
+@Default
+@Singleton
+public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements TenantDao, HealthCheck {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantDao.class);
 
@@ -71,18 +80,39 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
     /**
      * Creates a new DAO.
      *
-     * @param vertx The vert.x instance to use.
+     * @param vertx The Vert.x instance to use for asynchronous operations.
      * @param mongoClient The client to use for accessing the Mongo DB.
-     * @param collectionName The name of the collection that contains the tenant data.
+     * @param config The configuration properties for the tenants DAO.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     public MongoDbBasedTenantDao(
             final Vertx vertx,
-            final MongoClient mongoClient,
-            final String collectionName,
+            final ReactiveMongoClient mongoClient,
+            final MongoDbBasedTenantsConfigProperties config,
             final Tracer tracer) {
-        super(vertx, mongoClient, collectionName, tracer, null);
+        super(vertx, mongoClient, config.getDatabaseName(), config.getCollectionName(), tracer, null);
+    }
+
+    @PostConstruct
+    void init() {
+        vertx.setPeriodic(
+            2000,
+            2000,
+            timerId -> createIndices()
+                .onFailure(t -> LOG.info("Failed to create indices, retrying ...", t))
+                .onSuccess(ok -> {
+                    LOG.info("Successfully created indices");
+                    vertx.cancelTimer(timerId);
+                })
+        );
+    }
+
+    @Override
+    public HealthCheckResponse call() {
+        return HealthCheckResponse.named("Tenant DAO - Indices")
+            .status(indicesCreated.get())
+            .build();
     }
 
     /**
@@ -95,81 +125,50 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         final Promise<Void> result = Promise.promise();
 
         if (creatingIndices.compareAndSet(false, true)) {
-            final String trustedCaField = TenantDto.FIELD_TENANT + "."
-                    + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA;
+            final String trustedCaField = TenantDto.FIELD_TENANT + "." + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA;
             // create unique index on tenant ID
             return createIndex(
-                    new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                    new Document(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                     new IndexOptions().unique(true))
                 // create a unique partial index on tenant.alias
                 .compose(ok -> {
                     final String aliasField = TenantDto.FIELD_TENANT + "." + RegistryManagementConstants.FIELD_ALIAS;
                     return createIndex(
-                        new JsonObject().put(aliasField, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject().put(
+                        new Document(aliasField, 1),
+                        new IndexOptions()
+                            .unique(true)
+                            .partialFilterExpression(new Document(
                                         aliasField,
-                                        new JsonObject().put("$exists", true))));
+                                        new Document("$exists", true))));
                 })
                 // create a non-unique index on tenant ID, tenant.trust_anchor_group and tenant.trusted-ca.subject-dn
                 // this index is supposed to replace the previously used unique index on tenant.trusted-ca.subject-dn
                 .compose(ok -> createIndex(
-                    new JsonObject()
-                            .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                            .put(TenantDto.FIELD_TENANT + "."
-                                    + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
-                            .put(trustedCaField + "." + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                    new IndexOptions()
-                            .partialFilterExpression(new JsonObject().put(
+                        new Document()
+                            .append(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                            .append(TenantDto.FIELD_TENANT + "." + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
+                            .append(trustedCaField + "." + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        new IndexOptions().partialFilterExpression(new Document(
                                     trustedCaField,
-                                    new JsonObject().put("$exists", true)))))
+                            new Document("$exists", true)))))
                 // in order to be able to use the same trust anchor for multiple tenants having the same
                 // trust anchor group value, the old unique index on tenant.trusted-ca.subject-dn needs to be dropped
                 .compose(ok -> dropIndex(
-                        new JsonObject().put(trustedCaField + "."
-                                + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        new IndexOptions().unique(true)
-                            .partialFilterExpression(new JsonObject().put(
+                        new Document(trustedCaField + "." + RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        new IndexOptions()
+                            .unique(true)
+                            .partialFilterExpression(new Document(
                                     trustedCaField,
-                                    new JsonObject().put("$exists", true)))))
-                .onSuccess(ok -> indicesCreated.set(true))
+                                    new Document("$exists", true)))))
+                .onSuccess(ok -> this.indicesCreated.set(true))
                 .onComplete(r -> {
-                    creatingIndices.set(false);
+                    this.creatingIndices.set(false);
                     result.handle(r);
                 });
         } else {
             LOG.debug("already trying to create indices");
         }
         return result.future();
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Registers a check that, when invoked, verifies that Tenant collection related indices have been
-     * created and, if not, triggers the creation of the indices (again).
-     */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register(
-                "tenants-indices-created-" + UUID.randomUUID(),
-                status -> {
-                    if (indicesCreated.get()) {
-                        status.tryComplete(Status.OK());
-                    } else {
-                        LOG.debug("tenants-indices not (yet) created");
-                        status.tryComplete(Status.KO());
-                        createIndices();
-                    }
-                });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // nothing to register
     }
 
     /**
@@ -191,8 +190,9 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         if (LOG.isTraceEnabled()) {
             LOG.trace("creating tenant:{}{}", System.lineSeparator(), newTenantDtoJson.encodePrettily());
         }
+
         return validateTrustAnchors(tenantConfig, span)
-                .compose(ok -> mongoClient.insert(collectionName, newTenantDtoJson))
+                .compose(ok -> futureFromUni(getCollection().insertOne(new Document(newTenantDtoJson.getMap()))))
                 .map(tenantObjectIdResult -> {
                     LOG.debug("successfully created tenant [tenant-id: {}, version: {}]",
                             tenantConfig.getTenantId(), tenantConfig.getVersion());
@@ -256,22 +256,25 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
             queryBuilder.withTenantId(tenantId);
         }
 
-        return mongoClient.findOne(
-                collectionName,
-                queryBuilder.document(),
-                null)
+        final var findUni = getCollection().find(queryBuilder.document()).toUni();
+
+        return futureFromUni(findUni)
             .map(tenantJsonResult -> {
                 if (tenantJsonResult == null) {
-                    throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "no such tenant");
+                        throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such tenant");
                 } else {
+                        final JsonObject tenantJson = new JsonObject(tenantJsonResult);
                     if (LOG.isTraceEnabled()) {
-                        LOG.trace("tenant from collection:{}{}", System.lineSeparator(), tenantJsonResult.encodePrettily());
+                            LOG.trace("tenant from collection:{}{}", System.lineSeparator(),
+                                    tenantJson.encodePrettily());
                     }
-                    return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
-                            tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                            tenantJsonResult.getInstant(BaseDto.FIELD_CREATED),
-                            tenantJsonResult.getInstant(BaseDto.FIELD_UPDATED_ON),
-                            tenantJsonResult.getString(BaseDto.FIELD_VERSION));
+                        return TenantDto.forRead(tenantJson.getString(Constants.JSON_FIELD_TENANT_ID),
+                                tenantJson.getJsonObject(TenantDto.FIELD_TENANT)
+                                        .mapTo(Tenant.class),
+                                tenantJson.getInstant(BaseDto.FIELD_CREATED),
+                                tenantJson.getInstant(BaseDto.FIELD_UPDATED_ON),
+                                tenantJson.getString(BaseDto.FIELD_VERSION));
                 }
             })
             .onFailure(t -> logError(span, "error retrieving tenant", t, tenantId, null))
@@ -294,25 +297,30 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTag(TracingHelper.TAG_SUBJECT_DN, dn)
                 .start();
 
-        return mongoClient.findWithOptions(
-                collectionName,
-                MongoDbDocumentBuilder.builder().withCa(dn).document(),
-                new FindOptions().setLimit(2))
+        final var findOptions = new FindOptions()
+                .filter(MongoDbDocumentBuilder.builder().withCa(dn).document())
+                .limit(2);
+        final var searchResultUni = getCollection().find(findOptions).collect().asList();
+        return futureFromUni(searchResultUni)
             .map(matchingDocuments -> {
                 if (matchingDocuments.isEmpty()) {
-                    LOG.debug("could not find tenant with matching trust anchor [subject DN: {}]", dn);
+                                LOG.debug("could not find tenant with matching trust anchor [subject DN: {}]",
+                                        dn);
                     throw new ClientErrorException(
                             HttpURLConnection.HTTP_NOT_FOUND,
                             "no such tenant");
                 } else if (matchingDocuments.size() == 1) {
-                    final JsonObject tenantJsonResult = matchingDocuments.get(0);
-                    return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
-                            tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
+                                final JsonObject tenantJsonResult = new JsonObject(matchingDocuments.get(0));
+                                return TenantDto.forRead(
+                                        tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
+                                        tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT)
+                                                .mapTo(Tenant.class),
                             tenantJsonResult.getInstant(BaseDto.FIELD_CREATED),
                             tenantJsonResult.getInstant(BaseDto.FIELD_UPDATED_ON),
                             tenantJsonResult.getString(BaseDto.FIELD_VERSION));
                 } else {
-                    LOG.debug("found multiple tenants with matching trust anchor [subject DN: {}]", dn);
+                                LOG.debug("found multiple tenants with matching trust anchor [subject DN: {}]",
+                                        dn);
                     throw new ClientErrorException(
                             HttpURLConnection.HTTP_NOT_FOUND,
                             "found multiple tenants with matching trust anchor");
@@ -341,18 +349,17 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
+        final var updateTenantQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(newTenantConfig.getTenantId())
                 .document();
 
         return validateTrustAnchors(newTenantConfig, span)
-                .compose(ok -> mongoClient.findOneAndReplaceWithOptions(
-                        collectionName,
+                .compose(ok -> futureFromUni(getCollection()
+                        .findOneAndReplace(
                         updateTenantQuery,
-                        JsonObject.mapFrom(newTenantConfig),
-                        new FindOptions(),
-                        new UpdateOptions().setReturningNewDocument(true)))
+                                new Document(JsonObject.mapFrom(newTenantConfig).getMap()),
+                                new FindOneAndReplaceOptions().returnDocument(ReturnDocument.AFTER))))
                 .compose(updateResult -> {
                     if (updateResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(newTenantConfig.getTenantId(),
@@ -365,8 +372,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 })
                 .recover(error -> {
                     if (MongoDbBasedDao.isDuplicateKeyError(error)) {
-                        LOG.debug("failed to update tenant [{}], tenant alias already in use",
-                                newTenantConfig.getTenantId(), error);
+                                LOG.debug("failed to update tenant [{}], tenant alias already in use", newTenantConfig.getTenantId(), error);
                         final var exception = new ClientErrorException(
                                 newTenantConfig.getTenantId(),
                                 HttpURLConnection.HTTP_CONFLICT,
@@ -395,8 +401,11 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         } else {
             span = NoopSpan.INSTANCE;
         }
-
-        return mongoClient.count(collectionName, filter == null ? new JsonObject() : filter)
+        final Document filterDocument = Optional.ofNullable(filter)
+                .map(f -> new Document(f.getMap()))
+                .orElseGet(Document::new);
+        final var countUni = getCollection().countDocuments(filterDocument);
+        return futureFromUni(countUni)
                 .map(Long::intValue)
                 .onFailure(t -> logError(span, "error getting tenants count", t, null, null))
                 .onComplete(r -> span.finish());
@@ -420,12 +429,13 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
+        final Document deleteTenantQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .document();
 
-        return mongoClient.findOneAndDelete(collectionName, deleteTenantQuery)
+        final var deleteResultUni = getCollection().findOneAndDelete(deleteTenantQuery);
+        return futureFromUni(deleteResultUni)
                 .compose(deleteResult -> {
                     if (deleteResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,
@@ -466,10 +476,10 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .addReference(References.CHILD_OF, tracingContext)
                 .start();
 
-        final JsonObject filterDocument = MongoDbDocumentBuilder.builder()
+        final Document filterDocument = MongoDbDocumentBuilder.builder()
                 .withTenantFilters(filters)
                 .document();
-        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
+        final Document sortDocument = MongoDbDocumentBuilder.builder()
                 .withTenantSortOptions(sortOptions)
                 .document();
 
@@ -483,11 +493,12 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
             .onComplete(r -> span.finish());
     }
 
-    private static List<TenantWithId> getTenantsWithId(final JsonObject searchResult) {
-        return Optional.ofNullable(searchResult.getJsonArray(RegistryManagementConstants.FIELD_RESULT_SET_PAGE))
+    private static List<TenantWithId> getTenantsWithId(final Document searchResult) {
+        return Optional
+                .ofNullable(searchResult.getList(RegistryManagementConstants.FIELD_RESULT_SET_PAGE,
+                        Document.class))
                 .map(tenants -> tenants.stream()
-                        .filter(JsonObject.class::isInstance)
-                        .map(JsonObject.class::cast)
+                        .map(JsonObject::new)
                         .map(json -> json.mapTo(TenantDto.class))
                         .map(tenantDto -> TenantWithId.from(tenantDto.getTenantId(), tenantDto.getData()))
                         .toList())
@@ -549,14 +560,14 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         Optional.ofNullable(tenantDto.getData().getTrustAnchorGroup())
                 .ifPresent(queryBuilder::withTrustAnchorGroup);
 
+        final var filter = queryBuilder.document();
         if (LOG.isDebugEnabled()) {
             LOG.debug("validate trust anchors query:{}{}", System.lineSeparator(),
-                    queryBuilder.document().encodePrettily());
+                    new JsonObject(filter).encodePrettily());
         }
 
-        return mongoClient.count(
-                collectionName,
-                queryBuilder.document())
+        final var countUni = getCollection().countDocuments(filter);
+        return futureFromUni(countUni)
             .map(count -> {
                 if (count == 0) {
                     return null;

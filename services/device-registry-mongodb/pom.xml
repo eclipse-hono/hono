@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Copyright (c) 2022 Contributors to the Eclipse Foundation
-   
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -28,101 +28,15 @@
     A Quarkus based implementation of Hono's device registry using MongoDB for persistence.
   </description>
 
-  <properties>
-    <mongodb.driver.reactivestreams.version>4.11.5</mongodb.driver.reactivestreams.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>mongodb-driver-reactivestreams</artifactId>
-      <version>${mongodb.driver.reactivestreams.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-transport</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-buffer</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-handler</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.reactivestreams</groupId>
-          <artifactId>reactive-streams</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>mongodb-driver-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>bson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>mongodb-driver-core</artifactId>
-      <version>${mongodb.driver.reactivestreams.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>bson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>mongodb-crypt</artifactId>
-      <version>1.11.0</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>bson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>bson</artifactId>
-      <version>${mongodb.driver.reactivestreams.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mongodb</groupId>
-      <artifactId>bson-record-codec</artifactId>
-      <version>${mongodb.driver.reactivestreams.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>bson</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>com.github.jnr</groupId>
       <artifactId>jnr-unixsocket</artifactId>
       <version>0.38.23</version>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-mongo-client</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mongodb</groupId>
-          <artifactId>mongodb-driver-reactivestreams</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-auth-mongo</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -138,6 +52,10 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-mongodb-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-caffeine</artifactId>
     </dependency>
     <dependency>
@@ -148,6 +66,16 @@
       <groupId>com.github.spotbugs</groupId>
       <artifactId>spotbugs-annotations</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-mongo</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>io.vertx</groupId>
+          <artifactId>vertx-mongo-client</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- testing -->
@@ -175,6 +103,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
       <scope>test</scope>
@@ -188,6 +121,10 @@
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
     </dependency>
   </dependencies>
 
@@ -230,6 +167,13 @@
           <systemPropertyVariables>
             <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
           </systemPropertyVariables>
+          <properties>
+            <configurationParameters>
+              junit.jupiter.execution.parallel.enabled = false
+              junit.jupiter.execution.parallel.mode.default = same_thread
+              junit.jupiter.execution.parallel.mode.classes.default = concurrent
+            </configurationParameters>
+          </properties>
         </configuration>
       </plugin>
     </plugins>

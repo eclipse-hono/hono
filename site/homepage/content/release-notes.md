@@ -7,8 +7,22 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
+* The MongoDB based Device Registry now supports MongoDB versions 8.3 and 9.0 in addition to version 7.0.
+  However, due to an incompatibility with some Linux kernel versions, MongoDB 8.3 and 9.0 may not be able to
+  run on some current Linux distributions. Please refer to https://jira.mongodb.org/browse/SERVER-121912 for details.
 * Hono has been updated to the 3.27.6 Long Term Support (LTS) version of Quarkus which includes bug fixes and updates
   to other libraries that Hono depends on.
+
+### Breaking Configuration Changes
+
+* The underlying implementation of the connection pool to the MongoDB instance used by the MongoDB based Device Registry
+  has been changed in order to support MongoDB versions > 7.0.
+  As part of this activity, the names of the configuration properties for configuring the connection pool have also changed.
+  Please refer to the MongoDB Device Registry Admin Guide for details.
+
+### Deprecations
+
+* Support for Mongo DB 6.0 has been removed from the MongoDB based Device Registry.
 
 ## 2.7.0
 

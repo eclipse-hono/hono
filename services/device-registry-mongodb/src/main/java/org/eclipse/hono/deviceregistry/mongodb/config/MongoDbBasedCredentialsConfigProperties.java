@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,9 +18,13 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+
 /**
  * Configuration properties for Hono's credentials service and management APIs.
  */
+@Singleton
 public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 
     /**
@@ -45,6 +49,7 @@ public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongo
      * @param options The options.
      * @throws NullPointerException if options are {@code null}.
      */
+    @Inject
     public MongoDbBasedCredentialsConfigProperties(final MongoDbBasedCredentialsConfigOptions options) {
         super(options.commonOptions());
         this.setCollectionName(options.collectionName());
