@@ -97,7 +97,7 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                 .map(dto -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         dto.getData(),
-                        Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
+                        Optional.empty(),
                         Optional.ofNullable(dto.getVersion())));
     }
 

@@ -1,0 +1,8 @@
+hono:
+  registry:
+    svc:
+      credentialsTtl: PT0S
+      registrationTtl: PT140S
+  tenant:
+    svc:
+      tenantTtl: PT10M

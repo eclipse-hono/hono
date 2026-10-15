@@ -19,6 +19,8 @@ import java.util.Objects;
 
 import io.smallrye.config.SmallRyeConfigBuilder;
 import io.smallrye.config.source.yaml.YamlConfigSource;
+import io.smallrye.config.validator.BeanValidationConfigValidator;
+import jakarta.validation.Validation;
 
 /**
  * Helper methods for working with SmallRye Config mappings.
@@ -65,8 +67,12 @@ public final class ConfigMappingSupport {
         Objects.requireNonNull(yamlFileResource);
 
         try {
+            final var factory = Validation.buildDefaultValidatorFactory();
+            final BeanValidationConfigValidator validator = factory::getValidator;
+
             final var builder = new SmallRyeConfigBuilder()
                     .withSources(new YamlConfigSource(yamlFileResource))
+                    .withValidator(validator)
                     .withValidateUnknown(false);
             if (prefix == null) {
                 builder.withMapping(mappedType);
@@ -76,7 +82,7 @@ public final class ConfigMappingSupport {
                 return builder.build().getConfigMapping(mappedType, prefix);
             }
         } catch (final Exception e) {
-            throw new AssertionError("could not load YAML file", e);
+            throw new AssertionError("failed to get config mapping from YAML file", e);
         }
     }
 }

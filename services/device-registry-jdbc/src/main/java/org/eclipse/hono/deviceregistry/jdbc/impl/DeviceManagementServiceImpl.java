@@ -33,7 +33,6 @@ import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.util.CacheDirective;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -45,7 +44,6 @@ import io.vertx.core.Vertx;
 public class DeviceManagementServiceImpl extends AbstractDeviceManagementService {
 
     private final TableManagementStore store;
-    private final Optional<CacheDirective> ttl;
     private final DeviceServiceOptions config;
 
     /**
@@ -63,7 +61,6 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
             final ServiceConfigProperties serviceConfig) {
         super(vertx, serviceConfig);
         this.store = store;
-        this.ttl = Optional.of(CacheDirective.maxAgeDirective(properties.registrationTtl()));
         this.config = properties;
     }
 
@@ -98,7 +95,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         .map(result -> OperationResult.ok(
                                 HttpURLConnection.HTTP_OK,
                                 result.getDevice(),
-                                this.ttl,
+                                Optional.empty(),
                                 result.getResourceVersion()))
                         .orElseThrow(() -> new ClientErrorException(
                                 key.getTenantId(),

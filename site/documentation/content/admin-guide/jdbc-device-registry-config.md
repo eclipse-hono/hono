@@ -85,11 +85,11 @@ and availability.
 | `HONO_REGISTRY_JDBC_MANAGEMENT_VALIDATIONTIME`   <br> `hono.registry.jdbc.management.validationTime`       | no  | `30` | Interval, in seconds, in which connections in the pool are validated. A value of zero means connection validation is disabled. |
 | `HONO_REGISTRY_JDBC_MANAGEMENT_LEAKTIME`         <br> `hono.registry.jdbc.management.leakTime`             | no  | `60` | Seconds after which a connection is considered to be leaking if it has not returned to the pool. A value of zero means connection leakage detection is disabled. |
 | `HONO_REGISTRY_JDBC_MANAGEMENT_TABLENAME`        <br> `hono.registry.jdbc.management.tableName`        | no  | -    | The name of the table the datastore uses. If the datastore requires multiple tables, this is the prefix. |
-| `HONO_REGISTRY_SVC_CREDENTIALSTTL`               <br> `hono.registry.svc.credentialsTtl`                | no  | `1m` | The TTL for credentials responses. |
+| `HONO_REGISTRY_SVC_CREDENTIALSTTL`               <br> `hono.registry.svc.credentialsTtl`                | no  | `PT180S` | The TTL for credentials responses. Must be a duration of zero or positive length. |
 | `HONO_REGISTRY_SVC_HASHALGORITHMSWHITELIST`       <br> `hono.registry.svc.hashAlgorithmsWhitelist`         | no | `empty` | An array of supported hashing algorithms to be used with the `hashed-password` type of credentials. When not set, all values will be accepted. |
 | `HONO_REGISTRY_SVC_MAXBCRYPTCOSTFACTOR`          <br> `hono.registry.svc.maxBcryptCostFactor`            | no  | `10` | The maximum cost factor that is supported in password hashes using the BCrypt hash function. This limit is enforced by the device registry when adding or updating corresponding credentials. Increasing this number allows for potentially more secure password hashes to be used. However, the time required to compute the hash increases exponentially with the cost factor. |
 | `HONO_REGISTRY_SVC_MAXDEVICESPERTENANT`          <br> `hono.registry.svc.maxDevicesPerTenant`             | no | `-1` | The number of devices that can be registered for each tenant. It is an error to set this property to a value < -1. The value `-1` indicates that no limit is set.|
-| `HONO_REGISTRY_SVC_REGISTRATIONTTL`              <br> `hono.registry.svc.registrationTtl`               | no  | `1m` | The TTL for registrations responses. |
+| `HONO_REGISTRY_SVC_REGISTRATIONTTL`              <br> `hono.registry.svc.registrationTtl`               | no  | `PT180S` | The TTL for registrations responses.  Must be a duration of zero or positive length. |
 | `HONO_REGISTRY_SVC_USERNAMEPATTERN`              <br> `hono.registry.svc.usernamePattern`               | no | `^[a-zA-Z0-9-_=\\.]+$` | The regular expression to use for validating authentication identifiers (user names) of hashed-password credentials. |
 | `HONO_TENANT_JDBC_ADAPTER_URL`                   <br> `hono.tenant.jdbc.adapter.url`                    | yes | -    | The JDBC URL to the database. |
 | `HONO_TENANT_JDBC_ADAPTER_DRIVERCLASS`           <br> `hono.tenant.jdbc.adapter.driverClass`            | no  | The default driver registered for the JDBC URL. | The class name of the JDBC driver.|
@@ -114,8 +114,8 @@ and availability.
 | `HONO_TENANT_JDBC_MANAGEMENT_MAXIMUMCONNECTIONTIME` <br> `hono.tenant.jdbc.management.maximumConnectionTime` | no  | `30` | Maximum wait time in seconds to obtain a connection from the pool before the request fails. A value of zero disables the timeout. |
 | `HONO_TENANT_JDBC_MANAGEMENT_VALIDATIONTIME`      <br> `hono.tenant.jdbc.management.validationTime`       | no  | `30` | Interval, in seconds, in which connections in the pool are validated. A value of zero means connection validation is disabled. |
 | `HONO_TENANT_JDBC_MANAGEMENT_LEAKTIME`            <br> `hono.tenant.jdbc.management.leakTime`             | no  | `60` | Seconds after which a connection is considered to be leaking if it has not returned to the pool. A value of zero means connection leakage detection is disabled. |
-| `HONO_TENANT_JDBC_MANAGEMENT_TABLENAME`          <br> `hono.tenant.jdbc.management.tableName`           | no  | -    | The name of the table the datastore uses. If the datastore requires multiple tables, this is the prefix. |
-| `HONO_TENANT_SVC_TENANTTTL`                     <br> `hono.tenant.service.tenantTtl`                   | no  | `1m` | The TTL for tenant responses. |
+| `HONO_TENANT_JDBC_MANAGEMENT_TABLENAME`           <br> `hono.tenant.jdbc.management.tableName`           | no  | -    | The name of the table the datastore uses. If the datastore requires multiple tables, this is the prefix. |
+| `HONO_TENANT_SVC_TENANTTTL`                       <br> `hono.tenant.svc.tenantTtl`                     | no  | `PT180S` | The TTL for tenant responses. Must be a duration of zero or positive length. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -184,16 +184,16 @@ Setting this variable to `0.0.0.0` will let the port being bound to **all** netw
 the port unintentionally to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port
 at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
 configured to use the same port number.
 
 Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
 binding address `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port
-to a local network e.g., while the secure port may be visible worldwide. 
+to a local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 

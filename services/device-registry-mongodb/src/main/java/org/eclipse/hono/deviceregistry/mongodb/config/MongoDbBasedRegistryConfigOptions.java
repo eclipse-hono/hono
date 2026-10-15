@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
 import io.smallrye.config.WithDefault;
+import jakarta.validation.constraints.Min;
 
 /**
  * Common configuration properties for MongoDB based implementations of the APIs of Hono's device registry.
@@ -29,5 +30,6 @@ interface MongoDbBasedRegistryConfigOptions {
      * @return The period of time in seconds.
      */
     @WithDefault("180")
+    @Min(0)
     int cacheMaxAge();
 }

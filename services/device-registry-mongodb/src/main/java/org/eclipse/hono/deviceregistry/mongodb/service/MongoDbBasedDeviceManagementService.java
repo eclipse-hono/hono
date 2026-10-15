@@ -132,7 +132,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                 .map(deviceDto -> OperationResult.ok(
                                 HttpURLConnection.HTTP_OK,
                                 deviceDto.getDeviceWithStatus(),
-                                Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
+                                Optional.empty(),
                                 Optional.ofNullable(deviceDto.getVersion())));
     }
 

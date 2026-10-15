@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.registration.RegistrationService;
@@ -118,7 +119,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
     /**
      * Sets an instance of the edge device auto-provisioner.
      * <p>
-     * If set, edge device auto-provisioning will be performed. Defaults to {@code null} meaning edge device 
+     * If set, edge device auto-provisioning will be performed. Defaults to {@code null} meaning edge device
      * auto-provisioning is disabled.
      *
      * @param edgeDeviceAutoProvisioner An instance of the edge device auto-provisioner.
@@ -296,7 +297,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                         .toList()));
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
-                                    return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId, 
+                                    return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId,
                                             gatewayId, device, span.context())
                                             .compose(newDevice -> {
                                                 final JsonObject deviceData = JsonObject.mapFrom(newDevice);
@@ -550,7 +551,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @return The cache directive.
      */
     protected CacheDirective getRegistrationAssertionCacheDirective(final String deviceId, final String tenantId) {
-        return CacheDirective.maxAgeDirective(DEFAULT_MAX_AGE_SECONDS);
+        return DeviceRegistryUtils.getCacheDirective(DEFAULT_MAX_AGE_SECONDS);
     }
 
     /**
