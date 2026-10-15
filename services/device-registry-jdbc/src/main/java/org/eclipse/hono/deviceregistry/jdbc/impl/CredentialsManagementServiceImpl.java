@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
-import org.eclipse.hono.util.CacheDirective;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -40,7 +39,6 @@ import io.vertx.core.Vertx;
 public class CredentialsManagementServiceImpl extends AbstractCredentialsManagementService {
 
     private final TableManagementStore store;
-    private final Optional<CacheDirective> ttl;
 
     /**
      * Create a new instance.
@@ -59,7 +57,6 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
         super(vertx, passwordEncoder, properties.maxBcryptCostFactor(),
                 properties.hashAlgorithmsAllowList().orElseGet(Set::of));
         this.store = store;
-        this.ttl = Optional.of(CacheDirective.maxAgeDirective(properties.credentialsTtl()));
     }
 
     @Override
@@ -92,9 +89,7 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
                     }
 
                     return Future.failedFuture(e);
-
                 });
-
     }
 
     @Override
@@ -104,10 +99,9 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
                 .map(r -> r.map(result -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         result.getCredentials(),
-                        this.ttl,
+                        Optional.empty(),
                         result.getResourceVersion()))
                         .orElseThrow(() -> new ClientErrorException(key.getTenantId(), HttpURLConnection.HTTP_NOT_FOUND)));
 
     }
-
 }

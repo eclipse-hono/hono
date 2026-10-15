@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.device.Device;
@@ -26,12 +27,24 @@ import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class JdbcBasedRegistrationServiceTest extends AbstractJdbcRegistryTest implements AbstractRegistrationServiceTest {
+
+    @Override
+    public long getConfiguredRegistrationAssertionCacheMaxAge() {
+        return properties.registrationTtl().toSeconds();
+    }
 
     /**
      * Verifies that a request to create more devices than the globally configured limit fails with a 403.

@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 
+import org.hibernate.validator.constraints.time.DurationMin;
+
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
@@ -38,20 +40,24 @@ public interface DeviceServiceOptions {
 
     /**
      * Gets the duration after which retrieved credentials information must be considered stale.
+     * <p>
+     * The default value of this property is 180 seconds.
      *
      * @return The duration.
      */
-    @WithDefault("PT1M")
+    @WithDefault("PT180S")
+    @DurationMin(seconds = 0)
     Duration credentialsTtl();
 
     /**
      * Gets the duration after which retrieved device registration information must be considered stale.
      * <p>
-     * The default value of this property is one minute.
+     * The default value of this property is 180 seconds.
      *
      * @return The duration.
      */
-    @WithDefault("PT1M")
+    @WithDefault("PT180S")
+    @DurationMin(seconds = 0)
     Duration registrationTtl();
 
     /**

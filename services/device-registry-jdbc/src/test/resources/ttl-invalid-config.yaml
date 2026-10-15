@@ -1,0 +1,7 @@
+hono:
+  registry:
+    svc:
+      credentialsTtl: PT-1M
+  tenant:
+    svc:
+      tenantTtl: PT-120S

@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.AbstractMongoDbBasedRegistryConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
@@ -75,7 +76,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     private static final String DB_NAME = "hono-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 
-    private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
+    private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
     private final ServiceConfigProperties serviceConfig = new ServiceConfigProperties();
 
     private MongoDbBasedDeviceDao deviceDao;
@@ -100,7 +101,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 vertx,
                 deviceDao,
                 credentialsDao,
-                config,
+                registrationServiceConfig,
                 serviceConfig);
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
@@ -110,7 +111,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 new AutoProvisionerConfigProperties(),
                 NoopTracerFactory.create());
 
-        registrationService = new MongoDbBasedRegistrationService(deviceDao);
+        registrationService = new MongoDbBasedRegistrationService(deviceDao, registrationServiceConfig);
         registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
 
         Future.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
@@ -125,7 +126,10 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     public void setup(final TestInfo testInfo) {
 
         LOG.info("running {}", testInfo.getDisplayName());
-
+        // set the cache max age for registration assertions
+        // to non-default value for testing purposes
+        registrationServiceConfig
+                .setCacheMaxAge(AbstractMongoDbBasedRegistryConfigProperties.DEFAULT_MAX_AGE_SECONDS + 123);
         tenantInformationService = mock(TenantInformationService.class);
         when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
         when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
@@ -184,6 +188,11 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         return this.deviceManagementService;
     }
 
+    @Override
+    public long getConfiguredRegistrationAssertionCacheMaxAge() {
+        return registrationServiceConfig.getCacheMaxAge();
+    }
+
     private MessagingClientProvider<EventSender> mockEventSenders() {
         final EventSender eventSender = mock(EventSender.class);
         when(eventSender.getMessagingType()).thenReturn(MessagingType.amqp);
@@ -201,7 +210,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     @Test
     public void testCreateDeviceFailsIfGlobalDeviceLimitHasBeenReached(final VertxTestContext ctx) {
 
-        config.setMaxDevicesPerTenant(1);
+        registrationServiceConfig.setMaxDevicesPerTenant(1);
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
             .onFailure(ctx::failNow)
@@ -220,7 +229,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     @Test
     public void testCreateDeviceFailsIfTenantLevelDeviceLimitHasBeenReached(final VertxTestContext ctx) {
 
-        config.setMaxDevicesPerTenant(3);
+        registrationServiceConfig.setMaxDevicesPerTenant(3);
         when(tenantInformationService.getTenant(anyString(), any())).thenReturn(
                 Future.succeededFuture(new Tenant().setRegistrationLimits(new RegistrationLimits().setMaxNumberOfDevices(1))));
 

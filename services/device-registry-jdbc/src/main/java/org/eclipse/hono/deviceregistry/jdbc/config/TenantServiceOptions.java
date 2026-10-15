@@ -15,20 +15,25 @@ package org.eclipse.hono.deviceregistry.jdbc.config;
 
 import java.time.Duration;
 
+import org.hibernate.validator.constraints.time.DurationMin;
+
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
 /**
  * Tenant service configuration properties.
  */
-@ConfigMapping(prefix = "hono.tenant.svc")
+@ConfigMapping(prefix = "hono.tenant.svc", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
 public interface TenantServiceOptions {
 
     /**
      * Gets the duration after which retrieved tenant information must be considered stale.
+     * <p>
+     * The default value of this property is 180 seconds.
      *
      * @return The duration.
      */
-    @WithDefault("PT1M")
+    @WithDefault("PT180S")
+    @DurationMin(seconds = 0)
     Duration tenantTtl();
 }

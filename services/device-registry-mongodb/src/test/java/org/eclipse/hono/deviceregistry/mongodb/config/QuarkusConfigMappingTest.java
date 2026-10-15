@@ -19,8 +19,11 @@ import static com.google.common.truth.Truth.assertThat;
 import java.io.IOException;
 
 import org.eclipse.hono.test.ConfigMappingSupport;
+import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.config.ConfigValidationException;
 
 /**
  * Tests verifying the mapping of YAML properties to configuration classes.
@@ -64,5 +67,59 @@ class QuarkusConfigMappingTest {
                         MongoDbBasedHttpServiceConfigOptions.class,
                         this.getClass().getResource("/http-endpoint-config.yaml")));
         assertThat(props.getAuth().getCollectionName()).isEqualTo("user-accounts");
+    }
+
+    @Test
+    void testValidCacheMaxAgeIsMappedCorrectly() throws IOException {
+
+        Assertions.assertAll(
+            () -> {
+                final var credentialsOptions = ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedCredentialsConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-valid-config.yaml"));
+                assertThat(credentialsOptions.commonOptions().cacheMaxAge()).isEqualTo(0);
+                },
+            () -> {
+                final var registryOptions = ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedRegistrationConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-valid-config.yaml"));
+                assertThat(registryOptions.commonOptions().cacheMaxAge()).isEqualTo(100);
+            },
+            () -> {
+                final var tenantOptions = ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedTenantsConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-valid-config.yaml"));
+                assertThat(tenantOptions.commonOptions().cacheMaxAge()).isEqualTo(160);
+            }
+        );
+    }
+
+    @Test
+    void testMappingOfInvalidCacheMaxAgeFails() throws IOException {
+
+        Assertions.assertAll(
+            () -> {
+                final var exception = Assert.assertThrows(AssertionError.class, () ->
+                    ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedCredentialsConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-invalid-config.yaml")));
+                assertThat(exception).hasCauseThat().isInstanceOf(ConfigValidationException.class);
+
+            },
+            () -> {
+                final var exception = Assert.assertThrows(AssertionError.class, () ->
+                    ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedRegistrationConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-invalid-config.yaml")));
+                assertThat(exception).hasCauseThat().isInstanceOf(ConfigValidationException.class);
+            },
+            () -> {
+                final var exception = Assert.assertThrows(AssertionError.class, () ->
+                    ConfigMappingSupport.getConfigMapping(
+                            MongoDbBasedTenantsConfigOptions.class,
+                            this.getClass().getResource("/max-cache-age-invalid-config.yaml")));
+                assertThat(exception).hasCauseThat().isInstanceOf(ConfigValidationException.class);
+            }
+        );
     }
 }

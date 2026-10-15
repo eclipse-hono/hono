@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,6 +72,8 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
         vertx = Vertx.vertx();
         dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
+        // set the cache max age to a non-default value for testing
+        config.setCacheMaxAge(MongoDbBasedTenantsConfigProperties.DEFAULT_MAX_AGE_SECONDS + 123);
         tenantService = new MongoDbBasedTenantService(dao, config);
         tenantManagementService = new MongoDbBasedTenantManagementService(vertx, dao, config);
         dao.createIndices().onComplete(testContext.succeedingThenComplete());
@@ -108,12 +110,12 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
         dao.close(daoCloseHandler);
 
         daoCloseHandler.future()
-            .compose(ok -> {
-                final Promise<Void> vertxCloseHandler = Promise.promise();
-                vertx.close(vertxCloseHandler);
-                return vertxCloseHandler.future();
-            })
-            .onComplete(testContext.succeedingThenComplete());
+                .compose(ok -> {
+                    final Promise<Void> vertxCloseHandler = Promise.promise();
+                    vertx.close(vertxCloseHandler);
+                    return vertxCloseHandler.future();
+                })
+                .onComplete(testContext.succeedingThenComplete());
     }
 
     @Override
@@ -126,9 +128,13 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
         return tenantManagementService;
     }
 
+    @Override
+    public long getConfiguredTenantCacheMaxAge() {
+        return config.getCacheMaxAge();
+    }
+
     /**
-     * Verifies that a tenant cannot be added if it uses an already registered
-     * alias.
+     * Verifies that a tenant cannot be added if it uses an already registered alias.
      *
      * @param ctx The vert.x test context.
      */
@@ -137,14 +143,14 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
         final var tenantSpec = new Tenant().setAlias("the-alias");
         addTenant("tenant", tenantSpec)
-            .compose(ok -> getTenantManagementService().createTenant(
-                    Optional.of("other-tenant"),
-                    tenantSpec,
-                    NoopSpan.INSTANCE))
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
-                ctx.completeNow();
-            }));
+                .compose(ok -> getTenantManagementService().createTenant(
+                        Optional.of("other-tenant"),
+                        tenantSpec,
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -157,19 +163,19 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
         final var tenantSpec = new Tenant().setAlias("the-alias");
         addTenant("tenant", tenantSpec)
-            .compose(ok -> getTenantManagementService().createTenant(
-                    Optional.of("other-tenant"),
-                    new Tenant(),
-                    NoopSpan.INSTANCE))
-            .compose(ok -> getTenantManagementService().updateTenant(
-                    "other-tenant",
-                    tenantSpec,
-                    Optional.empty(),
-                    NoopSpan.INSTANCE))
-            .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
-                ctx.completeNow();
-            }));
+                .compose(ok -> getTenantManagementService().createTenant(
+                        Optional.of("other-tenant"),
+                        new Tenant(),
+                        NoopSpan.INSTANCE))
+                .compose(ok -> getTenantManagementService().updateTenant(
+                        "other-tenant",
+                        tenantSpec,
+                        Optional.empty(),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -184,25 +190,26 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", tenantSpec)
-            .compose(ok -> {
-                ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
-                });
-                // WHEN retrieving the tenant by alias using the Tenant API
-                return getTenantService().get("the-alias", NoopSpan.INSTANCE);
-            })
-            .onComplete(ctx.succeeding(tenantResult -> {
-                ctx.verify(() -> {
-                    // THEN the tenant is found
-                    assertThat(tenantResult.isOk()).isTrue();
-                    // and the response can be cached
-                    assertThat(tenantResult.getCacheDirective()).isNotNull();
-                    assertThat(tenantResult.getCacheDirective().isCachingAllowed()).isTrue();
-                    assertThat(tenantResult.getPayload().getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID))
-                        .isEqualTo("tenant");
-                });
-                ctx.completeNow();
-            }));
+                .compose(ok -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
+                    });
+                    // WHEN retrieving the tenant by alias using the Tenant API
+                    return getTenantService().get("the-alias", NoopSpan.INSTANCE);
+                })
+                .onComplete(ctx.succeeding(tenantResult -> {
+                    ctx.verify(() -> {
+                        // THEN the tenant is found
+                        assertThat(tenantResult.isOk()).isTrue();
+                        // and the response can be cached
+                        assertThat(tenantResult.getCacheDirective()).isNotNull();
+                        assertThat(tenantResult.getCacheDirective().isCachingAllowed()).isTrue();
+                        assertThat(tenantResult.getPayload()
+                                .getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID))
+                                        .isEqualTo("tenant");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -216,17 +223,17 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", new Tenant().setAlias("the-alias"))
-            .compose(ok -> {
-                ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
-                });
-                // WHEN retrieving the tenant by a non-matching identifier
-                return getTenantService().get("not-the-alias", NoopSpan.INSTANCE);
-            })
-            .onComplete(ctx.succeeding(s -> {
-                // THEN no tenant is found
-                ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus()));
-                ctx.completeNow();
-            }));
+                .compose(ok -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
+                    });
+                    // WHEN retrieving the tenant by a non-matching identifier
+                    return getTenantService().get("not-the-alias", NoopSpan.INSTANCE);
+                })
+                .onComplete(ctx.succeeding(s -> {
+                    // THEN no tenant is found
+                    ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus()));
+                    ctx.completeNow();
+                }));
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsSe
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -67,21 +66,6 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
         return Optional.ofNullable(credential.getBoolean(RegistryManagementConstants.FIELD_ENABLED)).orElse(true);
     }
 
-    private CacheDirective getCacheDirective(final String type) {
-
-        if (config.getCacheMaxAge() > 0) {
-            switch (type) {
-            case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
-            case CredentialsConstants.SECRETS_TYPE_X509_CERT:
-                return CacheDirective.maxAgeDirective(config.getCacheMaxAge());
-            default:
-                return CacheDirective.noCacheDirective();
-            }
-        } else {
-            return CacheDirective.noCacheDirective();
-        }
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -107,7 +91,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
                             .map(credential -> CredentialsResult.from(
                                     HttpURLConnection.HTTP_OK,
                                     credential,
-                                    getCacheDirective(key.getType())))
+                                    getCacheDirective(key.getType(), config.getCacheMaxAge())))
                             .orElseThrow(() -> new ClientErrorException(
                                     tenant.getTenantId(),
                                     HttpURLConnection.HTTP_NOT_FOUND,

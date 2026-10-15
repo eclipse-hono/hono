@@ -57,7 +57,7 @@ public class AmqpServerFactory extends AbstractAmqpServerFactory {
 
     @Override
     protected RegistrationServiceImpl createRegistrationService() {
-        return new RegistrationServiceImpl(devicesAdapterStore, schemaCreator);
+        return new RegistrationServiceImpl(devicesAdapterStore, schemaCreator, deviceServiceOptions);
     }
 
     @Override

@@ -13,13 +13,27 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+@ExtendWith(VertxExtension.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class JdbcBasedTenantServiceTest extends AbstractJdbcRegistryTest implements AbstractTenantServiceTest {
+
+    @Override
+    public long getConfiguredTenantCacheMaxAge() {
+        return tenantServiceOptions.tenantTtl().toSeconds();
+    }
 
     @Disabled("This feature is not implemented")
     @Test
@@ -33,14 +47,14 @@ class JdbcBasedTenantServiceTest extends AbstractJdbcRegistryTest implements Abs
     @Override
     public void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorSucceeds(
             final VertxTestContext ctx) {
-        //This feature is not implemented
+        // This feature is not implemented
     }
 
     @Disabled("This feature is not implemented")
     @Test
     @Override
     public void testUpdateTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(final VertxTestContext ctx) {
-        //This feature is not implemented
+        // This feature is not implemented
     }
 
     @Disabled("This feature is not implemented")

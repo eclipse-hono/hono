@@ -1,0 +1,10 @@
+hono:
+  credentials:
+    svc:
+      cacheMaxAge: 0
+  registry:
+    svc:
+      cacheMaxAge: 100
+  tenant:
+    svc:
+      cacheMaxAge: 160
