@@ -43,7 +43,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     }
 
     /**
-     * Creates properties from existing options.
+     * Creates properties for an existing maximum cache-age.
      *
      * @param cacheMaxAge The maximum cache age in seconds.
      * @throws IllegalArgumentException if cache max age is &lt; 0.

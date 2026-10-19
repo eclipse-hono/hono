@@ -39,7 +39,7 @@ public interface MongoDbBasedCredentialsConfigOptions {
     int cacheMaxAge();
 
     /**
-     * Gets the name of the collection to store tenant information in.
+     * Gets the name of the collection to store credentials in.
      *
      * @return The name.
      */
