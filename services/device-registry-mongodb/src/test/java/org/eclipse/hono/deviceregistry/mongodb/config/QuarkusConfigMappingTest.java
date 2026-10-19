@@ -77,19 +77,19 @@ class QuarkusConfigMappingTest {
                 final var credentialsOptions = ConfigMappingSupport.getConfigMapping(
                             MongoDbBasedCredentialsConfigOptions.class,
                             this.getClass().getResource("/max-cache-age-valid-config.yaml"));
-                assertThat(credentialsOptions.commonOptions().cacheMaxAge()).isEqualTo(0);
+                assertThat(credentialsOptions.cacheMaxAge()).isEqualTo(0);
                 },
             () -> {
                 final var registryOptions = ConfigMappingSupport.getConfigMapping(
                             MongoDbBasedRegistrationConfigOptions.class,
                             this.getClass().getResource("/max-cache-age-valid-config.yaml"));
-                assertThat(registryOptions.commonOptions().cacheMaxAge()).isEqualTo(100);
+                assertThat(registryOptions.cacheMaxAge()).isEqualTo(100);
             },
             () -> {
                 final var tenantOptions = ConfigMappingSupport.getConfigMapping(
                             MongoDbBasedTenantsConfigOptions.class,
                             this.getClass().getResource("/max-cache-age-valid-config.yaml"));
-                assertThat(tenantOptions.commonOptions().cacheMaxAge()).isEqualTo(160);
+                assertThat(tenantOptions.cacheMaxAge()).isEqualTo(160);
             }
         );
     }

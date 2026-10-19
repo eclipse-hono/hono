@@ -17,7 +17,7 @@ import java.util.Optional;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
 import io.smallrye.config.WithDefault;
-import io.smallrye.config.WithParentName;
+import jakarta.validation.constraints.Min;
 
 /**
  * Configuration options for Hono's device registration and management APIs.
@@ -26,12 +26,16 @@ import io.smallrye.config.WithParentName;
 public interface MongoDbBasedRegistrationConfigOptions {
 
     /**
-     * Gets the common registry options.
+     * Gets the maximum period of time that registration information returned
+     * by the service's operations may be cached for.
+     * <p>
+     * The default value of this property is 180 seconds.
      *
-     * @return The options.
+     * @return The period of time in seconds.
      */
-    @WithParentName
-    MongoDbBasedRegistryConfigOptions commonOptions();
+    @Min(0)
+    @WithDefault("180")
+    int cacheMaxAge();
 
     /**
      * Gets the name of the collection to store tenant information in.

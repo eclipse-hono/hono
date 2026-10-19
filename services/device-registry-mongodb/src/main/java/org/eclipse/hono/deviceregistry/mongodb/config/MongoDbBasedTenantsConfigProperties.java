@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ public final class MongoDbBasedTenantsConfigProperties extends AbstractMongoDbBa
      * @throws NullPointerException if options are {@code null}.
      */
     public MongoDbBasedTenantsConfigProperties(final MongoDbBasedTenantsConfigOptions options) {
-        super(options.commonOptions());
+        super(options.cacheMaxAge());
         this.setCollectionName(options.collectionName());
     }
 

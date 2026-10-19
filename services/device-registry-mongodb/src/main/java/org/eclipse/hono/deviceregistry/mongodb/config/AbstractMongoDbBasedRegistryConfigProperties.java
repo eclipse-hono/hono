@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,12 +45,11 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     /**
      * Creates properties from existing options.
      *
-     * @param options The options.
-     * @throws NullPointerException if options are {@code null}.
+     * @param cacheMaxAge The maximum cache age in seconds.
+     * @throws IllegalArgumentException if cache max age is &lt; 0.
      */
-    protected AbstractMongoDbBasedRegistryConfigProperties(final MongoDbBasedRegistryConfigOptions options) {
-        Objects.requireNonNull(options);
-        this.setCacheMaxAge(options.cacheMaxAge());
+    protected AbstractMongoDbBasedRegistryConfigProperties(final int cacheMaxAge) {
+        this.setCacheMaxAge(cacheMaxAge);
     }
 
     /**
