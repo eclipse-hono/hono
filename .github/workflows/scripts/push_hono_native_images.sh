@@ -45,8 +45,9 @@ IMAGES="hono-adapter-amqp-native \
         hono-adapter-mqtt-native \
         hono-adapter-sigfox-native \
         hono-service-auth-native \
-        ${COMMAND_ROUTER_IMAGE_INFINISPAN} \
         ${COMMAND_ROUTER_IMAGE_LEGACY} \
+        ${COMMAND_ROUTER_IMAGE_INFINISPAN} \
+        hono-service-command-router-redis-native \
         hono-service-device-registry-jdbc-native \
         hono-service-device-registry-mongodb-native"
 

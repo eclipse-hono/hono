@@ -15,7 +15,7 @@ instance that the gateway used by the device is connected to.
 
 {{% notice info %}}
 The Device Connection service has been removed in Hono 2.0.0.
-Protocol adapters now use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) instead.
+Protocol adapters now use the [Command Router service]({{< relref "/admin-guide/infinispan-command-router-config" >}}) instead.
 {{% /notice %}}
 
 The Device Connection component provides a production grade implementation of the Device Connection API which uses a
@@ -92,13 +92,13 @@ The `HONO_DEVICECONNECTION_AMQP_INSECUREPORTBINDADDRESS` variable can be used to
 Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own binding address `HONO_DEVICECONNECTION_AMQP_INSECUREPORTBINDADDRESS`. 
-This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
+Since the insecure port may need different visibility in the network setup compared to the secure port, it has its own binding address `HONO_DEVICECONNECTION_AMQP_INSECUREPORTBINDADDRESS`.
+This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 

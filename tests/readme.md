@@ -23,12 +23,12 @@ mvn verify -Prun-tests
 
 This starts the following Docker containers and runs the test cases against them
 
-* Infinispan server
-* MongoDB server
-* Hono Authentication service
-* Hono Device Registration service
 * Apache Kafka
-* Hono Command Router service
+* Hono Authentication service
+* MongoDB server
+* Hono MongoDB Device Registration service
+* Infinispan server
+* Hono Infinispan Command Router service
 * Hono HTTP adapter
 * Hono MQTT adapter
 * Hono AMQP adapter
@@ -140,7 +140,7 @@ In order to stop and remove the Docker containers started by a test run, use:
 mvn verify -PstopContainers
 ```
 
-### Running the Tests with the Command Router using an embedded Cache
+### Running the Tests with the Command Router using an embedded Infinispan Cache
 
 The Command Router component by default stores routing information in a dedicated Infinispan server.
 The router can also be configured to instead store the data in an embedded cache by means of
@@ -148,6 +148,16 @@ setting the `hono.commandrouting.cache` Maven property to value `embedded`:
 
 ```sh
 mvn verify -Prun-tests -Dhono.commandrouting.cache=embedded
+```
+
+### Running the Tests with the Command Router using a Redis Cache
+
+The Command Router component by default stores routing information in a dedicated Infinispan server.
+The router can also be configured to instead store the data in a Redis server by means of
+setting the `hono.commandrouting.cache` Maven property to value `redis`:
+
+```sh
+mvn verify -Prun-tests -Dhono.commandrouting.cache=redis
 ```
 
 ### Running the Tests with AMQP 1.0 based Messaging Infrastructure

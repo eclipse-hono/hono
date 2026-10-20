@@ -45,6 +45,7 @@ jobs:
           - hono-adapter-sigfox
           - hono-service-auth
           - hono-service-command-router-infinispan
+          - hono-service-command-router-redis
           - hono-service-device-registry-jdbc
           - hono-service-device-registry-mongodb
 
