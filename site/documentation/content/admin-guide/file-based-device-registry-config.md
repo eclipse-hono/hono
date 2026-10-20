@@ -167,14 +167,14 @@ Setting this variable to `0.0.0.0` will let the port being bound to **all** netw
 to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own binding address
+Since the insecure port may need different visibility in the network setup compared to the secure port, it has its own binding address
 `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS`.
-This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
+This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 
@@ -238,7 +238,7 @@ The Device Registry will then do the following:
 1. Verify that the device exists and is enabled.
 2. Verify that the gateway exists and is enabled.
 3. Verify that the device's registration information contains a property called `via` and that its value is either the
-   gateway's device identifier or a JSON array which contains the gateway's device identifier as one of its values. 
+   gateway's device identifier or a JSON array which contains the gateway's device identifier as one of its values.
 
 Only if all conditions are met, the Device Registry returns an assertion of the device's registration status.
 The protocol adapter can then forward the published data to the AMQP Messaging Network in the same way as for any
@@ -264,7 +264,7 @@ or *Google Pub/Sub* is used.
 ### AMQP 1.0 Messaging Network Connection Configuration
 
 The connection to the *AMQP 1.0 Messaging Network* is configured according to the
-[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` being used as `${PREFIX}`. 
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` being used as `${PREFIX}`.
 Since there are no responses being received, the properties for configuring response caching can be ignored.
 
 ### Kafka based Messaging Configuration

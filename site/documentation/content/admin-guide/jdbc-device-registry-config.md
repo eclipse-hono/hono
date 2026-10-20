@@ -191,7 +191,7 @@ at the same time.
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
 configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
+Since the insecure port may need different visibility in the network setup compared to the secure port, it has its own
 binding address `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port
 to a local network e.g., while the secure port may be visible worldwide.
 
