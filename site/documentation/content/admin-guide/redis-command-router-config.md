@@ -1,10 +1,10 @@
 +++
-title = "Configuring the Command Router Service"
-linkTitle = "Command Router Service Configuration"
-weight = 317
+title = "Configuring the Redis based Command Router Service"
+linkTitle = "Redis based Command Router Service Configuration"
+weight = 318
 +++
 
-The Command Router service provides an implementation of Eclipse Hono&trade;'s
+The Redis based Command Router service provides an implementation of Eclipse Hono&trade;'s
 [Command Router API]({{< relref "/api/command-router" >}}).
 
 *Protocol Adapters* use the *Command Router API* to supply information that the Command Router service component
@@ -13,18 +13,20 @@ connected to.
 
 <!--more-->
 
-The Command Router component provides an implementation of the Command Router API which uses a remote *data grid* for
-storing information about device connections. The data grid can be scaled out independently from the Command Router
-service components to meet the storage demands at hand.
+The Redis based Command Router component provides an implementation of the Command Router API which uses a remote
+[Redis](https://redis.io) cluster for storing information about device connections. The Redis cluster can be scaled out
+independently from the Command Router service components to meet the storage demands at hand.
 
 The Command Router is implemented as a Quarkus application. It can be run either directly from the command line or by
-means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipsehono/hono-service-command-router/)
+means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipsehono/hono-service-command-router-redis/)
 created from it.
 
-{{% notice info %}}
-The Command Router had originally been implemented as a Spring Boot application. That variant has been removed in Hono
-2.0.0.
+{{% notice warning %}}
+The Redis based variant is a recent addition that has not yet undergone extensive real-world validation. It is
+considered experimental and its configuration and behavior may change in future releases. Using it in production
+environments is not recommended at this stage.
 {{% /notice %}}
+
 
 ## Service Configuration
 
@@ -94,13 +96,13 @@ The `HONO_COMMANDROUTER_AMQP_INSECUREPORTBINDADDRESS` variable can be used to sp
 Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own binding address `HONO_COMMANDROUTER_AMQP_INSECUREPORTBINDADDRESS`. 
-This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
+Since the insecure port may need different visibility in the network setup compared to the secure port, it has its own binding address `HONO_COMMANDROUTER_AMQP_INSECUREPORTBINDADDRESS`.
+This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 
@@ -123,7 +125,7 @@ or *Google Pub/Sub* is used.
 
 ### AMQP 1.0 Messaging Network Connection Configuration
 
-The connection to the *AMQP 1.0 Messaging Network* is configured according to the 
+The connection to the *AMQP 1.0 Messaging Network* is configured according to the
 [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` and `HONO_COMMAND` being
 used as `${PREFIX}`. The properties for configuring response caching can be ignored.
 
@@ -174,88 +176,11 @@ Note that the adapter uses a single cache for all responses from the service reg
 Consequently, the Device Registration Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
 determine the overall number of responses that can be cached.
 
-## Data Grid Connection Configuration
+## Redis Connection Configuration
 
-The Command Router component uses a cache to store device connection information. Two implementations are
-provided, each built into its own Docker image. A deployment uses exactly one of them:
-
-* the *Infinispan* based variant (`hono-service-command-router-infinispan`) which uses either an embedded cache or a
-  remote data grid, accessed via the Infinispan Hotrod protocol, and
-* the *Redis* based variant (`hono-service-command-router-redis`) which uses a remote Redis server.
-
-### Infinispan cache
-
-The following table provides an overview of the configuration variables and corresponding command line options for
-configuring the common aspects of the Infinispan based variant:
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_COMMANDROUTER_CACHE_COMMON_CACHENAME`<br>`hono.commandRouter.cache.common.cacheName` | no | `command-router` | The name of the cache |
-| `HONO_COMMANDROUTER_CACHE_COMMON_CHECKKEY`<br>`hono.commandRouter.cache.common.checkKey` | no | `KEY_CONNECTION_CHECK` | The key used to check the health of the cache. This is only used in case of a remote cache. |
-| `HONO_COMMANDROUTER_CACHE_COMMON_CHECKVALUE`<br>`hono.commandRouter.cache.common.checkValue` | no | `VALUE_CONNECTION_CHECK` | The value used to check the health of the cache. This is only used in case of a remote cache. |
-
-The type of cache (embedded or remote) is determined during startup by means of the `HONO_COMMANDROUTER_CACHE_REMOTE_SERVERLIST`
-configuration variable. If the variable has a non empty value, a [remote cache]({{< relref "#remote-cache" >}}) is configured.
-Otherwise, an [embedded cache]({{< relref "#embedded-cache" >}}) is configured.
-
-#### Remote cache
-
-The following table provides an overview of the configuration variables and corresponding system properties for configuring the connection to the data grid:
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SERVERLIST`<br>`hono.commandRouter.cache.remote.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHSERVERNAME`<br>`hono.commandRouter.cache.remote.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHREALM`<br>`hono.commandRouter.cache.remote.authRealm` | yes | - | The authentication realm for the SASL handshake when authenticating to the server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHUSERNAME`<br>`hono.commandRouter.cache.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHPASSWORD`<br>`hono.commandRouter.cache.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SASLMECHANISM`<br>`hono.commandRouter.cache.remote.saslMechanism` | yes | - | The SASL mechanism to use for authenticating to the server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CLUSTER_[*]`<br>`hono.commandRouter.cache.remote.cluster.[*]` | no | - | Alternate cluster definition. Example: <br>Property: `hono.commandRouter.cache.remote.cluster.siteA`, value: `hostA1:11222;hostA2:11223`. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_EXHAUSTEDACTION`<br>`hono.commandRouter.cache.remote.connectionPool.exhaustedAction` | no | `WAIT` | Specifies what happens when asking for a connection from a server's pool, and that pool is exhausted. Valid values are `WAIT`, `CREATE_NEW` and `EXCEPTION`. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXACTIVE`<br>`hono.commandRouter.cache.remote.connectionPool.maxActive` | no | `-1` (no limit) | Maximum number of connections per server. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXPENDINGREQUESTS`<br>`hono.commandRouter.cache.remote.connectionPool.maxPendingRequests` | no | `-1` (no limit) | Specifies the maximum number of requests sent over a single connection at one instant. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXWAIT`<br>`hono.commandRouter.cache.remote.connectionPool.maxWait` | no | `-1` (no limit) | Time to wait in milliseconds for a connection to become available if `exhaustedAction` is `WAIT`. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MINEVICTABLEIDLETIME`<br>`hono.commandRouter.cache.remote.connectionPool.minEvictableIdleTime` | no | `-1` (no limit) | Minimum amount of time that an connection may sit idle in the pool. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MINIDLE`<br>`hono.commandRouter.cache.remote.connectionPool.minIdle` | no | `-1` (no limit) | Minimum number of idle connections (per server) that should always be available. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTTIMEOUT`<br>`hono.commandRouter.cache.remote.connectTimeout` | no | `60000` | The timeout for connections in milliseconds. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_POOLSIZE`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.poolSize` | no | `99` | Size of the thread pool. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_THREADNAMEPREFIX`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.threadnamePrefix` | no | `HotRod-client-async-pool` | Prefix for the default executor thread names. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_THREADNAMESUFFIX`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.threadnameSuffix` | no | - | Suffix for the default executor thread names. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYALIAS`<br>`hono.commandRouter.cache.remote.keyAlias` | no | - | The alias of the key to use, in case the keyStore contains multiple certificates. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTORECERTIFICATEPASSWORD`<br>`hono.commandRouter.cache.remote.keyStoreCertificatePassword` | no | - | The certificate password in the keystore. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTOREFILENAME`<br>`hono.commandRouter.cache.remote.keyStoreFileName` | no | - | The filename of a keystore to use when using client certificate authentication. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTOREPASSWORD`<br>`hono.commandRouter.cache.remote.keyStorePassword` | no | - | The keystore password. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTORETYPE`<br>`hono.commandRouter.cache.remote.keyStoreType` | no | `JKS` | The keystore type. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SASLPROPERTIES_[*]`<br>`hono.commandRouter.cache.remote.saslProperties.[*]` | no | - | A SASL property (specific to the used SASL mechanism). |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SOCKETTIMEOUT`<br>`hono.commandRouter.cache.remote.socketTimeout` | no | `60000` | The timeout for socket read/writes in milliseconds. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SSLCIPHERS`<br>`hono.commandRouter.cache.remote.sslCiphers` | no | - | A list of ciphers, separated with spaces and in order of preference, that are used during the SSL handshake to negotiate a cryptographic algorithm for key encryption. By default, the SSL protocol (e.g. TLSv1.2) determines which ciphers to use. You should customize the cipher list with caution to avoid vulnerabilities from weak algorithms. For details about cipher lists and possible values, refer to the [OpenSSL documentation](https://www.openssl.org/docs/man1.1.1/man1/ciphers). |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_SSLPROTOCOL`<br>`hono.commandRouter.cache.remote.sslProtocol` | no | - | The SSL protocol to use (e.g. `TLSv1.2`). |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTOREFILENAME`<br>`hono.commandRouter.cache.remote.trustStoreFileName` | no | - | The path of the trust store. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTOREPASSWORD`<br>`hono.commandRouter.cache.remote.trustStorePassword` | no | - | The password of the trust store. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTORETYPE`<br>`hono.commandRouter.cache.remote.trustStoreType` | no | `JKS` | The type of the trust store. Valid values are `JKS`, `JCEKS`, `PCKS12` and `PEM`. |
-| `HONO_COMMANDROUTER_CACHE_REMOTE_USESSL`<br>`hono.commandRouter.cache.remote.useSSL` | no | `false` | Enable TLS (implicitly enabled if a trust store is set). |
-
-See also the [Infinispan Hotrod client documentation](https://docs.jboss.org/infinispan/13.0/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description).
-
-#### Embedded cache
-
-The following table provides an overview of the configuration variables and corresponding system properties for configuring the embedded cache:
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
-| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/13.0/configdocs/infinispan-config-13.0.html). |
-
-### Redis cache
-
-{{% notice warning %}}
-The Redis based variant is a recent addition that has not yet undergone extensive real-world validation. It is
-considered experimental and its configuration and behavior may change in future releases. Using it in production
-environments is not recommended at this stage.
-{{% /notice %}}
-
-The Redis based variant (`hono-service-command-router-redis`) stores device connection information in a remote Redis
-server. It uses the [Quarkus Redis client](https://quarkus.io/guides/redis-reference) to connect to the server, so you
-configure the connection with that client's standard `quarkus.redis` properties.
+The Command Router component stores device connection information in a remote Redis instance/cluster.
+It uses the [Quarkus Redis client](https://quarkus.io/guides/redis-reference) to connect to the server, so the connection
+can be configured by means of that client's properties (`quarkus.redis.*`).
 
 The following table provides an overview of the most commonly used configuration variables and corresponding system
 properties for configuring the connection to the Redis server:
@@ -283,7 +208,7 @@ to the `@dangerous` command category, so an ACL that denies `@dangerous` must al
 the check before each operation on multiple keys, which adds a round trip to the Redis server.
 {{% /notice %}}
 
-#### Connection pool sizing
+### Connection Pool Sizing
 
 The Redis client sends each Redis command over a connection from its pool. If all `quarkus.redis.max-pool-size`
 connections are busy, further Redis commands wait in a queue that holds up to `quarkus.redis.max-pool-waiting`

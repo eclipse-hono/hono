@@ -76,7 +76,7 @@ The Command Router supports the use of TLS for incoming connections to its Comma
 using TLS for outgoing connections to the Authentication, Tenant and Device Registration service endpoints, the
 messaging infrastructure and the data grid used for storing routing information.
 
-Please refer to the [Command Router admin guide]({{< relref "command-router-config.md" >}}) for
+Please refer to the [Command Router admin guide]({{< relref "/admin-guide/infinispan-command-router-config" >}}) for
 details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the file based Device
@@ -324,6 +324,6 @@ The following steps a re necessary in order to configure the protocol adapters w
    been configured with a certificate using domain name *my-hono.eclipse.org*, then the following command can be used to test
    if a TLS secured connection with the adapter using that virtual host name can be established successfully:
 
-   ```sh 
+   ```sh
    openssl s_client -connect 10.100.84.23:31884 -servername my-hono.eclipse.org
    ```

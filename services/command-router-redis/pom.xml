@@ -20,7 +20,7 @@
     <relativePath>../parent</relativePath>
   </parent>
   <artifactId>hono-service-command-router-redis</artifactId>
-  <name>Hono Redis Based Command Router</name>
+  <name>Hono Redis Command Router</name>
   <description>A Quarkus based implementation of Hono's Command Router API that is using Redis for storing data.</description>
 
   <dependencies>

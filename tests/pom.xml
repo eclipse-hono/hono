@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Copyright (c) 2016 Contributors to the Eclipse Foundation
-   
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -82,18 +82,27 @@
     </default.java-options>
 
     <!--
-     Command Router related properties.
+     Infinispan based Command Router related properties.
      -->
-    <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.image>hono-service-command-router-infinispan</hono.command-router.image>
-    <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
-    <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
-    <hono.command-router.native-image-args></hono.command-router.native-image-args>
+    <hono.command-router-infinispan.config-src>clustered-cache</hono.command-router-infinispan.config-src>
+    <hono.command-router-infinispan.disabled>false</hono.command-router-infinispan.disabled>
+    <hono.command-router-infinispan.image>hono-service-command-router-infinispan</hono.command-router-infinispan.image>
+    <hono.command-router-infinispan.max-mem>300000000</hono.command-router-infinispan.max-mem>
+    <hono.command-router-infinispan.java-options>${default.java-options}</hono.command-router-infinispan.java-options>
+    <hono.command-router-infinispan.native-image-args></hono.command-router-infinispan.native-image-args>
+
+    <!--
+     Redis based Command Router related properties.
+     -->
+    <hono.command-router-redis.disabled>true</hono.command-router-redis.disabled>
+    <hono.command-router-redis.image>hono-service-command-router-redis</hono.command-router-redis.image>
+    <hono.command-router-redis.max-mem>350000000</hono.command-router-redis.max-mem>
+    <hono.command-router-redis.java-options>${default.java-options}</hono.command-router-redis.java-options>
+    <hono.command-router-redis.native-image-args></hono.command-router-redis.native-image-args>
 
     <hono.service-auth.disabled>false</hono.service-auth.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
-    <hono.redis.disabled>true</hono.redis.disabled>
     <hono.redis.host>hono-redis</hono.redis.host>
     <hono.redis.port>6379</hono.redis.port>
 
@@ -105,8 +114,6 @@
     <hono.kafka-messaging.disabled>false</hono.kafka-messaging.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
     <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
-
-    <hono.command-router.disabled>false</hono.command-router.disabled>
 
     <!--
       Device Registry related properties - The MongoDB based device registry is used as the default one.
@@ -435,7 +442,7 @@
           <name>CI</name>
         </property>
       </activation>
-      <!-- 
+      <!--
         relax timeouts when running on CI environment in order to account for (very) limited
         CPU resources.
        -->
@@ -466,8 +473,8 @@
       </activation>
       <properties>
         <hono.infinispan.disabled>true</hono.infinispan.disabled>
-        <hono.command-router.config-src>embedded-cache</hono.command-router.config-src>
-        <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
+        <hono.command-router-infinispan.config-src>embedded-cache</hono.command-router-infinispan.config-src>
+        <hono.command-router-infinispan.max-mem>350000000</hono.command-router-infinispan.max-mem>
       </properties>
     </profile>
 
@@ -480,11 +487,9 @@
         </property>
       </activation>
       <properties>
-        <hono.redis.disabled>false</hono.redis.disabled>
-        <hono.command-router.image>hono-service-command-router-redis</hono.command-router.image>
+        <hono.command-router-infinispan.disabled>true</hono.command-router-infinispan.disabled>
         <hono.infinispan.disabled>true</hono.infinispan.disabled>
-        <hono.command-router.config-src>redis-cache</hono.command-router.config-src>
-        <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
+        <hono.command-router-redis.disabled>false</hono.command-router-redis.disabled>
       </properties>
     </profile>
 
@@ -514,7 +519,7 @@
         <hono.kafka-messaging.disabled>false</hono.kafka-messaging.disabled>
         <request.timeout>4000</request.timeout>
         <!--The max memory command router is increased to 500 MB-->
-        <hono.command-router.max-mem>524288000</hono.command-router.max-mem>
+        <hono.command-router-infinispan.max-mem>524288000</hono.command-router-infinispan.max-mem>
       </properties>
       <build>
         <plugins>
@@ -642,8 +647,10 @@
         <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
         <hono.auth-server.max-mem>60000000</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
-        <hono.command-router.image>hono-service-command-router-infinispan-native</hono.command-router.image>
-        <hono.command-router.max-mem>100000000</hono.command-router.max-mem>
+        <hono.command-router-infinispan.image>hono-service-command-router-infinispan-native</hono.command-router-infinispan.image>
+        <hono.command-router-infinispan.max-mem>100000000</hono.command-router-infinispan.max-mem>
+        <hono.command-router-redis.image>hono-service-command-router-redis-native</hono.command-router-redis.image>
+        <hono.command-router-redis.max-mem>150000000</hono.command-router-redis.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
         <hono.deviceregistry.jdbc.image>hono-service-device-registry-jdbc-native</hono.deviceregistry.jdbc.image>
@@ -661,7 +668,8 @@
         <hono.service-auth.disabled>true</hono.service-auth.disabled>
         <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
         <hono.deviceregistry.jdbc.disabled>true</hono.deviceregistry.jdbc.disabled>
-        <hono.command-router.disabled>true</hono.command-router.disabled>
+        <hono.command-router-infinispan.disabled>true</hono.command-router-infinispan.disabled>
+        <hono.command-router-redis.disabled>true</hono.command-router-redis.disabled>
       </properties>
     </profile>
     <profile>
@@ -674,7 +682,8 @@
       <properties>
         <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
         <hono.deviceregistry.jdbc.disabled>true</hono.deviceregistry.jdbc.disabled>
-        <hono.command-router.disabled>true</hono.command-router.disabled>
+        <hono.command-router-infinispan.disabled>true</hono.command-router-infinispan.disabled>
+        <hono.command-router-redis.disabled>true</hono.command-router-redis.disabled>
       </properties>
     </profile>
     <profile>
@@ -742,7 +751,7 @@
         <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
-    
+
     <profile>
       <id>local</id>
       <activation>
@@ -860,92 +869,6 @@
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
-                <!-- ##### Infinispan server for Command Router ##### -->
-                <image>
-                  <name>${docker.repository}/hono-infinispan-test:${project.version}</name>
-                  <build>
-                    <skip>${hono.infinispan.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${infinispan-image.name}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSet>
-                          <directory>${project.build.directory}/resources/infinispan</directory>
-                          <!--
-                            We put the custom configuration files into a dedicated folder other than
-                            the default one in order to not interfere with the default configuration
-                            shipped with the Infinispan image and to not overwrite the default folder
-                            permissions (Infinispan image runs as non-root user).
-                          -->
-                          <outputDirectory>opt/hono/infinispan</outputDirectory>
-                          <includes>
-                            <include>*</include>
-                          </includes>
-                        </fileSet>
-                      </inline>
-                    </assembly>
-                  </build>
-                  <run>
-                    <skip>${hono.infinispan.disabled}</skip>
-                    <cmd>
-                      <arg>-c</arg>
-                      <arg>/opt/hono/infinispan/hono-data-grid.xml</arg>
-                    </cmd>
-                    <ports>
-                      <!--
-                        We need to map the port in order to be able to access the data grid
-                        from a Command Router process that is not running in Docker.
-                      -->
-                      <port>hono.infinispan.port:${hono.infinispan.port}</port>
-                    </ports>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>${hono.infinispan.host}</alias>
-                    </network>
-                    <memorySwap>320000000</memorySwap>
-                    <memory>320000000</memory>
-                    <log>
-                      <prefix>INFINISPAN</prefix>
-                      <color>${log.color.hono-services}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <http>
-                        <url>http://${docker.host.address}:${hono.infinispan.port}/rest/v2/container/health/status</url>
-                      </http>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### Redis ##### -->
-                <image>
-                  <name>${redis-image.name}</name>
-                  <alias>hono-redis-test</alias>
-                  <run>
-                    <skip>${hono.redis.disabled}</skip>
-                    <ports>
-                      <port>redis.port:${hono.redis.port}</port>
-                    </ports>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>${hono.redis.host}</alias>
-                    </network>
-                    <memorySwap>1500000000</memorySwap>
-                    <memory>1500000000</memory>
-                    <log>
-                      <prefix>Redis</prefix>
-                      <color>${log.color.extra-services}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <log>.*(Ready to accept connections).*</log>
-                    </wait>
-                  </run>
-                </image>
                 <!-- ##### Jaeger tracing component ##### -->
                 <image>
                   <name>${docker.repository}/hono-jaeger-test:${project.version}</name>
@@ -1524,13 +1447,73 @@
                     </wait>
                   </run>
                 </image>
-                <!-- ##### Command Router service ##### -->
+                <!-- ##### Infinispan server for Command Router ##### -->
+                <image>
+                  <name>${docker.repository}/hono-infinispan-test:${project.version}</name>
+                  <build>
+                    <skip>${hono.infinispan.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${infinispan-image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/resources/infinispan</directory>
+                          <!--
+                            We put the custom configuration files into a dedicated folder other than
+                            the default one in order to not interfere with the default configuration
+                            shipped with the Infinispan image and to not overwrite the default folder
+                            permissions (Infinispan image runs as non-root user).
+                          -->
+                          <outputDirectory>opt/hono/infinispan</outputDirectory>
+                          <includes>
+                            <include>*</include>
+                          </includes>
+                        </fileSet>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.infinispan.disabled}</skip>
+                    <cmd>
+                      <arg>-c</arg>
+                      <arg>/opt/hono/infinispan/hono-data-grid.xml</arg>
+                    </cmd>
+                    <ports>
+                      <!--
+                        We need to map the port in order to be able to access the data grid
+                        from a Command Router process that is not running in Docker.
+                      -->
+                      <port>hono.infinispan.port:${hono.infinispan.port}</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.infinispan.host}</alias>
+                    </network>
+                    <memorySwap>320000000</memorySwap>
+                    <memory>320000000</memory>
+                    <log>
+                      <prefix>INFINISPAN</prefix>
+                      <color>${log.color.hono-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <url>http://${docker.host.address}:${hono.infinispan.port}/rest/v2/container/health/status</url>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### Infinispan based Command Router service ##### -->
                 <image>
                   <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
                   <build>
-                    <skip>${hono.command-router.disabled}</skip>
+                    <skip>${hono.command-router-infinispan.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.command-router.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.command-router-infinispan.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1538,14 +1521,14 @@
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/resources/commandrouter</directory>
+                            <directory>${project.build.directory}/resources/commandrouter-infinispan</directory>
                             <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
-                            <directory>${project.build.directory}/resources/commandrouter/${hono.command-router.config-src}</directory>
+                            <directory>${project.build.directory}/resources/commandrouter-infinispan/${hono.command-router-infinispan.config-src}</directory>
                             <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
@@ -1564,7 +1547,7 @@
                     </assembly>
                   </build>
                   <run>
-                    <skip>${hono.command-router.disabled}</skip>
+                    <skip>${hono.command-router-infinispan.disabled}</skip>
                     <ports>
                       <port>commandrouter.amqp.port:5672</port>
                       <port>commandrouter.health.port:${health.check.port}</port>
@@ -1574,18 +1557,118 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.commandrouter.host}</alias>
                     </network>
-                    <memorySwap>${hono.command-router.max-mem}</memorySwap>
-                    <memory>${hono.command-router.max-mem}</memory>
+                    <memorySwap>${hono.command-router-infinispan.max-mem}</memorySwap>
+                    <memory>${hono.command-router-infinispan.max-mem}</memory>
                     <cmd>
                       <exec>
-                        <arg>${hono.command-router.native-image-args}</arg>
+                        <arg>${hono.command-router-infinispan.native-image-args}</arg>
                       </exec>
                     </cmd>
                     <env>
                       <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </QUARKUS_CONFIG_LOCATIONS>
-                      <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.command-router-infinispan.java-options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.commandrouter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:${jaeger.sampler.port}</OTEL_TRACES_SAMPLER_ARG>
+                    </env>
+                    <log>
+                      <prefix>CMDROUTER</prefix>
+                      <color>${log.color.hono-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${docker.host.address}:${commandrouter.health.port}${health.check.root-path}${health.check.readiness-path}</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### Redis server for Device Registry ##### -->
+                <image>
+                  <name>${redis-image.name}</name>
+                  <alias>hono-redis-test</alias>
+                  <run>
+                    <skip>${hono.command-router-redis.disabled}</skip>
+                    <ports>
+                      <port>redis.port:${hono.redis.port}</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.redis.host}</alias>
+                    </network>
+                    <memorySwap>500000000</memorySwap>
+                    <memory>500000000</memory>
+                    <log>
+                      <prefix>Redis</prefix>
+                      <color>${log.color.extra-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(Ready to accept connections).*</log>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### Redis based Command Router service ##### -->
+                <image>
+                  <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
+                  <build>
+                    <skip>${hono.command-router-redis.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.repository}/${hono.command-router-redis.image}:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/commandrouter-redis</directory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
+                            <includes>
+                              <include>command-router-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.command-router-redis.disabled}</skip>
+                    <ports>
+                      <port>commandrouter.amqp.port:5672</port>
+                      <port>commandrouter.health.port:${health.check.port}</port>
+                    </ports>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.commandrouter.host}</alias>
+                    </network>
+                    <memorySwap>${hono.command-router-redis.max-mem}</memorySwap>
+                    <memory>${hono.command-router-redis.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.command-router-redis.native-image-args}</arg>
+                      </exec>
+                    </cmd>
+                    <env>
+                      <QUARKUS_CONFIG_LOCATIONS>
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
+                      </QUARKUS_CONFIG_LOCATIONS>
+                      <JDK_JAVA_OPTIONS>${hono.command-router-redis.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <OTEL_SERVICE_NAME>${hono.commandrouter.host}</OTEL_SERVICE_NAME>
                       <OTEL_TRACES_SAMPLER>${otel-traces-sampler}</OTEL_TRACES_SAMPLER>

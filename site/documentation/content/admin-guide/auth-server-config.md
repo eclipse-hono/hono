@@ -115,14 +115,14 @@ Setting this variable to `0.0.0.0` will let the port being bound to **all** netw
 the port unintentionally to the outside world).
 
 ### Dual Port
- 
+
 In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port
 at the same time.
- 
+
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
 configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
+Since the insecure port may need different visibility in the network setup compared to the secure port, it has its own
 binding address `HONO_AUTH_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port to a
 local network e.g., while the secure port may be visible worldwide.
 
