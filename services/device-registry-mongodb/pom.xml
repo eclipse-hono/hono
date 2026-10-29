@@ -29,7 +29,7 @@
   </description>
 
   <properties>
-    <mongodb.driver.reactivestreams.version>4.11.5</mongodb.driver.reactivestreams.version>
+    <mongodb.driver.reactivestreams.version>5.13.0</mongodb.driver.reactivestreams.version>
   </properties>
   <dependencies>
     <dependency>
