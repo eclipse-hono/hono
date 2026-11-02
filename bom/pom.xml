@@ -33,7 +33,7 @@
     <californium.version>3.14.0</californium.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
-    <guava.version>33.6.0-jre</guava.version>
+    <guava.version>33.7.1-jre</guava.version>
     <!-- this needs to be kept in sync with the infinispan version defined in the Quarkus platform-bom -->
     <infinispan.version>15.0.19.Final</infinispan.version>
     <infinispan-image.name>quay.io/infinispan/server:15.2.6.Final</infinispan-image.name>
