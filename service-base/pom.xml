@@ -191,6 +191,14 @@
       <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.eclipse.hono</groupId>
+          <artifactId>hono-client-registry</artifactId>
+      </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-registry</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

@@ -46,6 +46,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
@@ -85,7 +86,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
 
-    private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
+    protected HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
     private HttpServer server;
     private HttpServer insecureServer;
 
@@ -203,7 +204,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             .onComplete(startPromise);
     }
 
-    private Sample getMicrometerSample(final RoutingContext ctx) {
+    /**
+     * Gets the timer used to track the processing of a telemetry message.
+     *
+     * @param ctx The routing context to extract the sample from.
+     * @return The sample or {@code null} if the context does not
+     *         contain a sample.
+     * @throws NullPointerException if ctx is {@code null}.
+     */
+    protected Sample getMicrometerSample(final RoutingContext ctx) {
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
 
@@ -790,7 +799,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     qos,
                     payloadSize,
                     ctx.getTtdStatus(),
-                    getMicrometerSample(ctx.getRoutingContext()));
+                    getMicrometerSample(ctx.getRoutingContext()),
+                    MetricsTags.ProcessingOutcomeReason.from(t));
             TracingHelper.logError(currentSpan, t);
             currentSpan.finish();
             return Future.failedFuture(t);
@@ -1307,9 +1317,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 });
     }
 
-    private static MetricsTags.QoS getQoSLevel(
-            final EndpointType endpoint,
-            final org.eclipse.hono.util.QoS requestedQos) {
+    /**
+     * Get the QoS based on the endpoint and the requested QoS.
+     *
+     * @param endpoint The endpoint the message was sent to.
+     * @param requestedQos The QoS requested by the sender.
+     * @return The resulting QoS.
+     */
+    protected static MetricsTags.QoS getQoSLevel(
+        final EndpointType endpoint,
+        final QoS requestedQos) {
 
         if (endpoint == EndpointType.EVENT) {
             return MetricsTags.QoS.AT_LEAST_ONCE;

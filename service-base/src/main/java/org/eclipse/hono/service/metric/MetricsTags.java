@@ -14,6 +14,9 @@
 package org.eclipse.hono.service.metric;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
+import org.eclipse.hono.service.AdapterDisabledException;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Hostnames;
@@ -229,6 +232,82 @@ public final class MetricsTags {
             } else {
                 return UNDELIVERABLE;
             }
+        }
+
+        /**
+         * Gets a <em>Micrometer</em> tag for the outcome.
+         *
+         * @return The tag.
+         */
+        public Tag asTag() {
+            return tag;
+        }
+    }
+
+    /**
+     * A status providing more information about the outcome of processing a message received from a device.
+     * <p>
+     * The immutable enum check is disabled because the offending field's (tag) type
+     * is in fact immutable but has no corresponding annotation.
+     */
+    @SuppressWarnings("ImmutableEnumChecker")
+    public enum ProcessingOutcomeReason {
+
+        /**
+         * The message received has a bad syntax and could not be parsed.
+         */
+        BAD_SYNTAX("bad-syntax"),
+        /**
+         * The type of the message could not be deduced from the message.
+         */
+        UNKNOWN_TYPE("unknown-type"),
+        /**
+         * The type of the message is not supported for this action.
+         */
+        UNSUPPORTED_TYPE("unsupported-type"),
+        /**
+         * Tenant is disabled or not registered.
+         */
+        TENANT_DISABLED_OR_NOT_REGISTERED("tenant-disabled-or-not-registered"),
+        /**
+         * Tenant is disabled for this adapter.
+         */
+        TENANT_DISABLED_FOR_ADAPTER("tenant-disabled-for-adapter"),
+        /**
+         * Message limit exceeded.
+         */
+        MESSAGE_LIMIT_EXCEEDED("message-limit-exceeded"),
+        /**
+         * Unknown reason.
+         */
+        UNKNOWN("unknown");
+
+        static final String TAG_NAME = "reason";
+
+        private final Tag tag;
+
+        ProcessingOutcomeReason(final String tagValue) {
+            this.tag = Tag.of(TAG_NAME, tagValue);
+        }
+
+        /**
+         * Gets a reason for an error.
+         *
+         * @param t The error.
+         * @return The reason.
+         */
+        public static ProcessingOutcomeReason from(final Throwable t) {
+            if (TenantDisabledOrNotRegisteredException.class.isInstance(t)) {
+                return ProcessingOutcomeReason.TENANT_DISABLED_OR_NOT_REGISTERED;
+            } else if (AdapterDisabledException.class.isInstance(t)) {
+                return ProcessingOutcomeReason.TENANT_DISABLED_FOR_ADAPTER;
+            } else if (ClientErrorException.class.isInstance(t)) {
+                final ClientErrorException exception = (ClientErrorException) t;
+                if (exception.getErrorCode() == HttpUtils.HTTP_TOO_MANY_REQUESTS) {
+                    return ProcessingOutcomeReason.MESSAGE_LIMIT_EXCEEDED;
+                }
+            }
+            return ProcessingOutcomeReason.UNKNOWN;
         }
 
         /**

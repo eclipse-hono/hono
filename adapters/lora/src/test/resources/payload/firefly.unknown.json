@@ -1,0 +1,9 @@
+{
+  "uid": "8a569133-aa44-4d7e-810d-af62faf9f722",
+  "type": "join_accept",
+  "received_at": "2016-07-15T14:31:11",
+  "frame_counter": null,
+  "for_frame_counter": null,
+  "direction": "down",
+  "device_eui": "2564927382738492"
+}
