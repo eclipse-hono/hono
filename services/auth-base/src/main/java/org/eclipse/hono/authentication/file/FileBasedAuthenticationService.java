@@ -280,7 +280,13 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
         JsonObject effectiveUser = user;
         String effectiveAuthorizationId = authenticationId;
-        if (authorizationId != null && !authorizationId.isEmpty() && isAuthorizedToImpersonate(user)) {
+        if (authorizationId != null && !authorizationId.isEmpty()) {
+            if (!isAuthorizedToImpersonate(user)) {
+                return Future.failedFuture(new ClientErrorException(
+                        HttpURLConnection.HTTP_UNAUTHORIZED,
+                        UNAUTHORIZED));
+            }
+
             final JsonObject impersonatedUser = users.get(authorizationId);
             if (impersonatedUser != null) {
                 effectiveUser = impersonatedUser;
