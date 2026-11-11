@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2026 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -105,9 +105,21 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
             final CoapAdapterProperties config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
-        StandardOptionRegistry.setDefaultOptionRegistry(new MapBasedOptionRegistry(
-                StandardOptionRegistry.getDefaultOptionRegistry(),
-                TimeOption.DEFINITION));
+        registerTimeOption();
+    }
+
+    /**
+     * Adds the time option to Californium's default option registry, unless it has already been added.
+     * <p>
+     * A factory is created for each adapter verticle instance, and Californium rejects an option
+     * whose number is already registered.
+     */
+    private static synchronized void registerTimeOption() {
+        if (!StandardOptionRegistry.getDefaultOptionRegistry().contains(TimeOption.DEFINITION)) {
+            StandardOptionRegistry.setDefaultOptionRegistry(new MapBasedOptionRegistry(
+                    StandardOptionRegistry.getDefaultOptionRegistry(),
+                    TimeOption.DEFINITION));
+        }
     }
 
     /**
